@@ -24,9 +24,11 @@ spring:
           batch_size: 30
     open-in-view: false
 
-# Flowable: KHÔNG tự đổi schema ở prod (chạy script DDL của Flowable khi nâng cấp).
+# Flowable: quản lý schema ACT_* RIÊNG, độc lập với Hibernate ddl-auto.
+#   Lần go-live ĐẦU TIÊN đặt BPM_FLOWABLE_SCHEMA_UPDATE=true để Flowable tạo bảng ACT_*.
+#   Sau khi schema ổn định, để mặc định 'false' (chạy script DDL của Flowable khi nâng cấp).
 flowable:
-  database-schema-update: false
+  database-schema-update: ${BPM_FLOWABLE_SCHEMA_UPDATE:false}
   async-executor-activate: true     # bật job nền cho timer/async ở môi trường thật
 
 server:
