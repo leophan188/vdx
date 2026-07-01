@@ -1,0 +1,138 @@
+<!-- Tab Tổng quan (hợp nhất): tóm tắt dự án + báo cáo + burndown -->
+@if (project(); as p) {
+  <div class="prj-ov">
+    <!-- Tiêu đề + trạng thái + PM dự án + khoảng ngày -->
+    <header class="prj-ov__head">
+      <div>
+        <h2 class="prj-ov__title">
+          {{ p.name }}
+          <span class="prj-ov__code">{{ p.code }}</span>
+          <span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span>
+        </h2>
+        <div class="prj-ov__meta">
+          <span>PM dự án: <b>{{ p.ownerName || '—' }}</b></span>
+          <span>Thời gian: <b>{{ dateRange() }}</b></span>
+          <span>Ngân sách: <b>{{ formatBudget(p.budget) }}</b></span>
+          <span>Nỗ lực (KH → TT):
+            <b>{{ p.plannedEffortMm == null ? '—' : formatMM(p.plannedEffortMm) + ' MM' }}</b>
+            <b> → {{ formatMM(p.totalEffortMM) }} MM</b>
+            @if (p.plannedEffortMm) {
+              <span class="badge" [class]="p.totalEffortMM > p.plannedEffortMm ? 'badge--cancel' : 'badge--active'"
+                    [title]="'Thực tế vs kế hoạch'">
+                {{ p.totalEffortMM > p.plannedEffortMm ? '▲ vượt ' : '▼ còn ' }}{{ formatMM(effortVariance(p)) }} MM
+              </span>
+            }
+          </span>
+        </div>
+      </div>
+    </header>
+
+    <!-- ===== Nhóm: Tiến độ ===== -->
+    <h3 class="prj-ov__section-title">Tiến độ</h3>
+
+    <!-- Thanh tiến độ % hoàn thành lớn -->
+    <section class="prj-ov__progress">
+      <div class="prj-ov__progress-top">
+        <div>
+          <div class="prj-ov__progress-label">Tiến độ hoàn thành</div>
+          @if (report(); as r) {
+            <div class="prj-ov__progress-sub">
+              {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc lá ·
+              {{ r.doneEstimate }}/{{ r.totalEstimate }} h est · đã log {{ r.totalSpent }} h
+            </div>
+          }
+        </div>
+        <span class="prj-ov__progress-pct">{{ pct() }}%</span>
+      </div>
+      <div class="prj-ov__bar" role="progressbar"
+           [attr.aria-valuenow]="pct()" aria-valuemin="0" aria-valuemax="100">
+        <div class="prj-ov__bar-fill" [style.width.%]="pct()"></div>
+      </div>
+    </section>
+
+    <!-- Các thẻ số liệu -->
+    @if (report(); as r) {
+      <section class="prj-ov__stats">
+        <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
+        <stat-card icon="✅" label="Đã xong" [value]="r.doneTasks" tint="var(--status-done)" />
+        <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="r.doneEstimate + ' / ' + r.totalEstimate" tint="var(--status-active)" />
+        <stat-card icon="🧾" label="Đã log (h)" [value]="r.totalSpent" tint="var(--color-info)" />
+        <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
+        <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
+        <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
+      </section>
+    }
+
+    <!-- ===== Nhóm: Burndown ===== -->
+    <h3 class="prj-ov__section-title">Burndown</h3>
+    <app-burndown-chart [data]="burndown()" />
+
+    <!-- ===== Nhóm: Phân bổ (byStatus / byType) ===== -->
+    @if (report()) {
+      <h3 class="prj-ov__section-title">Phân bổ</h3>
+      <div class="prj-ov__panels">
+        <!-- byStatus -->
+        <section class="prj-ov__panel">
+          <h4 class="prj-ov__panel-title">Theo trạng thái</h4>
+          @for (b of statusBars(); track b.status) {
+            <div class="prj-ov__barrow">
+              <span>{{ b.label }}</span>
+              <div class="prj-ov__row-bar">
+                <div class="prj-ov__row-fill" [style.width.%]="b.pct" [style.background]="b.color"></div>
+              </div>
+              <span class="prj-ov__row-val">{{ b.count }}</span>
+            </div>
+          }
+        </section>
+
+        <!-- byType -->
+        <section class="prj-ov__panel">
+          <h4 class="prj-ov__panel-title">Theo loại</h4>
+          @if (typeStats().length) {
+            <div class="prj-ov__types">
+              @for (t of typeStats(); track t.type) {
+                <span class="prj-ov__type">
+                  <span class="badge" [class]="t.badge">{{ t.label }}</span>
+                  <span class="prj-ov__type-count">{{ t.count }}</span>
+                </span>
+              }
+            </div>
+          } @else {
+            <p class="hint">Chưa có dữ liệu.</p>
+          }
+        </section>
+      </div>
+
+      <!-- ===== Nhóm: Theo người ===== -->
+      <h3 class="prj-ov__section-title">Theo người</h3>
+      <data-grid [columns]="assigneeCols" [rows]="assigneeRows()"
+                 [title]="'Theo người phụ trách (' + assigneeRows().length + ')'"
+                 [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                 emptyText="Chưa có ai được giao việc.">
+        <ng-template gridCell="name" let-a>
+          <employee-chip [name]="a.name" />
+        </ng-template>
+        <ng-template gridCell="donePct" let-a>
+          <div class="prj-ov__mini">
+            <div class="prj-ov__mini-bar"><div class="prj-ov__mini-fill" [style.width.%]="a.donePct"></div></div>
+            <span>{{ a.donePct }}%</span>
+          </div>
+        </ng-template>
+      </data-grid>
+    }
+
+    <!-- Mô tả dự án -->
+    <section class="prj-ov__desc">
+      <h3>Mô tả dự án</h3>
+      @if (p.description) {
+        <p>{{ p.description }}</p>
+      } @else {
+        <p class="muted">Chưa có mô tả cho dự án này.</p>
+      }
+    </section>
+  </div>
+} @else {
+  <div class="prj-ov__loading">
+    {{ loading() ? 'Đang tải tổng quan…' : 'Không tải được dữ liệu dự án.' }}
+  </div>
+}

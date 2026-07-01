@@ -1,0 +1,29 @@
+<!-- Tạo yêu cầu mới (Story 3.1): chọn quy trình đã ban hành để khởi tạo hồ sơ. -->
+<section class="page">
+  <app-page-header title="Tạo yêu cầu"
+                   subtitle="Chọn loại quy trình để khởi tạo một hồ sơ mới."
+                   [breadcrumb]="[{ label: 'Vận hành' }, { label: 'Tạo yêu cầu' }]" />
+
+  @if (loading()) {
+    <p class="hint">Đang tải…</p>
+  } @else if (!procs().length) {
+    <p class="hint">Chưa có quy trình nào được ban hành. Liên hệ quản trị để cấu hình & ban hành quy trình.</p>
+  } @else {
+    <div class="request-grid">
+      @for (p of procs(); track p.id) {
+        <div class="request-card">
+          <span class="request-card__badge">{{ initials(p.name) }}</span>
+          <div class="request-card__body">
+            <strong class="request-card__name">{{ p.name }}</strong>
+            <small class="request-card__key">{{ p.processKey }}</small>
+          </div>
+          <button type="button" class="btn btn--primary btn--sm" [disabled]="busyId() === p.id" (click)="create(p)">
+            {{ busyId() === p.id ? 'Đang tạo…' : '＋ Tạo yêu cầu' }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+</section>
+
+<app-task-processor (completed)="onSubmitted()" />

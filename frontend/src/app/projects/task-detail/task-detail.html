@@ -1,0 +1,300 @@
+<app-modal [open]="open()" [xwide]="true"
+           [title]="current()?.code ? (current()!.code + ' · Chi tiết công việc') : 'Chi tiết công việc'"
+           (closed)="closed.emit()">
+  @if (current(); as t) {
+    <div class="td">
+      <!-- ===== Header ===== -->
+      <div class="td__head">
+        <!-- Thuộc về: Epic › Story › Task cha -->
+        @if (t.parentChain.length) {
+          <div class="td__path">
+            <span class="td__path-label">Thuộc về:</span>
+            @for (a of t.parentChain; track a.code; let last = $last) {
+              <span class="badge td__path-badge" [class]="typeBadge(a.type)">{{ typeLabels[a.type] }}</span>
+              <span class="td__path-name" [title]="a.code + ' — ' + a.title">{{ a.title }}</span>
+              @if (!last) { <span class="td__path-sep">›</span> }
+            }
+          </div>
+        }
+        <div class="td__titlerow">
+          <span class="td__code">{{ t.code }}</span>
+          <span class="badge" [class]="typeBadge(t.type)">{{ typeLabels[t.type] }}</span>
+          <span class="badge" [class]="priorityBadge(t.priority)">{{ priorityLabels[t.priority] }}</span>
+        </div>
+        <div class="td__title">{{ t.title }}</div>
+        <div class="td__progress">
+          <div class="td__bar"><i [style.width.%]="t.progressPct"></i></div>
+          <span class="td__pct">{{ t.progressPct }}%</span>
+        </div>
+      </div>
+
+      <!-- ===== Segmented trạng thái ===== -->
+      <div class="td__seg">
+        @for (s of statusOptions; track s.value) {
+          <button type="button" [class.is-active]="t.status === s.value"
+                  [disabled]="busyStatus()" (click)="setStatus(s.value)">{{ s.label }}</button>
+        }
+      </div>
+
+      <!-- ===== Sub-tabs ===== -->
+      <div class="td__tabs" role="tablist">
+        <button type="button" class="td__tab" [class.is-active]="tab() === 'info'"
+                (click)="setTab('info')">Thông tin</button>
+        <button type="button" class="td__tab" [class.is-active]="tab() === 'comments'"
+                (click)="setTab('comments')">Bình luận <small>({{ comments().length }})</small></button>
+        <button type="button" class="td__tab" [class.is-active]="tab() === 'activity'"
+                (click)="setTab('activity')">Hoạt động <small>({{ activities().length }})</small></button>
+      </div>
+
+      <!-- ===== TAB: Thông tin ===== -->
+      @if (tab() === 'info') {
+        <div class="td__grid">
+          <!-- Cột trái: thông tin -->
+          <div class="td__info">
+            <div class="td__row">
+              <label>Người thực hiện</label>
+              <searchable-select [options]="peopleSel()" [value]="t.assigneeUserId || ''"
+                                 (valueChange)="assign($event || null)"
+                                 [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
+            </div>
+            <div class="td__row">
+              <label>Ngày bắt đầu</label>
+              <span [class.td__muted]="!t.startDate">{{ t.startDate || '—' }}</span>
+            </div>
+            <div class="td__row">
+              <label>Ngày kết thúc</label>
+              <span [class.td__muted]="!t.dueDate">{{ t.dueDate || '—' }}</span>
+            </div>
+            <div class="td__sec">
+              <h4>Mô tả</h4>
+              @if (t.description) {
+                <div class="td__desc">{{ t.description }}</div>
+              } @else {
+                <div class="td__muted">Chưa có mô tả.</div>
+              }
+            </div>
+
+            <!-- ===== Chi tiết lỗi (chỉ BUG/ISSUE) ===== -->
+            @if (isBug()) {
+              <div class="bug">
+                <div class="bug__head">
+                  <h4>🐞 Chi tiết lỗi</h4>
+                  @if (!editingBug()) {
+                    <button type="button" class="linkbtn" (click)="startEditBug()">Sửa</button>
+                  }
+                </div>
+
+                @if (editingBug()) {
+                  <!-- Chế độ sửa inline -->
+                  <div class="bug__edit">
+                    <div class="bug__field">
+                      <label>Mức độ nghiêm trọng</label>
+                      <searchable-select [options]="severitySel" [value]="bugForm.severity || ''"
+                                         (valueChange)="bugForm.severity = $any($event) || null"
+                                         [allowEmpty]="true" emptyLabel="— Chưa đánh giá —" placeholder="Mức độ…" />
+                    </div>
+                    <div class="bug__field">
+                      <label>Các bước tái hiện</label>
+                      <textarea rows="3" [value]="bugForm.stepsToReproduce"
+                                (input)="bugForm.stepsToReproduce = $any($event.target).value"
+                                placeholder="1. … &#10;2. …"></textarea>
+                    </div>
+                    <div class="bug__field">
+                      <label>Kết quả mong đợi</label>
+                      <textarea rows="2" [value]="bugForm.expectedResult"
+                                (input)="bugForm.expectedResult = $any($event.target).value"></textarea>
+                    </div>
+                    <div class="bug__field">
+                      <label>Kết quả thực tế</label>
+                      <textarea rows="2" [value]="bugForm.actualResult"
+                                (input)="bugForm.actualResult = $any($event.target).value"></textarea>
+                    </div>
+                    <div class="bug__field">
+                      <label>Môi trường</label>
+                      <input type="text" [value]="bugForm.environment"
+                             (input)="bugForm.environment = $any($event.target).value"
+                             placeholder="Trình duyệt / OS / phiên bản" />
+                    </div>
+                    <div class="bug__acts">
+                      <button type="button" class="btn btn--primary btn--sm"
+                              [disabled]="busyBug()" (click)="saveBug()">Lưu</button>
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="cancelEditBug()">Huỷ</button>
+                    </div>
+                  </div>
+                } @else {
+                  <!-- Chế độ xem -->
+                  <div class="bug__field">
+                    <label>Mức độ nghiêm trọng</label>
+                    @if (t.severity) {
+                      <span [class]="severityBadge(t.severity)">{{ severityLabels[t.severity] }}</span>
+                    } @else { <span class="bug__val is-empty">Chưa đánh giá</span> }
+                  </div>
+                  <div class="bug__field">
+                    <label>Các bước tái hiện</label>
+                    <div class="bug__val" [class.is-empty]="!t.stepsToReproduce">{{ t.stepsToReproduce || 'Chưa nhập' }}</div>
+                  </div>
+                  <div class="bug__field">
+                    <label>Kết quả mong đợi</label>
+                    <div class="bug__val" [class.is-empty]="!t.expectedResult">{{ t.expectedResult || 'Chưa nhập' }}</div>
+                  </div>
+                  <div class="bug__field">
+                    <label>Kết quả thực tế</label>
+                    <div class="bug__val" [class.is-empty]="!t.actualResult">{{ t.actualResult || 'Chưa nhập' }}</div>
+                  </div>
+                  <div class="bug__field">
+                    <label>Môi trường</label>
+                    <div class="bug__val" [class.is-empty]="!t.environment">{{ t.environment || 'Chưa nhập' }}</div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Cột phải: theo dõi thời gian + ảnh đính kèm -->
+          <div class="td__info">
+            <div class="td__sec">
+              <h4>Theo dõi thời gian</h4>
+              <div class="td__time">
+                <div class="td__timehead">
+                  <div>
+                    <div class="td__muted">Ước lượng</div>
+                    <b>{{ t.estimateHours || 0 }}h</b>
+                  </div>
+                  <div style="text-align:right">
+                    <div class="td__muted">Đã làm</div>
+                    <b>{{ t.spentHours || 0 }}h</b>
+                  </div>
+                </div>
+                <div class="td__hbar" [class.is-over]="hoursOver()">
+                  <i [style.width.%]="hoursPct() > 100 ? 100 : hoursPct()"></i>
+                </div>
+                @if (hoursOver()) {
+                  <div class="td__over">⚠ Vượt ước lượng ({{ hoursPct() }}%)</div>
+                } @else {
+                  <div class="td__muted" style="font-size:.78rem">{{ hoursPct() }}% ước lượng</div>
+                }
+                <div class="td__logwork">
+                  <input type="number" min="0" step="0.25" placeholder="+ giờ"
+                         [value]="logHours() ?? ''"
+                         (input)="onLogHoursInput($event)"
+                         (keydown.enter)="submitLogWork()" />
+                  <button type="button" class="btn btn--primary btn--sm"
+                          [disabled]="busyLog()" (click)="submitLogWork()">Ghi nhận giờ làm</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="td__sec">
+              <h4>Ảnh đính kèm ({{ attachments().length }})</h4>
+              @if (attachments().length) {
+                <div class="td__atts">
+                  @for (a of attachments(); track a.id; let i = $index) {
+                    <div class="att">
+                      <img [src]="attUrl(a)" [alt]="a.fileName" (click)="openLightbox(i)" loading="lazy" />
+                      <button type="button" class="att__del" title="Xoá ảnh" (click)="deleteAttachment(a)">✕</button>
+                    </div>
+                  }
+                </div>
+              } @else {
+                <div class="td__muted">Chưa có ảnh nào.</div>
+              }
+              <div class="td__upload">
+                <label class="btn btn--ghost btn--sm">
+                  ＋ Tải ảnh lên
+                  <input type="file" accept="image/*" hidden (change)="onUpload($event)" />
+                </label>
+              </div>
+            </div>
+          </div>
+        </div>
+      }
+
+      <!-- ===== TAB: Bình luận ===== -->
+      @if (tab() === 'comments') {
+        <div class="td__sec">
+          <div class="td__comments">
+            @for (c of comments(); track c.id) {
+              <div class="cmt">
+                @if (editingId() === c.id) {
+                  <div class="cmt__edit">
+                    <div class="cmt__author">{{ c.authorName }}</div>
+                    <textarea rows="2" [value]="editDraft()"
+                              (input)="editDraft.set($any($event.target).value)"></textarea>
+                    <div class="cmt__editacts">
+                      <button type="button" class="btn btn--primary btn--sm" (click)="saveEdit(c)">Lưu</button>
+                      <button type="button" class="btn btn--ghost btn--sm" (click)="cancelEdit()">Huỷ</button>
+                    </div>
+                  </div>
+                } @else {
+                  <div class="cmt__top">
+                    <span class="cmt__author">{{ c.authorName }}</span>
+                    <span class="cmt__time">{{ fmt(c.createdAt) }}</span>
+                    @if (c.edited) { <span class="cmt__edited">(đã sửa)</span> }
+                  </div>
+                  <div class="cmt__body">{{ c.body }}</div>
+                  @if (c.mine) {
+                    <div class="cmt__acts">
+                      <button type="button" class="linkbtn" (click)="startEdit(c)">Sửa</button>
+                      <button type="button" class="linkbtn linkbtn--danger" (click)="deleteComment(c)">Xoá</button>
+                    </div>
+                  }
+                }
+              </div>
+            } @empty {
+              <div class="td__muted">Chưa có bình luận nào.</div>
+            }
+          </div>
+          <div class="td__newcmt">
+            <textarea rows="2" placeholder="Viết bình luận… (Enter để gửi)"
+                      [value]="draft()" (input)="draft.set($any($event.target).value)"
+                      (keydown)="onCommentKey($event)"></textarea>
+            <button type="button" class="btn btn--primary btn--sm" (click)="submitComment()">Gửi</button>
+          </div>
+        </div>
+      }
+
+      <!-- ===== TAB: Hoạt động (timeline mới → cũ) ===== -->
+      @if (tab() === 'activity') {
+        <div class="td__sec">
+          <div class="td__acts">
+            @for (a of activities(); track a.id) {
+              <div class="act">
+                <div class="act__icon is-{{ a.action.toLowerCase() }}">{{ activityIcons[a.action] }}</div>
+                <div class="act__body">
+                  <div class="act__line">
+                    <span class="act__label">{{ activityLabels[a.action] }}</span>
+                    @if (a.detail) { <span class="act__detail"> · {{ a.detail }}</span> }
+                  </div>
+                  <div class="act__meta">{{ a.actorName }} · {{ fmt(a.createdAt) }}</div>
+                </div>
+              </div>
+            } @empty {
+              <div class="td__muted">Chưa có hoạt động nào.</div>
+            }
+          </div>
+        </div>
+      }
+    </div>
+  } @else {
+    <div class="td__muted">Không có dữ liệu công việc.</div>
+  }
+
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="closed.emit()">Đóng</button>
+  </div>
+</app-modal>
+
+<!-- ===== Lightbox xem ảnh lớn ===== -->
+@if (lightboxItem(); as lb) {
+  <div class="lb" (click)="closeLightbox()">
+    <button type="button" class="lb__close" aria-label="Đóng" (click)="closeLightbox()">✕</button>
+    @if (attachments().length > 1) {
+      <button type="button" class="lb__nav lb__nav--prev" aria-label="Ảnh trước"
+              (click)="$event.stopPropagation(); prevImg()">‹</button>
+      <button type="button" class="lb__nav lb__nav--next" aria-label="Ảnh sau"
+              (click)="$event.stopPropagation(); nextImg()">›</button>
+    }
+    <img [src]="attUrl(lb)" [alt]="lb.fileName" (click)="$event.stopPropagation()" />
+    <span class="lb__counter">{{ lightboxIndex()! + 1 }} / {{ attachments().length }}</span>
+  </div>
+}

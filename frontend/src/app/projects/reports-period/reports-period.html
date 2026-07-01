@@ -1,0 +1,79 @@
+<!-- Báo cáo Daily & Weekly — chuyển kỳ, overview, 4 khối danh sách task. -->
+<div class="rpp">
+  <!-- Chuyển kỳ + nhãn kỳ -->
+  <div class="rpp__head">
+    <div class="rpp__switch" role="group" aria-label="Chọn kỳ báo cáo">
+      <button type="button" [class.is-active]="period() === 'daily'" (click)="setPeriod('daily')">Hàng ngày</button>
+      <button type="button" [class.is-active]="period() === 'weekly'" (click)="setPeriod('weekly')">Hàng tuần</button>
+    </div>
+    @if (report(); as r) {
+      <span class="rpp__period">{{ r.periodLabel }}</span>
+    }
+  </div>
+
+  @if (loading()) {
+    <div class="rpp__loading">Đang tải báo cáo…</div>
+  } @else if (report(); as r) {
+    <!-- Số liệu tổng quan -->
+    <section class="rpp__hero">
+      <div class="rpp__hero-top">
+        <span class="rpp__hero-label">Tiến độ hoàn thành</span>
+        <span class="rpp__hero-pct">{{ pct() }}%</span>
+      </div>
+      <div class="rpp__hero-bar" role="progressbar"
+           [attr.aria-valuenow]="pct()" aria-valuemin="0" aria-valuemax="100">
+        <div class="rpp__hero-fill" [style.width.%]="pct()"></div>
+      </div>
+    </section>
+
+    <section class="rpp__stats">
+      <stat-card icon="📋" label="Tổng task" [value]="r.overview.totalTasks" tint="var(--color-primary)" />
+      <stat-card icon="✅" label="Đã xong" [value]="r.overview.doneTasks" tint="var(--status-done)" />
+      <stat-card icon="⏱️" label="Est done / tổng (h)"
+                 [value]="r.overview.doneEstimate + ' / ' + r.overview.totalEstimate" tint="var(--status-active)" />
+      <stat-card icon="⛔" label="Quá hạn" [value]="r.overview.overdueCount" tint="var(--overdue)" />
+      <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
+    </section>
+
+    <!-- 4 khối danh sách task -->
+    <div class="rpp__blocks">
+      @for (b of blocks(); track b.key) {
+        <section class="rpp__block">
+          <h3 class="rpp__block-title">
+            <span>{{ b.icon }}</span> {{ b.title }}
+            <span class="rpp__count">{{ b.rows.length }}</span>
+          </h3>
+
+          <data-grid [columns]="cols" [rows]="b.rows"
+                     [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                     [emptyText]="b.emptyText">
+            <ng-template gridCell="code" let-t>
+              <span class="badge badge--neutral" [title]="typeLabel(t.type)">{{ t.code }}</span>
+            </ng-template>
+            <ng-template gridCell="title" let-t>
+              <span [title]="t.title">{{ t.title }}</span>
+              <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
+            </ng-template>
+            <ng-template gridCell="assigneeName" let-t>
+              @if (t.assigneeName) {
+                <employee-chip [name]="t.assigneeName" />
+              } @else {
+                <span class="rpp__pct-val">— Chưa gán —</span>
+              }
+            </ng-template>
+            <ng-template gridCell="estimateHours" let-t>{{ t.estimateHours || 0 }}</ng-template>
+            <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
+            <ng-template gridCell="progressPct" let-t>
+              <div class="rpp__pct-cell">
+                <div class="rpp__mini-bar"><div class="rpp__mini-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
+                <span class="rpp__pct-val">{{ clampPct(t.progressPct) }}%</span>
+              </div>
+            </ng-template>
+          </data-grid>
+        </section>
+      }
+    </div>
+  } @else {
+    <div class="rpp__loading">Không tải được báo cáo.</div>
+  }
+</div>

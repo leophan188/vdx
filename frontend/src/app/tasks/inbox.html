@@ -1,0 +1,65 @@
+<!-- Hộp thư "Việc của tôi" (Story 3.2) + xử lý việc qua TaskProcessor (Story 3.4). -->
+<section class="page">
+  <app-page-header title="Việc của tôi"
+                   subtitle="Các việc đang chờ bạn xử lý theo quy trình."
+                   [breadcrumb]="[{ label: 'Vận hành' }, { label: 'Việc của tôi' }]" />
+
+  <data-grid [columns]="cols" [rows]="items()" title="Danh sách việc"
+             [emptyText]="loading() ? 'Đang tải…' : 'Không có việc nào đang chờ bạn.'">
+    <button gridActions type="button" class="btn btn--primary" (click)="openPicker()">＋ Tạo yêu cầu</button>
+    <button gridActions type="button" class="btn btn--ghost" (click)="reload()">↻ Làm mới</button>
+
+    <ng-template gridCell="createdAt" let-t>{{ fmt(t.createdAt) }}</ng-template>
+
+    <ng-template gridCell="sla" let-t>
+      @if (t.overdue) {
+        <span class="badge badge--cancel" title="Đã quá hạn xử lý">⚠ Quá hạn</span>
+      } @else if (t.slaHours) {
+        <span class="badge badge--info">{{ t.slaHours }}h</span>
+      } @else { — }
+    </ng-template>
+
+    <ng-template gridCell="actions" let-t>
+      <span class="cell-actions">
+        @if (t.claimable) {
+          <button type="button" class="btn btn--primary btn--sm" (click)="claim(t)">✋ Nhận việc</button>
+        } @else {
+          <button type="button" class="btn btn--primary btn--sm" (click)="process(t)">Xử lý →</button>
+          @if (t.slaHours) {
+            <button type="button" class="btn btn--ghost btn--sm" title="Xin gia hạn" (click)="askExtend(t)">⏰</button>
+          }
+        }
+      </span>
+    </ng-template>
+  </data-grid>
+</section>
+
+<!-- Tạo yêu cầu: chọn quy trình → nhập liệu (gộp vào Việc của tôi) -->
+<app-modal [open]="pickerOpen()" [wide]="true" title="Tạo yêu cầu — chọn quy trình" (closed)="pickerOpen.set(false)">
+  @if (pickerLoading()) {
+    <p class="hint">Đang tải danh sách quy trình…</p>
+  } @else if (!startables().length) {
+    <p class="hint">Chưa có quy trình nào được ban hành. Liên hệ quản trị để cấu hình & ban hành quy trình.</p>
+  } @else {
+    <p class="hint">Chọn loại quy trình để khởi tạo hồ sơ rồi nhập liệu ở bước đầu.</p>
+    <div class="request-grid">
+      @for (p of startables(); track p.id) {
+        <div class="request-card">
+          <span class="request-card__badge">{{ initials(p.name) }}</span>
+          <div class="request-card__body">
+            <strong class="request-card__name">{{ p.name }}</strong>
+            <small class="request-card__key">{{ p.processKey }}</small>
+          </div>
+          <button type="button" class="btn btn--primary btn--sm" [disabled]="busyId() === p.id" (click)="createFromProcess(p)">
+            {{ busyId() === p.id ? 'Đang tạo…' : 'Chọn →' }}
+          </button>
+        </div>
+      }
+    </div>
+  }
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="pickerOpen.set(false)">Đóng</button>
+  </div>
+</app-modal>
+
+<app-task-processor (completed)="reload()" />

@@ -1,0 +1,182 @@
+:host { display: block; }
+
+/* ===== Lưới các khối vai trò ===== */
+.roles {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.role-card {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  transition: box-shadow .15s ease, border-color .15s ease;
+}
+.role-card.is-dirty {
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 1px var(--color-primary);
+}
+
+/* ----- Đầu khối: tên + mô tả + badge ----- */
+.role-card__head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.role-card__title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.role-card__name {
+  font-size: var(--text-base);
+  font-weight: var(--weight-semibold);
+  color: var(--color-text);
+}
+.role-card__desc {
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+.role-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin-top: var(--space-1);
+}
+
+/* ----- Lưới chức năng gom nhóm ----- */
+.role-card__features {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--space-3);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+.fgroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.fgroup__title {
+  font-size: var(--text-xs);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  color: var(--color-primary);
+}
+.fgroup__items {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+.fcheck {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--color-text);
+  padding: 2px 0;
+}
+.fcheck input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  cursor: pointer;
+  flex: none;
+}
+.fcheck__label { line-height: 1.25; }
+
+/* ----- Hàng hành động ----- */
+.role-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--color-border);
+}
+.role-card__spacer { flex: 1; }
+
+.roles__hint {
+  margin: var(--space-3) 0 0;
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+}
+
+/* ===== Modal Thành viên ===== */
+.member-bar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+.member-search {
+  flex: 1;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  color: var(--color-text);
+  font-size: var(--text-sm);
+}
+.member-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+.member-list {
+  display: flex;
+  flex-direction: column;
+  max-height: 50vh;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+.member-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+  cursor: pointer;
+}
+.member-row:last-child { border-bottom: none; }
+.member-row:hover { background: var(--color-surface-zebra); }
+.member-row.is-admin { cursor: default; opacity: .85; }
+.member-row input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--color-primary);
+  flex: none;
+}
+.member-row__main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+}
+.member-row__name {
+  font-weight: var(--weight-medium);
+  color: var(--color-text);
+}
+.member-row__user {
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+}
+.member-row__tags {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  white-space: nowrap;
+}
+.member-empty {
+  padding: var(--space-6);
+  text-align: center;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm);
+}

@@ -1,0 +1,188 @@
+<!-- Quản trị tài khoản — FULL UI/UX FLOW (tham khảo DMS): danh sách · thêm (wizard 3 bước) ·
+     sửa · khóa/mở · xóa · xuất Excel · bộ lọc · chi tiết + lịch sử · toast. -->
+<section class="page">
+  <app-page-header title="Quản trị tài khoản"
+                   subtitle="Quản lý danh sách tài khoản người dùng trong hệ thống."
+                   [breadcrumb]="[{ label: 'Quản trị hệ thống' }, { label: 'Tài khoản' }]" />
+
+  @if (filterOpen()) {
+    <div class="card" style="margin-bottom: var(--space-4);">
+      <div class="card__head"><span class="card__title">🔽 Bộ lọc nâng cao</span></div>
+      <div class="filter-panel">
+        <div class="field">
+          <label>Vai trò</label>
+          <select [(ngModel)]="filterRole"><option value="">-- Tất cả vai trò --</option>
+            @for (r of roleOptions; track r) { <option [value]="r">{{ r }}</option> }</select>
+        </div>
+        <div class="field">
+          <label>Trạng thái</label>
+          <select [(ngModel)]="filterStatus"><option value="">-- Tất cả trạng thái --</option>
+            <option value="ACTIVE">Hoạt động</option><option value="LOCKED">Đã khóa</option></select>
+        </div>
+        <div class="filter-panel__actions">
+          <button type="button" class="btn btn--ghost" (click)="resetFilter()">Đặt lại</button>
+          <button type="button" class="btn btn--primary" (click)="applyFilter()">Áp dụng</button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <data-grid [columns]="cols" [rows]="filteredUsers()" title="Tài khoản"
+             searchPlaceholder="Tìm theo tên hoặc họ tên…" emptyText="Chưa có tài khoản nào.">
+    <span gridFilters class="cell-actions">
+      <button type="button" class="btn btn--secondary" (click)="filterOpen.set(!filterOpen())">🔽 Bộ lọc</button>
+      <button type="button" class="btn btn--secondary" (click)="exportOpen.set(true)">⤓ Xuất Excel</button>
+    </span>
+    <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Thêm tài khoản</button>
+
+    <ng-template gridCell="username" let-u>
+      <span class="cell-user"><app-avatar [name]="u.username" [size]="28" /> {{ u.username }}</span>
+    </ng-template>
+    <ng-template gridCell="roleCode" let-u>
+      <span class="badge badge--neutral">{{ funcRoleName(u.roleCode) }}</span>
+    </ng-template>
+    <ng-template gridCell="status" let-u>
+      <status-badge [status]="statusKind(u.status)" [label]="statusLabel(u.status)" />
+    </ng-template>
+    <ng-template gridCell="actions" let-u>
+      <span class="cell-actions">
+        <button type="button" class="btn btn--ghost btn--sm" title="Xem chi tiết" (click)="openDetail(u)">👁</button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(u)">✎</button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Đổi mật khẩu" (click)="openReset(u)">🔑</button>
+        <button type="button" class="btn btn--secondary btn--sm" (click)="askLock(u)">
+          {{ u.status === 'LOCKED' ? 'Mở' : 'Khóa' }}
+        </button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(u)">🗑</button>
+      </span>
+    </ng-template>
+  </data-grid>
+</section>
+
+<!-- ===== Wizard THÊM (3 bước) ===== -->
+<app-modal [open]="createOpen()" title="Thêm tài khoản" [wide]="true" (closed)="createOpen.set(false)">
+  <app-stepper [steps]="steps" [current]="step()" />
+
+  @if (step() === 1) {
+    <form id="wz" (ngSubmit)="next()">
+      <div class="form-2col">
+        <div class="field"><label>Tên đăng nhập *</label><input name="u" [(ngModel)]="w.username" required /></div>
+        <div class="field"><label>Họ và tên *</label><input name="fn" [(ngModel)]="w.fullName" required /></div>
+        <div class="field"><label>Email</label><input name="em" type="email" [(ngModel)]="w.email" /></div>
+        <div class="field"><label>Số điện thoại</label><input name="ph" [(ngModel)]="w.phone" /></div>
+        <div class="field"><label>Mật khẩu * (≥ 8 ký tự)</label><input name="pw" type="password" [(ngModel)]="w.password" required /></div>
+      </div>
+    </form>
+  } @else if (step() === 2) {
+    <div class="field" style="max-width: 320px;">
+      <label>Vai trò *</label>
+      <select [(ngModel)]="w.role">@for (r of roleOptions; track r) { <option [value]="r">{{ r }}</option> }</select>
+    </div>
+    <p class="hint">Quyền chi tiết được kế thừa qua vị trí → vai trò (RBAC, Story 1.4). Vai trò tài khoản dùng cho quyền quản trị nền.</p>
+  } @else {
+    <p class="hint">Xác nhận thông tin trước khi tạo tài khoản:</p>
+    <dl class="desc-grid">
+      <dt>Tên đăng nhập</dt><dd>{{ w.username }}</dd>
+      <dt>Họ và tên</dt><dd>{{ w.fullName }}</dd>
+      <dt>Email</dt><dd>{{ w.email || '—' }}</dd>
+      <dt>Số điện thoại</dt><dd>{{ w.phone || '—' }}</dd>
+      <dt>Vai trò</dt><dd>{{ w.role }}</dd>
+    </dl>
+  }
+
+  <ng-container modalFooter>
+    @if (step() > 1) { <button type="button" class="btn btn--ghost" (click)="back()">Quay lại</button> }
+    <span style="flex:1"></span>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    @if (step() < 3) {
+      <button type="button" class="btn btn--primary" [disabled]="!canNext()" (click)="next()">Tiếp tục</button>
+    } @else {
+      <button type="button" class="btn btn--primary" (click)="submitCreate()">Hoàn tất</button>
+    }
+  </ng-container>
+</app-modal>
+
+<!-- ===== SỬA ===== -->
+<app-modal [open]="editOpen()" [title]="'Cập nhật tài khoản — ' + (editTarget()?.username || '')" (closed)="editOpen.set(false)">
+  <form id="edit" (ngSubmit)="saveEdit()">
+    <div class="field"><label>Họ và tên *</label><input name="efn" [(ngModel)]="e.fullName" required /></div>
+    <div class="field"><label>Email</label><input name="eem" type="email" [(ngModel)]="e.email" /></div>
+    <div class="field"><label>Số điện thoại</label><input name="eph" [(ngModel)]="e.phone" /></div>
+    <div class="field"><label>Vai trò</label>
+      <select name="er" [(ngModel)]="e.role">@for (r of roleOptions; track r) { <option [value]="r">{{ r }}</option> }</select>
+    </div>
+    <div class="field"><label>Vai trò chức năng (phân quyền)</label>
+      <searchable-select [options]="funcRoleOptions()" [(value)]="e.roleCode"
+                         placeholder="Chọn vai trò chức năng…" />
+      <span class="hint" style="margin-top: var(--space-1);">Quyết định các chức năng tài khoản được dùng. Để "Mặc định (nhân viên)" nếu không gán vai trò riêng.</span>
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="editOpen.set(false)">Hủy</button>
+    <button type="submit" form="edit" class="btn btn--primary">Lưu thay đổi</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== ĐỔI MẬT KHẨU ===== -->
+<app-modal [open]="resetOpen()" [title]="'Đặt lại mật khẩu — ' + (resetTarget()?.username || '')" (closed)="resetOpen.set(false)">
+  <form id="rpwf" (ngSubmit)="doReset()">
+    <div class="field"><label>Mật khẩu mới (≥ 8 ký tự)</label><input name="rpw" type="password" [(ngModel)]="resetPw" required /></div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="resetOpen.set(false)">Hủy</button>
+    <button type="submit" form="rpwf" class="btn btn--primary">Đặt lại</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== CHI TIẾT + LỊCH SỬ ===== -->
+<app-modal [open]="detailOpen()" [title]="'Chi tiết tài khoản — ' + (detailTarget()?.username || '')" [wide]="true" (closed)="detailOpen.set(false)">
+  <app-tabs [tabs]="detailTabs" [(active)]="detailTab" />
+  @if (detailTab() === 'info') {
+    <dl class="desc-grid">
+      <dt>Tên đăng nhập</dt><dd>{{ detailTarget()?.username }}</dd>
+      <dt>Họ và tên</dt><dd>{{ detailTarget()?.fullName }}</dd>
+      <dt>Email</dt><dd>{{ detailTarget()?.email || '—' }}</dd>
+      <dt>Số điện thoại</dt><dd>{{ detailTarget()?.phone || '—' }}</dd>
+      <dt>Vai trò</dt><dd>{{ detailTarget()?.role }}</dd>
+      <dt>Trạng thái</dt><dd><status-badge [status]="statusKind(detailTarget()?.status || '')" [label]="statusLabel(detailTarget()?.status || '')" /></dd>
+    </dl>
+  } @else {
+    <table class="data-table">
+      <thead><tr><th>Thời gian</th><th>Hành động</th><th>Thực hiện bởi</th><th>Nội dung</th></tr></thead>
+      <tbody>
+        @for (h of history(); track h.id) {
+          <tr><td>{{ h.createdAt }}</td><td>{{ h.action }}</td><td>{{ h.actor }}</td><td>{{ h.detail }}</td></tr>
+        } @empty { <tr><td colspan="4">Chưa có hoạt động nào được ghi nhận.</td></tr> }
+      </tbody>
+    </table>
+  }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--secondary" (click)="detailOpen.set(false)">Đóng</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== XUẤT EXCEL ===== -->
+<app-modal [open]="exportOpen()" title="Xuất Excel" (closed)="exportOpen.set(false)">
+  <p class="hint" style="margin:0;">Chọn dữ liệu muốn xuất:</p>
+  <label class="radio-row"><input type="radio" name="scope" value="all" [(ngModel)]="exportScope" /> Toàn bộ dữ liệu ({{ users().length }} bản ghi)</label>
+  <label class="radio-row"><input type="radio" name="scope" value="filtered" [(ngModel)]="exportScope" /> Theo bộ lọc hiện tại ({{ filteredUsers().length }} bản ghi)</label>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="exportOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" (click)="doExport()">Xuất Excel</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== XÁC NHẬN KHÓA / XÓA ===== -->
+<app-confirm-dialog
+  [open]="lockOpen()"
+  [title]="lockTarget()?.status === 'LOCKED' ? 'Mở khóa tài khoản' : 'Khóa tài khoản'"
+  [message]="'Bạn có chắc chắn muốn ' + (lockTarget()?.status === 'LOCKED' ? 'mở khóa' : 'khóa') + ' tài khoản &quot;' + (lockTarget()?.username || '') + '&quot;? Tài khoản bị khóa sẽ không đăng nhập được.'"
+  [confirmLabel]="lockTarget()?.status === 'LOCKED' ? 'Mở khóa' : 'Khóa'"
+  [danger]="lockTarget()?.status !== 'LOCKED'"
+  (confirm)="confirmLock()" (cancel)="lockOpen.set(false)" />
+
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xóa tài khoản"
+  [message]="'Bạn có chắc chắn muốn xóa tài khoản &quot;' + (delTarget()?.username || '') + '&quot;? Hành động này không thể hoàn tác.'"
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="delOpen.set(false)" />

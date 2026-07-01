@@ -1,0 +1,122 @@
+<div class="gantt">
+  <!-- Thanh công cụ: phóng (zoom) + chú giải màu -->
+  <div class="gantt__bar-toolbar">
+    <div class="gantt__zoom" role="group" aria-label="Mức phóng trục thời gian">
+      @for (z of zoomOptions; track z.value) {
+        <button type="button"
+                [class.is-active]="zoom() === z.value"
+                (click)="setZoom(z.value)">{{ z.label }}</button>
+      }
+    </div>
+
+    <div class="gantt__legend">
+      @for (l of statusLegend; track l.status) {
+        <span>
+          <i class="gantt__swatch" [class]="'gantt__bar--' + l.status"></i>{{ l.label }}
+        </span>
+      }
+    </div>
+  </div>
+
+  <!-- Thanh tuỳ chỉnh: khung thời gian + lọc theo level/loại — dùng class chuẩn .filter-bar -->
+  <div class="filter-bar">
+    <!-- (a) Khung thời gian thủ công -->
+    <div class="filter-bar__field">
+      <label>Từ ngày</label>
+      <input type="date" class="gantt__date" [value]="fromDate()"
+             (change)="setFromDate($any($event.target).value)" />
+    </div>
+    <div class="filter-bar__field">
+      <label>Đến ngày</label>
+      <input type="date" class="gantt__date" [value]="toDate()"
+             (change)="setToDate($any($event.target).value)" />
+    </div>
+
+    <!-- (b) Lọc theo loại — component CHIP dùng chung (đồng bộ với Backlog) -->
+    <div class="filter-bar__field">
+      <label>Loại</label>
+      <app-type-filter [options]="typeChips" [selected]="selectedTypes()"
+                       (toggle)="onToggleType($event)" />
+    </div>
+
+    <span class="filter-bar__spacer"></span>
+    <button type="button" class="gantt__reset" (click)="resetCustom()">Đặt lại</button>
+  </div>
+
+  @if (loading()) {
+    <div class="gantt__empty">Đang tải lịch công việc…</div>
+  } @else if (rows().length === 0) {
+    <div class="gantt__empty">Dự án chưa có công việc nào.</div>
+  } @else {
+    <div class="gantt__grid">
+      <!-- Cột trái: danh sách task (cuộn ngang khi chật) -->
+      <div class="gantt__list">
+        <div class="gantt__list-inner">
+          <div class="gantt__list-head">
+            <span class="gantt__c-task">Công việc</span>
+            <span class="gantt__c-dates">Từ ngày → Đến ngày</span>
+            <span class="gantt__c-pct">% Hoàn thành</span>
+          </div>
+          @for (r of rows(); track r.task.id) {
+            <div class="gantt__list-row" [title]="r.task.code + ' · ' + r.task.title">
+              <span class="gantt__c-task" [style.padding-left]="indentPx(r.depth)">
+                <span class="gantt__code">{{ r.task.code }}</span>
+                <span class="gantt__title">{{ r.task.title }}</span>
+              </span>
+              <span class="gantt__c-dates" [title]="dateRangeLabel(r)">{{ dateRangeLabel(r) }}</span>
+              <span class="gantt__c-pct" [title]="r.progressPct + '%'">
+                <span class="gantt__pct-track">
+                  <span class="gantt__pct-fill" [style.width.%]="r.progressPct"></span>
+                </span>
+                <span class="gantt__pct-num">{{ r.progressPct }}%</span>
+              </span>
+            </div>
+          }
+        </div>
+      </div>
+
+      <!-- Cột phải: trục thời gian + bar (cuộn ngang) -->
+      <div class="gantt__scroll">
+        <div class="gantt__canvas" [style.width.px]="canvasWidth()">
+          <!-- Header trục -->
+          <div class="gantt__axis">
+            @for (t of ticks(); track $index) {
+              <div class="gantt__tick" [style.left.px]="t.left" [style.width.px]="t.width">
+                <span>{{ t.label }}</span>
+                @if (t.alt) { <span class="gantt__tick-alt">{{ t.alt }}</span> }
+              </div>
+            }
+          </div>
+
+          <!-- Các làn + bar -->
+          <div class="gantt__lanes">
+            @if (todayLeft() !== null) {
+              <div class="gantt__today" [style.left.px]="todayLeft()"></div>
+            }
+            @for (r of rows(); track r.task.id) {
+              <div class="gantt__lane">
+                @for (t of ticks(); track $index) {
+                  <div class="gantt__gridline" [style.left.px]="t.left"></div>
+                }
+                @if (r.hasBar) {
+                  <div class="gantt__bar" [class]="'gantt__bar gantt__bar--' + r.task.status"
+                       [style.left.px]="r.left" [style.width.px]="r.width"
+                       [title]="r.tooltip">
+                    <!-- Overlay phần đã hoàn thành (tô đậm hơn) -->
+                    @if (r.progressPct > 0) {
+                      <span class="gantt__bar-progress" [style.width.%]="r.progressPct"></span>
+                    }
+                    <span class="gantt__bar-label">{{ r.task.title }}</span>
+                    <span class="gantt__bar-pct">{{ r.progressPct }}%</span>
+                  </div>
+                } @else {
+                  <span class="gantt__nodate" [title]="r.tooltip">chưa có lịch</span>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </div>
+    </div>
+  }
+</div>

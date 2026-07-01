@@ -1,0 +1,170 @@
+/* "Tài khoản của tôi" — bố cục 3 khu, responsive. Màu sắc CHỈ dùng token --color-*. */
+
+/* Banner thiết lập bắt buộc — nổi bật, dùng token cảnh báo. */
+.setup-required {
+  border: 1px solid var(--color-error);
+  background: var(--color-surface);
+  border-left: 4px solid var(--color-error);
+  border-radius: var(--radius-md, 8px);
+  padding: var(--space-3, 0.75rem) var(--space-4, 1rem);
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.setup-required__head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  color: var(--color-error);
+}
+
+.setup-required__icon {
+  font-size: var(--text-lg, 1.125rem);
+}
+
+.setup-required__list {
+  margin: var(--space-2, 0.5rem) 0 0;
+  padding-left: var(--space-5, 1.25rem);
+  color: var(--color-text);
+}
+
+.setup-required__list li {
+  margin: var(--space-1, 0.25rem) 0;
+}
+
+.setup-required__hint {
+  margin: var(--space-2, 0.5rem) 0 0;
+  color: var(--color-text-muted);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.account-grid {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) 1fr;
+  gap: var(--space-4, 1rem);
+  align-items: start;
+}
+
+/* Khu Ảnh đại diện chiếm cột trái; Thông tin + Đổi mật khẩu xếp dọc cột phải. */
+.account-avatar-card {
+  grid-column: 1;
+  grid-row: 1 / span 2;
+}
+.account-info-card { grid-column: 2; grid-row: 1; }
+.account-pwd-card { grid-column: 2; grid-row: 2; }
+.account-theme-card { grid-column: 2; grid-row: 3; }
+
+.account-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  padding: var(--space-2, 0.5rem) 0;
+}
+
+.account-avatar__img {
+  width: 96px;
+  height: 96px;
+  border-radius: var(--radius-full, 999px);
+  object-fit: cover;
+  border: 2px solid var(--color-border);
+  background: var(--color-surface-alt);
+}
+
+.account-avatar__actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2, 0.5rem);
+  text-align: center;
+}
+
+/* Nút <label> bọc input file: vô hiệu hoá trực quan khi đang upload. */
+.btn.is-disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+.account-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--space-2, 0.5rem);
+  margin-top: var(--space-4, 1rem);
+  padding-top: var(--space-3, 0.75rem);
+  border-top: 1px solid var(--color-border);
+}
+
+.account-info-card .hint,
+.account-avatar .hint {
+  color: var(--color-text-muted);
+}
+
+/* ===== Khu Giao diện (dark-safe, chỉ dùng token) ===== */
+.theme-block {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2, 0.5rem);
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.theme-block__label {
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-medium, 500);
+  color: var(--color-text);
+}
+
+/* Segmented Sáng/Tối */
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md, 6px);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.segmented__btn {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--color-text-muted);
+  padding: var(--space-2, 0.5rem) var(--space-4, 1rem);
+  font-size: var(--text-sm, 0.875rem);
+  font-weight: var(--weight-medium, 500);
+  cursor: pointer;
+}
+
+.segmented__btn + .segmented__btn {
+  border-left: 1px solid var(--color-border);
+}
+
+.segmented__btn.is-active {
+  background: var(--color-primary);
+  color: var(--color-text-invert);
+}
+
+/* Gallery SKIN trên trang Account — rộng hơn dropdown nên nhiều cột hơn, không giới hạn chiều cao.
+   Dùng CHUNG card/thumbnail (.skin-*) định nghĩa global trong _shell.scss — chỉ chỉnh lưới. */
+.skin-gallery--account {
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: var(--space-3);
+  max-height: none;
+}
+
+.account-theme-card .hint {
+  color: var(--color-text-muted);
+  margin: 0;
+}
+
+/* Responsive: gộp về 1 cột trên màn hẹp. */
+@media (max-width: 720px) {
+  .account-grid {
+    grid-template-columns: 1fr;
+  }
+  .account-avatar-card,
+  .account-info-card,
+  .account-pwd-card,
+  .account-theme-card {
+    grid-column: 1;
+    grid-row: auto;
+  }
+}

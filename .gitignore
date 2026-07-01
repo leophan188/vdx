@@ -1,0 +1,4 @@
+.claude/settings.local.json
+
+# Bí mật go-live — KHÔNG commit
+.env

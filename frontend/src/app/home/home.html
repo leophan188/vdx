@@ -1,0 +1,135 @@
+<!-- Trang chủ ONEConnect — bảng tin MXH nội bộ (Epic 2, dữ liệu thật). Render trong app-shell. -->
+<div class="ochome">
+  <div class="ochome-body">
+
+    <!-- -------- GIỮA: feed -------- -->
+    <main class="ochome-feed">
+
+      <!-- Composer (theo phân quyền đăng bài) -->
+      @if (canPost()) {
+        <app-post-composer (created)="reload()" />
+      }
+
+      <!-- Bộ lọc nhanh theo phân loại (Tin tức / Sự kiện / Thông báo) — bài đăng toàn công ty -->
+      <section class="ochome-card ochome-catfilter">
+        @for (c of cats; track c.value) {
+          <button class="ochome-catfilter__btn" [class.active]="filterCategory() === c.value"
+                  (click)="selectCategory(c.value)" [disabled]="showHidden()">{{ c.label }}</button>
+        }
+        @if (isAdmin()) {
+          <button class="ochome-catfilter__btn ochome-catfilter__btn--hidden" [class.active]="showHidden()"
+                  (click)="toggleHidden()" title="Xem lại / bỏ ẩn các bài đã ẩn">
+            {{ showHidden() ? '✕ Đóng bài ẩn' : '👁 Bài đã ẩn' }}
+          </button>
+        }
+      </section>
+
+      <!-- Feed -->
+      @if (loading()) {
+        <div class="ochome-card ochome-empty">Đang tải bảng tin...</div>
+      } @else if (posts().length === 0) {
+        <div class="ochome-card ochome-empty">Chưa có bài viết nào.</div>
+      } @else {
+        @for (p of posts(); track p.id) {
+          <app-post-card [post]="p" [isAdmin]="isAdmin()" (changed)="reload()" />
+        }
+        @if (hasMore()) {
+          <button class="ochome-loadmore" [disabled]="loadingMore()" (click)="loadMore()">
+            {{ loadingMore() ? 'Đang tải...' : 'Tải thêm' }}
+          </button>
+        }
+      }
+    </main>
+
+    <!-- -------- PHẢI: widgets -------- -->
+    <aside class="ochome-right">
+
+      <!-- Việc 1: Sinh nhật hôm nay (nhân sự đang hoạt động) — thẻ lễ hội ấm -->
+      <section class="ochome-card ochome-widget ochome-hr ochome-hr--bday">
+        <div class="ochome-widget__head"><span>🎂 SINH NHẬT HÔM NAY</span></div>
+        @if (birthdaysToday().length) {
+          <ul class="ochome-hr__list">
+            @for (b of birthdaysToday(); track b.empCode) {
+              <li class="ochome-hr__item">
+                @if (avatarUrl(b.userId); as src) {
+                  <img class="ochome-hr__ava" [src]="src" [alt]="b.fullName" (error)="onAvatarError(b.userId)" />
+                } @else {
+                  <app-avatar class="ochome-hr__ava-fallback" [name]="b.fullName" [size]="60" />
+                }
+                <div class="ochome-hr__info">
+                  <strong class="ochome-hr__name">{{ b.fullName }}</strong>
+                  <span class="ochome-hr__sub">{{ b.jobPosition || '—' }} · {{ b.deptCode }}</span>
+                </div>
+              </li>
+            }
+          </ul>
+        } @else {
+          <p class="ochome-hr__empty">Hôm nay không có sinh nhật.</p>
+        }
+      </section>
+
+      <!-- Việc 1: Sắp onboard (joinDate trong tương lai) -->
+      @if (onboardingSoon().length) {
+        <section class="ochome-card ochome-widget ochome-hr">
+          <div class="ochome-widget__head"><span>🚀 SẮP ONBOARD</span></div>
+          <ul class="ochome-hr__list">
+            @for (o of onboardingSoon(); track o.empCode) {
+              <li class="ochome-hr__item ochome-hr__item--onboard">
+                @if (avatarUrl(o.userId); as src) {
+                  <img class="ochome-hr__ava" [src]="src" [alt]="o.fullName" (error)="onAvatarError(o.userId)" />
+                } @else {
+                  <app-avatar class="ochome-hr__ava-fallback" [name]="o.fullName" [size]="60" />
+                }
+                <div class="ochome-hr__info">
+                  <strong class="ochome-hr__name">{{ o.fullName }}</strong>
+                  <span class="ochome-hr__sub">{{ o.jobPosition || '—' }} · {{ o.deptCode }}</span>
+                  <span class="ochome-hr__badge" [class.ochome-hr__badge--soon]="o.daysUntil <= 7">
+                    còn {{ o.daysUntil }} ngày Onboard
+                  </span>
+                </div>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
+      <!-- Việc 3: Thông báo (data thật từ feed, category ANNOUNCEMENT) -->
+      <section class="ochome-card ochome-widget">
+        <div class="ochome-widget__head"><span>THÔNG BÁO</span></div>
+        @if (announcements().length) {
+          @for (a of announcements(); track a.id) {
+            <div class="ochome-ann">
+              <span class="ochome-ann__ic ochome-ann__ic--blue">
+                <svg viewBox="0 0 24 24" class="ochome-ic"><path d="m3 11 18-5v12L3 14z" /><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6" /></svg>
+              </span>
+              <div class="ochome-ann__body">
+                <strong>{{ excerpt(a.body) }}</strong>
+                <small>{{ fmtTime(a.createdAt) }}</small>
+              </div>
+            </div>
+          }
+        } @else {
+          <p class="ochome-hr__empty">Chưa có thông báo.</p>
+        }
+      </section>
+
+      <!-- Việc 3: Sự kiện sắp tới (data thật từ feed, category EVENT) -->
+      <section class="ochome-card ochome-widget">
+        <div class="ochome-widget__head"><span>SỰ KIỆN SẮP TỚI</span></div>
+        @if (events().length) {
+          @for (e of events(); track e.id) {
+            <div class="ochome-ev">
+              <div class="ochome-ev__date"><strong>{{ evDay(e.createdAt) }}</strong><small>{{ evMonth(e.createdAt) }}</small></div>
+              <div class="ochome-ev__meta">
+                <strong>{{ excerpt(e.body) }}</strong>
+                <small>{{ evHour(e.createdAt) }}</small>
+              </div>
+            </div>
+          }
+        } @else {
+          <p class="ochome-hr__empty">Chưa có sự kiện.</p>
+        }
+      </section>
+    </aside>
+  </div>
+</div>

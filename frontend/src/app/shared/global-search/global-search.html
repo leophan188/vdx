@@ -1,0 +1,83 @@
+<!-- Tìm kiếm toàn cục (quick-jump). Ô input + dropdown nhóm kết quả. -->
+<div class="gsearch">
+  <label class="gsearch__box" [class.gsearch__box--open]="open()">
+    <span class="gsearch__ico" aria-hidden="true">🔍</span>
+    <input
+      #searchInput
+      type="search"
+      class="gsearch__input"
+      placeholder="Tìm nhân sự, dự án, tài khoản…"
+      autocomplete="off"
+      [value]="query()"
+      (input)="onInput($any($event.target).value)"
+      (focus)="onFocus()"
+      (keydown.escape)="onEsc()"
+      aria-label="Tìm kiếm toàn cục" />
+    <kbd class="gsearch__kbd">⌘K</kbd>
+  </label>
+
+  @if (open() && hasQuery()) {
+    <div class="gsearch__panel" role="listbox">
+      @if (loading()) {
+        <div class="gsearch__state">Đang tìm…</div>
+      } @else if (empty()) {
+        <div class="gsearch__state">Không tìm thấy</div>
+      } @else {
+        @if (results().employees.length) {
+          <div class="gsearch__group">
+            <div class="gsearch__group-title">Nhân sự</div>
+            @for (e of results().employees; track e.id) {
+              <button type="button" class="gsearch__item" (click)="goEmployee(e)" role="option">
+                <employee-chip [code]="e.code" [name]="e.name" />
+                @if (e.sub) { <span class="gsearch__sub">{{ e.sub }}</span> }
+              </button>
+            }
+          </div>
+        }
+
+        @if (results().projects.length) {
+          <div class="gsearch__group">
+            <div class="gsearch__group-title">Dự án</div>
+            @for (p of results().projects; track p.id) {
+              <button type="button" class="gsearch__item" (click)="goProject(p)" role="option">
+                <span class="gsearch__row">
+                  @if (p.code) { <span class="gsearch__code">{{ p.code }}</span> }
+                  <strong class="gsearch__name">{{ p.name }}</strong>
+                </span>
+                @if (p.sub) { <span class="gsearch__sub">{{ p.sub }}</span> }
+              </button>
+            }
+          </div>
+        }
+
+        @if (results().accounts.length) {
+          <div class="gsearch__group">
+            <div class="gsearch__group-title">Tài khoản</div>
+            @for (a of results().accounts; track a.id) {
+              <button type="button" class="gsearch__item" (click)="goAccount(a)" role="option">
+                <span class="gsearch__row">
+                  <strong class="gsearch__name">{{ a.name }}</strong>
+                </span>
+                @if (a.sub) { <span class="gsearch__sub">{{ a.sub }}</span> }
+              </button>
+            }
+          </div>
+        }
+
+        @if (results().posts.length) {
+          <div class="gsearch__group">
+            <div class="gsearch__group-title">Bài viết</div>
+            @for (p of results().posts; track p.id) {
+              <button type="button" class="gsearch__item" (click)="goPost(p)" role="option">
+                <span class="gsearch__row">
+                  <strong class="gsearch__name">{{ p.name }}</strong>
+                </span>
+                @if (p.sub) { <span class="gsearch__sub">{{ p.sub }}</span> }
+              </button>
+            }
+          </div>
+        }
+      }
+    </div>
+  }
+</div>

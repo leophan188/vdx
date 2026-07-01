@@ -1,0 +1,121 @@
+/* Khu tạo dữ liệu demo (an toàn — chỉ thêm). Tách khỏi vùng nguy hiểm. */
+.seed-zone {
+  border: 1px solid var(--color-success, #16a34a);
+  background: var(--color-success-bg, #f0fdf4);
+  margin-bottom: var(--space-4, 1rem);
+}
+
+.seed-zone__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 0.5rem);
+}
+
+.seed-zone__title {
+  margin: 0;
+  color: var(--color-success, #16a34a);
+  font-size: var(--text-lg, 1.125rem);
+}
+
+.seed-zone__desc {
+  margin: var(--space-3, 0.75rem) 0;
+  color: var(--color-text, #1f2937);
+}
+
+/* Vùng nguy hiểm — Xoá dữ liệu hệ thống. Styles scoped trong component (không đụng global). */
+.danger-zone {
+  border: 2px solid var(--overdue, #dc2626);
+  background: var(--overdue-bg, #fef2f2);
+}
+
+.danger-zone__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 0.5rem);
+}
+
+.danger-zone__title {
+  margin: 0;
+  color: var(--overdue, #dc2626);
+  font-size: var(--text-lg, 1.125rem);
+}
+
+.danger-zone__warn {
+  margin: var(--space-3, 0.75rem) 0;
+  color: var(--color-text, #1f2937);
+}
+
+.danger-zone__toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  margin-bottom: var(--space-2, 0.5rem);
+}
+
+.cat-list {
+  list-style: none;
+  margin: 0 0 var(--space-3, 0.75rem);
+  padding: 0;
+  display: grid;
+  gap: var(--space-2, 0.5rem);
+}
+
+.cat-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2, 0.5rem);
+  padding: var(--space-2, 0.5rem) var(--space-3, 0.75rem);
+  border: 1px solid var(--color-border, #e5e7eb);
+  border-radius: var(--radius-md, 8px);
+  background: var(--color-surface, #fff);
+}
+
+.cat-item--on {
+  border-color: var(--overdue, #dc2626);
+  box-shadow: 0 0 0 1px var(--overdue, #dc2626) inset;
+}
+
+.cat-item__label {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3, 0.75rem);
+  cursor: pointer;
+  flex: 1;
+}
+
+.cat-item__text {
+  display: grid;
+  gap: 2px;
+}
+
+.cat-item__desc {
+  color: var(--color-text-muted, #6b7280);
+  font-size: var(--text-sm, 0.875rem);
+}
+
+.cat-item__count {
+  flex: none;
+  white-space: nowrap;
+}
+
+.danger-zone__confirm {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-3, 0.75rem);
+  padding-top: var(--space-3, 0.75rem);
+  border-top: 1px dashed var(--color-border, #e5e7eb);
+}
+
+.danger-zone__confirm .field {
+  flex: 1;
+  max-width: 320px;
+}
+
+.danger-zone__confirm code {
+  background: var(--color-surface-alt, #f3f4f6);
+  padding: 0 4px;
+  border-radius: 4px;
+}

@@ -1,0 +1,111 @@
+<!-- Đăng ký nghỉ (ghi nhận, không phê duyệt). Tab "Đăng ký của tôi" + tab "Tổng hợp" (LEAVE_MANAGE). -->
+<section class="page">
+  <app-page-header title="Đăng ký nghỉ"
+                   subtitle="Ghi nhận ngày nghỉ phép năm / không lương của bạn; quản lý tổng hợp theo khoảng ngày."
+                   [breadcrumb]="[{ label: 'Tổng quan' }, { label: 'Đăng ký nghỉ' }]" />
+
+  <app-tabs [tabs]="tabs()" [(active)]="tab" />
+
+  <!-- ============ Tab: Đăng ký của tôi ============ -->
+  @if (tab() === 'mine') {
+    <data-grid [columns]="entryCols" [rows]="entries()" title="Đơn nghỉ của tôi"
+               searchPlaceholder="Tìm theo lý do…"
+               [emptyText]="loading() ? 'Đang tải…' : 'Bạn chưa có đơn nghỉ nào.'">
+      <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Đăng ký nghỉ</button>
+
+      <ng-template gridCell="type" let-e>
+        @if (e.type === 'ANNUAL') {
+          <span class="badge badge--neutral">Phép năm</span>
+        } @else {
+          <span class="badge badge--cancel">Không lương</span>
+        }
+      </ng-template>
+      <ng-template gridCell="days" let-e><span class="badge badge--neutral">{{ e.days }}</span></ng-template>
+      <ng-template gridCell="actions" let-e>
+        <span class="cell-actions">
+          <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(e)">✎</button>
+          <button type="button" class="btn btn--ghost btn--sm" title="Xoá" (click)="askDelete(e)">🗑</button>
+        </span>
+      </ng-template>
+    </data-grid>
+  }
+
+  <!-- ============ Tab: Tổng hợp (LEAVE_MANAGE) ============ -->
+  @if (tab() === 'summary' && canManage()) {
+    <div class="card" style="margin-bottom: var(--space-4);">
+      <div class="ot-toolbar">
+        <div class="field">
+          <label>Từ ngày</label>
+          <input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" />
+        </div>
+        <div class="field">
+          <label>Đến ngày</label>
+          <input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" />
+        </div>
+        <div class="ot-toolbar__actions">
+          <button type="button" class="btn btn--secondary" (click)="loadSummary()">Xem</button>
+          @if (summary()) {
+            <button type="button" class="btn btn--primary" (click)="exportXlsx()">⬇ Xuất Excel</button>
+          }
+        </div>
+      </div>
+      @if (summary()) {
+        <p class="ot-total">
+          Khoảng <strong>{{ summary()!.from }}</strong> → <strong>{{ summary()!.to }}</strong>:
+          <strong>{{ summary()!.totals.totalDays }}</strong> ngày nghỉ ·
+          Phép năm <strong>{{ summary()!.totals.annualDays }}</strong> ·
+          Không lương <strong>{{ summary()!.totals.unpaidDays }}</strong> ·
+          {{ summary()!.totals.people }} nhân sự
+        </p>
+      }
+    </div>
+
+    <data-grid [columns]="empCols" [rows]="summary()?.byEmployee ?? []" title="Tổng hợp theo nhân sự"
+               searchPlaceholder="Tìm theo tên / bộ phận…"
+               [emptyText]="summaryLoading() ? 'Đang tải…' : 'Không có dữ liệu nghỉ trong khoảng đã chọn.'">
+      <ng-template gridCell="totalDays" let-r><span class="badge badge--neutral">{{ r.totalDays }}</span></ng-template>
+    </data-grid>
+  }
+</section>
+
+<!-- ===== Modal đăng ký / sửa nghỉ ===== -->
+<app-modal [open]="formOpen()" [title]="editId() ? 'Sửa đơn nghỉ' : 'Đăng ký nghỉ'" (closed)="formOpen.set(false)">
+  <form id="leave-form" (ngSubmit)="save()">
+    <div class="form-2col">
+      <div class="field">
+        <label>Từ ngày *</label>
+        <input name="from" type="date" [(ngModel)]="f.fromDate" required />
+      </div>
+      <div class="field">
+        <label>Đến ngày *</label>
+        <input name="to" type="date" [(ngModel)]="f.toDate" required />
+      </div>
+      <div class="field">
+        <label>Loại nghỉ *</label>
+        <select name="type" [(ngModel)]="f.type" required>
+          <option value="ANNUAL">Phép năm</option>
+          <option value="UNPAID">Không lương</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Số ngày nghỉ (xem trước)</label>
+        <input type="text" [value]="previewDays() + ' ngày'" disabled />
+      </div>
+    </div>
+    <div class="field">
+      <label>Lý do</label>
+      <textarea name="reason" rows="2" [(ngModel)]="f.reason" placeholder="VD: Việc gia đình"></textarea>
+    </div>
+    <p class="ot-hint">Số ngày = số ngày làm việc (T2–T6) trong khoảng đã chọn — server tính lại khi lưu. Không cần phê duyệt — chỉ ghi nhận.</p>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="formOpen.set(false)">Hủy</button>
+    <button type="submit" form="leave-form" class="btn btn--primary">{{ editId() ? 'Cập nhật' : 'Đăng ký' }}</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== Xác nhận xoá ===== -->
+<app-confirm-dialog [open]="confirmDeleteOpen()" title="Xoá đơn nghỉ"
+                    message="Bạn có chắc muốn xoá đơn nghỉ này? Thao tác không thể hoàn tác."
+                    confirmLabel="Xoá" [danger]="true"
+                    (confirm)="confirmDelete()" (cancel)="confirmDeleteOpen.set(false)" />

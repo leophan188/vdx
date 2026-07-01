@@ -1,0 +1,12 @@
+# Không gửi vào build context — giảm size & tránh lộ dữ liệu cục bộ.
+target/
+data/
+*.log
+.git/
+.gitignore
+.idea/
+*.iml
+.vscode/
+.DS_Store
+Dockerfile
+.dockerignore

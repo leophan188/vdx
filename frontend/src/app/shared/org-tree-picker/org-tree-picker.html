@@ -1,0 +1,23 @@
+<div class="org-picker">
+  <div class="org-picker__head">
+    <span class="hint" style="margin:0;">
+      @if (selectedLabel()) { Đã chọn: <strong>{{ selectedLabel() }}</strong> }
+      @else { Chọn {{ mode() === 'unit' ? 'đơn vị' : mode() === 'position' ? 'chức danh' : 'nhân sự' }} theo cây tổ chức }
+    </span>
+    <button type="button" class="btn btn--ghost btn--sm" (click)="expandAll()">Mở rộng tất cả</button>
+  </div>
+  <div class="org-picker__tree">
+    @for (n of visible(); track n.key) {
+      <div class="org-node" [class.is-selected]="n.selectable && value() === n.id"
+           [style.padding-left.px]="8 + n.level * 18" (click)="select(n)">
+        @if (hasChildren(n.key)) {
+          <button type="button" class="org-node__caret" [class.open]="expanded().has(n.key)"
+                  (click)="toggle(n.key); $event.stopPropagation()">›</button>
+        } @else { <span class="org-node__caret-spacer"></span> }
+        <span class="org-node__ico">{{ icon(n.type) }}</span>
+        <span class="org-node__label" [class.is-pickable]="n.selectable">{{ n.label }}</span>
+        @if (n.selectable && value() === n.id) { <span class="org-node__check">✓</span> }
+      </div>
+    } @empty { <p class="hint">Chưa có dữ liệu tổ chức.</p> }
+  </div>
+</div>

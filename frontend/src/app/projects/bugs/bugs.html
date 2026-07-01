@@ -1,0 +1,170 @@
+<!-- TAB Quản lý Bug/Issue (gắn trực tiếp vào task cha) -->
+<div class="bug-stats">
+  <span class="badge badge--neutral">Tổng: <strong>{{ stats().total }}</strong></span>
+  <span class="badge badge--cancel">Đang mở: <strong>{{ stats().open }}</strong></span>
+  <span class="badge badge--active">Đã xong: <strong>{{ stats().done }}</strong></span>
+</div>
+
+<!-- Bộ lọc chuẩn — đặt trên lưới, control trái → action phải -->
+<div class="filter-bar">
+  <div class="filter-bar__field">
+    <label>Trạng thái</label>
+    <searchable-select [options]="statusSel" [value]="filterStatus"
+                       (valueChange)="filterStatus = $event"
+                       [allowEmpty]="true" emptyLabel="— Mọi trạng thái —" placeholder="Trạng thái" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Loại</label>
+    <searchable-select [options]="typeSel" [value]="filterType"
+                       (valueChange)="filterType = $event"
+                       [allowEmpty]="true" emptyLabel="— Mọi loại —" placeholder="Loại" />
+  </div>
+  <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">Đặt lại</button>
+  <span class="filter-bar__spacer"></span>
+  <button type="button" class="btn btn--primary" (click)="openReport()">＋ Báo lỗi</button>
+</div>
+
+<data-grid [columns]="cols" [rows]="filtered()"
+           [title]="'Bug / Issue (' + filtered().length + ')'"
+           [pageSize]="50" [pageSizes]="[50, 100, 200]"
+           [emptyText]="loading() ? 'Đang tải…' : 'Chưa có lỗi nào được báo cáo.'">
+  <ng-template gridCell="code" let-t>
+    <button type="button" class="bug-open" (click)="openDetail(t)">{{ t.code }}</button>
+  </ng-template>
+  <ng-template gridCell="type" let-t>
+    <span class="badge" [class]="typeBadge(t.type)">{{ typeLabel(t.type) }}</span>
+  </ng-template>
+  <ng-template gridCell="title" let-t>
+    <button type="button" class="bug-open" (click)="openDetail(t)">{{ t.title }}</button>
+  </ng-template>
+  <ng-template gridCell="status" let-t>
+    <searchable-select [options]="statusSel" [value]="t.status"
+                       (valueChange)="changeStatus(t, $event)" placeholder="Trạng thái" />
+  </ng-template>
+  <ng-template gridCell="priority" let-t>
+    <span class="badge" [class]="priorityBadge(t.priority)">{{ priorityLabel(t.priority) }}</span>
+  </ng-template>
+  <ng-template gridCell="severity" let-t>
+    @if (t.severity) {
+      <span [class]="severityBadge(t.severity)">{{ severityLabel(t.severity) }}</span>
+    } @else { <span class="sev sev--gray">—</span> }
+  </ng-template>
+  <ng-template gridCell="assignee" let-t>
+    @if (t.assigneeUserId) {
+      <employee-chip [code]="t.assigneeCode" [name]="t.assigneeName"
+                     [position]="t.assigneePosition" [dept]="t.assigneeDept" />
+    } @else { — Chưa gán — }
+  </ng-template>
+  <ng-template gridCell="progress" let-t>
+    <div class="bug-progress">
+      <span class="bar"><i [style.width.%]="t.progressPct"></i></span>
+      <span class="pct">{{ t.progressPct }}%</span>
+    </div>
+  </ng-template>
+  <ng-template gridCell="est" let-t>{{ t.estimateHours || 0 }}</ng-template>
+  <ng-template gridCell="act" let-t>
+    <button type="button" class="bug-edit" title="Sửa lỗi" (click)="openEdit(t)">✏️</button>
+  </ng-template>
+</data-grid>
+
+<!-- Modal báo lỗi / sửa lỗi (đầy đủ kiểu Jira) -->
+<app-modal [open]="modalOpen()" [wide]="true" [title]="modalTitle()" (closed)="modalOpen.set(false)">
+  <form id="bug-form" class="bug-form" (ngSubmit)="save()">
+    <div class="field">
+      <label>Task cha *</label>
+      <searchable-select [options]="parentSel()" [value]="f.parentId || ''"
+                         (valueChange)="f.parentId = $event || null"
+                         placeholder="Chọn task cha…" />
+    </div>
+
+    <div class="field">
+      <label>Tiêu đề *</label>
+      <input type="text" name="title" [(ngModel)]="f.title" required placeholder="Mô tả ngắn lỗi…" />
+    </div>
+
+    <div class="form-2col">
+      <div class="field">
+        <label>Loại</label>
+        <searchable-select [options]="typeSel" [value]="f.type || 'BUG'"
+                           (valueChange)="f.type = $any($event)" placeholder="Loại" />
+      </div>
+      <div class="field">
+        <label>Ưu tiên</label>
+        <searchable-select [options]="prioritySel" [value]="f.priority || 'MEDIUM'"
+                           (valueChange)="f.priority = $any($event)" placeholder="Ưu tiên" />
+      </div>
+      <div class="field">
+        <label>Mức độ nghiêm trọng</label>
+        <searchable-select [options]="severitySel" [value]="f.severity || ''"
+                           (valueChange)="f.severity = $any($event) || null"
+                           [allowEmpty]="true" emptyLabel="— Chưa đánh giá —" placeholder="Mức độ…" />
+      </div>
+      <div class="field">
+        <label>Người thực hiện</label>
+        <searchable-select [options]="peopleSel()" [value]="f.assigneeUserId || ''"
+                           (valueChange)="f.assigneeUserId = $event || null"
+                           [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Mô tả</label>
+      <textarea name="description" rows="2" [(ngModel)]="f.description" placeholder="Tóm tắt lỗi…"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Các bước tái hiện</label>
+      <textarea name="stepsToReproduce" rows="3" [(ngModel)]="f.stepsToReproduce"
+                placeholder="1. … &#10;2. … &#10;3. …"></textarea>
+    </div>
+
+    <div class="form-2col">
+      <div class="field">
+        <label>Kết quả mong đợi</label>
+        <textarea name="expectedResult" rows="2" [(ngModel)]="f.expectedResult"
+                  placeholder="Hành vi đúng phải xảy ra…"></textarea>
+      </div>
+      <div class="field">
+        <label>Kết quả thực tế</label>
+        <textarea name="actualResult" rows="2" [(ngModel)]="f.actualResult"
+                  placeholder="Hành vi sai đang xảy ra…"></textarea>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Môi trường</label>
+      <input type="text" name="environment" [(ngModel)]="f.environment"
+             placeholder="Trình duyệt / OS / phiên bản (vd: Chrome 120, Windows 11)" />
+    </div>
+
+    <!-- Đính kèm ảnh NGAY khi báo lỗi (chỉ khi tạo mới) -->
+    @if (!editingId()) {
+      <div class="field">
+        <label>Ảnh đính kèm</label>
+        <div class="bug-att">
+          @for (q of queuedFiles(); track q.url; let i = $index) {
+            <div class="bug-att__item">
+              <img [src]="q.url" alt="ảnh đính kèm" />
+              <button type="button" class="bug-att__del" title="Bỏ ảnh" (click)="removeQueued(i)">✕</button>
+            </div>
+          }
+          <label class="bug-att__add" title="Chọn ảnh">
+            <span>＋ Ảnh</span>
+            <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
+          </label>
+        </div>
+        <span class="field-hint">Có thể chọn nhiều ảnh chụp màn hình lỗi — sẽ tải lên khi bấm "Báo lỗi".</span>
+      </div>
+    }
+  </form>
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>
+    <button type="submit" form="bug-form" class="btn btn--primary" [disabled]="saving()">
+      {{ saving() ? 'Đang lưu…' : (editingId() ? '💾 Lưu thay đổi' : '💾 Báo lỗi') }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Chi tiết task kiểu Jira -->
+<app-prj-task-detail [projectId]="projectId()" [task]="detailTask()" [open]="detailOpen()"
+                     (closed)="closeDetail()" (changed)="reload()" />

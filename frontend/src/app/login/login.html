@@ -1,0 +1,172 @@
+<!-- Màn đăng nhập VMO DX — Hệ thống nội bộ. 2 cột: brand (trái) + form (phải).
+     Style scoped: login.scss. Logic form GIỮ NGUYÊN (username/password/submit/auth.login). -->
+<div class="auth">
+  <!-- Chuyển chế độ Sáng / Tối (góc trên phải) -->
+  <button type="button" class="auth__theme" (click)="themeSvc.toggle()"
+          [attr.aria-label]="themeSvc.theme() === 'dark' ? 'Chuyển chế độ sáng' : 'Chuyển chế độ tối'"
+          [title]="themeSvc.theme() === 'dark' ? 'Chế độ sáng' : 'Chế độ tối'">
+    <span>{{ themeSvc.theme() === 'dark' ? '☀️' : '🌙' }}</span>
+    <span class="auth__theme-txt">{{ themeSvc.theme() === 'dark' ? 'Sáng' : 'Tối' }}</span>
+  </button>
+
+  <div class="auth__body">
+
+    <!-- ============ TRÁI: thương hiệu VMO DX ============ -->
+    <section class="auth__brand">
+      <div class="brand__deco brand__deco--1" aria-hidden="true"></div>
+      <div class="brand__deco brand__deco--2" aria-hidden="true"></div>
+
+      <div class="brand__inner">
+
+        <!-- Logo VMO: mark quỹ đạo + wordmark + tagline -->
+        <div class="brand__logo">
+          <span class="vmo-mark vmo-mark--lg" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
+              <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
+              <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
+            </svg>
+          </span>
+          <span class="brand__word">
+            <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
+            <small class="vmo-tagline">AN ALTEN COMPANY</small>
+            <small class="vmo-sysname">Hệ thống nội bộ</small>
+          </span>
+        </div>
+
+        <!-- Tiêu đề -->
+        <h1 class="brand__title">Chào mừng đến với<br /><span>VMO DX</span></h1>
+        <p class="brand__sub">
+          Hệ thống nội bộ hợp nhất — làm việc, kết nối<br />
+          và quản lý mọi thứ ở một nơi.
+        </p>
+
+        <!-- Lưới 6 phân hệ -->
+        <div class="brand__grid">
+          <article class="mod">
+            <span class="mod__ico mod__ico--blue" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /></svg>
+            </span>
+            <strong>Quản lý dự án</strong>
+            <small>Backlog, kanban, timeline &amp; báo cáo</small>
+          </article>
+
+          <article class="mod">
+            <span class="mod__ico mod__ico--violet" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9.5" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" /></svg>
+            </span>
+            <strong>Quản lý nhân sự</strong>
+            <small>Hồ sơ, cơ cấu, vị trí &amp; vai trò</small>
+          </article>
+
+          <article class="mod">
+            <span class="mod__ico mod__ico--pink" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2zm0 0a2 2 0 0 1-2-2v-9h4" /><path d="M18 14h-8M15 18h-5M10 6h8v4h-8z" /></svg>
+            </span>
+            <strong>Mạng xã hội nội bộ</strong>
+            <small>Bảng tin, sự kiện, thông báo, sinh nhật</small>
+          </article>
+
+          <article class="mod">
+            <span class="mod__ico mod__ico--green" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></svg>
+            </span>
+            <strong>Đăng ký OT</strong>
+            <small>Đăng ký &amp; theo dõi giờ làm thêm</small>
+          </article>
+
+          <article class="mod">
+            <span class="mod__ico mod__ico--orange" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" /></svg>
+            </span>
+            <strong>Tài liệu</strong>
+            <small>Soạn thảo &amp; cộng tác với OnlyOffice</small>
+          </article>
+
+          <article class="mod">
+            <span class="mod__ico mod__ico--teal" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M3 3v18h18" /><path d="m7 15 3-3 3 2 5-6" /><path d="M18 5h3v3" /></svg>
+            </span>
+            <strong>Báo cáo &amp; thống kê</strong>
+            <small>Dashboard dự án &amp; nhân sự</small>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PHẢI: form đăng nhập ============ -->
+    <section class="auth__panel">
+      <form class="loginbox" (ngSubmit)="submit()">
+
+        <!-- Logo gọn cho mobile (ẩn ở desktop) -->
+        <div class="loginbox__brand">
+          <span class="vmo-mark vmo-mark--sm" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
+              <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
+              <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
+            </svg>
+          </span>
+          <span class="brand__word">
+            <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
+            <small class="vmo-sysname">Hệ thống nội bộ</small>
+          </span>
+        </div>
+
+        <h2 class="loginbox__title">Đăng nhập</h2>
+        <p class="loginbox__lead">Vui lòng đăng nhập để tiếp tục sử dụng hệ thống</p>
+
+        <div class="field">
+          <label for="username">Tên đăng nhập</label>
+          <div class="field__control">
+            <span class="field__ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
+            </span>
+            <input id="username" name="username" [(ngModel)]="username" required
+                   autocomplete="username" placeholder="Nhập tên đăng nhập" />
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">Mật khẩu</label>
+          <div class="field__control">
+            <span class="field__ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></svg>
+            </span>
+            <input id="password" name="password" [type]="showPassword() ? 'text' : 'password'"
+                   [(ngModel)]="password" required autocomplete="current-password" placeholder="Nhập mật khẩu" />
+            <button type="button" class="field__toggle" (click)="togglePassword()"
+                    [attr.aria-label]="showPassword() ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'">
+              @if (showPassword()) {
+                <svg viewBox="0 0 24 24"><path d="M9.9 4.2A9.1 9.1 0 0 1 12 4c7 0 10 8 10 8a18 18 0 0 1-2.2 3.3M6.3 6.3A18 18 0 0 0 2 12s3 8 10 8a9 9 0 0 0 3.6-.8" /><path d="m3 3 18 18" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>
+              } @else {
+                <svg viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z" /><circle cx="12" cy="12" r="3" /></svg>
+              }
+            </button>
+          </div>
+        </div>
+
+        @if (error()) {
+          <p class="loginbox__error" role="alert">{{ error() }}</p>
+        }
+
+        <div class="loginbox__row">
+          <label class="checkbox">
+            <input type="checkbox" name="remember" [(ngModel)]="rememberMe" />
+            <span>Ghi nhớ đăng nhập</span>
+          </label>
+          <span class="loginbox__hint">Quên mật khẩu? Liên hệ quản trị</span>
+        </div>
+
+        <button type="submit" class="btn-primary" [disabled]="loading()">
+          {{ loading() ? 'Đang đăng nhập…' : 'Đăng nhập' }}
+        </button>
+      </form>
+    </section>
+  </div>
+
+  <!-- ============ Footer ============ -->
+  <footer class="auth__footer">
+    <span>© 2024 VMO DX. All rights reserved.</span>
+  </footer>
+</div>

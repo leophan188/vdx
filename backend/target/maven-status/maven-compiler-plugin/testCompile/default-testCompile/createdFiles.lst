@@ -1,0 +1,17 @@
+com/bpm/OtEntryComputeTest.class
+com/bpm/CollaborationServiceTest.class
+com/bpm/AuditTrailTest.class
+com/bpm/AuthAndUserAdminIntegrationTest.class
+com/bpm/RoleServiceTest.class
+com/bpm/AssignmentServiceTest.class
+com/bpm/UnassignedQueueTest.class
+com/bpm/OrgUnitServiceTest.class
+com/bpm/DocumentServiceTest.class
+com/bpm/HrDataPadTest.class
+com/bpm/EmployeeFileReaderTest.class
+com/bpm/ExcelReportServiceTest.class
+com/bpm/FormServiceTest.class
+com/bpm/DelegationAndSubstituteTest.class
+com/bpm/WorkflowServiceTest.class
+com/bpm/ProcessServiceTest.class
+com/bpm/PositionServiceTest.class

@@ -1,0 +1,168 @@
+<!-- Phân quyền chức năng — mỗi vai trò phân quyền là một khối: chức năng + thành viên + sửa/xoá. -->
+<section class="page">
+  <app-page-header
+    title="Phân quyền chức năng"
+    subtitle="Tạo vai trò phân quyền, gán chức năng và nhân sự. Nhân sự cùng vai trò có quyền như nhau."
+    [breadcrumb]="[{ label: 'Quản trị hệ thống' }, { label: 'Phân quyền' }]">
+    <span actions>
+      <button type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo vai trò</button>
+    </span>
+  </app-page-header>
+
+  @if (loading()) {
+    <div class="card"><app-skeleton [rows]="8" /></div>
+  } @else if (error()) {
+    <div class="card">
+      <app-empty-state icon="⚠️" title="Không tải được dữ liệu" [hint]="error()!">
+        <button emptyAction type="button" class="btn btn--secondary" (click)="reload()">Thử lại</button>
+      </app-empty-state>
+    </div>
+  } @else if (!roles().length || !featureCount()) {
+    <div class="card">
+      <app-empty-state icon="🔐" title="Chưa có vai trò phân quyền"
+                       hint="Bấm “Tạo vai trò” để thêm vai trò phân quyền đầu tiên.">
+        <button emptyAction type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo vai trò</button>
+      </app-empty-state>
+    </div>
+  } @else {
+    <div class="roles">
+      @for (r of roles(); track r.code) {
+        <div class="role-card card" [class.is-dirty]="isDirty(r.code)">
+          <div class="role-card__head">
+            <div class="role-card__title">
+              <span class="role-card__name">{{ r.name }}</span>
+              <span class="badge badge--neutral">{{ r.code }}</span>
+              @if (isDirty(r.code)) { <span class="badge badge--pending">Chưa lưu</span> }
+            </div>
+            @if (r.description) { <p class="role-card__desc">{{ r.description }}</p> }
+            <div class="role-card__meta">
+              <span class="badge badge--active">{{ countOn(r.code) }} chức năng</span>
+              <span class="badge badge--active">{{ r.memberCount }} nhân sự</span>
+            </div>
+          </div>
+
+          <div class="role-card__features">
+            @for (g of groups(); track g.group) {
+              <div class="fgroup">
+                <div class="fgroup__title">{{ g.group }}</div>
+                <div class="fgroup__items">
+                  @for (f of g.features; track f.key) {
+                    <label class="fcheck" [title]="f.label">
+                      <input type="checkbox"
+                             [checked]="isOn(r.code, f.key)"
+                             (change)="toggle(r.code, f.key)" />
+                      <span class="fcheck__label">{{ f.label }}</span>
+                    </label>
+                  }
+                </div>
+              </div>
+            }
+          </div>
+
+          <div class="role-card__actions">
+            <button type="button" class="btn btn--secondary btn--sm" (click)="openMembers(r)">👥 Thành viên</button>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="openEdit(r)">✎ Sửa</button>
+            <button type="button" class="btn btn--ghost btn--sm" (click)="askDelete(r)">🗑 Xoá</button>
+            <span class="role-card__spacer"></span>
+            <button type="button" class="btn btn--ghost btn--sm"
+                    [disabled]="!isDirty(r.code) || !!saving()"
+                    (click)="resetRow(r.code)">Đặt lại</button>
+            <button type="button" class="btn btn--primary btn--sm"
+                    [disabled]="!isDirty(r.code) || !!saving()"
+                    (click)="saveRow(r)">
+              {{ saving() === r.code ? 'Đang lưu…' : 'Lưu' }}
+            </button>
+          </div>
+        </div>
+      }
+    </div>
+
+    <p class="roles__hint">
+      Bật/tắt chức năng cho từng vai trò rồi bấm <strong>Lưu</strong>. Dùng <strong>Thành viên</strong>
+      để gán nhân sự; nhân sự cùng vai trò có quyền như nhau.
+    </p>
+  }
+</section>
+
+<!-- ===== Modal Tạo / Sửa vai trò ===== -->
+<app-modal [open]="roleModalOpen()"
+           [title]="roleModalMode() === 'create' ? 'Tạo vai trò phân quyền' : 'Sửa vai trò phân quyền'"
+           (closed)="roleModalOpen.set(false)">
+  <form id="rolef" (ngSubmit)="submitRole()">
+    <div class="field">
+      <label>Tên vai trò *</label>
+      <input name="rn" [(ngModel)]="rf.name" required placeholder="VD: Trưởng nhóm dự án" />
+    </div>
+    <div class="field">
+      <label>Mô tả</label>
+      <textarea name="rd" rows="3" [(ngModel)]="rf.description"
+                placeholder="Mô tả ngắn về phạm vi quyền của vai trò…"></textarea>
+    </div>
+    @if (roleModalMode() === 'create') {
+      <p class="hint">Mã vai trò sẽ được sinh tự động. Sau khi tạo, hãy gán chức năng và nhân sự cho vai trò.</p>
+    } @else {
+      <p class="hint">Chức năng đang gán được giữ nguyên; chỉnh chức năng ngay trên khối vai trò.</p>
+    }
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="roleModalOpen.set(false)">Hủy</button>
+    <button type="submit" form="rolef" class="btn btn--primary"
+            [disabled]="!rf.name.trim() || roleSaving()">
+      {{ roleSaving() ? 'Đang lưu…' : (roleModalMode() === 'create' ? 'Tạo vai trò' : 'Lưu thay đổi') }}
+    </button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== Modal Thành viên ===== -->
+<app-modal [open]="memberOpen()"
+           [title]="'Gán nhân sự — ' + (memberRole()?.name || '')" [wide]="true"
+           (closed)="memberOpen.set(false)">
+  @if (memberLoading()) {
+    <app-skeleton [rows]="6" />
+  } @else {
+    <div class="member-bar">
+      <input class="member-search" [ngModel]="memberQuery()" (ngModelChange)="memberQuery.set($event)" name="mq"
+             placeholder="Tìm theo họ tên hoặc mã nhân viên…" />
+      <span class="member-count">{{ memberSelCount() }} đang chọn</span>
+    </div>
+    <div class="member-list">
+      @for (u of memberFiltered(); track u.userId) {
+        <label class="member-row" [class.is-admin]="u.admin">
+          <input type="checkbox" [checked]="isMember(u.userId)" [disabled]="u.admin"
+                 (change)="toggleMember(u.userId)" />
+          <span class="member-row__main">
+            <employee-chip [code]="u.username" [name]="u.fullName"
+                           [position]="u.jobPosition" [dept]="u.deptCode" />
+          </span>
+          <span class="member-row__tags">
+            @if (u.admin) {
+              <span class="badge badge--neutral">Quản trị — luôn đủ quyền</span>
+            } @else if (otherRoleCode(u)) {
+              <span class="badge badge--pending" [title]="'Sẽ chuyển từ ' + roleName(otherRoleCode(u))">
+                Đang ở: {{ roleName(otherRoleCode(u)) }}
+              </span>
+            }
+          </span>
+        </label>
+      } @empty {
+        <div class="member-empty">Không tìm thấy tài khoản phù hợp.</div>
+      }
+    </div>
+    <p class="hint">Bỏ chọn một người sẽ đưa họ về <strong>mặc định (nhân viên)</strong>. Tài khoản quản trị luôn đủ quyền nên không cần gán.</p>
+  }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="memberOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary"
+            [disabled]="memberLoading() || memberSaving()" (click)="saveMembers()">
+      {{ memberSaving() ? 'Đang lưu…' : 'Lưu thành viên' }}
+    </button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== Xác nhận xoá ===== -->
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xoá vai trò phân quyền"
+  [message]="'Bạn có chắc chắn muốn xoá vai trò &quot;' + (delTarget()?.name || '') + '&quot;? Vai trò sẽ được gỡ khỏi ' + (delTarget()?.memberCount || 0) + ' nhân sự (họ trở về mặc định). Hành động này không thể hoàn tác.'"
+  confirmLabel="Xoá vai trò" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="delOpen.set(false)" />

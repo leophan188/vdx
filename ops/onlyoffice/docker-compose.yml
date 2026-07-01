@@ -1,0 +1,28 @@
+# OnlyOffice Document Server cho BPM (Epic 3.10+) — chạy local bằng Docker/Colima.
+# Khởi động:  docker compose -f ops/onlyoffice/docker-compose.yml up -d
+# Truy cập welcome page:  http://localhost:8082/   (UP sau ~30–60s)
+services:
+  onlyoffice:
+    image: onlyoffice/documentserver:8.2
+    container_name: bpm-onlyoffice
+    ports:
+      - "8082:80"            # 8082 = OnlyOffice (8081 đã là backend BPM)
+    environment:
+      - JWT_ENABLED=true
+      - JWT_SECRET=${ONLYOFFICE_JWT_SECRET:-bpm-local-dev-secret}
+      - JWT_HEADER=Authorization
+    volumes:
+      - onlyoffice_data:/var/www/onlyoffice/Data
+      - onlyoffice_logs:/var/log/onlyoffice
+      - onlyoffice_cache:/var/lib/onlyoffice/documentserver/App_Data/cache/files
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80/healthcheck"]
+      interval: 20s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  onlyoffice_data:
+  onlyoffice_logs:
+  onlyoffice_cache:

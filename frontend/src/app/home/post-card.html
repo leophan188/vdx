@@ -1,0 +1,177 @@
+<article class="ochome-card ochome-post" [class.ochome-post--hidden]="current().hidden"
+         [class.ochome-post--celebrate]="isCelebration()">
+  @if (isCelebration()) {
+    <div class="ochome-celebrate-banner">
+      <span class="ochome-celebrate-banner__txt">🎉 Chúc mừng · Sự kiện</span>
+    </div>
+  }
+  <header class="ochome-post__head">
+    <span class="ochome-ava ochome-ava--{{ tone(current().authorName) }}">
+      @if (avatarUrl(current().authorId); as src) {
+        <img class="ochome-ava__img" [src]="src" alt="" (error)="onAvatarError(current().authorId)" />
+      }
+      {{ initials(current().authorName) }}
+    </span>
+    <div class="ochome-post__meta">
+      <strong>{{ current().authorName }}</strong>
+      <small class="ochome-post__sub">
+        {{ fmt(current().createdAt) }}
+        <span class="ochome-cat ochome-cat--{{ current().category }}">{{ current().categoryLabel }}</span>
+        @if (current().topic) { • {{ current().topic }} }
+      </small>
+    </div>
+    @if (current().pinned) { <span class="ochome-pin">📌 Ghim</span> }
+    @if (isAdmin()) {
+      <div class="ochome-post__admin">
+        <button class="ochome-modbtn" (click)="togglePin()">{{ current().pinned ? 'Bỏ ghim' : 'Ghim' }}</button>
+        <button class="ochome-modbtn" (click)="hidePost()">{{ current().hidden ? 'Hiện' : 'Ẩn' }}</button>
+        <button class="ochome-modbtn ochome-modbtn--danger" (click)="deletePost()">Xoá</button>
+      </div>
+    }
+  </header>
+
+  @if (current().hidden) {
+    <p class="ochome-post__text ochome-post__muted">Bài viết đang bị ẩn (chỉ admin thấy).</p>
+  }
+
+  <!-- Hero: ảnh nhân sự được chúc (tin chúc mừng có subjectUserId) — căn giữa, sinh động -->
+  @if (isCelebration() && current().subjectUserId) {
+    <div class="ochome-celebrate-hero">
+      <span class="ochome-celebrate-hero__ring">
+        @if (avatarUrl(current().subjectUserId); as src) {
+          <img class="ochome-celebrate-hero__img" [src]="src" alt=""
+               (error)="onAvatarError(current().subjectUserId)" />
+        } @else {
+          <app-avatar [name]="celebrantName()" [size]="116" />
+        }
+      </span>
+      @if (celebrantName()) { <strong class="ochome-celebrate-hero__name">{{ celebrantName() }}</strong> }
+    </div>
+  }
+
+  @if (current().body) {
+    <p class="ochome-post__text" [innerHTML]="renderBody(current().body, current().mentions)"></p>
+  }
+
+  @if (mediaList().length) {
+    <div class="ochome-media ochome-media--{{ tileCount() }}">
+      @for (m of tiles(); track m.id; let i = $index; let last = $last) {
+        <button type="button" class="ochome-media__tile" (click)="openLightbox(i)"
+                [attr.aria-label]="m.kind === 'IMAGE' ? 'Xem ảnh' : 'Xem video'">
+          @if (m.kind === 'IMAGE') {
+            <img class="ochome-media__thumbimg" [src]="m.url" [alt]="m.name" loading="lazy" />
+          } @else {
+            <video class="ochome-media__thumbimg" [src]="m.url" preload="metadata" muted></video>
+            <span class="ochome-media__play">▶</span>
+          }
+          @if (last && moreCount() > 0) { <span class="ochome-media__more">+{{ moreCount() }}</span> }
+        </button>
+      }
+    </div>
+  }
+
+  @if (lightboxItem(); as lb) {
+    <div class="ochome-lightbox" (click)="closeLightbox()">
+      <button class="ochome-lightbox__close" (click)="closeLightbox()" aria-label="Đóng">✕</button>
+      @if (mediaList().length > 1) {
+        <button class="ochome-lightbox__nav ochome-lightbox__nav--prev"
+                (click)="$event.stopPropagation(); prevMedia()" aria-label="Ảnh trước">‹</button>
+        <button class="ochome-lightbox__nav ochome-lightbox__nav--next"
+                (click)="$event.stopPropagation(); nextMedia()" aria-label="Ảnh sau">›</button>
+      }
+      <div class="ochome-lightbox__stage" (click)="$event.stopPropagation()">
+        @if (lb.kind === 'IMAGE') {
+          <img class="ochome-lightbox__media" [src]="lb.url" [alt]="lb.name" />
+        } @else {
+          <video class="ochome-lightbox__media" [src]="lb.url" controls autoplay></video>
+        }
+      </div>
+      <span class="ochome-lightbox__counter">{{ lightboxIndex()! + 1 }} / {{ mediaList().length }}</span>
+    </div>
+  }
+
+  <div class="ochome-post__stats">
+    <span>{{ current().likeCount }} lượt thích</span>
+    <span class="ochome-post__counts">{{ current().commentCount }} bình luận</span>
+  </div>
+
+  <div class="ochome-post__actions">
+    <button [class.active]="current().liked" (click)="toggleLike()">
+      <svg viewBox="0 0 24 24" class="ochome-ic"><path d="M7 10v11" /><path d="M15 5.9 14 10h5.8a2 2 0 0 1 2 2.5l-2.3 8A2 2 0 0 1 17.6 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h3.3a2 2 0 0 0 1.8-1.1L12 2a3 3 0 0 1 3 3z" /></svg>
+      Thích
+    </button>
+    <button [class.active]="showComments()" (click)="toggleComments()">
+      <svg viewBox="0 0 24 24" class="ochome-ic"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></svg>
+      Bình luận
+    </button>
+  </div>
+
+  @if (showComments()) {
+    <div class="ochome-comments">
+      @for (node of commentTree(); track node.id) {
+        <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: node }"></ng-container>
+      }
+
+      <div class="ochome-comment ochome-comment--new">
+        <span class="ochome-ava ochome-ava--sm ochome-ava--blue">＋</span>
+        <app-mention-box placeholder="Viết bình luận... (gõ @ để nhắc tên)" [value]="draft()"
+                         (textChange)="draft.set($event)" (mentionsChange)="draftMentions.set($event)"
+                         (enter)="submitComment()"></app-mention-box>
+        <button class="ochome-btn-primary ochome-btn--sm" (click)="submitComment()">Gửi</button>
+      </div>
+    </div>
+  }
+
+  <!-- Template đệ quy cho bình luận + reply lồng nhau -->
+  <ng-template #commentTpl let-c>
+    <div class="ochome-comment" [class.ochome-comment--reply]="c.depth > 0" [class.is-deep]="c.depth >= 3">
+      <span class="ochome-ava ochome-ava--sm ochome-ava--{{ tone(c.authorName) }}">
+        @if (avatarUrl(c.authorId); as src) {
+          <img class="ochome-ava__img" [src]="src" alt="" (error)="onAvatarError(c.authorId)" />
+        }
+        {{ initials(c.authorName) }}
+      </span>
+      <div class="ochome-comment__body">
+        @if (editingId() === c.id) {
+          <div class="ochome-comment__edit">
+            <input class="ochome-cinput" [value]="editDraft()" (input)="editDraft.set($any($event.target).value)" />
+            <button class="ochome-btn-primary ochome-btn--sm" (click)="saveEdit(c)">Lưu</button>
+            <button class="ochome-modbtn" (click)="cancelEdit()">Huỷ</button>
+          </div>
+        } @else {
+          <div class="ochome-comment__bubble">
+            <strong>{{ c.authorName }}</strong><span [innerHTML]="renderBody(c.body, c.mentions)"></span>
+            @if (c.edited) { <em class="ochome-comment__edited"> (đã sửa)</em> }
+          </div>
+          <div class="ochome-comment__meta">
+            <span>{{ fmt(c.createdAt) }}</span>
+            <button class="ochome-linkbtn" (click)="startReply(c)">Trả lời</button>
+            @if (c.mine && c.editable) {
+              <button class="ochome-linkbtn" (click)="startEdit(c)">Sửa</button>
+            }
+            @if ((c.mine && c.editable) || isAdmin()) {
+              <button class="ochome-linkbtn ochome-linkbtn--danger" (click)="deleteComment(c)">Xoá</button>
+            }
+            @if (isAdmin() && !c.mine) {
+              <button class="ochome-linkbtn" (click)="deleteComment(c)">Kiểm duyệt</button>
+            }
+          </div>
+        }
+      </div>
+    </div>
+
+    @if (replyingTo() === c.id) {
+      <div class="ochome-comment__replybox">
+        <app-mention-box placeholder="Trả lời... (gõ @ để nhắc tên)" [value]="replyDraft()"
+                         (textChange)="replyDraft.set($event)" (mentionsChange)="replyMentions.set($event)"
+                         (enter)="submitReply(c)"></app-mention-box>
+        <button class="ochome-btn-primary ochome-btn--sm" (click)="submitReply(c)">Gửi</button>
+        <button class="ochome-modbtn" (click)="cancelReply()">Huỷ</button>
+      </div>
+    }
+
+    @for (child of c.children; track child.id) {
+      <ng-container *ngTemplateOutlet="commentTpl; context: { $implicit: child }"></ng-container>
+    }
+  </ng-template>
+</article>

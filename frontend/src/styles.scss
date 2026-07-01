@@ -1,0 +1,14 @@
+/* =========================================================================
+   BPM Platform — global stylesheet.
+   Hệ thiết kế dùng lại: tokens → base → components → shell.
+   Đặc tả: _bmad-output/.../ux-designs/.../DESIGN-SYSTEM.md · Gallery: /styleguide
+   ========================================================================= */
+
+/* Font brand ONEConnect (Sora = tiêu đề, Inter = nội dung) cho màn đăng nhập (login.scss).
+   Nạp qua angular.json "styles" (self-host @fontsource, on-prem) — KHÔNG @use .css (numeric namespace lỗi). */
+
+@use 'styles/tokens';
+@use 'styles/base';
+@use 'styles/components';
+@use 'styles/shell';
+@use 'styles/home';

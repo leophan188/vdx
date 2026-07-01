@@ -1,0 +1,94 @@
+<!-- Báo cáo dự án — % hoàn thành, con số tổng quan, byStatus, byType, byAssignee. -->
+@if (loading()) {
+  <p class="hint">Đang tải báo cáo…</p>
+} @else if (report(); as r) {
+  <!-- % hoàn thành -->
+  <div class="rp-hero">
+    <div class="rp-hero__head">
+      <span class="rp-hero__label">Tiến độ hoàn thành</span>
+      <span class="rp-hero__pct">{{ r.completionPct }}%</span>
+    </div>
+    <div class="rp-progress">
+      <div class="rp-progress__fill" [style.width.%]="r.completionPct"></div>
+    </div>
+    <span class="rp-hero__label">
+      {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc lá hoàn thành ·
+      {{ r.doneEstimate }}/{{ r.totalEstimate }} h
+    </span>
+  </div>
+
+  <!-- Con số tổng quan -->
+  <div class="rp-stats">
+    <div class="rp-stat">
+      <span class="rp-stat__num">{{ r.totalTasks }}</span>
+      <span class="rp-stat__label">Tổng công việc</span>
+    </div>
+    <div class="rp-stat">
+      <span class="rp-stat__num">{{ r.doneTasks }}</span>
+      <span class="rp-stat__label">Đã hoàn thành</span>
+    </div>
+    <div class="rp-stat">
+      <span class="rp-stat__num">{{ r.doneEstimate }}/{{ r.totalEstimate }}</span>
+      <span class="rp-stat__label">Est done / tổng (h)</span>
+    </div>
+    <div class="rp-stat rp-stat--bug">
+      <span class="rp-stat__num">{{ r.bugCount }}</span>
+      <span class="rp-stat__label">Lỗi (bug)</span>
+    </div>
+    <div class="rp-stat rp-stat--overdue">
+      <span class="rp-stat__num">{{ r.overdue }}</span>
+      <span class="rp-stat__label">Quá hạn</span>
+    </div>
+  </div>
+
+  <div class="rp-panels">
+    <!-- byStatus -->
+    <section class="rp-panel">
+      <h3 class="rp-panel__title">Theo trạng thái</h3>
+      @for (b of statusBars(); track b.status) {
+        <div class="rp-barrow">
+          <span>{{ b.label }}</span>
+          <div class="rp-bar">
+            <div class="rp-bar__fill" [style.width.%]="b.pct" [style.background]="b.color"></div>
+          </div>
+          <span class="rp-barrow__val">{{ b.count }}</span>
+        </div>
+      }
+    </section>
+
+    <!-- byType -->
+    <section class="rp-panel">
+      <h3 class="rp-panel__title">Theo loại</h3>
+      @if (typeStats().length) {
+        <div class="rp-types">
+          @for (t of typeStats(); track t.type) {
+            <span class="rp-type">
+              <span class="badge" [class]="t.badge">{{ t.label }}</span>
+              <span class="rp-type__count">{{ t.count }}</span>
+            </span>
+          }
+        </div>
+      } @else {
+        <p class="hint">Chưa có dữ liệu.</p>
+      }
+    </section>
+  </div>
+
+  <!-- byAssignee -->
+  <data-grid [columns]="assigneeCols" [rows]="assigneeRows()"
+             [title]="'Theo người phụ trách (' + assigneeRows().length + ')'"
+             [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
+             emptyText="Chưa có ai được giao việc.">
+    <ng-template gridCell="name" let-a>
+      <employee-chip [name]="a.name" />
+    </ng-template>
+    <ng-template gridCell="donePct" let-a>
+      <div class="rp-progress-cell">
+        <div class="rp-mini-bar"><div class="rp-mini-bar__fill" [style.width.%]="a.donePct"></div></div>
+        <span>{{ a.donePct }}%</span>
+      </div>
+    </ng-template>
+  </data-grid>
+} @else {
+  <p class="hint">Không có dữ liệu báo cáo.</p>
+}

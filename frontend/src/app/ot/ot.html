@@ -1,0 +1,115 @@
+<!-- Công cụ Đăng ký OT (Epic 3, UX-DR6). Tab "OT của tôi" + tab "Tổng hợp" (ADMIN). -->
+<section class="page">
+  <app-page-header title="Đăng ký OT"
+                   subtitle="Đăng ký giờ làm thêm của bạn; quản lý tổng hợp theo khoảng ngày."
+                   [breadcrumb]="[{ label: 'Tổng quan' }, { label: 'Đăng ký OT' }]" />
+
+  <app-tabs [tabs]="tabs()" [(active)]="tab" />
+
+  <!-- ============ Tab: OT của tôi ============ -->
+  @if (tab() === 'mine') {
+    <data-grid [columns]="entryCols" [rows]="entries()" title="OT của tôi"
+               searchPlaceholder="Tìm theo lý do / dự án…"
+               [emptyText]="loading() ? 'Đang tải…' : 'Bạn chưa có đăng ký OT nào.'">
+      <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Đăng ký OT</button>
+
+      <ng-template gridCell="time" let-e>{{ timeLabel(e) }}</ng-template>
+      <ng-template gridCell="hours" let-e><span class="badge badge--neutral">{{ e.hours }}h</span></ng-template>
+      <ng-template gridCell="periodKey" let-e>
+        @if (e.closed) {
+          <span class="badge badge--cancel" title="Kỳ đã chốt">{{ e.periodKey }} 🔒</span>
+        } @else {
+          <span class="badge badge--neutral">{{ e.periodKey }}</span>
+        }
+      </ng-template>
+      <ng-template gridCell="actions" let-e>
+        <span class="cell-actions">
+          @if (e.closed) {
+            <span class="ot-locked-hint" title="Kỳ đã chốt, chỉ xem">Đã chốt</span>
+          } @else {
+            <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(e)">✎</button>
+            <button type="button" class="btn btn--ghost btn--sm" title="Xoá" (click)="askDelete(e)">🗑</button>
+          }
+        </span>
+      </ng-template>
+    </data-grid>
+  }
+
+  <!-- ============ Tab: Tổng hợp theo khoảng ngày (OT_MANAGE) ============ -->
+  @if (tab() === 'summary' && canManage()) {
+    <div class="card" style="margin-bottom: var(--space-4);">
+      <div class="ot-toolbar">
+        <div class="field">
+          <label>Từ ngày</label>
+          <input type="date" [ngModel]="from()" (ngModelChange)="from.set($event)" />
+        </div>
+        <div class="field">
+          <label>Đến ngày</label>
+          <input type="date" [ngModel]="to()" (ngModelChange)="to.set($event)" />
+        </div>
+        <div class="ot-toolbar__actions">
+          <button type="button" class="btn btn--secondary" (click)="loadSummary()">Xem</button>
+          @if (summary()) {
+            <button type="button" class="btn btn--primary" (click)="exportXlsx()">⬇ Xuất Excel</button>
+          }
+        </div>
+      </div>
+      @if (summary()) {
+        <p class="ot-total">
+          Khoảng <strong>{{ summary()!.from }}</strong> → <strong>{{ summary()!.to }}</strong>:
+          <strong>{{ summary()!.totals.totalHours }}h</strong> · {{ summary()!.totals.people }} nhân sự
+        </p>
+      }
+    </div>
+
+    <data-grid [columns]="empCols" [rows]="summary()?.byEmployee ?? []" title="Tổng hợp theo nhân sự"
+               searchPlaceholder="Tìm theo tên / bộ phận…"
+               [emptyText]="summaryLoading() ? 'Đang tải…' : 'Không có dữ liệu OT trong khoảng đã chọn.'">
+      <ng-template gridCell="totalHours" let-r><span class="badge badge--neutral">{{ r.totalHours }}h</span></ng-template>
+    </data-grid>
+  }
+</section>
+
+<!-- ===== Modal đăng ký / sửa OT ===== -->
+<app-modal [open]="formOpen()" [title]="editId() ? 'Sửa đăng ký OT' : 'Đăng ký OT'" (closed)="formOpen.set(false)">
+  <form id="ot-form" (ngSubmit)="save()">
+    <div class="form-2col">
+      <div class="field">
+        <label>Ngày làm thêm *</label>
+        <input name="d" type="date" [(ngModel)]="f.workDate" (ngModelChange)="onWorkDateChange()" required />
+        <span class="ot-hint">{{ isWeekendStr(f.workDate) ? 'Cuối tuần (T7/CN) — mặc định 08:30–17:30; trừ nghỉ trưa: 1h nếu bắt đầu 08:30, 1.5h nếu từ 08:00' : 'Ngày thường — mặc định 17:30–18:30' }}</span>
+      </div>
+      <div class="field">
+        <label>Lý do / Dự án</label>
+        <input name="r" [(ngModel)]="f.reason" placeholder="VD: Chạy báo cáo cuối tháng" />
+      </div>
+      <div class="field">
+        <label>Giờ bắt đầu</label>
+        <input name="st" type="time" [(ngModel)]="f.startTime" />
+      </div>
+      <div class="field">
+        <label>Giờ kết thúc</label>
+        <input name="et" type="time" [(ngModel)]="f.endTime" />
+      </div>
+      <div class="field">
+        <label>Số giờ OT (tự tính, không sửa)</label>
+        <input type="text" [value]="previewHours() + ' giờ'" disabled />
+      </div>
+    </div>
+    <div class="field">
+      <label>Ghi chú</label>
+      <textarea name="n" rows="2" [(ngModel)]="f.note"></textarea>
+    </div>
+    <p class="ot-hint">Số giờ tự tính = giờ kết thúc − giờ bắt đầu (T7/CN trừ 1.5h nghỉ trưa). Chỉ sửa/xoá được khi kỳ chưa chốt.</p>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="formOpen.set(false)">Hủy</button>
+    <button type="submit" form="ot-form" class="btn btn--primary">{{ editId() ? 'Cập nhật' : 'Đăng ký' }}</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== Xác nhận xoá ===== -->
+<app-confirm-dialog [open]="confirmDeleteOpen()" title="Xoá đăng ký OT"
+                    message="Bạn có chắc muốn xoá đăng ký OT này? Thao tác không thể hoàn tác."
+                    confirmLabel="Xoá" [danger]="true"
+                    (confirm)="confirmDelete()" (cancel)="confirmDeleteOpen.set(false)" />

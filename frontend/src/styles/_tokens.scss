@@ -1,0 +1,282 @@
+/* =========================================================================
+   Design tokens — NGUỒN SỰ THẬT duy nhất (DESIGN.md + DESIGN-SYSTEM.md).
+   2 chế độ: Light (mặc định, :root) + Dark (:root[data-theme='dark']).
+   Component KHÔNG hardcode màu — luôn đọc semantic var(--…).
+   ========================================================================= */
+:root {
+  /* --- Màu nền tảng (LIGHT) — brand xanh Nicotex (tham khảo DMS) --- */
+  --color-primary: #ee6c1e;
+  --color-primary-hover: #d65f15;
+  --color-primary-soft: #fdeee2;
+  --color-surface: #ffffff;
+  --color-surface-alt: #f3f7f4;
+  --color-surface-zebra: #fafcfb;
+  --color-overlay: rgba(16, 32, 22, 0.45);
+  --color-border: #dde5e0;
+  --color-text: #18211c;
+  --color-text-muted: #5d6b62;
+  --color-text-invert: #ffffff;
+
+  /* --- Màu trạng thái nhiệm vụ (nghĩa BẤT BIẾN) --- */
+  --status-pending: #b7791f;  --status-pending-bg: #fbf0db;
+  --status-active: #1e66c7;   --status-active-bg: #e2ecfb;
+  --status-done: #2f855a;     --status-done-bg: #dcefe5;
+  --status-cancel: #718096;   --status-cancel-bg: #edf0f3;
+
+  /* --- Cờ quá hạn: TRỰC GIAO (AD-5) --- */
+  --overdue: #c53030;
+  --overdue-bg: #fce8e8;
+
+  /* --- Phản hồi chung --- */
+  --color-error: #c53030;
+  --color-success: #2f855a;
+  --color-success-bg: #e9f8ef;
+  --color-info: #1e66c7;
+  --focus-ring: var(--color-primary);
+
+  /* --- Sidebar navy ONEConnect (token riêng — chrome shell theo brand) --- */
+  --sidebar-bg: #0f172a;
+  --sidebar-fg: #ffffff;
+  --sidebar-fg-muted: #9aa7bd;
+  --sidebar-section: #5b6b85;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: var(--color-primary);
+  --sidebar-active-fg: #ffffff;
+
+  /* --- Toolbar (topbar) — NHUỐM MÀU THEME: tint primary 12% trên surface.
+     Skin KHÔNG set lại --topbar-bg → thừa kế công thức này (tự đổi theo --color-primary skin). --- */
+  --topbar-bg: var(--sidebar-bg);
+  --topbar-fg: var(--sidebar-fg);
+
+  /* --- Accent xanh ONEConnect cho chrome shell (topbar) — tham chiếu primary để lan toả theo accent --- */
+  --brand-blue: var(--color-primary);
+  --brand-blue-hover: var(--color-primary-hover);
+  --brand-blue-soft: var(--color-primary-soft);
+
+  /* --- Chữ --- */
+  --font-sans: 'Be Vietnam Pro', 'Segoe UI', 'Roboto', sans-serif;
+  --font-mono: 'JetBrains Mono', 'Consolas', monospace;
+  --text-xs: 12px;  --text-sm: 13px;  --text-base: 14px;
+  --text-lg: 16px;  --text-xl: 20px;  --text-2xl: 26px;
+  --weight-regular: 400;  --weight-medium: 500;  --weight-semibold: 600;
+
+  /* --- Khoảng cách: lưới 4px --- */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px;  --space-4: 16px;
+  --space-5: 20px; --space-6: 24px; --space-8: 32px;  --space-10: 40px;
+
+  /* --- Bo góc --- */
+  --radius-sm: 4px;  --radius-md: 6px;  --radius-lg: 10px;  --radius-full: 9999px;
+
+  /* --- Bóng --- */
+  --shadow-sm: 0 1px 2px rgba(27, 36, 48, 0.06);
+  --shadow-pop: 0 8px 28px rgba(27, 36, 48, 0.18);
+
+  /* --- Kích thước --- */
+  --control-h: 36px;  --control-h-sm: 30px;  --row-h: 40px;
+  --sidebar-w: 220px; --sidebar-w-collapsed: 56px; --topbar-h: 52px;
+  --content-max: 1180px;
+
+  color-scheme: light;
+}
+
+/* ========================= DARK ========================= */
+:root[data-theme='dark'] {
+  --color-primary: #f47e2c;
+  --color-primary-hover: #ee6c1e;
+  --color-primary-soft: #3a2415;
+  --color-surface: #0e1613;
+  --color-surface-alt: #16201b;
+  --color-surface-zebra: #121b16;
+  --color-overlay: rgba(0, 0, 0, 0.6);
+  --color-border: #283730;
+  --color-text: #e6efe9;
+  --color-text-muted: #93a89c;
+  --color-text-invert: #0e1613;
+
+  --status-pending: #e0a955;  --status-pending-bg: #352a18;
+  --status-active: #6aa6f5;   --status-active-bg: #18293f;
+  --status-done: #5cc08a;     --status-done-bg: #15301f;
+  --status-cancel: #93a89c;   --status-cancel-bg: #212c26;
+
+  --overdue: #f08a8a;
+  --overdue-bg: #371d1d;
+
+  --color-error: #f08a8a;
+  --color-success: #5cc08a;
+  --color-success-bg: #16271d;
+  --color-info: #6aa6f5;
+  --focus-ring: var(--color-primary);
+
+  --sidebar-bg: #0b1220;
+  --sidebar-fg: #e6eefc;
+  --sidebar-fg-muted: #8a99b3;
+  --sidebar-section: #56657f;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-active-bg: var(--color-primary);
+  --sidebar-active-fg: #ffffff;
+
+  /* Topbar dark: tint primary đậm hơn chút (16%) trên surface tối → vẫn nhuốm màu theme, dark-safe. */
+  --topbar-bg: var(--sidebar-bg);
+  --topbar-fg: var(--sidebar-fg);
+
+  --brand-blue: var(--color-primary);
+  --brand-blue-hover: var(--color-primary-hover);
+  --brand-blue-soft: var(--color-primary-soft);
+
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-pop: 0 8px 28px rgba(0, 0, 0, 0.55);
+
+  color-scheme: dark;
+}
+
+/* =========================================================================
+   SKIN PRESETS — mỗi data-accent là 1 BỘ SKIN hoàn chỉnh: theme cả
+   --color-primary*, --sidebar-* (NỀN MENU) và --topbar-* (NỀN TOOLBAR).
+   • Token phụ (brand-blue, focus-ring, sidebar-active-bg) tham chiếu primary → tự lan toả.
+   • --sidebar-active-bg = var(--color-primary) (kế thừa base) → mục đang chọn = màu nhấn, chữ trắng.
+   • DARK mode: mỗi skin override --color-primary* VÀ set lại --sidebar-bg (sidebar GIỮ màu skin
+     ở cả 2 mode, trừ 'minimal' sáng→nền sáng / tối→theo surface). Đặc hiệu [data-theme='dark'][data-accent]
+     (0,3,0) thắng base dark (0,2,0) nên primary + sidebar + accent đúng theo skin.
+   • --topbar-bg KHÔNG set trong skin → thừa kế công thức tint (primary % trên surface) ở base
+     light/dark → topbar TỰ NHUỐM màu theme theo --color-primary của skin (sáng lẫn tối).
+   ========================================================================= */
+
+/* ---- vmo (Cam VMO — MẶC ĐỊNH): sidebar nâu đậm, accent cam, topbar nền sáng ---- */
+:root[data-accent='vmo'] {
+  --color-primary: #ee6c1e; --color-primary-hover: #d65f15; --color-primary-soft: #fdeee2;
+  --sidebar-bg: #2a1c10; --sidebar-fg: #ffffff; --sidebar-fg-muted: #c4ab95; --sidebar-section: #8a7257;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.07);
+  /* --topbar-bg thừa kế công thức tint (primary 12% trên surface) — tự nhuốm cam VMO. */
+}
+:root[data-theme='dark'][data-accent='vmo'] {
+  --color-primary: #f47e2c; --color-primary-hover: #ee6c1e; --color-primary-soft: #3a2415;
+}
+
+/* ---- minimal: sidebar SÁNG, chữ đậm; accent xanh; topbar trắng ---- */
+:root[data-accent='minimal'] {
+  --color-primary: #2563eb; --color-primary-hover: #1d4ed8; --color-primary-soft: #e8f0fe;
+  --sidebar-bg: #ffffff; --sidebar-fg: var(--color-text); --sidebar-fg-muted: var(--color-text-muted);
+  --sidebar-section: var(--color-text-muted); --sidebar-hover-bg: var(--color-surface-alt); --topbar-fg: var(--sidebar-fg);
+}
+:root[data-theme='dark'][data-accent='minimal'] {
+  --color-primary: #3b82f6; --color-primary-hover: #2563eb; --color-primary-soft: #16263f;
+  /* tối: sidebar/topbar theo surface, chữ theo text → tự dark-safe qua var() */
+}
+
+/* ---- navy ---- */
+:root[data-accent='navy'] {
+  --color-primary: #3b82f6; --color-primary-hover: #2563eb; --color-primary-soft: #e8f0fe;
+  --sidebar-bg: #0f172a; --sidebar-fg: #ffffff; --sidebar-fg-muted: #93a3bd; --sidebar-section: #5b6b85;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='navy'] {
+  --color-primary: #60a5fa; --color-primary-hover: #3b82f6; --color-primary-soft: #16263f;
+}
+
+/* ---- slate (accent xám sáng → mục chọn dùng chữ tối cho tương phản) ---- */
+:root[data-accent='slate'] {
+  --color-primary: #94a3b8; --color-primary-hover: #64748b; --color-primary-soft: #eef1f6;
+  --sidebar-bg: #1e293b; --sidebar-fg: #ffffff; --sidebar-fg-muted: #94a3b8; --sidebar-section: #64748b;
+  --sidebar-active-fg: #0f172a;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='slate'] {
+  --color-primary: #cbd5e1; --color-primary-hover: #94a3b8; --color-primary-soft: #1e293b;
+  --sidebar-active-fg: #0f172a;
+}
+
+/* ---- indigo ---- */
+:root[data-accent='indigo'] {
+  --color-primary: #6366f1; --color-primary-hover: #4f46e5; --color-primary-soft: #ebecfe;
+  --sidebar-bg: #312e81; --sidebar-fg: #ffffff; --sidebar-fg-muted: #b8b6e8; --sidebar-section: #8987d4;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='indigo'] {
+  --color-primary: #818cf8; --color-primary-hover: #6366f1; --color-primary-soft: #20204a;
+}
+
+/* ---- ocean ---- */
+:root[data-accent='ocean'] {
+  --color-primary: #0ea5e9; --color-primary-hover: #0284c7; --color-primary-soft: #e0f4fe;
+  --sidebar-bg: #0c4a6e; --sidebar-fg: #ffffff; --sidebar-fg-muted: #9cc4dd; --sidebar-section: #5e93b3;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='ocean'] {
+  --color-primary: #38bdf8; --color-primary-hover: #0ea5e9; --color-primary-soft: #082f44;
+}
+
+/* ---- teal ---- */
+:root[data-accent='teal'] {
+  --color-primary: #14b8a6; --color-primary-hover: #0d9488; --color-primary-soft: #ddf5f1;
+  --sidebar-bg: #134e4a; --sidebar-fg: #ffffff; --sidebar-fg-muted: #9ec9c4; --sidebar-section: #5e958f;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='teal'] {
+  --color-primary: #2dd4bf; --color-primary-hover: #14b8a6; --color-primary-soft: #0d302b;
+}
+
+/* ---- emerald ---- */
+:root[data-accent='emerald'] {
+  --color-primary: #10b981; --color-primary-hover: #059669; --color-primary-soft: #d6f5e6;
+  --sidebar-bg: #064e3b; --sidebar-fg: #ffffff; --sidebar-fg-muted: #93c7b1; --sidebar-section: #5a9379;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='emerald'] {
+  --color-primary: #34d399; --color-primary-hover: #10b981; --color-primary-soft: #0d3024;
+}
+
+/* ---- rose ---- */
+:root[data-accent='rose'] {
+  --color-primary: #f43f5e; --color-primary-hover: #e11d48; --color-primary-soft: #fde7eb;
+  --sidebar-bg: #881337; --sidebar-fg: #ffffff; --sidebar-fg-muted: #d49aab; --sidebar-section: #b56880;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='rose'] {
+  --color-primary: #fb7185; --color-primary-hover: #f43f5e; --color-primary-soft: #3a1620;
+}
+
+/* ---- violet ---- */
+:root[data-accent='violet'] {
+  --color-primary: #8b5cf6; --color-primary-hover: #7c3aed; --color-primary-soft: #f1ebfe;
+  --sidebar-bg: #3b0764; --sidebar-fg: #ffffff; --sidebar-fg-muted: #c2a6e0; --sidebar-section: #9772bf;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='violet'] {
+  --color-primary: #a78bfa; --color-primary-hover: #8b5cf6; --color-primary-soft: #241b3a;
+}
+
+/* ---- amber (accent vàng cam → mục chọn dùng chữ tối) ---- */
+:root[data-accent='amber'] {
+  --color-primary: #f59e0b; --color-primary-hover: #d97706; --color-primary-soft: #fdf0d5;
+  --sidebar-bg: #451a03; --sidebar-fg: #ffffff; --sidebar-fg-muted: #cdab86; --sidebar-section: #a07c52;
+  --sidebar-active-fg: #451a03;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='amber'] {
+  --color-primary: #fbbf24; --color-primary-hover: #f59e0b; --color-primary-soft: #3a2a0f;
+  --sidebar-active-fg: #451a03;
+}
+
+/* ---- midnight ---- */
+:root[data-accent='midnight'] {
+  --color-primary: #818cf8; --color-primary-hover: #6366f1; --color-primary-soft: #e7e8fe;
+  --sidebar-bg: #020617; --sidebar-fg: #ffffff; --sidebar-fg-muted: #8a93ab; --sidebar-section: #5a6582;
+  /* --topbar-bg thừa kế công thức tint theo --color-primary của skin (light + dark). */
+}
+:root[data-theme='dark'][data-accent='midnight'] {
+  --color-primary: #a5b4fc; --color-primary-hover: #818cf8; --color-primary-soft: #181a3a;
+}
+
+/* =========================================================================
+   DARK = MỘT TÔNG TỐI THỐNG NHẤT cho chrome (menu + toolbar), KHÔNG theo skin.
+   Đặt SAU mọi skin preset → thắng source-order, ép --sidebar-* (và topbar thừa kế)
+   về tối chuẩn ở dark mode. CHỈ --color-primary (màu nhấn) vẫn theo skin.
+   ========================================================================= */
+:root[data-theme='dark'] {
+  --sidebar-bg: #0b1220;
+  --sidebar-fg: #e6eefc;
+  --sidebar-fg-muted: #8a99b3;
+  --sidebar-section: #56657f;
+  --sidebar-hover-bg: rgba(255, 255, 255, 0.06);
+  --sidebar-active-fg: #ffffff;
+}

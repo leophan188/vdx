@@ -1,0 +1,85 @@
+<!-- Import Excel → Báo cáo (Epic 4, UX-DR7). -->
+<section class="page">
+  <app-page-header title="Import Excel → Báo cáo"
+                   subtitle="Chọn mẫu báo cáo, tải file Excel đầu vào, kiểm tra định dạng và tải kết quả .xlsx."
+                   [breadcrumb]="[{ label: 'Báo cáo' }, { label: 'Import Excel' }]" />
+
+  <div class="xlrep-card">
+    <label class="field">
+      <span>Mẫu báo cáo</span>
+      <select [value]="selectedKey()" (change)="onTemplateChange($any($event.target).value)">
+        @for (t of templates(); track t.key) {
+          <option [value]="t.key">{{ t.title }}</option>
+        }
+      </select>
+    </label>
+
+    @if (selectedTemplate; as tpl) {
+      <p class="hint">{{ tpl.description }}</p>
+      <div class="field">
+        <span>Cột bắt buộc</span>
+        <div class="xlrep-cols">
+          @for (c of tpl.requiredColumns; track c.header) {
+            <span class="badge badge--neutral">{{ c.header }} ({{ c.type }})</span>
+          }
+        </div>
+      </div>
+    }
+
+    <label class="field">
+      <span>File Excel (.xlsx, ≤10MB)</span>
+      <input type="file" accept=".xlsx" (change)="onFile($event)" />
+    </label>
+
+    @if (validation(); as v) {
+      @if (v.valid) {
+        <div class="badge badge--done">File hợp lệ — {{ v.dataRows }} dòng dữ liệu.</div>
+      } @else {
+        <div class="alert alert--error">
+          Phát hiện {{ v.issues.length }} lỗi định dạng — hãy sửa và tải lại.
+        </div>
+        <div class="xlrep-issues">
+          <table>
+            <thead><tr><th>Dòng</th><th>Cột</th><th>Lỗi</th></tr></thead>
+            <tbody>
+              @for (i of v.issues; track $index) {
+                <tr>
+                  <td>{{ i.row > 0 ? i.row : '—' }}</td>
+                  <td>{{ i.column || '—' }}</td>
+                  <td>{{ i.message }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      }
+    }
+
+    <div class="xlrep-actions">
+      <button type="button" class="btn btn--primary"
+              [disabled]="running() || !file() || (validation() && !validation()!.valid)"
+              (click)="run()">
+        {{ running() ? 'Đang chạy…' : '▶ Chạy báo cáo' }}
+      </button>
+    </div>
+  </div>
+
+  <data-grid [columns]="historyCols" [rows]="history()" title="Lịch sử lần chạy"
+             [emptyText]="loadingHistory() ? 'Đang tải…' : 'Chưa có lần chạy nào.'">
+    <ng-template gridCell="runAt" let-r>{{ fmt(r.runAt) }}</ng-template>
+    <ng-template gridCell="status" let-r>
+      @if (r.status === 'SUCCESS') {
+        <span class="badge badge--done">Thành công</span>
+      } @else {
+        <span class="badge badge--cancel">Thất bại</span>
+      }
+    </ng-template>
+    <ng-template gridCell="actions" let-r>
+      @if (r.hasOutput) {
+        <button type="button" class="btn btn--secondary btn--sm" (click)="downloadRun(r)">⬇ Tải .xlsx</button>
+      } @else {
+        <span class="hint">{{ r.message }}</span>
+      }
+    </ng-template>
+  </data-grid>
+</section>

@@ -1,0 +1,90 @@
+<!-- Báo cáo CHI TIẾT dự án + phân bổ nỗ lực nhân sự (mini-Jira + HR). -->
+<section class="page">
+  <app-page-header title="Báo cáo dự án &amp; nhân sự"
+                   subtitle="Thống kê chi tiết theo dự án và phân bổ nỗ lực theo nhân sự."
+                   [breadcrumb]="[{ label: 'Báo cáo & Thống kê' }, { label: 'Dự án & Nhân sự' }]">
+    <button actions type="button" class="btn btn--ghost btn--sm no-print" (click)="printReport()">🖨 In / PDF</button>
+  </app-page-header>
+
+  @if (loading()) {
+    <p class="hint">Đang tải…</p>
+  } @else if (data(); as d) {
+
+    <!-- ===== Bảng 1: Dự án ===== -->
+    <div class="card">
+      <div class="card__head"><span class="card__title">1 · Dự án</span></div>
+      <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Mã</th><th>Tên dự án</th><th>Trạng thái</th><th class="num">% hoàn thành</th>
+              <th class="num">Thành viên</th><th class="num">Nỗ lực KH (MM)</th><th class="num">Nỗ lực TT (MM)</th>
+              <th class="num">Ngân sách (VND)</th><th class="num">Task trễ</th><th class="num">Bug mở</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of d.projects; track p.id) {
+              <tr>
+                <td>{{ p.code }}</td>
+                <td><a href="javascript:void(0)" (click)="openProject(p.id)">{{ p.name }}</a></td>
+                <td><span class="badge {{ statusBadge(p.status) }}">{{ statusLabel(p.status) }}</span></td>
+                <td class="num">{{ p.completionPct }}%</td>
+                <td class="num">{{ p.memberCount }}</td>
+                <td class="num">{{ p.plannedMm }}</td>
+                <td class="num">{{ p.actualMm }}</td>
+                <td class="num">{{ fmt(p.budget) }}</td>
+                <td class="num">@if (p.overdue) { <span class="badge badge--cancel">{{ p.overdue }}</span> } @else { 0 }</td>
+                <td class="num">@if (p.bugOpen) { <span class="badge badge--pending">{{ p.bugOpen }}</span> } @else { 0 }</td>
+              </tr>
+            }
+            @if (!d.projects.length) { <tr><td colspan="10" class="hint">Chưa có dự án nào.</td></tr> }
+            @if (d.projects.length) {
+              <tr class="report-table__total">
+                <td colspan="7">Tổng</td>
+                <td class="num">{{ fmt(d.project.totalBudget) }}</td>
+                <td class="num">{{ d.project.overdueTasks }}</td>
+                <td class="num">{{ d.project.openBugs }}</td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- ===== Bảng 2: Phân bổ nỗ lực theo nhân sự ===== -->
+    <div class="card">
+      <div class="card__head"><span class="card__title">2 · Phân bổ nỗ lực theo nhân sự</span></div>
+      <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Mã</th><th>Nhân sự</th><th>Bộ phận</th>
+              <th class="num">Số dự án</th><th class="num">Tổng % effort</th>
+              <th class="num">Tổng man-day</th><th class="num">Tổng MM</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (e of d.effortByPerson; track e.empCode) {
+              <tr>
+                <td>{{ e.empCode || '—' }}</td>
+                <td><employee-chip [code]="null" [name]="e.name" /></td>
+                <td>{{ e.deptCode || '—' }}</td>
+                <td class="num">{{ e.projectsCount }}</td>
+                <td class="num">
+                  @if (e.totalEffort > 100) {
+                    <span class="badge badge--cancel">{{ e.totalEffort }}%</span>
+                  } @else { {{ e.totalEffort }}% }
+                </td>
+                <td class="num">{{ e.totalManday }}</td>
+                <td class="num">{{ e.totalMM }}</td>
+              </tr>
+            }
+            @if (!d.effortByPerson.length) { <tr><td colspan="7" class="hint">Chưa có nhân sự nào tham gia dự án.</td></tr> }
+          </tbody>
+        </table>
+      </div>
+    </div>
+  } @else {
+    <p class="hint">Không tải được báo cáo.</p>
+  }
+</section>

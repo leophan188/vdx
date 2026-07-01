@@ -1,0 +1,408 @@
+<!-- Quản lý nhân sự + Import từ file (Epic 1 GĐ2 — chỉ admin). Thay màn "Đồng bộ nhân sự" cũ. -->
+<section class="page">
+  <app-page-header title="Quản lý nhân sự"
+                   subtitle="Danh sách nhân sự + nhập từ file Excel/CSV — xem trước thay đổi trước khi áp dụng."
+                   [breadcrumb]="[{ label: 'Quản trị' }, { label: 'Quản lý nhân sự' }]" />
+
+  <!-- Bộ lọc -->
+  <div class="card">
+    <div class="filter-panel">
+      <div class="field">
+        <label for="f-q">Tìm kiếm</label>
+        <input id="f-q" type="text" [(ngModel)]="filterQ" (keyup.enter)="reload()"
+               placeholder="ID, họ tên, vị trí, chức danh…" />
+      </div>
+      <div class="field">
+        <label>Trạng thái</label>
+        <searchable-select [options]="statusSel()" [value]="filterStatus"
+                           (valueChange)="filterStatus = $event; reload()"
+                           [allowEmpty]="true" placeholder="— Tất cả —" />
+      </div>
+      <div class="field">
+        <label>Bộ phận</label>
+        <searchable-select [options]="deptSel()" [value]="filterDept"
+                           (valueChange)="filterDept = $event; reload()"
+                           [allowEmpty]="true" placeholder="— Tất cả —" />
+      </div>
+      <div class="field">
+        <label>Level</label>
+        <searchable-select [options]="levelSel()" [value]="filterLevel"
+                           (valueChange)="filterLevel = $event; reload()"
+                           [allowEmpty]="true" placeholder="— Tất cả —" />
+      </div>
+      <div class="field">
+        <label>Nguồn</label>
+        <select [value]="filterExternalSig()"
+                (change)="filterExternalSig.set($any($event.target).value)">
+          <option value="">— Tất cả —</option>
+          <option value="no">Nội bộ</option>
+          <option value="yes">Thuê ngoài / mượn</option>
+        </select>
+      </div>
+      <div class="filter-panel__actions">
+        <button type="button" class="btn btn--ghost" (click)="resetFilter()">Đặt lại</button>
+        <button type="button" class="btn btn--primary" (click)="reload()">Lọc</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Thống kê nhanh -->
+  <div class="emp-stats">
+    <span class="badge badge--neutral">Tổng: <strong>{{ stats().total }}</strong></span>
+    <span class="badge badge--active">Đang làm việc: <strong>{{ stats().active }}</strong></span>
+    <span class="badge badge--cancel">Đã nghỉ / khác: <strong>{{ stats().inactive }}</strong></span>
+    <span class="badge badge--pending">Thuê ngoài: <strong>{{ stats().external }}</strong></span>
+  </div>
+
+  <!-- Lưới danh sách -->
+  @if (loading()) {
+    <div class="card"><app-skeleton [rows]="8" /></div>
+  } @else if (displayRows().length === 0) {
+    <div class="card">
+      <app-empty-state icon="👥" title="Chưa có nhân sự nào"
+                       hint="Không có nhân sự khớp bộ lọc. Hãy đặt lại bộ lọc, thêm thủ công, hoặc nhập từ file Excel/CSV.">
+        <button emptyAction type="button" class="btn btn--secondary" (click)="openCreate()">＋ Thêm nhân sự</button>
+        <button emptyAction type="button" class="btn btn--primary" (click)="openImport()">⤓ Import nhân sự</button>
+      </app-empty-state>
+    </div>
+  } @else {
+  <data-grid [columns]="cols" [rows]="displayRows()" [title]="'Danh sách nhân sự (' + stats().total + ')'"
+             [pageSize]="50" [pageSizes]="[50, 100, 200]" [searchable]="false"
+             [emptyText]="'Chưa có nhân sự nào — hãy thêm thủ công hoặc nhập từ file.'">
+    <button gridActions type="button" class="btn btn--secondary" (click)="openCreate()">＋ Thêm nhân sự</button>
+    <button gridActions type="button" class="btn btn--primary" (click)="openImport()">⤓ Import nhân sự</button>
+
+    <ng-template gridCell="employee" let-e>
+      <employee-chip [code]="e.empCode" [name]="e.fullName" [position]="e.jobPosition" [dept]="e.deptCode" />
+      @if (e.external) {
+        <span class="badge badge--pending emp-ext-badge" title="Nhân sự thuê ngoài / mượn — cập nhật thủ công, không bị import đụng vào">Thuê ngoài</span>
+      }
+    </ng-template>
+    <ng-template gridCell="projects" let-e>
+      @if (e.projects?.length) {
+        <span class="emp-projs">
+          @for (p of e.projects; track p) { <span class="badge badge--neutral">{{ p }}</span> }
+        </span>
+      } @else { <span class="hint">—</span> }
+    </ng-template>
+    <ng-template gridCell="effort" let-e>
+      @if (e.totalEffort) {
+        <span class="badge" [class]="e.totalEffort > 100 ? 'badge--cancel' : 'badge--active'"
+              [title]="e.totalEffort > 100 ? 'Vượt 100%!' : ''">{{ e.totalEffort }}%</span>
+      } @else { <span class="hint">0%</span> }
+    </ng-template>
+    <ng-template gridCell="joinDate" let-e>{{ e.joinDate || '—' }}</ng-template>
+    <ng-template gridCell="birthDate" let-e>{{ e.birthDate || '—' }}</ng-template>
+    <ng-template gridCell="status" let-e>
+      <span class="badge" [class]="statusBadge(e.status)">{{ e.status || '—' }}</span>
+    </ng-template>
+    <ng-template gridCell="level" let-e>{{ e.level || '—' }}</ng-template>
+    <ng-template gridCell="actions" let-e>
+      <button type="button" class="btn btn--ghost btn--sm" title="Xem chi tiết / sửa" (click)="openDetail(e)">👁 ✎</button>
+      @if (e.external) {
+        <button type="button" class="btn btn--ghost btn--sm" title="Xoá nhân sự thuê ngoài"
+                (click)="removeExternal(e)">🗑</button>
+      }
+    </ng-template>
+  </data-grid>
+  }
+</section>
+
+<!-- Modal chi tiết & sửa tay (14 trường) -->
+<app-modal [open]="detailOpen()" [wide]="true"
+           [title]="(editing() ? 'Sửa nhân sự · ' : 'Chi tiết nhân sự · ') + (detailTarget()?.empCode ?? '')"
+           (closed)="detailOpen.set(false)">
+  @if (detailTarget(); as t) {
+    <form id="emp-edit" class="form" (ngSubmit)="saveEdit()">
+      <div class="form-2col">
+        <div class="field">
+          <label>ID (mã nhân sự)
+            @if (t.external) {
+              <span class="badge badge--pending emp-ext-badge" title="Nhân sự thuê ngoài / mượn — cập nhật thủ công">Thuê ngoài</span>
+            }
+          </label>
+          <input type="text" [value]="t.empCode" disabled />
+        </div>
+        <div class="field">
+          <label>Trạng thái</label>
+          <input type="text" name="status" [(ngModel)]="e.status" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Họ và tên *</label>
+          <input type="text" name="fullName" [(ngModel)]="e.fullName" [disabled]="!editing()" required />
+        </div>
+        <div class="field">
+          <label>Vị trí công việc</label>
+          <input type="text" name="jobPosition" [(ngModel)]="e.jobPosition" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Chức danh</label>
+          <input type="text" name="title" [(ngModel)]="e.title" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Mã bộ phận</label>
+          <input type="text" name="deptCode" [(ngModel)]="e.deptCode" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Đơn vị</label>
+          <input type="text" name="unit" [(ngModel)]="e.unit" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Ngày tham gia (dd/MM/yyyy)</label>
+          <input type="text" name="joinDate" [(ngModel)]="e.joinDate" [disabled]="!editing()" placeholder="dd/MM/yyyy" />
+        </div>
+        <div class="field">
+          <label>Ngày sinh (dd/MM/yyyy)</label>
+          <input type="text" name="birthDate" [(ngModel)]="e.birthDate" [disabled]="!editing()" placeholder="dd/MM/yyyy" />
+        </div>
+        <div class="field">
+          <label>Số điện thoại</label>
+          <input type="text" name="phone" [(ngModel)]="e.phone" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Loại hợp đồng hiện tại</label>
+          <input type="text" name="contractType" [(ngModel)]="e.contractType" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Số tài khoản</label>
+          <input type="text" name="bankAccount" [(ngModel)]="e.bankAccount" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Ngân hàng</label>
+          <input type="text" name="bankName" [(ngModel)]="e.bankName" [disabled]="!editing()" />
+        </div>
+        <div class="field">
+          <label>Level</label>
+          <input type="text" name="level" [(ngModel)]="e.level" [disabled]="!editing()" />
+        </div>
+      </div>
+      <!-- Liên thông tổ chức (chỉ đọc) — Epic 1 GĐ2 -->
+      <fieldset class="emp-link" disabled>
+        <legend>Liên thông tổ chức</legend>
+        <div class="form-2col">
+          <div class="field">
+            <label>Đơn vị / Bộ phận (cây)</label>
+            <input type="text" [value]="t.orgUnitName || '— chưa nối —'" disabled />
+          </div>
+          <div class="field">
+            <label>Vị trí</label>
+            <input type="text" [value]="t.positionTitle || '— chưa nối —'" disabled />
+          </div>
+          <div class="field">
+            <label>Vai trò</label>
+            <input type="text" [value]="(t.roleNames && t.roleNames.length) ? t.roleNames.join(', ') : '— chưa nối —'" disabled />
+          </div>
+        </div>
+      </fieldset>
+
+      @if (t.updatedAt) {
+        <p class="page-header__sub">Cập nhật lần cuối {{ fmt(t.updatedAt) }} bởi {{ t.updatedBy }}</p>
+      }
+    </form>
+  }
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="detailOpen.set(false)">Đóng</button>
+    @if (!editing()) {
+      <button type="button" class="btn btn--primary" (click)="startEdit()">✎ Sửa tay</button>
+    } @else {
+      <button type="submit" form="emp-edit" class="btn btn--primary">💾 Lưu thay đổi</button>
+    }
+  </div>
+</app-modal>
+
+<!-- Modal tạo mới thủ công (thuê ngoài/mượn) -->
+<app-modal [open]="createOpen()" [wide]="true" title="Thêm nhân sự thuê ngoài / mượn"
+           (closed)="createOpen.set(false)">
+  <form id="emp-create" class="form" (ngSubmit)="saveCreate()">
+    <p class="page-header__sub">
+      Dùng cho nhân sự <strong>thuê ngoài / mượn</strong> — KHÔNG đồng bộ từ file/Google Sheet và KHÔNG bị import đụng vào.
+      Hệ thống tạo tài khoản đăng nhập (username = mã NV, mật khẩu mặc định) để gán vào dự án.
+    </p>
+    <div class="form-2col">
+      <div class="field">
+        <label>ID (mã nhân sự) *</label>
+        <input type="text" name="empCode" [(ngModel)]="c.empCode" required placeholder="vd EXT001" />
+      </div>
+      <div class="field">
+        <label>Họ và tên *</label>
+        <input type="text" name="fullName" [(ngModel)]="c.fullName" required />
+      </div>
+      <div class="field">
+        <label>Trạng thái</label>
+        <input type="text" name="status" [(ngModel)]="c.status" placeholder="Đang làm việc" />
+      </div>
+      <div class="field">
+        <label>Vị trí công việc</label>
+        <input type="text" name="jobPosition" [(ngModel)]="c.jobPosition" />
+      </div>
+      <div class="field">
+        <label>Chức danh</label>
+        <input type="text" name="title" [(ngModel)]="c.title" />
+      </div>
+      <div class="field">
+        <label>Mã bộ phận</label>
+        <input type="text" name="deptCode" [(ngModel)]="c.deptCode" />
+      </div>
+      <div class="field">
+        <label>Đơn vị</label>
+        <input type="text" name="unit" [(ngModel)]="c.unit" />
+      </div>
+      <div class="field">
+        <label>Ngày tham gia (dd/MM/yyyy)</label>
+        <input type="text" name="joinDate" [(ngModel)]="c.joinDate" placeholder="dd/MM/yyyy" />
+      </div>
+      <div class="field">
+        <label>Ngày sinh (dd/MM/yyyy)</label>
+        <input type="text" name="birthDate" [(ngModel)]="c.birthDate" placeholder="dd/MM/yyyy" />
+      </div>
+      <div class="field">
+        <label>Số điện thoại</label>
+        <input type="text" name="phone" [(ngModel)]="c.phone" />
+      </div>
+      <div class="field">
+        <label>Loại hợp đồng hiện tại</label>
+        <input type="text" name="contractType" [(ngModel)]="c.contractType" />
+      </div>
+      <div class="field">
+        <label>Số tài khoản</label>
+        <input type="text" name="bankAccount" [(ngModel)]="c.bankAccount" />
+      </div>
+      <div class="field">
+        <label>Ngân hàng</label>
+        <input type="text" name="bankName" [(ngModel)]="c.bankName" />
+      </div>
+      <div class="field">
+        <label>Level</label>
+        <input type="text" name="level" [(ngModel)]="c.level" />
+      </div>
+    </div>
+  </form>
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="emp-create" class="btn btn--primary" [disabled]="creating()">
+      {{ creating() ? 'Đang lưu…' : '＋ Tạo nhân sự' }}
+    </button>
+  </div>
+</app-modal>
+
+<!-- Modal nhập nhân sự -->
+<app-modal [open]="importOpen()" [xwide]="true" title="Nhập nhân sự"
+           (closed)="importOpen.set(false)">
+  <div class="emp-import-body">
+    <!-- Chọn nguồn: tải file hoặc link Google Sheet -->
+    <div class="emp-modes">
+      <button type="button" class="btn btn--sm" [class.btn--primary]="importMode() === 'file'"
+              [class.btn--ghost]="importMode() !== 'file'" (click)="setMode('file')">⤓ Tải file</button>
+      <button type="button" class="btn btn--sm" [class.btn--primary]="importMode() === 'sheet'"
+              [class.btn--ghost]="importMode() !== 'sheet'" (click)="setMode('sheet')">🔗 Link Google Sheet</button>
+    </div>
+
+    @if (importMode() === 'file') {
+      <div class="emp-upload">
+        <input type="file" accept=".xlsx,.csv" (change)="onFile($event)" />
+        <span class="page-header__sub">Chấp nhận .xlsx hoặc .csv. Dòng banner tiêu đề ở đầu file sẽ tự được bỏ qua.</span>
+      </div>
+    } @else {
+      <div class="field">
+        <label for="sheet-url">Link Google Sheet</label>
+        <input id="sheet-url" type="url" placeholder="https://docs.google.com/spreadsheets/d/.../edit#gid=0"
+               [value]="sheetUrl()" (input)="sheetUrl.set($any($event.target).value); preview.set(null)" />
+        <span class="page-header__sub">⚠️ Sheet phải <strong>chia sẻ "Bất kỳ ai có đường liên kết → Người xem"</strong> hoặc <strong>Tệp → Chia sẻ → Xuất bản lên web (CSV)</strong>. Sheet riêng tư sẽ báo lỗi.</span>
+      </div>
+
+      <!-- Lưu link & tự đồng bộ (Việc 3) -->
+      <div class="emp-sheetcfg">
+        <label style="display:flex; gap:.5rem; align-items:center; cursor:pointer;">
+          <input type="checkbox" [checked]="autoSyncEnabled()" (change)="autoSyncEnabled.set($any($event.target).checked)" />
+          <strong>Tự đồng bộ hàng ngày</strong>
+        </label>
+        @if (autoSyncEnabled()) {
+          <label class="field field--inline" style="gap:.5rem;">
+            <span>Vào lúc:</span>
+            <input type="time" style="width:140px"
+                   [value]="syncTime()" (input)="syncTime.set($any($event.target).value || '02:00')" />
+            <span class="page-header__sub">chạy mỗi ngày một lần vào giờ này (giờ máy chủ)</span>
+          </label>
+        }
+        <div style="display:flex; gap:.5rem; flex-wrap:wrap; align-items:center;">
+          <button type="button" class="btn btn--secondary btn--sm" (click)="saveSheetCfg()">💾 Lưu link</button>
+          <button type="button" class="btn btn--primary btn--sm" (click)="syncSavedNow()"
+                  [disabled]="applying() || !sheetCfg()?.sheetUrl">🔄 Đồng bộ ngay (link đã lưu)</button>
+        </div>
+        @if (sheetCfg(); as cfg) {
+          @if (cfg.lastSyncAt) {
+            <span class="page-header__sub">Lần đồng bộ gần nhất: {{ fmt(cfg.lastSyncAt) }} — {{ cfg.lastSyncStatus }}</span>
+          } @else if (cfg.sheetUrl) {
+            <span class="page-header__sub">Đã lưu link, chưa đồng bộ lần nào.</span>
+          }
+        }
+      </div>
+    }
+    <label class="field field--inline" style="gap:.5rem; cursor:pointer;">
+      <input type="checkbox" [checked]="fullSync()"
+             (change)="fullSync.set($any($event.target).checked); preview.set(null)" />
+      <span>
+        <strong>Đồng bộ toàn phần</strong>
+        <span class="page-header__sub"> — khoá tài khoản nhân sự KHÔNG có trong file (người đang giữ việc sẽ chuyển sang "bàn giao", không khoá). Mặc định tắt để upload từng phần an toàn.</span>
+      </span>
+    </label>
+    <div class="field field--inline">
+      <button type="button" class="btn btn--secondary" (click)="runPreview()"
+              [disabled]="previewing() || (importMode() === 'file' ? !selectedFile() : !sheetUrl().trim())">
+        {{ previewing() ? 'Đang đọc…' : '🔍 Xem trước' }}
+      </button>
+      @if (importMode() === 'file' && selectedFile()) { <span class="page-header__sub">{{ selectedFile()!.name }}</span> }
+    </div>
+
+    @if (preview(); as p) {
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Thêm mới</span><span class="stat-card__value">{{ p.add.length }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Cập nhật</span><span class="stat-card__value">{{ p.update.length }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Sẽ khoá</span><span class="stat-card__value">{{ p.lock.length }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Cần bàn giao</span><span class="stat-card__value">{{ p.handover.length }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Dòng lỗi</span><span class="stat-card__value">{{ p.errors.length }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Đơn vị mới</span><span class="stat-card__value">{{ p.newOrgUnits }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Vị trí mới</span><span class="stat-card__value">{{ p.newPositions }}</span></div></div>
+        <div class="stat-card"><div class="stat-card__body">
+          <span class="stat-card__label">Vai trò mới</span><span class="stat-card__value">{{ p.newRoles }}</span></div></div>
+      </div>
+
+      <data-grid [columns]="previewCols" [rows]="previewRows()" title="Xem trước thay đổi"
+                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                 emptyText="Không có thay đổi nào.">
+        <ng-template gridCell="action" let-r>
+          <span class="badge" [class]="actionBadge(r.action)">{{ actionLabel(r.action) }}</span>
+        </ng-template>
+        <ng-template gridCell="empCode" let-r>{{ r.empCode || '—' }}</ng-template>
+        <ng-template gridCell="jobPosition" let-r>{{ r.jobPosition || '—' }}</ng-template>
+        <ng-template gridCell="deptCode" let-r>{{ r.deptCode || '—' }}</ng-template>
+        <ng-template gridCell="status" let-r>{{ r.status || '—' }}</ng-template>
+        <ng-template gridCell="message" let-r>{{ r.message }}</ng-template>
+      </data-grid>
+    }
+
+    <!-- Lịch sử import (đưa vào trong màn import — Việc 1) -->
+    <details class="emp-history">
+      <summary>Lịch sử import ({{ logs().length }})</summary>
+      <data-grid [columns]="logCols" [rows]="logs()" title="" [searchable]="false"
+                 emptyText="Chưa có lần nhập nào.">
+        <ng-template gridCell="runAt" let-l>{{ fmt(l.runAt) }}</ng-template>
+        <ng-template gridCell="fileName" let-l>{{ l.fileName || '—' }}</ng-template>
+      </data-grid>
+    </details>
+  </div>
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="importOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" (click)="applyImport()"
+            [disabled]="applying() || !preview()">
+      {{ applying() ? 'Đang áp dụng…' : '✓ Áp dụng' }}
+    </button>
+  </div>
+</app-modal>

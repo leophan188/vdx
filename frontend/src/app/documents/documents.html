@@ -1,0 +1,17 @@
+<!-- Tài liệu dự thảo OnlyOffice (Story 3.10). -->
+<section class="page">
+  <app-page-header title="Tài liệu dự thảo"
+                   subtitle="Soạn thảo văn bản trực tiếp trên trình duyệt (OnlyOffice), lưu theo phiên bản."
+                   [breadcrumb]="[{ label: 'Vận hành' }, { label: 'Tài liệu' }]" />
+
+  <data-grid [columns]="cols" [rows]="rows()" title="Danh sách tài liệu"
+             [emptyText]="loading() ? 'Đang tải…' : 'Chưa có tài liệu nào.'">
+    <button gridActions type="button" class="btn btn--primary" (click)="create()">＋ Tạo tài liệu</button>
+
+    <ng-template gridCell="version" let-d><span class="badge badge--neutral">v{{ d.version }}</span></ng-template>
+    <ng-template gridCell="updatedAt" let-d>{{ fmt(d.updatedAt) }}</ng-template>
+    <ng-template gridCell="actions" let-d>
+      <button type="button" class="btn btn--primary btn--sm" (click)="open(d)">✎ Soạn thảo</button>
+    </ng-template>
+  </data-grid>
+</section>

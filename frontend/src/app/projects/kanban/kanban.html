@@ -1,0 +1,124 @@
+<!-- Bảng Kanban dự án — 5 cột theo TaskStatus. Kéo-thả thẻ = đổi trạng thái; bấm thẻ = mở chi tiết. -->
+<div class="filter-bar">
+  <div class="filter-bar__field">
+    <label>Người phụ trách</label>
+    <searchable-select [options]="assigneeSel()" [value]="filterAssignee()"
+                       (valueChange)="filterAssignee.set($event)"
+                       [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Ưu tiên</label>
+    <app-type-filter [options]="priorityChips" [selected]="priorityFilter()" (toggle)="togglePriority($event)" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Lọc theo hạn</label>
+    <div class="kb-datechips">
+      @for (f of dateFilters; track f.key) {
+        <button type="button" class="kb-chip" [class.kb-chip--on]="dateFilter() === f.key"
+                (click)="dateFilter.set(f.key)">{{ f.label }}</button>
+      }
+    </div>
+  </div>
+  <span class="filter-bar__spacer"></span>
+  <button type="button" class="btn btn--ghost btn--sm" (click)="reload()">↻ Tải lại</button>
+</div>
+
+@if (loading()) {
+  <p class="hint">Đang tải công việc…</p>
+} @else {
+  <div class="kb-board">
+    @for (col of columns; track col.status) {
+      <section class="kb-col" [class.is-over]="overStatus() === col.status"
+               [attr.data-status]="col.status">
+        <header class="kb-col__head">
+          <span>{{ col.label }}</span>
+          <span class="kb-col__count">{{ countOf(col.status) }}</span>
+        </header>
+        <div class="kb-col__body">
+          @for (t of cardsOf(col.status); track t.id) {
+            <article class="kb-card" [class.is-dragging]="draggingId() === t.id"
+                     [class.is-overdue]="isOverdue(t)"
+                     (mousedown)="onCardMouseDown($event, t)"
+                     title="Kéo để đổi trạng thái · Bấm để xem chi tiết">
+              <!-- Thuộc về: Epic › Story › Task cha -->
+              @if (t.parentChain.length) {
+                <div class="kb-card__path">
+                  @for (a of t.parentChain; track a.code; let last = $last) {
+                    <span class="kb-card__path-item" [title]="a.code + ' — ' + a.title">
+                      <span class="badge kb-badge--xs" [class]="typeBadge(a.type)">{{ typeLabel(a.type) }}</span>
+                      <span class="kb-card__path-name">{{ a.title }}</span>
+                    </span>
+                    @if (!last) { <span class="kb-card__path-sep">›</span> }
+                  }
+                </div>
+              }
+              <div class="kb-card__top">
+                <span class="kb-card__code">
+                  <span class="badge kb-badge--xs" [class]="typeBadge(t.type)">{{ typeLabel(t.type) }}</span>
+                  {{ t.code }}
+                </span>
+                <span class="kb-card__topright">
+                  <span class="badge" [class]="priorityBadge(t.priority)">{{ priorityLabel(t.priority) }}</span>
+                  <!-- Menu chuyển cột (dự phòng cảm ứng — HTML5 drag không chạy trên touch). -->
+                  <span class="kb-card__menu-wrap">
+                    <button type="button" class="kb-card__menu-btn" title="Chuyển cột"
+                            aria-label="Chuyển cột"
+                            (click)="$event.stopPropagation(); toggleMenu(t.id)">⋮</button>
+                    @if (menuId() === t.id) {
+                      <div class="kb-card__menu-backdrop" (click)="$event.stopPropagation(); closeMenu()"></div>
+                      <div class="kb-card__menu" (click)="$event.stopPropagation()">
+                        <span class="kb-card__menu-title">Chuyển sang</span>
+                        @for (col of columns; track col.status) {
+                          <button type="button" class="kb-card__menu-item"
+                                  [class.is-current]="t.status === col.status"
+                                  [disabled]="t.status === col.status"
+                                  (click)="pickStatus(t.id, col.status)">
+                            <span class="kb-card__menu-check">{{ t.status === col.status ? '✓' : '' }}</span>
+                            <span>{{ col.label }}</span>
+                          </button>
+                        }
+                      </div>
+                    }
+                  </span>
+                </span>
+              </div>
+              <div class="kb-card__title">{{ t.title }}</div>
+              <div class="kb-card__meta">
+                @if (t.assigneeUserId) {
+                  <employee-chip [code]="t.assigneeCode" [name]="t.assigneeName"
+                                 [position]="t.assigneePosition" [dept]="t.assigneeDept" />
+                } @else {
+                  <span class="kb-card__est">Chưa giao</span>
+                }
+                @if (t.estimateHours) { <span class="kb-card__est">{{ t.estimateHours }}h</span> }
+              </div>
+              @if (t.dueDate) {
+                <div class="kb-card__due">
+                  @if (isOverdue(t)) {
+                    <span class="badge kb-badge--xs kb-due--over">⚠ Trễ hạn · {{ t.dueDate }}</span>
+                  } @else {
+                    <span class="kb-card__est">📅 Hạn {{ t.dueDate }}</span>
+                  }
+                </div>
+              }
+              <!-- Tiến độ hoàn thành -->
+              <div class="kb-card__progress">
+                <div class="kb-card__bar" [class.is-done]="pct(t) === 100">
+                  <i [style.width.%]="pct(t)"></i>
+                </div>
+                <span class="kb-card__pct">{{ pct(t) }}%</span>
+              </div>
+            </article>
+          } @empty {
+            <div class="kb-empty">— Trống —</div>
+          }
+        </div>
+      </section>
+    }
+  </div>
+
+  <!-- Thẻ "bóng ma" bám theo con trỏ khi đang kéo -->
+  @if (ghost(); as g) {
+    <div class="kb-ghost" [style.left.px]="g.x" [style.top.px]="g.y">{{ g.label }}</div>
+  }
+}

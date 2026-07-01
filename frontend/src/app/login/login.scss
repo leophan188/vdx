@@ -1,0 +1,338 @@
+/* Màn đăng nhập VMO DX — Hệ thống nội bộ. Scoped.
+   Panel brand TRÁI: gradient brand tự chứa (luôn nền tối, chữ trắng → an toàn light/dark).
+   Card form PHẢI + footer: dùng token semantic color/brand/space/text (dark mode an toàn). */
+:host { display: block; }
+
+.auth {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: var(--color-surface);
+  font-family: var(--font-sans);
+  color: var(--color-text);
+}
+
+/* Nút chuyển Sáng/Tối — góc trên phải (trên panel form) */
+.auth__theme {
+  position: absolute; top: 18px; right: 20px; z-index: 5;
+  display: inline-flex; align-items: center; gap: 6px;
+  height: 34px; padding: 0 12px; border-radius: var(--radius-full);
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  color: var(--color-text); font-family: inherit; font-size: 13px; font-weight: 600; cursor: pointer;
+}
+.auth__theme:hover { border-color: var(--color-primary); color: var(--color-primary); }
+.auth__theme-txt { line-height: 1; }
+
+.auth__body {
+  flex: 1;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  min-height: 0;
+}
+
+/* Base icon: nét tròn, không tô */
+.mod__ico svg, .field__ico svg, .field__toggle svg {
+  fill: none;
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+/* ===== Logo VMO: mark QUỸ ĐẠO (2 cung cam xoáy + tâm) — dùng chung ===== */
+.vmo-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex: none;
+}
+.vmo-mark svg { width: 100%; height: 100%; display: block; }
+.vmo-mark__arc1, .vmo-mark__arc2 {
+  fill: none;
+  stroke: var(--color-primary);
+  stroke-width: 5;
+  stroke-linecap: round;
+}
+.vmo-mark__core { fill: var(--color-primary); }
+.vmo-mark--lg { width: 52px; height: 52px; }
+.vmo-mark--sm { width: 40px; height: 40px; }
+
+/* Wordmark VMO DX: V cam, MO theo nền, DX nhẹ */
+.brand__word { display: flex; flex-direction: column; line-height: 1.18; }
+.brand__word strong { font-size: 21px; font-weight: 700; color: var(--color-text); }
+.brand__word strong .vmo-v { color: var(--color-primary); font-weight: 800; }
+.brand__word strong em { font-style: normal; font-weight: 600; color: var(--color-text-muted); }
+.brand__word small { font-size: var(--text-xs); color: var(--color-text-muted); letter-spacing: 0.2px; }
+.vmo-tagline { text-transform: uppercase; letter-spacing: 2px; font-size: 10px; font-weight: 600; }
+.vmo-sysname { margin-top: 1px; }
+
+/* ===== TRÁI: brand ===== */
+.auth__brand {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-10) 60px;
+  color: #fff;
+  background:
+    radial-gradient(120% 90% at 12% 8%, rgba(238, 108, 30, 0.45), transparent 55%),
+    radial-gradient(120% 90% at 92% 100%, rgba(238, 108, 30, 0.28), transparent 55%),
+    linear-gradient(155deg, #2a2018 0%, #221a14 38%, #161310 100%);
+}
+/* Trang trí: vòng tròn mờ */
+.brand__deco {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+.brand__deco--1 {
+  width: 360px; height: 360px;
+  top: -120px; right: -100px;
+  background: radial-gradient(circle, rgba(238, 108, 30, 0.35), transparent 70%);
+}
+.brand__deco--2 {
+  width: 300px; height: 300px;
+  bottom: -110px; left: -90px;
+  background: radial-gradient(circle, rgba(244, 126, 44, 0.22), transparent 70%);
+}
+
+.brand__inner {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  max-width: 540px;
+}
+
+.brand__logo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-8);
+}
+/* Panel nền tối: MO trắng, V cam, DX/tagline sáng mờ */
+.brand__logo .brand__word strong { color: #fff; }
+.brand__logo .brand__word strong .vmo-v { color: var(--color-primary); }
+.brand__logo .brand__word strong em { color: rgba(255, 255, 255, 0.7); }
+.brand__logo .brand__word small { color: rgba(255, 255, 255, 0.6); }
+
+.brand__title {
+  margin: 0;
+  font-size: 38px;
+  line-height: 1.18;
+  font-weight: 700;
+  letter-spacing: -0.4px;
+}
+.brand__title span {
+  background: linear-gradient(90deg, #f7a35c, #ee6c1e);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: #f7a35c;
+}
+
+.brand__sub {
+  margin: var(--space-4) 0 0;
+  max-width: 460px;
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.78);
+}
+
+.brand__grid {
+  margin-top: var(--space-8);
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: var(--space-3);
+}
+.mod {
+  padding: var(--space-4);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: background 0.18s ease, transform 0.18s ease, border-color 0.18s ease;
+}
+.mod:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.22);
+  transform: translateY(-2px);
+}
+.mod__ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-3);
+}
+.mod__ico svg { width: 21px; height: 21px; stroke: currentColor; }
+.mod__ico--blue   { background: rgba(59, 130, 246, 0.22); color: #93c5fd; }
+.mod__ico--violet { background: rgba(124, 58, 237, 0.22); color: #c4b5fd; }
+.mod__ico--pink   { background: rgba(236, 72, 153, 0.2);  color: #f9a8d4; }
+.mod__ico--green  { background: rgba(34, 197, 94, 0.2);   color: #86efac; }
+.mod__ico--orange { background: rgba(249, 115, 22, 0.2);  color: #fdba74; }
+.mod__ico--teal   { background: rgba(20, 184, 166, 0.22); color: #5eead4; }
+.mod strong { display: block; font-size: var(--text-base); font-weight: 600; margin-bottom: var(--space-1); }
+.mod small {
+  display: block;
+  font-size: var(--text-xs);
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.66);
+}
+
+/* ===== PHẢI: form ===== */
+.auth__panel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-8) var(--space-10);
+  background: var(--color-surface);
+}
+.loginbox { width: 100%; max-width: 384px; display: flex; flex-direction: column; }
+
+/* Logo trong form: chỉ hiện ở mobile */
+.loginbox__brand {
+  display: none;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+.loginbox__title {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 700;
+  color: var(--color-text);
+}
+.loginbox__lead {
+  margin: var(--space-2) 0 var(--space-8);
+  font-size: var(--text-base);
+  color: var(--color-text-muted);
+}
+
+.field { margin-bottom: var(--space-5); }
+.field label {
+  display: block;
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text);
+}
+.field__control { position: relative; display: flex; align-items: center; }
+.field__ico { position: absolute; left: 14px; display: inline-flex; pointer-events: none; }
+.field__ico svg { width: 19px; height: 19px; stroke: var(--color-text-muted); }
+.field__control input {
+  width: 100%;
+  height: 48px;
+  padding: 0 44px 0 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  color: var(--color-text);
+  transition: border-color 0.16s ease, box-shadow 0.16s ease;
+}
+.field__control input::placeholder { color: var(--color-text-muted); }
+.field__control input:hover { border-color: var(--color-primary); }
+.field__control input:focus,
+.field__control input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-primary-soft);
+}
+.field__toggle {
+  position: absolute;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.field__toggle:hover { background: var(--color-surface-alt); color: var(--color-text); }
+.field__toggle svg { width: 19px; height: 19px; stroke: currentColor; }
+
+.loginbox__error {
+  margin: calc(var(--space-1) * -1) 0 var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md);
+  background: var(--color-surface-alt);
+  border: 1px solid var(--color-error);
+  color: var(--color-error);
+  font-size: var(--text-sm);
+}
+
+.loginbox__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+.checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  cursor: pointer;
+}
+.checkbox input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  accent-color: var(--color-primary);
+  cursor: pointer;
+}
+.loginbox__hint { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+.btn-primary {
+  height: 50px;
+  border: none;
+  border-radius: var(--radius-lg);
+  background: linear-gradient(180deg, var(--color-primary) 0%, var(--color-primary-hover) 100%);
+  color: #fff;
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(238, 108, 30, 0.3);
+  transition: filter 0.16s ease, box-shadow 0.16s ease, transform 0.06s ease;
+}
+.btn-primary:hover { filter: brightness(1.06); box-shadow: 0 10px 22px rgba(238, 108, 30, 0.38); }
+.btn-primary:active { transform: translateY(1px); }
+.btn-primary:disabled { opacity: 0.6; cursor: default; box-shadow: none; }
+
+/* ===== Footer ===== */
+.auth__footer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-4) var(--space-10);
+  border-top: 1px solid var(--color-border);
+  font-size: var(--text-xs);
+  color: var(--color-text-muted);
+  background: var(--color-surface);
+}
+
+/* ===== Responsive: ≤860px xếp dọc (form ưu tiên, brand thu gọn/ẩn) ===== */
+@media (max-width: 860px) {
+  .auth__body { grid-template-columns: 1fr; }
+  .auth__brand { display: none; }
+  .auth__panel { padding: var(--space-10) var(--space-6); }
+  .loginbox__brand { display: flex; }
+  .auth__footer { padding: var(--space-4) var(--space-6); text-align: center; }
+}

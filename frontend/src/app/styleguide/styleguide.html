@@ -1,0 +1,129 @@
+<!-- Gallery sống — hệ thống thiết kế BPM (DESIGN-SYSTEM.md). Thêm pattern mới thì cập nhật ở đây. -->
+<section class="page">
+  <h1>Hệ thống thiết kế</h1>
+  <p class="hint">Bộ token + component dùng chung. Mọi màn mới ráp từ đây, không hardcode màu/kích thước.</p>
+
+  <div class="toolbar-row">
+    <button type="button" class="btn btn--secondary" (click)="themeSvc.toggle()">
+      {{ themeSvc.theme() === 'dark' ? '☀️ Chuyển sáng' : '🌙 Chuyển tối' }}
+    </button>
+    <span class="hint" style="margin:0;">Chế độ hiện tại: <strong>{{ themeSvc.theme() }}</strong> — toàn bộ component tự đổi theo token.</span>
+  </div>
+
+  <h2>Page header + Breadcrumb</h2>
+  <div class="card">
+    <app-page-header title="Tiêu đề màn" subtitle="Mô tả ngắn của màn hình."
+                     [breadcrumb]="[{ label: 'Nhóm' }, { label: 'Màn hiện tại' }]" />
+  </div>
+
+  <h2>Avatar</h2>
+  <div class="sg-row">
+    <app-avatar name="admin" />
+    <app-avatar name="Nguyễn Văn An" [size]="44" bg="var(--status-active)" />
+    <app-avatar name="Trần Bình" [size]="28" bg="var(--status-pending)" />
+  </div>
+
+  <h2>Thẻ KPI (StatCard)</h2>
+  <div class="stats-grid">
+    <stat-card icon="👤" label="Tài khoản" value="1.256" tint="var(--color-primary)" trend="5,3% so tháng trước" />
+    <stat-card icon="🏛️" label="Đơn vị" value="128" tint="var(--status-active)" />
+    <stat-card icon="🪪" label="Vị trí" value="342" tint="var(--status-pending)" />
+    <stat-card icon="🛡️" label="Vai trò" value="24" tint="var(--status-done)" />
+  </div>
+
+  <h2>Màu (token)</h2>
+  <div class="sg-swatches">
+    @for (s of swatches; track s.name) {
+      <div class="sg-swatch">
+        <span class="sg-chip" [style.background]="'var(' + s.var + ')'"></span>
+        <div><strong>{{ s.name }}</strong><br /><code>{{ s.var }}</code></div>
+      </div>
+    }
+  </div>
+
+  <h2>Badge trạng thái</h2>
+  <div class="sg-row">
+    <status-badge status="pending" />
+    <status-badge status="active" />
+    <status-badge status="done" />
+    <status-badge status="cancel" />
+    <status-badge status="active" [overdue]="true" label="Đang xử lý" />
+  </div>
+  <p class="hint">Cờ quá hạn = chấm đỏ chồng lên, không đổi màu badge gốc (AD-5 trực giao).</p>
+
+  <h2>Button</h2>
+  <div class="sg-row">
+    <button type="button" class="btn btn--primary">Primary</button>
+    <button type="button" class="btn btn--secondary">Secondary</button>
+    <button type="button" class="btn btn--ghost">Ghost</button>
+    <button type="button" class="btn btn--danger">Xóa</button>
+    <button type="button" class="btn btn--primary" disabled>Disabled</button>
+  </div>
+
+  <h2>Popup (Modal &amp; Confirm)</h2>
+  <div class="sg-row">
+    <button type="button" class="btn btn--primary" (click)="modalOpen.set(true)">Mở modal</button>
+    <button type="button" class="btn btn--danger" (click)="confirmOpen.set(true)">Mở xác nhận xóa</button>
+  </div>
+
+  <h2>DataGrid (toolbar + lọc + sort + phân trang + hàng mở rộng)</h2>
+  <data-grid [columns]="demoCols" [rows]="demoRows" title="Hồ sơ mẫu" searchPlaceholder="Tìm hồ sơ…"
+             [pageSize]="3" [pageSizes]="[3, 5, 10]" [expandable]="true">
+    <select gridFilters class="grid__search" style="border-radius: var(--radius-md);">
+      <option>-- Chọn đơn vị --</option><option>00 – Công ty mẹ</option>
+    </select>
+    <button gridActions type="button" class="btn btn--primary">＋ Thêm</button>
+    <ng-template gridCell="status" let-r>
+      <status-badge [status]="r.status" [overdue]="r.overdue" />
+    </ng-template>
+    <ng-template gridCell="actions" let-r>
+      <span class="cell-actions">
+        <button type="button" class="btn btn--ghost btn--sm" title="Xem">👁</button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Sửa">✎</button>
+      </span>
+    </ng-template>
+    <ng-template gridDetail let-r>
+      <strong>Chi tiết {{ r.code }}</strong> — {{ r.name }}
+      <table class="data-table" style="margin-top: var(--space-2);">
+        <thead><tr><th>#</th><th>Tài liệu</th><th>Bản</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>{{ r.name }} - tệp 1.pdf</td><td>v1.0</td></tr>
+          <tr><td>2</td><td>{{ r.name }} - tệp 2.docx</td><td>v1.0</td></tr>
+        </tbody>
+      </table>
+    </ng-template>
+  </data-grid>
+
+  <h2>Card &amp; Alert</h2>
+  <div class="sg-row">
+    <div class="card">Thẻ nội dung (.card) — viền + bóng nhẹ.</div>
+  </div>
+  <div class="sg-row">
+    <span class="alert alert--info">Thông tin</span>
+    <span class="alert alert--success">Thành công</span>
+    <span class="alert alert--error">Lỗi</span>
+  </div>
+
+  <h2>Canvas (Epic 2)</h2>
+  <div class="canvas"></div>
+  <p class="hint">Khung nền chấm lưới cho process designer / form builder — dựng chi tiết khi vào Epic 2.</p>
+</section>
+
+<app-modal [open]="modalOpen()" title="Modal mẫu" (closed)="modalOpen.set(false)">
+  <div class="field">
+    <label for="sg-mi">Trường ví dụ</label>
+    <input id="sg-mi" placeholder="Nhập giá trị…" />
+  </div>
+  <p class="hint" style="margin:0;">Đóng bằng nút ×, nút Hủy, phím ESC, hoặc click nền.</p>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" (click)="modalOpen.set(false)">Lưu</button>
+  </ng-container>
+</app-modal>
+
+<app-confirm-dialog
+  [open]="confirmOpen()"
+  title="Xóa mục này?"
+  message="Hành động không thể hoàn tác."
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmOpen.set(false)" (cancel)="confirmOpen.set(false)" />

@@ -1,0 +1,79 @@
+<!-- Tab Thành viên dự án -->
+<data-grid [columns]="cols" [rows]="members()"
+           [title]="'Thành viên dự án (' + members().length + ')'"
+           [searchPlaceholder]="'Tìm tên, mã NV…'"
+           [emptyText]="loading() ? 'Đang tải…' : 'Chưa có thành viên — hãy thêm người vào dự án.'">
+  <button gridActions type="button" class="btn btn--primary" (click)="openAdd()">＋ Thêm thành viên</button>
+
+  <ng-template gridCell="member" let-m>
+    <employee-chip [code]="m.empCode" [name]="m.name" [position]="m.jobPosition" [dept]="m.deptCode" />
+  </ng-template>
+  <ng-template gridCell="role" let-m>
+    <span class="badge" [class]="roleBadge(m.roleInProject)">{{ roleLabel(m.roleInProject) }}</span>
+  </ng-template>
+  <ng-template gridCell="period" let-m>
+    @if (m.startDate || m.endDate) { {{ m.startDate || '—' }} → {{ m.endDate || '—' }} } @else { <span class="hint">— chưa đặt —</span> }
+  </ng-template>
+  <ng-template gridCell="effort" let-m>
+    <span class="badge badge--neutral">{{ m.effortPct }}%</span>
+  </ng-template>
+  <ng-template gridCell="manday" let-m>
+    <strong>{{ m.manday }}</strong> <span class="hint">md</span>
+    @if (m.workdays && m.effortPct < 100) { <span class="hint">({{ m.workdays }}×{{ m.effortPct }}%)</span> }
+  </ng-template>
+  <ng-template gridCell="mm" let-m>
+    <strong>{{ mm(m.manday) }}</strong> <span class="hint">MM</span>
+  </ng-template>
+  <ng-template gridCell="actions" let-m>
+    <button type="button" class="btn btn--ghost btn--sm" title="Gỡ khỏi dự án" (click)="remove(m)">🗑 Gỡ</button>
+  </ng-template>
+</data-grid>
+
+<!-- Modal thêm thành viên -->
+<app-modal [open]="addOpen()" title="Thêm thành viên vào dự án" (closed)="addOpen.set(false)">
+  <div class="prj-mb__add">
+    <div class="field">
+      <label>Chọn người</label>
+      <searchable-select [options]="peopleOptions()" [value]="selUserId"
+                         (valueChange)="selUserId = $event"
+                         placeholder="Gõ tên hoặc mã nhân viên…" />
+    </div>
+    <div class="field">
+      <label>Vai trò trong dự án</label>
+      <div class="prj-mb__roles">
+        @for (r of roles; track r) {
+          <button type="button" class="prj-mb__role-btn"
+                  [class.prj-mb__role-btn--on]="selRole === r"
+                  (click)="pickRole(r)">{{ roleLabel(r) }}</button>
+        }
+      </div>
+    </div>
+    <div class="form-2col">
+      <div class="field">
+        <label>Ngày bắt đầu</label>
+        <input type="date" [(ngModel)]="selStart" name="ms" />
+      </div>
+      <div class="field">
+        <label>Ngày kết thúc</label>
+        <input type="date" [(ngModel)]="selEnd" name="me" />
+      </div>
+      <div class="field">
+        <label>% Effort dành cho dự án</label>
+        <input type="number" min="1" max="100" step="5" [(ngModel)]="selEffort" name="mef" />
+      </div>
+    </div>
+    <p class="hint">
+      Ngày công (T2–T6): <strong>{{ previewWorkdays() }}</strong> ·
+      <strong>Man-day</strong> thực tế = ngày công × {{ selEffort }}% =
+      <strong>{{ previewManday() }}</strong> ngày.
+      <br>Hệ thống sẽ chặn nếu tổng % effort của người này qua các dự án vượt 100%.
+    </p>
+  </div>
+
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="addOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" [disabled]="saving() || !selUserId" (click)="save()">
+      {{ saving() ? 'Đang thêm…' : 'Thêm vào dự án' }}
+    </button>
+  </div>
+</app-modal>

@@ -1,0 +1,112 @@
+<!-- Quản trị vai trò & phân quyền (Story 1.4): lưới vai trò + popup tạo/gán cho vị trí. -->
+<section class="page">
+  <app-page-header title="Vai trò & phân quyền"
+                   subtitle="Định nghĩa vai trò và gán cho vị trí; quyền kế thừa qua vị trí."
+                   [breadcrumb]="[{ label: 'Quản trị hệ thống' }, { label: 'Vai trò' }]" />
+
+  @if (error()) { <p class="alert alert--error" role="alert">{{ error() }}</p> }
+  @if (message()) { <p class="alert alert--success" role="status">{{ message() }}</p> }
+
+  <data-grid [columns]="cols" [rows]="roles()" title="Vai trò" searchPlaceholder="Tìm theo mã/tên…"
+             emptyText="Chưa có vai trò nào.">
+    <span gridActions class="cell-actions">
+      <button type="button" class="btn btn--secondary" (click)="openAssign()">Gán cho vị trí</button>
+      <button type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo vai trò</button>
+    </span>
+
+    <ng-template gridCell="permissions" let-r>
+      @for (p of r.permissions; track p) {
+        <span class="badge badge--neutral">{{ p }}</span>
+      } @empty {
+        <span class="hint">—</span>
+      }
+    </ng-template>
+
+    <ng-template gridCell="actions" let-r>
+      <span class="cell-actions">
+        <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(r)">✎ Sửa</button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(r)">🗑 Xóa</button>
+      </span>
+    </ng-template>
+  </data-grid>
+</section>
+
+<!-- Popup sửa vai trò (không đổi mã) -->
+<app-modal [open]="editOpen()" [title]="'Cập nhật vai trò — ' + (editTarget()?.code || '')" (closed)="editOpen.set(false)">
+  <form id="edit-role" (ngSubmit)="saveEdit()">
+    <div class="field">
+      <label>Mã vai trò</label>
+      <input [value]="editTarget()?.code || ''" disabled />
+    </div>
+    <div class="field">
+      <label for="ername">Tên vai trò</label>
+      <input id="ername" name="ername" [(ngModel)]="editName" required />
+    </div>
+    <div class="field">
+      <label for="eperms">Quyền (phân tách bằng dấu phẩy)</label>
+      <input id="eperms" name="eperms" [(ngModel)]="editPerms" placeholder="ORG_ADMIN, POSITION_ADMIN" />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="editOpen.set(false)">Hủy</button>
+    <button type="submit" form="edit-role" class="btn btn--primary">Lưu thay đổi</button>
+  </ng-container>
+</app-modal>
+
+<!-- Xác nhận xóa vai trò -->
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xóa vai trò"
+  [message]="'Xóa vai trò &quot;' + (delTarget()?.code || '') + '&quot;? Không xóa được nếu đang gán cho vị trí.'"
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="delOpen.set(false)" />
+
+<!-- Popup tạo vai trò -->
+<app-modal [open]="createOpen()" title="Tạo vai trò" (closed)="createOpen.set(false)">
+  <form id="create-role" (ngSubmit)="create()">
+    <div class="field">
+      <label for="code">Mã vai trò</label>
+      <input id="code" name="code" [(ngModel)]="newCode" required placeholder="VD: ORG_MANAGER" />
+    </div>
+    <div class="field">
+      <label for="rname">Tên vai trò</label>
+      <input id="rname" name="rname" [(ngModel)]="newName" required />
+    </div>
+    <div class="field">
+      <label for="perms">Quyền (phân tách bằng dấu phẩy)</label>
+      <input id="perms" name="perms" [(ngModel)]="newPerms" placeholder="ORG_ADMIN, POSITION_ADMIN" />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="create-role" class="btn btn--primary">Tạo vai trò</button>
+  </ng-container>
+</app-modal>
+
+<!-- Popup gán vai trò cho vị trí -->
+<app-modal [open]="assignOpen()" title="Gán vai trò cho vị trí" (closed)="assignOpen.set(false)">
+  <form id="assign-role" (ngSubmit)="assign()">
+    <div class="field">
+      <label for="pos">Vị trí</label>
+      <select id="pos" name="pos" [(ngModel)]="assignPositionId">
+        <option value="">(Chọn vị trí)</option>
+        @for (p of positions(); track p.id) {
+          <option [value]="p.id">{{ p.title }}</option>
+        }
+      </select>
+    </div>
+    <div class="field">
+      <label for="role">Vai trò</label>
+      <select id="role" name="role" [(ngModel)]="assignRoleCode">
+        <option value="">(Chọn vai trò)</option>
+        @for (r of roles(); track r.code) {
+          <option [value]="r.code">{{ r.name }} ({{ r.code }})</option>
+        }
+      </select>
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="assignOpen.set(false)">Hủy</button>
+    <button type="submit" form="assign-role" class="btn btn--primary">Gán</button>
+  </ng-container>
+</app-modal>

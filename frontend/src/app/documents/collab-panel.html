@@ -1,0 +1,125 @@
+<!-- Bảng cộng tác tài liệu (Story 3.11–3.17). -->
+<div class="collab">
+  <div class="collab__tabs">
+    <button type="button" [class.active]="tab() === 'comments'" (click)="tab.set('comments')">💬 Bình luận</button>
+    <button type="button" [class.active]="tab() === 'opinions'" (click)="tab.set('opinions')">📋 Ý kiến</button>
+    <button type="button" [class.active]="tab() === 'signoff'" (click)="tab.set('signoff')">✍️ Ký & Lưu trữ</button>
+  </div>
+
+  <!-- ===== BÌNH LUẬN (3.13/3.14) ===== -->
+  @if (tab() === 'comments') {
+    <div class="collab__body">
+      @for (c of comments(); track c.id) {
+        <div class="collab__item">
+          <div class="collab__meta"><strong>{{ c.authorName }}</strong> · {{ fmt(c.createdAt) }}
+            @if (c.edited) { <em>(đã sửa)</em> }
+          </div>
+          @if (editingId === c.id) {
+            <textarea rows="2" [(ngModel)]="editBody"></textarea>
+            <div class="collab__row"><button class="btn btn--primary btn--sm" (click)="saveEdit()">Lưu</button>
+              <button class="btn btn--ghost btn--sm" (click)="editingId = null">Hủy</button></div>
+          } @else {
+            <div class="collab__text">{{ c.body }}</div>
+            @if (c.editable) { <button class="collab__link" (click)="startEdit(c)">Sửa</button> }
+          }
+        </div>
+      } @empty { <p class="hint">Chưa có bình luận. Dùng <code>@username</code> để nhắc đến ai đó.</p> }
+    </div>
+    <div class="collab__compose">
+      <textarea rows="2" placeholder="Viết bình luận… (@username để nhắc)" [(ngModel)]="newComment"></textarea>
+      <button class="btn btn--primary btn--sm" (click)="addComment()">Gửi</button>
+    </div>
+  }
+
+  <!-- ===== Ý KIẾN PHỐI HỢP (3.11/3.12/3.15) ===== -->
+  @if (tab() === 'opinions') {
+    <div class="collab__body">
+      <!-- Đợt phối hợp song song -->
+      @for (r of rounds(); track r.id) {
+        <div class="collab__round">
+          <div class="collab__meta">Đợt phối hợp — {{ r.status === 'OPEN' ? 'đang mở' : 'đã đóng' }}</div>
+          @if (roundStatus()[r.id]; as st) {
+            <small class="hint">Phản hồi {{ st.respondedCount }}/{{ st.participants.length }}
+              @if (st.pending.length) { · chờ: {{ st.pending.join(', ') }} }
+              @if (st.overdue) { · <span class="badge badge--cancel">quá hạn</span> }
+              @if (st.complete) { · <span class="badge badge--success">đủ điều kiện</span> }
+            </small>
+            @if (r.status === 'OPEN') { <button class="collab__link" (click)="closeRound(r.id)">Đóng đợt</button> }
+          }
+        </div>
+      }
+
+      <!-- Bảng tổng hợp ý kiến (3.11) -->
+      @for (o of opinions(); track o.id) {
+        <div class="collab__item">
+          <div class="collab__meta"><strong>{{ o.authorName }}</strong>
+            · <span class="badge badge--neutral">{{ stanceLabel(o.stance) }}</span> · {{ fmt(o.createdAt) }}
+          </div>
+          <div class="collab__text">{{ o.body }}</div>
+          @if (o.resolution) {
+            <div class="collab__resolution" [class.collab__resolution--no]="o.resolution === 'KHONG_TIEP_THU'">
+              {{ o.resolution === 'TIEP_THU' ? '✓ Tiếp thu' : '✗ Không tiếp thu' }}
+              @if (o.resolutionNote) { — {{ o.resolutionNote }} }
+            </div>
+          } @else {
+            <div class="collab__row">
+              <button class="btn btn--secondary btn--sm" (click)="resolve(o, 'TIEP_THU')">Tiếp thu</button>
+              <button class="btn btn--ghost btn--sm" (click)="resolve(o, 'KHONG_TIEP_THU')">Không tiếp thu</button>
+            </div>
+          }
+        </div>
+      } @empty { <p class="hint">Chưa có ý kiến phối hợp.</p> }
+    </div>
+
+    <div class="collab__compose">
+      <div class="collab__row">
+        <select [(ngModel)]="opStance">@for (s of STANCES; track s.v) { <option [value]="s.v">{{ s.l }}</option> }</select>
+      </div>
+      <textarea rows="2" placeholder="Nội dung ý kiến…" [(ngModel)]="opBody"></textarea>
+      <button class="btn btn--primary btn--sm" (click)="giveOpinion()">Gửi ý kiến</button>
+      <hr class="collab__hr" />
+      <div class="collab__meta">Mời phối hợp song song</div>
+      <input type="text" placeholder="username1, username2…" [(ngModel)]="coordParticipants" />
+      <div class="collab__row">
+        <label class="hint">Hạn (giờ): <input type="number" style="width:64px" [(ngModel)]="coordDeadline" /></label>
+        <button class="btn btn--secondary btn--sm" (click)="requestCoord()">Gửi đề nghị</button>
+      </div>
+    </div>
+  }
+
+  <!-- ===== KÝ & LƯU TRỮ (3.16/3.17) ===== -->
+  @if (tab() === 'signoff') {
+    <div class="collab__body">
+      @if (doc(); as d) {
+        <div class="collab__item">
+          <div class="collab__meta">Trạng thái</div>
+          <span class="badge" [class.badge--info]="d.status === 'DRAFT'" [class.badge--success]="d.status === 'SIGNED'" [class.badge--neutral]="d.status === 'ARCHIVED'">
+            {{ d.status === 'DRAFT' ? 'Dự thảo' : d.status === 'SIGNED' ? 'Đã ký ban hành' : 'Đã lưu trữ' }}
+          </span>
+          @if (d.signedNumber) { <div class="collab__text">Số: <strong>{{ d.signedNumber }}</strong> · {{ fmt(d.signedAt!) }} · {{ d.signedBy }}</div> }
+          @if (d.archiveNo) { <div class="collab__text">Hồ sơ: <strong>{{ d.archiveNo }}</strong> · {{ d.classification }} · lưu {{ d.retentionYears }} năm</div> }
+        </div>
+
+        @if (d.status === 'DRAFT') {
+          <div class="collab__compose">
+            <div class="collab__meta">Ký ban hành (3.16)</div>
+            <input type="text" placeholder="Số ký hiệu VD: 15/2026/QĐ-ONE" [(ngModel)]="signNumber" />
+            <button class="btn btn--primary btn--sm" (click)="sign()">✍️ Ghi nhận ký ban hành</button>
+          </div>
+        }
+        @if (d.status === 'SIGNED') {
+          <div class="collab__compose">
+            <div class="collab__meta">Đóng hồ sơ & lưu trữ (3.17)</div>
+            <input type="text" placeholder="Số hồ sơ lưu trữ" [(ngModel)]="archiveNo" />
+            <div class="collab__row">
+              <input type="text" placeholder="Độ mật" [(ngModel)]="archiveClass" />
+              <label class="hint">Lưu (năm): <input type="number" style="width:64px" [(ngModel)]="archiveRetention" /></label>
+            </div>
+            <button class="btn btn--primary btn--sm" (click)="archive()">📦 Đóng hồ sơ lưu trữ</button>
+          </div>
+        }
+        @if (d.status === 'ARCHIVED') { <p class="hint">Hồ sơ đã đóng & lưu trữ — không chỉnh sửa thêm.</p> }
+      }
+    </div>
+  }
+</div>

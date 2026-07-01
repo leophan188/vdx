@@ -1,0 +1,85 @@
+<!-- Cây cơ cấu tổ chức (Story 1.2): lưới dạng cây (thụt lề theo cấp) + popup thêm/xóa. -->
+<section class="page">
+  <app-page-header title="Quản trị cơ cấu tổ chức"
+                   subtitle="Cây đơn vị nhiều cấp; kéo theo vị trí và phân quyền."
+                   [breadcrumb]="[{ label: 'Quản trị hệ thống' }, { label: 'Cơ cấu tổ chức' }]" />
+
+  @if (error()) { <p class="alert alert--error" role="alert">{{ error() }}</p> }
+
+  <div class="tree-split">
+    <!-- Cây tổ chức bên trái -->
+    <aside class="card tree-split__aside">
+      <div class="tree-split__head">
+        <strong>Cây đơn vị</strong>
+        <button type="button" class="btn btn--primary btn--sm" (click)="openCreate()">＋ Thêm</button>
+      </div>
+      <org-tree [units]="units()" [(selectedId)]="selectedUnitId" />
+    </aside>
+
+    <!-- Chi tiết đơn vị đang chọn bên phải -->
+    <div class="card tree-split__detail">
+      @if (selectedUnit(); as u) {
+        <h3 style="margin-top:0">🏛️ {{ u.name }}</h3>
+        <div class="form-2col" style="max-width:560px">
+          <div class="field"><label>Đơn vị cha</label><input type="text" [value]="parentName(u)" disabled /></div>
+          <div class="field"><label>Số đơn vị con</label><input type="text" [value]="childCount(u.id)" disabled /></div>
+        </div>
+        <div class="cell-actions" style="margin-top:var(--space-4)">
+          <button type="button" class="btn btn--secondary btn--sm" (click)="openCreateUnder(u)">＋ Thêm đơn vị con</button>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="openEdit(u)">✎ Sửa</button>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="askDelete(u)">🗑 Xóa</button>
+        </div>
+      } @else {
+        <p class="tree-split__empty">Chọn một đơn vị ở cây bên trái để xem chi tiết và thao tác (Thêm con / Sửa / Xóa).</p>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Popup sửa đơn vị -->
+<app-modal [open]="editOpen()" [title]="'Cập nhật đơn vị — ' + (editTarget()?.name || '')" (closed)="editOpen.set(false)">
+  <form id="edit-org" (ngSubmit)="saveEdit()">
+    <div class="field">
+      <label for="ename">Tên đơn vị</label>
+      <input id="ename" name="ename" [(ngModel)]="editName" required />
+    </div>
+    <div class="field">
+      <label>Đơn vị cha</label>
+      <searchable-select [options]="parentSelEdit()" [value]="editParentId"
+                         (valueChange)="editParentId = $event"
+                         [allowEmpty]="true" emptyLabel="(Gốc — không có cha)" placeholder="(Gốc — không có cha)" />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="editOpen.set(false)">Hủy</button>
+    <button type="submit" form="edit-org" class="btn btn--primary">Lưu thay đổi</button>
+  </ng-container>
+</app-modal>
+
+<!-- Popup thêm đơn vị -->
+<app-modal [open]="createOpen()" title="Thêm đơn vị" (closed)="createOpen.set(false)">
+  <form id="create-org" (ngSubmit)="create()">
+    <div class="field">
+      <label for="name">Tên đơn vị</label>
+      <input id="name" name="name" [(ngModel)]="newName" required />
+    </div>
+    <div class="field">
+      <label>Đơn vị cha</label>
+      <searchable-select [options]="parentSelAll()" [value]="newParentId"
+                         (valueChange)="newParentId = $event"
+                         [allowEmpty]="true" emptyLabel="(Gốc — không có cha)" placeholder="(Gốc — không có cha)" />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="create-org" class="btn btn--primary">Thêm</button>
+  </ng-container>
+</app-modal>
+
+<!-- Xác nhận xóa -->
+<app-confirm-dialog
+  [open]="deleteOpen()"
+  title="Xóa đơn vị"
+  [message]="'Xóa đơn vị &quot;' + (deleteTarget()?.name || '') + '&quot;? Không xóa được nếu còn đơn vị con.'"
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="deleteOpen.set(false)" />

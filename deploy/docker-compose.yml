@@ -1,0 +1,16 @@
+# Hạ tầng dev nội bộ (Story 1.1 cần MariaDB). BE/OnlyOffice thêm ở story sau.
+services:
+  mariadb:
+    image: mariadb:11.8
+    environment:
+      MARIADB_DATABASE: bpm
+      MARIADB_USER: bpm
+      MARIADB_PASSWORD: bpm
+      MARIADB_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - mariadb_data:/var/lib/mysql
+
+volumes:
+  mariadb_data:

@@ -1,0 +1,49 @@
+<!-- Truy vết kiểm toán append-only (Story 1.8, FR-I01/FR-I02): bộ lọc + lưới kết quả. -->
+<section class="page">
+  <app-page-header title="Truy vết kiểm toán"
+                   subtitle="Bản ghi audit append-only (ghi-một-lần, không sửa/xóa — AD-6)."
+                   [breadcrumb]="[{ label: 'Kiểm toán' }, { label: 'Truy vết' }]" />
+
+  @if (error()) { <p class="alert alert--error" role="alert">{{ error() }}</p> }
+
+  <form class="card" (ngSubmit)="search()">
+    <div class="toolbar-row" style="margin: 0;">
+      <button type="button" class="btn btn--secondary" (click)="loadRecent()">
+        🔄 Nhật ký gần nhất (200)
+      </button>
+      <span style="width: 1px; height: 28px; background: var(--color-border);"></span>
+      <div class="field field--inline">
+        <label for="mode">Tra theo</label>
+        <select id="mode" name="mode" [(ngModel)]="mode">
+          <option value="object">Đối tượng</option>
+          <option value="task">Nhiệm vụ</option>
+        </select>
+      </div>
+
+      @if (mode === 'object') {
+        <div class="field field--inline">
+          <label for="otype">Loại</label>
+          <input id="otype" name="otype" [(ngModel)]="objectType" placeholder="Position, TaskAssignment…" />
+        </div>
+        <div class="field field--inline">
+          <label for="oid">Mã</label>
+          <input id="oid" name="oid" [(ngModel)]="objectId" placeholder="objectId" />
+        </div>
+      } @else {
+        <div class="field field--inline">
+          <label for="tid">Mã nhiệm vụ</label>
+          <input id="tid" name="tid" [(ngModel)]="taskId" placeholder="taskId" />
+        </div>
+      }
+      <button type="submit" class="btn btn--primary">Tra vết</button>
+    </div>
+  </form>
+
+  <data-grid [columns]="cols" [rows]="events()" title="Vết kiểm toán" [searchable]="true"
+             searchPlaceholder="Lọc trong kết quả…"
+             [emptyText]="searched() ? 'Không có vết nào khớp.' : 'Nhập tiêu chí rồi bấm Tra vết.'">
+    <ng-template gridCell="object" let-e>
+      <span class="mono">{{ e.objectType }}#{{ e.objectId }}</span>
+    </ng-template>
+  </data-grid>
+</section>

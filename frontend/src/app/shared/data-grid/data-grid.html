@@ -1,0 +1,80 @@
+<div class="grid">
+  <div class="grid__toolbar">
+    @if (title()) { <span class="grid__title">{{ title() }}</span> }
+    <span class="grid__count">{{ total() }} mục</span>
+    <span class="grid__spacer"></span>
+    <ng-content select="[gridFilters]" />
+    @if (searchable()) {
+      <input class="grid__search" type="search" [placeholder]="searchPlaceholder()"
+             [value]="query()" (input)="onSearch($any($event.target).value)" />
+    }
+    <ng-content select="[gridActions]" />
+  </div>
+
+  <div class="grid__scroll">
+    <table>
+      <thead>
+        <tr>
+          @if (expandable()) { <th class="grid__expander-col"></th> }
+          @for (col of columns(); track col.key) {
+            <th [class.is-sortable]="col.sortable"
+                [class.align-right]="col.align === 'right'"
+                [class.align-center]="col.align === 'center'"
+                [style.width]="col.width"
+                (click)="toggleSort(col)">
+              {{ col.header }}<span class="sort-ind"> {{ sortIndicator(col) }}</span>
+            </th>
+          }
+        </tr>
+      </thead>
+      <tbody>
+        @if (loading()) {
+          <tr><td [attr.colspan]="colspan()"><div class="grid__loading">Đang tải…</div></td></tr>
+        } @else {
+          @for (row of pageRows(); track $index) {
+            <tr [class.is-expanded]="expandable() && isExpanded($index)">
+              @if (expandable()) {
+                <td class="grid__expander-col">
+                  <button type="button" class="grid__expander" [class.open]="isExpanded($index)"
+                          (click)="toggleExpand($index)" aria-label="Mở rộng">›</button>
+                </td>
+              }
+              @for (col of columns(); track col.key) {
+                <td [class.align-right]="col.align === 'right'" [class.align-center]="col.align === 'center'">
+                  @if (cellTpl().get(col.key); as tpl) {
+                    <ng-container [ngTemplateOutlet]="tpl" [ngTemplateOutletContext]="{ $implicit: row, row: row }" />
+                  } @else {
+                    {{ cellValue(row, col.key) }}
+                  }
+                </td>
+              }
+            </tr>
+            @if (expandable() && isExpanded($index) && detailTpl()) {
+              <tr class="grid__detail-row">
+                <td [attr.colspan]="colspan()">
+                  <ng-container [ngTemplateOutlet]="detailTpl()!" [ngTemplateOutletContext]="{ $implicit: row, row: row }" />
+                </td>
+              </tr>
+            }
+          } @empty {
+            <tr><td [attr.colspan]="colspan()"><div class="grid__empty">{{ emptyText() }}</div></td></tr>
+          }
+        }
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid__footer">
+    <span>Hiển thị {{ rangeFrom() }}–{{ rangeTo() }} trong tổng số {{ total() }}</span>
+    <span class="grid__pager">
+      <select class="grid__pagesize" [value]="effPageSize()" (change)="setPageSize($any($event.target).value)">
+        @for (s of pageSizes(); track s) { <option [value]="s">{{ s }} / trang</option> }
+      </select>
+      <button type="button" class="grid__pagebtn" [disabled]="page() <= 1" (click)="prev()" aria-label="Trước">‹</button>
+      @for (n of pageNumbers(); track n) {
+        <button type="button" class="grid__pagebtn" [class.active]="n === page()" (click)="goTo(n)">{{ n }}</button>
+      }
+      <button type="button" class="grid__pagebtn" [disabled]="page() >= pageCount()" (click)="next()" aria-label="Sau">›</button>
+    </span>
+  </div>
+</div>

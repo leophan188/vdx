@@ -1,0 +1,225 @@
+<!-- Designer quy trình bpmn-js (Story 2.1): canvas kéo-thả + modal cấu hình bước nhiều tab. -->
+<section class="page designer-page">
+  <div class="page-header">
+    <div class="page-header__main">
+      <h1>Thiết kế quy trình</h1>
+      <p class="page-header__sub">{{ name() }}</p>
+    </div>
+    <div class="page-header__actions">
+      <button type="button" class="btn btn--ghost" (click)="back()">‹ Quay lại</button>
+      <button type="button" class="btn btn--secondary" [disabled]="!selectedId()" (click)="openConfig()">⚙ Cấu hình bước</button>
+      <button type="button" class="btn btn--secondary" [disabled]="!selectedFlowId()" (click)="openFlowConfig()">🔀 Điều kiện nhánh</button>
+      <button type="button" class="btn btn--ghost" (click)="validate()">✓ Kiểm tra cấu hình</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="save()">
+        {{ saving() ? 'Đang lưu…' : '💾 Lưu quy trình' }}
+      </button>
+    </div>
+  </div>
+
+  <p class="hint">Kéo từ palette để thêm <strong>bước / gateway (rẽ nhánh ✕, song song ＋) / luồng nối</strong>. Nhấp đúp
+    <strong>bước</strong> → cấu hình người thực hiện/biểu mẫu/thông báo; nhấp đúp <strong>nhánh</strong> (mũi tên rời gateway) → đặt
+    <strong>điều kiện chuyển bước</strong> theo dữ liệu form.</p>
+
+  <div class="designer">
+    <div #canvas class="designer__canvas"></div>
+  </div>
+</section>
+
+<!-- ===== Modal cấu hình bước ===== -->
+<app-modal [open]="configOpen()" [wide]="true" [title]="'Cấu hình bước: ' + (selectedName || '(chưa đặt tên)')" (closed)="configOpen.set(false)">
+  <app-tabs [tabs]="configTabs" [(active)]="configTab" />
+
+  <!-- TAB 1: Người thực hiện -->
+  @if (configTab() === 'assignee') {
+    <div class="field">
+      <label>Tên bước</label>
+      <input [(ngModel)]="selectedName" (ngModelChange)="updateName()" />
+    </div>
+    <div class="cfg-2col">
+      <div class="field">
+        <label>Phân công theo</label>
+        <select [(ngModel)]="meta.assigneeType" (ngModelChange)="onAssigneeTypeChange()">
+          @for (t of ASSIGNEE_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
+        </select>
+      </div>
+      <div class="field">
+        <label>Chọn {{ assigneeTypeLabel() }} (theo danh mục)</label>
+        <select [(ngModel)]="meta.assigneeId" (ngModelChange)="writeMeta()">
+          <option [ngValue]="undefined">— chọn {{ assigneeTypeLabel() }} —</option>
+          @for (o of assigneeOptions(); track o.id) { <option [ngValue]="o.id">{{ o.label }}</option> }
+        </select>
+      </div>
+    </div>
+    <div class="field" style="max-width: 220px;">
+      <label>Hạn xử lý (SLA, giờ)</label>
+      <input type="number" min="0" [(ngModel)]="meta.slaHours" (ngModelChange)="writeMeta()" />
+    </div>
+    <div class="field">
+      <label>Hành động cho phép</label>
+      <div class="check-grid">
+        @for (a of ALL_ACTIONS; track a.k) {
+          <label class="radio-row"><input type="checkbox" [checked]="hasAction(a.k)" (change)="toggleAction(a.k)" /> {{ a.l }}</label>
+        }
+      </div>
+    </div>
+  }
+
+  <!-- TAB: Biểu mẫu gắn vào bước + quyền trường (Story 2.9) -->
+  @else if (configTab() === 'form') {
+    <div class="field">
+      <label>Biểu mẫu của bước</label>
+      <select [(ngModel)]="meta.formId" (ngModelChange)="onFormChange()">
+        <option [ngValue]="undefined">— Không gắn biểu mẫu —</option>
+        @for (f of forms(); track f.id) { <option [ngValue]="f.id">{{ f.name }} ({{ f.formKey }})</option> }
+      </select>
+    </div>
+    @if (meta.formId && formFields().length) {
+      <p class="hint" style="margin-top:0;">Quyền trên từng trường tại bước này. Dữ liệu form mang xuyên suốt giữa các bước (cùng mã trường).</p>
+      <table class="data-table">
+        <thead><tr><th>Trường</th><th style="width:170px;">Quyền tại bước</th></tr></thead>
+        <tbody>
+          @for (ff of formFields(); track ff.key) {
+            <tr>
+              <td>{{ ff.label }} <span class="hint" style="margin:0;">· {{ ff.key }}</span></td>
+              <td>
+                <select [ngModel]="fieldPerm(ff.key)" (ngModelChange)="setFieldPerm(ff.key, $any($event))">
+                  @for (p of PERMS; track p.v) { <option [ngValue]="p.v">{{ p.l }}</option> }
+                </select>
+              </td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    } @else if (meta.formId) {
+      <p class="hint">Biểu mẫu này chưa có trường nào — thiết kế ở mục “Biểu mẫu”.</p>
+    } @else {
+      <p class="hint">Chọn một biểu mẫu để gắn vào bước và cấu hình quyền trường (Sửa được / Chỉ xem / Ẩn).</p>
+    }
+  }
+
+  <!-- TAB: Trường thêm (metadata có kiểu dữ liệu, ngoài biểu mẫu) -->
+  @else if (configTab() === 'meta') {
+    <p class="hint" style="margin-top:0;">Trường dữ liệu thêm cho bước (ngoài biểu mẫu). Hỗ trợ: văn bản, số, ngày, dropdown, radio, có/không, rich text.</p>
+    @for (f of meta.fields; track $index) {
+      <div class="field-card">
+        <div class="cfg-3col">
+          <div class="field"><label>Nhãn hiển thị</label><input [(ngModel)]="f.label" (ngModelChange)="writeMeta()" /></div>
+          <div class="field"><label>Mã trường</label><input [(ngModel)]="f.key" (ngModelChange)="writeMeta()" placeholder="vd: tieu_de" /></div>
+          <div class="field"><label>Loại dữ liệu</label>
+            <select [(ngModel)]="f.type" (ngModelChange)="writeMeta()">
+              @for (t of FIELD_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
+            </select>
+          </div>
+        </div>
+        @if (isChoice(f.type)) {
+          <div class="cfg-2col">
+            <div class="field"><label>Nguồn lựa chọn</label>
+              <select [(ngModel)]="f.optionSource" (ngModelChange)="writeMeta()">
+                <option ngValue="STATIC">Tự khai báo</option>
+                <option ngValue="CATALOG">Theo danh mục dùng chung</option>
+              </select>
+            </div>
+            @if (f.optionSource === 'CATALOG') {
+              <div class="field"><label>Mã danh mục</label><input [(ngModel)]="f.catalog" (ngModelChange)="writeMeta()" placeholder="vd: DON_VI, LOAI_HO_SO" /></div>
+            } @else {
+              <div class="field"><label>Các lựa chọn (phân tách dấu phẩy)</label><input [(ngModel)]="f.options" (ngModelChange)="writeMeta()" placeholder="Thấp, Trung bình, Cao" /></div>
+            }
+          </div>
+        }
+        <div class="field-card__foot">
+          <label class="radio-row"><input type="checkbox" [(ngModel)]="f.required" (ngModelChange)="writeMeta()" /> Bắt buộc</label>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="removeField($index)">🗑 Xóa trường</button>
+        </div>
+      </div>
+    } @empty { <p class="hint">Chưa có trường dữ liệu nào.</p> }
+    <button type="button" class="btn btn--secondary" (click)="addField()">＋ Thêm trường</button>
+  }
+
+  <!-- TAB 3: Thông báo -->
+  @else {
+    <p class="hint" style="margin-top:0;">Cấu hình thông báo khi việc tới bước này: gửi email / thông báo app / CC cho ai, kèm nội dung.</p>
+    @for (list of NOTIFY_LISTS; track list.key) {
+      <div class="field">
+        <label>{{ list.icon }} {{ list.label }}</label>
+        @for (r of recipients(list.key); track $index) {
+          <div class="recip-row">
+            <select [(ngModel)]="r.type" (ngModelChange)="writeMeta()">
+              @for (t of RECIPIENT_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
+            </select>
+            @if (r.type !== 'ASSIGNEE') {
+              <select [(ngModel)]="r.id" (ngModelChange)="writeMeta()">
+                <option [ngValue]="undefined">— chọn —</option>
+                @for (o of targetOptions(r.type); track o.id) { <option [ngValue]="o.id">{{ o.label }}</option> }
+              </select>
+            } @else {
+              <span class="recip-note">người đang thực hiện bước này</span>
+            }
+            <button type="button" class="btn btn--ghost btn--sm" (click)="removeRecipient(list.key, $index)">✕</button>
+          </div>
+        } @empty { <p class="hint" style="margin:0;">Chưa có người nhận.</p> }
+        <button type="button" class="btn btn--secondary btn--sm" (click)="addRecipient(list.key)">＋ Thêm người nhận</button>
+      </div>
+    }
+    <div class="field"><label>Tiêu đề thông báo</label><input [(ngModel)]="meta.notify!.subject" (ngModelChange)="writeMeta()" placeholder="VD: Bạn có việc cần xử lý" /></div>
+    <div class="field"><label>Nội dung thông báo</label><textarea rows="4" [(ngModel)]="meta.notify!.content" (ngModelChange)="writeMeta()" placeholder="Nội dung gửi tới người nhận…"></textarea></div>
+  }
+
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--primary" (click)="configOpen.set(false)">Xong</button>
+  </ng-container>
+</app-modal>
+
+<!-- ===== Modal điều kiện chuyển bước trên nhánh (Story 2.2) ===== -->
+<app-modal [open]="flowConfigOpen()" title="Điều kiện chuyển bước" (closed)="flowConfigOpen.set(false)">
+  <p class="hint" style="margin-top:0;">Nhánh này chỉ được đi khi điều kiện đúng (dựa trên dữ liệu form). Để trống = nhánh mặc định (luôn đi).</p>
+  <div class="cfg-2col">
+    <div class="field">
+      <label>Trường dữ liệu</label>
+      <select [(ngModel)]="flowCond.field">
+        <option value="">— Nhánh mặc định —</option>
+        @for (d of dataFields(); track d.key) { <option [value]="d.key">{{ d.label }} ({{ d.key }})</option> }
+      </select>
+    </div>
+    <div class="field">
+      <label>Điều kiện</label>
+      <select [(ngModel)]="flowCond.op">
+        @for (op of COND_OPS; track op.v) { <option [ngValue]="op.v">{{ op.l }}</option> }
+      </select>
+    </div>
+  </div>
+  @if (flowCond.field && flowCond.op !== 'truthy') {
+    <div class="field"><label>Giá trị so sánh</label><input [(ngModel)]="flowCond.value" placeholder="VD: Cao" /></div>
+  }
+  @if (flowCond.field) {
+    <p class="hint" style="margin:0;">Tóm tắt: đi nhánh khi <strong>{{ condLabel(flowCond) }}</strong></p>
+  }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="clearFlowCondition()">Xóa điều kiện</button>
+    <span style="flex:1"></span>
+    <button type="button" class="btn btn--ghost" (click)="flowConfigOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" (click)="saveFlowCondition()">Lưu điều kiện</button>
+  </ng-container>
+</app-modal>
+
+<!-- Kết quả kiểm tra cấu hình (Story 5.3) -->
+<app-modal [open]="checkOpen()" title="Kiểm tra cấu hình quy trình" (closed)="checkOpen.set(false)">
+  @if (!issues().length) {
+    <p class="alert alert--success">✓ Cấu hình hợp lệ — quy trình sẵn sàng để ban hành.</p>
+  } @else {
+    @if (errorCount() > 0) {
+      <p class="alert alert--error">Có {{ errorCount() }} lỗi cần sửa trước khi ban hành.</p>
+    } @else {
+      <p class="alert alert--info">Không có lỗi chặn; còn vài cảnh báo nên rà soát.</p>
+    }
+    <ul class="check-list">
+      @for (i of issues(); track $index) {
+        <li class="check-list__item check-list__item--{{ i.level }}">
+          <span>{{ i.level === 'error' ? '⛔' : '⚠️' }}</span> {{ i.msg }}
+        </li>
+      }
+    </ul>
+  }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--primary" (click)="checkOpen.set(false)">Đóng</button>
+  </ng-container>
+</app-modal>

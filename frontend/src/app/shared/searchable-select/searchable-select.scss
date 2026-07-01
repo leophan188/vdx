@@ -1,0 +1,29 @@
+:host { display: block; position: relative; }
+
+.ss__control {
+  display: flex; align-items: center; gap: 6px;
+  height: var(--control-h); padding: 0 var(--space-2) 0 var(--space-3);
+  border: 1px solid var(--color-border); border-radius: var(--radius-md);
+  background: var(--color-surface); cursor: text;
+}
+.ss--open .ss__control { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
+.ss__input { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; color: var(--color-text); font: inherit; padding: 0; }
+.ss__input:focus-visible { outline: none; }
+.ss__caret { color: var(--color-text-muted); font-size: 10px; flex: none; pointer-events: none; }
+
+.ss__menu {
+  position: absolute; z-index: 1200; top: calc(100% + 4px); left: 0; right: 0;
+  list-style: none; margin: 0; padding: 4px;
+  max-height: 280px; overflow: auto;
+  background: var(--color-surface); border: 1px solid var(--color-border);
+  border-radius: var(--radius-md); box-shadow: var(--shadow-pop);
+}
+.ss__opt {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap;
+}
+.ss__opt:hover { background: var(--color-surface-alt); }
+.ss__opt.is-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
+.ss__opt-label { overflow: hidden; text-overflow: ellipsis; }
+.ss__opt-sub { color: var(--color-text-muted); font-size: var(--text-xs); }
+.ss__empty { padding: 10px; color: var(--color-text-muted); font-size: var(--text-sm); }

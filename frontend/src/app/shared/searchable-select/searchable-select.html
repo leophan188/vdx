@@ -1,0 +1,26 @@
+<div class="ss" [class.ss--open]="open()">
+  <div class="ss__control" (click)="openIt()">
+    <input class="ss__input" type="text" [value]="query()" [placeholder]="placeholder()"
+           (input)="onType($any($event.target).value)" (focus)="openIt()" autocomplete="off" />
+    <span class="ss__caret">▾</span>
+  </div>
+
+  @if (open()) {
+    <ul class="ss__menu" role="listbox">
+      @if (allowEmpty()) {
+        <li class="ss__opt" [class.is-active]="value() === ''" (mousedown)="pick('')">
+          <span class="ss__opt-label">{{ emptyLabel() }}</span>
+        </li>
+      }
+      @for (o of filtered(); track o.value) {
+        <li class="ss__opt" [class.is-active]="o.value === value()" (mousedown)="pick(o.value)" role="option">
+          <span class="ss__opt-label">{{ o.label }}</span>
+          @if (o.sub) { <small class="ss__opt-sub">{{ o.sub }}</small> }
+        </li>
+      }
+      @if (filtered().length === 0) {
+        <li class="ss__empty">Không có kết quả phù hợp</li>
+      }
+    </ul>
+  }
+</div>

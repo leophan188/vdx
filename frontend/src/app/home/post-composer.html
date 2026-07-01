@@ -1,0 +1,59 @@
+<section class="ochome-card ochome-composer">
+  @if (!open()) {
+    <div class="ochome-composer__top">
+      <span class="ochome-ava ochome-ava--blue">＋</span>
+      <button class="ochome-composer__input" (click)="expand()">Chia sẻ thông báo / nội dung tới nhân viên...</button>
+    </div>
+  } @else {
+    <app-mention-box class="ochome-composer__area" [multiline]="true" [rows]="4"
+                     placeholder="Nội dung bài viết... (gõ @ để nhắc tên)"
+                     [value]="body()" (textChange)="body.set($event)"
+                     (mentionsChange)="mentionIds.set($event)"></app-mention-box>
+
+    @if (uploaded().length) {
+      <div class="ochome-media ochome-media--multi">
+        @for (m of uploaded(); track m.id) {
+          <div class="ochome-media__thumb">
+            @if (m.kind === 'IMAGE') {
+              <img class="ochome-media__img" [src]="m.url" [alt]="m.name" />
+            } @else {
+              <video class="ochome-media__video" [src]="m.url" preload="metadata"></video>
+            }
+            <button class="ochome-media__rm" (click)="removeMedia(m.id)" aria-label="Bỏ">✕</button>
+          </div>
+        }
+      </div>
+    }
+
+    <div class="ochome-composer__fields">
+      <label class="ochome-field">
+        <span>Phân loại</span>
+        <select [value]="category()" (change)="category.set($any($event.target).value)">
+          <option value="ANNOUNCEMENT">📣 Thông báo</option>
+          <option value="NEWS">📰 Tin tức</option>
+          <option value="EVENT">📅 Sự kiện</option>
+        </select>
+      </label>
+      <label class="ochome-field">
+        <span>Chủ đề</span>
+        <input [value]="topic()" (input)="topic.set($any($event.target).value)" placeholder="vd: Nghỉ lễ, Team building" />
+      </label>
+      <span class="ochome-field__hint">Bài đăng hiển thị cho toàn công ty.</span>
+    </div>
+
+    <div class="ochome-composer__row">
+      <div class="ochome-composer__tools">
+        <label class="ochome-upload">
+          <input type="file" accept="image/*,video/*" multiple hidden (change)="onFiles($event)" />
+          <svg viewBox="0 0 24 24" class="ochome-ic"><path d="M4 4h16v16H4z" /><path d="M9 11a2 2 0 1 0 0-4 2 2 0 0 0 0 4" /><path d="m4 16 4-4 3 3 4-5 5 6" /></svg>
+          {{ uploading() ? 'Đang tải...' : 'Ảnh/Video' }}
+        </label>
+        <small class="ochome-hint">Ảnh ≤10MB · Video ≤100MB</small>
+      </div>
+      <div>
+        <button class="ochome-modbtn" (click)="reset()">Huỷ</button>
+        <button class="ochome-btn-primary" [disabled]="submitting() || uploading()" (click)="submit()">Đăng bài</button>
+      </div>
+    </div>
+  }
+</section>

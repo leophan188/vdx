@@ -1,0 +1,129 @@
+<!-- Cấu hình hệ thống → Xoá dữ liệu hệ thống (vùng nguy hiểm). CHỈ ADMIN. KHÔNG xoá tài khoản admin. -->
+<section class="page">
+  <app-page-header
+    title="Xoá dữ liệu hệ thống"
+    subtitle="Xoá chọn lọc các nhóm dữ liệu (giữ tài khoản admin). Thao tác không hoàn tác."
+    [breadcrumb]="[{ label: 'Quản trị' }, { label: 'Xoá dữ liệu hệ thống' }]" />
+
+  @if (error()) {
+    <p class="alert alert--error" role="alert">{{ error() }}</p>
+  }
+
+  <!-- 🌱 TẠO DỮ LIỆU DEMO: Quy trình nhân sự (CHỈ THÊM — không xoá dữ liệu thật) -->
+  <div class="card seed-zone">
+    <div class="seed-zone__head">
+      <h2 class="seed-zone__title">🌱 Tạo dữ liệu quy trình nhân sự (demo)</h2>
+      <span class="badge badge--neutral">An toàn — chỉ thêm</span>
+    </div>
+    <p class="seed-zone__desc">
+      Tạo sẵn <strong>4 quy trình nhân sự</strong> (Nghỉ phép, Khen thưởng, Đề nghị tuyển dụng,
+      Đánh giá nhân viên) cùng biểu mẫu và <strong>nhiều hồ sơ mẫu đủ trạng thái</strong>
+      (đang soạn / chờ duyệt / quá hạn / hoàn thành) để trình diễn luồng Tạo yêu cầu → Việc của tôi →
+      Theo dõi → Dashboard. Người khởi tạo và người duyệt là <strong>nhân sự thật</strong> đã import.
+      Thao tác <strong>không xoá/đụng dữ liệu thật</strong> và <strong>không nhân đôi</strong> nếu đã tạo trước đó.
+    </p>
+    <div style="display:flex; gap:.5rem; flex-wrap:wrap;">
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="seeding()"
+        (click)="seedHrDemo()">
+        {{ seeding() ? 'Đang tạo…' : '🌱 Tạo dữ liệu demo nhân sự' }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--primary"
+        [disabled]="seedingProject()"
+        (click)="seedProjectDemo()">
+        {{ seedingProject() ? 'Đang tạo…' : '📁 Tạo dữ liệu dự án mẫu' }}
+      </button>
+      <button
+        type="button"
+        class="btn btn--secondary"
+        [disabled]="fixing()"
+        (click)="fixHrData()">
+        {{ fixing() ? 'Đang chuẩn hoá…' : '🔧 Chuẩn hoá dữ liệu nhân sự (số 0 đầu / mật khẩu / quyền vai trò)' }}
+      </button>
+    </div>
+  </div>
+
+  <!-- ⚠️ VÙNG NGUY HIỂM: Xoá dữ liệu hệ thống -->
+  <div class="card danger-zone">
+    <div class="danger-zone__head">
+      <h2 class="danger-zone__title">⚠️ Xoá dữ liệu hệ thống</h2>
+      <span class="badge badge--cancel">Vùng nguy hiểm</span>
+    </div>
+
+    <p class="danger-zone__warn">
+      Thao tác này <strong>xoá vĩnh viễn</strong> các nhóm dữ liệu được chọn và
+      <strong>không thể hoàn tác</strong>. Hệ thống <strong>KHÔNG xoá tài khoản admin</strong>
+      (username = "admin") để bạn vẫn đăng nhập được sau khi xoá.
+    </p>
+
+    @if (loading()) {
+      <p class="hint">Đang tải danh mục…</p>
+    } @else {
+      <div class="danger-zone__toolbar">
+        <button type="button" class="btn btn--secondary btn--sm" (click)="toggleAll()">
+          {{ allSelected() ? 'Bỏ chọn tất cả' : 'Chọn tất cả' }}
+        </button>
+        <span class="hint">Đã chọn {{ selectedCount() }} / {{ categories().length }} nhóm</span>
+      </div>
+
+      <ul class="cat-list">
+        @for (c of categories(); track c.key) {
+          <li class="cat-item" [class.cat-item--on]="isChecked(c.key)">
+            <label class="cat-item__label">
+              <input
+                type="checkbox"
+                [checked]="isChecked(c.key)"
+                (change)="toggle(c.key)" />
+              <span class="cat-item__text">
+                <strong>{{ c.label }}</strong>
+                <span class="cat-item__desc">{{ c.description }}</span>
+              </span>
+            </label>
+            @if (c.count >= 0) {
+              <span class="badge badge--neutral cat-item__count">{{ c.count }} bản ghi</span>
+            }
+          </li>
+        }
+      </ul>
+
+      <div class="danger-zone__confirm">
+        <div class="field">
+          <label for="wipe-confirm">
+            Gõ <code>{{ CONFIRM_TOKEN }}</code> để xác nhận
+          </label>
+          <input
+            id="wipe-confirm"
+            type="text"
+            autocomplete="off"
+            [ngModel]="confirmText()"
+            (ngModelChange)="confirmText.set($event)"
+            [placeholder]="CONFIRM_TOKEN" />
+        </div>
+
+        <button
+          type="button"
+          class="btn btn--danger"
+          [disabled]="!canWipe()"
+          (click)="askWipe()">
+          🗑 Xoá dữ liệu đã chọn
+        </button>
+      </div>
+    }
+  </div>
+</section>
+
+<app-confirm-dialog
+  [open]="confirmOpen()"
+  title="Xác nhận xoá dữ liệu hệ thống"
+  [message]="
+    'Bạn sắp xoá vĩnh viễn ' + selectedCount() +
+    ' nhóm dữ liệu. Hành động KHÔNG thể hoàn tác. Tài khoản admin sẽ được giữ lại. Tiếp tục?'
+  "
+  confirmLabel="Xoá vĩnh viễn"
+  [danger]="true"
+  (confirm)="doWipe()"
+  (cancel)="cancelWipe()" />

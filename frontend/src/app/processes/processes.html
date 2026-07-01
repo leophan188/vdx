@@ -1,0 +1,92 @@
+<!-- Danh sách quy trình (Story 2.1): lưới + tạo/đổi tên/xóa + mở designer. -->
+<section class="page">
+  <app-page-header title="Cấu hình quy trình"
+                   subtitle="Thiết kế quy trình nghiệp vụ bằng canvas kéo-thả, không cần viết code."
+                   [breadcrumb]="[{ label: 'Cấu hình quy trình' }, { label: 'Quy trình' }]" />
+
+  @if (error()) { <p class="alert alert--error" role="alert">{{ error() }}</p> }
+
+  <data-grid [columns]="cols" [rows]="rows()" title="Quy trình" searchPlaceholder="Tìm theo mã/tên…"
+             emptyText="Chưa có quy trình nào. Bấm “Tạo quy trình” để bắt đầu.">
+    <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo quy trình</button>
+
+    <ng-template gridCell="status" let-p>
+      <status-badge [status]="statusKind(p.status)" [label]="statusLabel(p.status)" />
+    </ng-template>
+
+    <ng-template gridCell="publishedVersion" let-p>
+      @if (p.publishedVersion > 0) { <span class="badge badge--neutral">v{{ p.publishedVersion }}</span> }
+      @else { <span class="hint">—</span> }
+    </ng-template>
+
+    <ng-template gridCell="actions" let-p>
+      <span class="cell-actions">
+        <button type="button" class="btn btn--secondary btn--sm" (click)="design(p)">✎ Thiết kế</button>
+        @if (p.status !== 'PUBLISHED') {
+          <button type="button" class="btn btn--primary btn--sm" (click)="askPublish(p)">🚀 Ban hành</button>
+        } @else {
+          <button type="button" class="btn btn--secondary btn--sm" (click)="startInstance(p)">▶ Khởi tạo</button>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="askRetire(p)">⏸ Ngừng dùng</button>
+        }
+        <button type="button" class="btn btn--ghost btn--sm" title="Đổi tên" (click)="openEdit(p)">✎ Tên</button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(p)">🗑 Xóa</button>
+      </span>
+    </ng-template>
+  </data-grid>
+</section>
+
+<!-- Tạo quy trình -->
+<app-modal [open]="createOpen()" title="Tạo quy trình mới" (closed)="createOpen.set(false)">
+  <form id="create-process" (ngSubmit)="create()">
+    <div class="field">
+      <label for="pkey">Mã quy trình</label>
+      <input id="pkey" name="pkey" [(ngModel)]="newKey" required placeholder="VD: phoi-hop-nghien-cuu" />
+    </div>
+    <div class="field">
+      <label for="pname">Tên quy trình</label>
+      <input id="pname" name="pname" [(ngModel)]="newName" required placeholder="VD: Phối hợp nghiên cứu, tham mưu" />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="create-process" class="btn btn--primary">Tạo &amp; thiết kế</button>
+  </ng-container>
+</app-modal>
+
+<!-- Đổi tên -->
+<app-modal [open]="editOpen()" [title]="'Đổi tên — ' + (editTarget()?.processKey || '')" (closed)="editOpen.set(false)">
+  <form id="edit-process" (ngSubmit)="saveEdit()">
+    <div class="field">
+      <label for="ename">Tên quy trình</label>
+      <input id="ename" name="ename" [(ngModel)]="editName" required />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="editOpen.set(false)">Hủy</button>
+    <button type="submit" form="edit-process" class="btn btn--primary">Lưu</button>
+  </ng-container>
+</app-modal>
+
+<!-- Ban hành -->
+<app-confirm-dialog
+  [open]="publishOpen()"
+  title="Ban hành quy trình"
+  [message]="'Ban hành &quot;' + (publishTarget()?.name || '') + '&quot;? Bản nháp hiện tại sẽ được chốt thành phiên bản mới và dùng để khởi tạo nhiệm vụ.'"
+  confirmLabel="Ban hành"
+  (confirm)="confirmPublish()" (cancel)="publishOpen.set(false)" />
+
+<!-- Ngừng dùng -->
+<app-confirm-dialog
+  [open]="retireOpen()"
+  title="Ngừng dùng quy trình"
+  [message]="'Ngừng dùng &quot;' + (retireTarget()?.name || '') + '&quot;? Sẽ không khởi tạo nhiệm vụ mới; nhiệm vụ đang chạy không bị ảnh hưởng.'"
+  confirmLabel="Ngừng dùng" [danger]="true"
+  (confirm)="confirmRetire()" (cancel)="retireOpen.set(false)" />
+
+<!-- Xóa -->
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xóa quy trình"
+  [message]="'Xóa quy trình &quot;' + (delTarget()?.name || '') + '&quot;? Hành động không thể hoàn tác.'"
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="delOpen.set(false)" />

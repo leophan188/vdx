@@ -1,0 +1,188 @@
+<!-- Form builder kéo-thả (Story 2.6): palette | canvas (reorder) | thuộc tính + xem trước. -->
+<section class="page builder-page">
+  <div class="page-header">
+    <div class="page-header__main">
+      <h1>Thiết kế biểu mẫu</h1>
+      <p class="page-header__sub">{{ name() }}</p>
+    </div>
+    <div class="page-header__actions">
+      <button type="button" class="btn btn--ghost" (click)="back()">‹ Quay lại</button>
+      <button type="button" class="btn btn--secondary" (click)="openPreview()">👁 Xem trước</button>
+      <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="save()">{{ saving() ? 'Đang lưu…' : '💾 Lưu biểu mẫu' }}</button>
+    </div>
+  </div>
+
+  <div class="builder">
+    <!-- Palette -->
+    <aside class="builder__palette">
+      <h2>Loại trường</h2>
+      <p class="hint" style="margin:0 0 var(--space-2);">Bấm để thêm vào biểu mẫu</p>
+      @for (p of PALETTE; track p.t) {
+        <button type="button" class="palette-item" (click)="addField(p.t)">
+          <span class="palette-item__ico">{{ p.i }}</span> {{ p.l }}
+        </button>
+      }
+    </aside>
+
+    <!-- Canvas: danh sách trường (kéo-thả sắp xếp) -->
+    <div class="builder__canvas" cdkDropList (cdkDropListDropped)="drop($event)">
+      @for (f of fields(); track f.id; let i = $index) {
+        <div class="fb-field" cdkDrag [class.is-selected]="selectedIdx() === i" (click)="selectField(i)">
+          <span class="fb-field__grip" cdkDragHandle title="Kéo để sắp xếp">⠿</span>
+          <span class="fb-field__main">
+            <strong>{{ f.label || '(chưa đặt nhãn)' }}</strong>
+            @if (f.required) { <span class="req">*</span> }
+            <span class="fb-field__meta">{{ typeLabel(f.type) }} · {{ f.key }}</span>
+          </span>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="removeField(i); $event.stopPropagation()">🗑</button>
+        </div>
+      } @empty {
+        <div class="fb-empty">Chọn loại trường ở cột trái để bắt đầu thiết kế biểu mẫu.</div>
+      }
+    </div>
+
+    <!-- Thuộc tính trường đang chọn -->
+    <aside class="builder__props">
+      <h2>Thuộc tính trường</h2>
+      @if (selected(); as f) {
+        <div class="field"><label>Nhãn hiển thị</label><input [(ngModel)]="f.label" (ngModelChange)="touch()" /></div>
+        <div class="field"><label>Mã trường</label><input [(ngModel)]="f.key" (ngModelChange)="touch()" /></div>
+        <div class="field"><label>Loại dữ liệu</label>
+          <select [(ngModel)]="f.type" (ngModelChange)="touch()">
+            @for (t of FIELD_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
+          </select>
+        </div>
+        <div class="field"><label>Gợi ý nhập (placeholder)</label><input [(ngModel)]="f.placeholder" (ngModelChange)="touch()" /></div>
+        <label class="radio-row"><input type="checkbox" [(ngModel)]="f.required" (ngModelChange)="touch()" /> Bắt buộc</label>
+
+        @if (isChoice(f.type)) {
+          <div class="field"><label>Nguồn lựa chọn</label>
+            <select [(ngModel)]="f.optionSource" (ngModelChange)="touch()">
+              <option ngValue="STATIC">Tự khai báo</option>
+              <option ngValue="CATALOG">Theo danh mục dùng chung</option>
+            </select>
+          </div>
+          @if (f.optionSource === 'CATALOG') {
+            <div class="field"><label>Mã danh mục</label><input [(ngModel)]="f.catalog" (ngModelChange)="touch()" placeholder="vd: DON_VI" /></div>
+          } @else {
+            <div class="field"><label>Các lựa chọn (phân tách dấu phẩy)</label><input [(ngModel)]="f.options" (ngModelChange)="touch()" placeholder="Thấp, Trung bình, Cao" /></div>
+          }
+        }
+
+        @if (isTable(f.type)) {
+          <div class="field">
+            <label>Cột của bảng</label>
+            @for (c of f.columns; track $index) {
+              <div class="recip-row">
+                <input [(ngModel)]="c.label" (ngModelChange)="touch()" placeholder="Tên cột" />
+                <input [(ngModel)]="c.key" (ngModelChange)="touch()" placeholder="mã cột" />
+                <button type="button" class="btn btn--ghost btn--sm" (click)="removeColumn(f, $index)">✕</button>
+              </div>
+            }
+            <button type="button" class="btn btn--secondary btn--sm" (click)="addColumn(f)">＋ Thêm cột</button>
+          </div>
+        }
+
+        @if (f.type === 'orgtree') {
+          <div class="field"><label>Chọn theo</label>
+            <select [(ngModel)]="f.pickMode" (ngModelChange)="touch()">
+              <option ngValue="user">Nhân sự</option>
+              <option ngValue="position">Chức danh</option>
+              <option ngValue="unit">Đơn vị</option>
+            </select>
+          </div>
+        }
+
+        <!-- Validation (Story 2.8) -->
+        @if (f.type === 'number') {
+          <div class="cfg-2col">
+            <div class="field"><label>Giá trị tối thiểu</label><input type="number" [(ngModel)]="ensureValidation(f).min" (ngModelChange)="touch()" /></div>
+            <div class="field"><label>Giá trị tối đa</label><input type="number" [(ngModel)]="ensureValidation(f).max" (ngModelChange)="touch()" /></div>
+          </div>
+        }
+        @if (f.type === 'text' || f.type === 'richtext') {
+          <div class="field"><label>Độ dài tối đa</label><input type="number" [(ngModel)]="ensureValidation(f).maxLength" (ngModelChange)="touch()" /></div>
+          @if (f.type === 'text') {
+            <div class="field"><label>Định dạng</label>
+              <select [(ngModel)]="ensureValidation(f).format" (ngModelChange)="touch()">
+                @for (fm of FORMATS; track fm.v) { <option [ngValue]="fm.v">{{ fm.l }}</option> }
+              </select>
+            </div>
+          }
+        }
+
+        <!-- Điều kiện hiển thị (Story 2.8) -->
+        <label class="radio-row"><input type="checkbox" [checked]="hasCondition(f)" (change)="toggleCondition(f, $any($event.target).checked)" /> Chỉ hiện theo điều kiện</label>
+        @if (f.visibleWhen; as c) {
+          <div class="field" style="background: var(--color-surface-alt); padding: var(--space-2); border-radius: var(--radius-md);">
+            <label>Hiện khi trường…</label>
+            <select [(ngModel)]="c.field" (ngModelChange)="touch()">
+              <option value="">— chọn trường —</option>
+              @for (o of otherFields(f); track o.key) { <option [value]="o.key">{{ o.label }}</option> }
+            </select>
+            <select [(ngModel)]="c.op" (ngModelChange)="touch()">
+              @for (op of COND_OPS; track op.v) { <option [ngValue]="op.v">{{ op.l }}</option> }
+            </select>
+            @if (c.op !== 'truthy') {
+              <input [(ngModel)]="c.value" (ngModelChange)="touch()" placeholder="giá trị so sánh" />
+            }
+          </div>
+        }
+      } @else {
+        <p class="hint">Chọn một trường ở giữa để chỉnh thuộc tính.</p>
+      }
+    </aside>
+  </div>
+</section>
+
+<!-- Xem trước biểu mẫu (tương tác: ẩn/hiện điều kiện + validation — Story 2.8) -->
+<app-modal [open]="previewOpen()" [wide]="true" [title]="'Xem trước: ' + name()" (closed)="previewOpen.set(false)">
+  @for (f of fields(); track f.id) {
+    @if (isSection(f.type)) {
+      <h4 class="form-section">{{ f.label }}</h4>
+    } @else if (isVisible(f)) {
+      <div class="field">
+        <label>{{ f.label }} @if (f.required) { <span class="req">*</span> }</label>
+        @switch (f.type) {
+          @case ('number') { <input type="number" [placeholder]="f.placeholder || ''" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)" /> }
+          @case ('date') { <input type="date" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)" /> }
+          @case ('datetime') { <input type="datetime-local" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)" /> }
+          @case ('boolean') { <label class="radio-row"><input type="checkbox" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)" /> {{ f.placeholder || 'Có' }}</label> }
+          @case ('textarea') { <textarea rows="3" [placeholder]="f.placeholder || ''" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)"></textarea> }
+          @case ('dropdown') {
+            <select [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)">
+              <option value="">— chọn —</option>@for (o of optionList(f); track o) { <option [value]="o">{{ o }}</option> }
+            </select>
+          }
+          @case ('radio') {
+            <div class="radio-row">@for (o of optionList(f); track o) {
+              <label class="radio-opt"><input type="radio" [name]="'pv_'+f.key" [value]="o" [checked]="values()[f.key] === o" (change)="setVal(f.key, o)" /> {{ o }}</label>
+            }</div>
+          }
+          @case ('multiselect') {
+            <div class="radio-row">@for (o of optionList(f); track o) {
+              <label class="radio-opt"><input type="checkbox" [checked]="hasMulti(f.key, o)" (change)="toggleMulti(f.key, o)" /> {{ o }}</label>
+            }</div>
+          }
+          @case ('file') { <input type="file" /> }
+          @case ('richtext') { <textarea rows="4" [placeholder]="f.placeholder || ''" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)"></textarea> }
+          @case ('table') {
+            <table class="data-table">
+              <thead><tr>@for (c of f.columns; track c.key) { <th>{{ c.label }}</th> }</tr></thead>
+              <tbody><tr>@for (c of f.columns; track c.key) { <td><input /></td> }</tr></tbody>
+            </table>
+          }
+          @case ('orgtree') {
+            <org-tree-picker [mode]="f.pickMode || 'user'" [value]="$any(values()[f.key]) || ''" (valueChange)="setVal(f.key, $event)" />
+          }
+          @default { <input type="text" [placeholder]="f.placeholder || ''" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)" /> }
+        }
+        @if (shownError(f); as err) { <span class="field__error">{{ err }}</span> }
+      </div>
+    }
+  } @empty { <p class="hint">Biểu mẫu chưa có trường nào.</p> }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="previewOpen.set(false)">Đóng</button>
+    <button type="button" class="btn btn--primary" (click)="validateAll()">✓ Kiểm tra &amp; gửi</button>
+  </ng-container>
+</app-modal>

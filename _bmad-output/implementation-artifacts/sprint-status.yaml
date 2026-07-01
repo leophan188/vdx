@@ -1,0 +1,79 @@
+# generated: 2026-06-24
+# last_updated: 2026-06-27 (Epic 3 DONE 17/17 — OnlyOffice + cộng tác. TOÀN BỘ 52/52 story DONE).
+# project: BPM Platform
+# project_key: NOKEY
+# tracking_system: file-system
+# story_location: _bmad-output/implementation-artifacts
+#
+# STATUS: epic backlog->in-progress->done | story backlog->ready-for-dev->in-progress->review->done | retro optional<->done
+
+generated: 2026-06-24
+last_updated: 2026-06-24
+project: BPM Platform
+project_key: NOKEY
+tracking_system: file-system
+story_location: _bmad-output/implementation-artifacts
+
+development_status:
+  epic-1: done
+  1-1-dang-nhap-quan-ly-tai-khoan-noi-bo: done
+  1-2-cay-co-cau-to-chuc-nhieu-cap: done
+  1-3-vi-tri-chuc-danh-gan-nguoi-giu: done
+  1-4-phan-quyen-rbac-theo-vi-tri-vai-tro: done
+  1-5-phan-cong-theo-vi-tri-nguoi-snapshot-khi-giao: done
+  1-6-uy-quyen-chuyen-tiep-nguoi-thay-the: done
+  1-7-hang-doi-chua-co-nguoi-nhan-cho-vi-tri-trong: done
+  1-8-audit-trail-append-only-vet-phe-duyet: done
+  epic-1-retrospective: optional
+  epic-2: done
+  2-1-process-designer-keo-tha-metadata-buoc: done
+  2-2-loai-luong-cot-loi-cho-mau-1-dieu-kien-chuyen-buoc: done
+  2-3-tap-hanh-dong-cho-phep-tren-buoc: done
+  2-4-versioning-quy-trinh-publish-retire-snapshot: done
+  2-5-sla-han-theo-buoc: done
+  2-6-form-builder-keo-tha-loai-truong-cot-loi: done
+  2-7-org-tree-picker-dung-lai: done
+  2-8-an-hien-dieu-kien-validation: done
+  2-9-gan-form-vao-buoc-du-lieu-xuyen-suot-quyen-truong-theo-buoc: done
+  2-10-versioning-form-snapshot-moi-node: done
+  epic-2-retrospective: optional
+  epic-3: done
+  3-1-khoi-tao-nhiem-vu-tu-quy-trinh-publish: done
+  3-2-hop-thu-viec-viec-cua-toi: done
+  3-3-trang-thai-nhiem-vu-projection-tien-do-buoc: done
+  3-4-hanh-dong-tren-viec-theo-buoc-vai-tro: done
+  3-5-tu-chuyen-viec-sang-buoc-ke: done
+  3-6-quy-tac-sua-huy-theo-trang-thai: done
+  3-7-co-qua-han-truc-giao-theo-doi-han: done
+  3-8-xin-gia-han: done
+  3-9-cascade-khi-huy-nhiem-vu: done
+  3-10-soan-thao-onlyoffice-nhung-import-version-du-thao: done
+  3-11-thu-thap-y-kien-phoi-hop-bang-tong-hop: done
+  3-12-tiep-thu-khong-tiep-thu-phe-duyet-du-thao: done
+  3-13-comment-kieu-jira-mention: done
+  3-14-sua-y-kien-da-gui-khi-con-han: done
+  3-15-phoi-hop-don-vi-ca-nhan-song-song-join-chong-treo: done
+  3-16-ghi-nhan-ket-qua-ky-ban-hanh: done
+  3-17-dong-ho-so-luu-tru-metadata-chuan-san: done
+  epic-3-retrospective: done
+  epic-4: done
+  4-1-projection-truong-reportable-dong-bo: done
+  4-2-dashboard-dieu-hanh: done
+  4-3-ai-dang-lam-gi: done
+  4-4-theo-doi-nhiem-vu-ca-nhan: done
+  4-5-tra-cuu-tim-kiem: done
+  4-6-bao-cao-4-lat-cat-loc-thoi-gian: done
+  4-7-cap-nhat-gan-realtime-5s: done
+  4-8-xuat-bao-cao-excel-pdf: done
+  4-9-thong-bao-in-app-trung-tam-thong-bao: done
+  4-10-thong-bao-email-bat-tat-nhac-han: done
+  epic-4-retrospective: done
+  epic-5: done
+  5-1-day-du-loai-luong-lap-quay-lai-buoc-da-nhanh-phuc: done
+  5-2-day-du-bo-loai-truong-form: done
+  5-3-affordance-designer-nang-cao: done
+  5-4-backup-nhat-quan-da-kho-phuc-hoi: done
+  5-5-vong-doi-partition-bang-audit-van-hanh: done
+  5-6-ux-polish-design-system-accessibility-aa: done
+  5-7-nfr-van-hanh-hieu-nang-tuong-thich-san-sang-da-ngon-ngu: done
+  epic-5-retrospective: done

@@ -1,0 +1,23 @@
+<!-- Soạn thảo OnlyOffice nhúng (Story 3.10). -->
+<div class="doc-editor">
+  <div class="doc-editor__bar">
+    <button type="button" class="btn btn--ghost btn--sm" (click)="back()">← Tài liệu</button>
+    <strong class="doc-editor__title">{{ title() }}</strong>
+    <span style="flex:1"></span>
+    <span class="hint">Lưu tự động qua OnlyOffice — đóng tab sẽ ghi phiên bản mới</span>
+  </div>
+
+  @if (error(); as e) {
+    <div class="doc-editor__error">
+      <p class="alert alert--error">{{ e }}</p>
+      <p class="hint">Đảm bảo OnlyOffice đang chạy: <code>docker-compose -f ops/onlyoffice/docker-compose.yml up -d</code> và mở được <a href="http://localhost:8082/" target="_blank" rel="noopener">http://localhost:8082</a>.</p>
+    </div>
+  }
+
+  <div class="doc-editor__split">
+    <div id="onlyoffice-editor" class="doc-editor__frame"></div>
+    <aside class="doc-editor__side">
+      <app-collab-panel [id]="id" />
+    </aside>
+  </div>
+</div>

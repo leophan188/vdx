@@ -1,0 +1,90 @@
+<!-- Theo dõi quy trình (Story 3.3) + tra cứu (Story 4.5) + hủy (Story 3.6). -->
+<section class="page">
+  <app-page-header title="Theo dõi quy trình"
+                   subtitle="Tra cứu và theo dõi các phiên chạy — bước hiện tại, người giữ việc."
+                   [breadcrumb]="[{ label: 'Vận hành' }, { label: 'Theo dõi quy trình' }]" />
+
+  <div class="toolbar-row">
+    <div class="field field--inline" style="flex:1">
+      <input type="search" placeholder="🔍 Tìm theo tiêu đề, quy trình, người tạo, bước, hoặc dữ liệu hồ sơ (số văn bản, hạng mục…)"
+             [ngModel]="search()" (ngModelChange)="search.set($event)" />
+    </div>
+    <div class="field field--inline">
+      <label for="st">Trạng thái</label>
+      <select id="st" [ngModel]="statusFilter()" (ngModelChange)="statusFilter.set($event)">
+        <option value="">Tất cả</option>
+        <option value="RUNNING">Đang chạy</option>
+        <option value="COMPLETED">Hoàn thành</option>
+        <option value="CANCELLED">Đã hủy</option>
+      </select>
+    </div>
+  </div>
+
+  <data-grid [columns]="cols" [rows]="filtered()" title="Phiên chạy ({{ filtered().length }})"
+             [emptyText]="loading() ? 'Đang tải…' : 'Không có hồ sơ khớp tìm kiếm.'">
+    <button gridActions type="button" class="btn btn--ghost" (click)="reload()">↻ Làm mới</button>
+
+    <ng-template gridCell="title" let-i>
+      <strong>{{ i.title }}</strong>
+      <small class="hint" style="display:block">👤 {{ i.startedBy }}</small>
+    </ng-template>
+
+    <ng-template gridCell="status" let-i>
+      <span class="badge" [class]="statusClass(i.status)">{{ statusLabel(i.status) }}</span>
+    </ng-template>
+
+    <ng-template gridCell="currentStep" let-i>
+      @if (i.status === 'RUNNING') {
+        <strong>{{ i.currentStep }}</strong>
+        @if (i.currentOverdue) { <span class="badge badge--cancel" style="margin-left:6px">⚠ Quá hạn</span> }
+        <small class="hint" style="display:block">👤 {{ i.currentAssignee }}</small>
+      } @else { — }
+    </ng-template>
+
+    <ng-template gridCell="startedAt" let-i>{{ fmt(i.startedAt) }}</ng-template>
+
+    <ng-template gridCell="actions" let-i>
+      <span class="cell-actions">
+        <button type="button" class="btn btn--secondary btn--sm" (click)="openTimeline(i)">🕑 Tiến trình</button>
+        @if (i.status === 'RUNNING') {
+          <button type="button" class="btn btn--ghost btn--sm" (click)="askCancel(i)">✖ Hủy</button>
+        }
+      </span>
+    </ng-template>
+  </data-grid>
+</section>
+
+<!-- Dòng thời gian các bước -->
+<app-modal [open]="tlOpen()" [title]="'Tiến trình — ' + (timeline()?.processName || '')" (closed)="tlOpen.set(false)">
+  @if (timeline(); as t) {
+    <ol class="timeline">
+      @for (s of t.steps; track $index) {
+        <li class="timeline__item" [class.timeline__item--active]="s.status === 'ACTIVE'">
+          <span class="timeline__dot"></span>
+          <div class="timeline__body">
+            <strong>{{ s.stepName }}</strong>
+            <small>👤 {{ s.assignee }}</small>
+            <small>
+              {{ fmt(s.startedAt) }}
+              @if (s.status === 'DONE') { → {{ fmt(s.endedAt) }} } @else { · <em>đang xử lý</em> }
+            </small>
+          </div>
+        </li>
+      }
+      @if (!t.steps.length) { <p class="hint">Chưa có bước nào được ghi nhận.</p> }
+    </ol>
+  } @else {
+    <p class="hint">Đang tải…</p>
+  }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--primary" (click)="tlOpen.set(false)">Đóng</button>
+  </ng-container>
+</app-modal>
+
+<app-confirm-dialog
+  [open]="confirmOpen()"
+  title="Hủy phiên chạy"
+  [message]="'Hủy phiên: ' + (cancelTarget()?.processName || '') + '? Việc đang mở sẽ bị thu hồi.'"
+  confirmLabel="Hủy phiên"
+  [danger]="true"
+  (confirm)="doCancel()" (cancel)="confirmOpen.set(false)" />

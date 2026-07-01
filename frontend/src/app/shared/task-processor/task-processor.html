@@ -1,0 +1,88 @@
+<!-- Modal xử lý việc dùng chung (Story 3.4): form theo quyền trường + hành động. -->
+<app-modal [open]="open()" [wide]="true" [title]="(detail()?.stepName || 'Xử lý việc')" (closed)="close()">
+  @if (detail(); as d) {
+    <p class="hint" style="margin-top:0">Quy trình: <strong>{{ d.processName }}</strong></p>
+
+    @if (d.formId && fields().length) {
+      <form id="task-proc-form">
+        @for (f of fields(); track f.key) {
+          @if (f.type === 'section') {
+            <h4 class="form-section">{{ f.label }}</h4>
+          } @else if (visible(f.key)) {
+            <div class="field">
+              <label [attr.for]="'tpf_' + f.key">{{ f.label }}@if (f.required) { <span class="req">*</span> }</label>
+
+              @switch (f.type) {
+                @case ('boolean') {
+                  <input type="checkbox" [id]="'tpf_' + f.key" [disabled]="readonly_(f.key)"
+                         [checked]="!!val(f.key)" (change)="setVal(f.key, $any($event.target).checked)" />
+                }
+                @case ('dropdown') {
+                  <select [id]="'tpf_' + f.key" [disabled]="readonly_(f.key)"
+                          [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)">
+                    <option value="">(Chọn)</option>
+                    @for (o of opts(f); track o) { <option [value]="o">{{ o }}</option> }
+                  </select>
+                }
+                @case ('radio') {
+                  <div class="radio-row">
+                    @for (o of opts(f); track o) {
+                      <label class="radio-opt">
+                        <input type="radio" [name]="'tpf_' + f.key" [value]="o" [disabled]="readonly_(f.key)"
+                               [checked]="val(f.key) === o" (change)="setVal(f.key, o)" /> {{ o }}
+                      </label>
+                    }
+                  </div>
+                }
+                @case ('multiselect') {
+                  <div class="radio-row">
+                    @for (o of opts(f); track o) {
+                      <label class="radio-opt">
+                        <input type="checkbox" [disabled]="readonly_(f.key)"
+                               [checked]="hasMulti(f.key, o)" (change)="toggleMulti(f.key, o)" /> {{ o }}
+                      </label>
+                    }
+                  </div>
+                }
+                @case ('number') {
+                  <input type="number" [id]="'tpf_' + f.key" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
+                         [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)" />
+                }
+                @case ('date') {
+                  <input type="date" [id]="'tpf_' + f.key" [readOnly]="readonly_(f.key)"
+                         [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)" />
+                }
+                @case ('datetime') {
+                  <input type="datetime-local" [id]="'tpf_' + f.key" [readOnly]="readonly_(f.key)"
+                         [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)" />
+                }
+                @case ('textarea') {
+                  <textarea [id]="'tpf_' + f.key" rows="3" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
+                            [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)"></textarea>
+                }
+                @case ('richtext') {
+                  <textarea [id]="'tpf_' + f.key" rows="4" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
+                            [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)"></textarea>
+                }
+                @default {
+                  <input type="text" [id]="'tpf_' + f.key" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
+                         [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)" />
+                }
+              }
+              @if (readonly_(f.key)) { <small class="hint">Chỉ đọc ở bước này</small> }
+            </div>
+          }
+        }
+      </form>
+    } @else {
+      <p class="hint">Bước này không gắn biểu mẫu — chọn hành động để tiếp tục.</p>
+    }
+  }
+
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="close()">Đóng</button>
+    @for (a of detail()?.actions || []; track a) {
+      <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="act(a)">{{ a }}</button>
+    }
+  </ng-container>
+</app-modal>

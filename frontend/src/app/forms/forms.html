@@ -1,0 +1,77 @@
+<!-- Danh sách biểu mẫu (Story 2.6): lưới + tạo/đổi tên/xóa + mở form builder. -->
+<section class="page">
+  <app-page-header title="Biểu mẫu động"
+                   subtitle="Thiết kế biểu mẫu bằng kéo-thả; form sinh tự động từ metadata."
+                   [breadcrumb]="[{ label: 'Cấu hình quy trình' }, { label: 'Biểu mẫu' }]" />
+
+  @if (error()) { <p class="alert alert--error" role="alert">{{ error() }}</p> }
+
+  <data-grid [columns]="cols" [rows]="rows()" title="Biểu mẫu" searchPlaceholder="Tìm theo mã/tên…"
+             emptyText="Chưa có biểu mẫu nào.">
+    <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo biểu mẫu</button>
+
+    <ng-template gridCell="status" let-f>
+      <status-badge [status]="statusKind(f.status)" [label]="statusLabel(f.status)" />
+    </ng-template>
+
+    <ng-template gridCell="publishedVersion" let-f>
+      @if (f.publishedVersion > 0) { <span class="badge badge--neutral">v{{ f.publishedVersion }}</span> }
+      @else { <span class="hint">—</span> }
+    </ng-template>
+
+    <ng-template gridCell="actions" let-f>
+      <span class="cell-actions">
+        <button type="button" class="btn btn--secondary btn--sm" (click)="design(f)">✎ Thiết kế</button>
+        @if (f.status !== 'PUBLISHED') {
+          <button type="button" class="btn btn--primary btn--sm" (click)="askPublish(f)">🚀 Ban hành</button>
+        } @else {
+          <button type="button" class="btn btn--ghost btn--sm" (click)="askRetire(f)">⏸ Ngừng dùng</button>
+        }
+        <button type="button" class="btn btn--ghost btn--sm" title="Đổi tên" (click)="openEdit(f)">✎ Tên</button>
+        <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(f)">🗑 Xóa</button>
+      </span>
+    </ng-template>
+  </data-grid>
+</section>
+
+<app-modal [open]="createOpen()" title="Tạo biểu mẫu mới" (closed)="createOpen.set(false)">
+  <form id="create-form" (ngSubmit)="create()">
+    <div class="field"><label for="fkey">Mã biểu mẫu</label><input id="fkey" name="fkey" [(ngModel)]="newKey" required placeholder="vd: phieu-trinh" /></div>
+    <div class="field"><label for="fname">Tên biểu mẫu</label><input id="fname" name="fname" [(ngModel)]="newName" required /></div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="create-form" class="btn btn--primary">Tạo &amp; thiết kế</button>
+  </ng-container>
+</app-modal>
+
+<app-modal [open]="editOpen()" [title]="'Đổi tên — ' + (editTarget()?.formKey || '')" (closed)="editOpen.set(false)">
+  <form id="edit-form" (ngSubmit)="saveEdit()">
+    <div class="field"><label for="efname">Tên biểu mẫu</label><input id="efname" name="efname" [(ngModel)]="editName" required /></div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="editOpen.set(false)">Hủy</button>
+    <button type="submit" form="edit-form" class="btn btn--primary">Lưu</button>
+  </ng-container>
+</app-modal>
+
+<app-confirm-dialog
+  [open]="publishOpen()"
+  title="Ban hành biểu mẫu"
+  [message]="'Ban hành &quot;' + (publishTarget()?.name || '') + '&quot;? Bản nháp hiện tại sẽ được chốt thành phiên bản mới.'"
+  confirmLabel="Ban hành"
+  (confirm)="confirmPublish()" (cancel)="publishOpen.set(false)" />
+
+<app-confirm-dialog
+  [open]="retireOpen()"
+  title="Ngừng dùng biểu mẫu"
+  [message]="'Ngừng dùng &quot;' + (retireTarget()?.name || '') + '&quot;? Node đang dùng giữ snapshot phiên bản cũ.'"
+  confirmLabel="Ngừng dùng" [danger]="true"
+  (confirm)="confirmRetire()" (cancel)="retireOpen.set(false)" />
+
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xóa biểu mẫu"
+  [message]="'Xóa biểu mẫu &quot;' + (delTarget()?.name || '') + '&quot;? Hành động không thể hoàn tác.'"
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="delOpen.set(false)" />

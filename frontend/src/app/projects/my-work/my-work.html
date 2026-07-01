@@ -1,0 +1,68 @@
+<section class="page">
+  <app-page-header title="Việc dự án của tôi"
+                   subtitle="Các công việc trong dự án được giao cho bạn — tự cập nhật trạng thái."
+                   [breadcrumb]="[{ label: 'Cá nhân' }, { label: 'Việc dự án của tôi' }]" />
+
+  <div class="mw-stats">
+    <span class="badge badge--neutral">Tổng: <strong>{{ stats().total }}</strong></span>
+    <span class="badge badge--info">Đang làm: <strong>{{ (stats().by['IN_PROGRESS'] || 0) + (stats().by['IN_REVIEW'] || 0) }}</strong></span>
+    <span class="badge badge--done">Hoàn thành: <strong>{{ stats().by['DONE'] || 0 }}</strong></span>
+    <span class="badge badge--pending">Cần làm: <strong>{{ (stats().by['TODO'] || 0) + (stats().by['BACKLOG'] || 0) }}</strong></span>
+    <span class="badge badge--neutral">Tiến độ giờ: <strong>{{ stats().pct }}%</strong> ({{ stats().doneEst }}/{{ stats().est }}h)</span>
+  </div>
+
+  <div class="filter-bar">
+    <div class="filter-bar__field">
+      <label>Trạng thái</label>
+      <searchable-select [options]="statusSel" [value]="filterStatus()"
+                         (valueChange)="filterStatus.set($event)" [allowEmpty]="true" placeholder="— Tất cả —" />
+    </div>
+    <div class="filter-bar__field">
+      <label>Dự án</label>
+      <searchable-select [options]="projectSel()" [value]="filterProject()"
+                         (valueChange)="filterProject.set($event)" [allowEmpty]="true" placeholder="— Tất cả —" />
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="card"><app-skeleton [rows]="6" /></div>
+  } @else if (all().length === 0) {
+    <div class="card">
+      <app-empty-state icon="✅" title="Chưa có công việc nào"
+                       hint="Bạn chưa được giao công việc dự án nào. Khi quản lý phân công, công việc sẽ xuất hiện ở đây." />
+    </div>
+  } @else {
+  <data-grid [columns]="cols" [rows]="rows()" [title]="'Công việc của tôi (' + rows().length + ')'"
+             [emptyText]="'Không có công việc khớp bộ lọc.'">
+    <ng-template gridCell="project" let-t>
+      <a [routerLink]="['/projects', t.projectId]" [title]="t.projectName"><strong>{{ t.projectCode }}</strong></a>
+    </ng-template>
+    <ng-template gridCell="code" let-t>
+      <button type="button" class="mw-link" (click)="openDetail(t)">{{ t.code }}</button>
+    </ng-template>
+    <ng-template gridCell="title" let-t>
+      <button type="button" class="mw-link" [title]="t.title + ' — bấm để xem chi tiết'"
+              (click)="openDetail(t)">{{ t.title }}</button>
+    </ng-template>
+    <ng-template gridCell="priority" let-t>
+      <span class="badge" [class]="prioBadge(t.priority)">{{ t.priority }}</span>
+    </ng-template>
+    <ng-template gridCell="progress" let-t>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="mw-bar"><span class="mw-bar__fill" [style.width.%]="t.progressPct"></span></span>
+        <span>{{ t.progressPct }}%</span>
+      </div>
+    </ng-template>
+    <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
+    <ng-template gridCell="status" let-t>
+      <select [value]="t.status" (change)="changeStatus(t, $any($event.target).value)">
+        @for (s of STATUSES; track s.value) { <option [value]="s.value">{{ s.label }}</option> }
+      </select>
+    </ng-template>
+  </data-grid>
+  }
+
+  <!-- Chi tiết task (Jira) — cập nhật đầy đủ trạng thái/giờ/bình luận/ảnh -->
+  <app-prj-task-detail [projectId]="detailProjectId()" [task]="detailTask()" [open]="detailOpen()"
+                       (closed)="closeDetail()" (changed)="reload()" />
+</section>

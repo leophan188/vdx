@@ -1,0 +1,52 @@
+<!-- Hồ sơ của tôi (Story 4.4): theo dõi hồ sơ do mình tạo + tiến trình. -->
+<section class="page">
+  <app-page-header title="Hồ sơ của tôi"
+                   subtitle="Theo dõi các yêu cầu bạn đã tạo và tiến trình xử lý."
+                   [breadcrumb]="[{ label: 'Vận hành' }, { label: 'Hồ sơ của tôi' }]" />
+
+  <data-grid [columns]="cols" [rows]="rows()" title="Hồ sơ đã tạo"
+             [emptyText]="loading() ? 'Đang tải…' : 'Bạn chưa tạo hồ sơ nào. Vào “Tạo yêu cầu” để bắt đầu.'">
+    <button gridActions type="button" class="btn btn--ghost" (click)="reload()">↻ Làm mới</button>
+
+    <ng-template gridCell="title" let-i><strong>{{ i.title }}</strong></ng-template>
+
+    <ng-template gridCell="status" let-i>
+      <span class="badge" [class]="statusClass(i.status)">{{ statusLabel(i.status) }}</span>
+    </ng-template>
+
+    <ng-template gridCell="currentStep" let-i>
+      @if (i.status === 'RUNNING') {
+        {{ i.currentStep }}
+        @if (i.currentOverdue) { <span class="badge badge--cancel" style="margin-left:6px">⚠ Quá hạn</span> }
+        <small class="hint" style="display:block">👤 {{ i.currentAssignee }}</small>
+      } @else { — }
+    </ng-template>
+
+    <ng-template gridCell="startedAt" let-i>{{ fmt(i.startedAt) }}</ng-template>
+
+    <ng-template gridCell="actions" let-i>
+      <button type="button" class="btn btn--secondary btn--sm" (click)="openTimeline(i)">🕑 Tiến trình</button>
+    </ng-template>
+  </data-grid>
+</section>
+
+<app-modal [open]="tlOpen()" [title]="'Tiến trình — ' + (timeline()?.processName || '')" (closed)="tlOpen.set(false)">
+  @if (timeline(); as t) {
+    <ol class="timeline">
+      @for (s of t.steps; track $index) {
+        <li class="timeline__item" [class.timeline__item--active]="s.status === 'ACTIVE'">
+          <span class="timeline__dot"></span>
+          <div class="timeline__body">
+            <strong>{{ s.stepName }}</strong>
+            <small>👤 {{ s.assignee }}</small>
+            <small>{{ fmt(s.startedAt) }} @if (s.status === 'DONE') { → {{ fmt(s.endedAt) }} } @else { · <em>đang xử lý</em> }</small>
+          </div>
+        </li>
+      }
+      @if (!t.steps.length) { <p class="hint">Chưa có bước nào được ghi nhận.</p> }
+    </ol>
+  } @else { <p class="hint">Đang tải…</p> }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--primary" (click)="tlOpen.set(false)">Đóng</button>
+  </ng-container>
+</app-modal>

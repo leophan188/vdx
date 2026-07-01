@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.bpm.ExcelReportServiceTest
+-------------------------------------------------------------------------------
+Tests run: 5, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.467 s -- in com.bpm.ExcelReportServiceTest

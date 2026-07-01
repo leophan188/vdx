@@ -1,0 +1,156 @@
+<app-page-header
+  title="Tài khoản của tôi"
+  subtitle="Xem và cập nhật thông tin cá nhân, ảnh đại diện và mật khẩu."
+  [breadcrumb]="[{ label: 'Bảng tin VDX', link: '/home' }, { label: 'Tài khoản của tôi' }]">
+</app-page-header>
+
+<!-- ===== Khu THIẾT LẬP BẮT BUỘC (chỉ hiện khi còn việc chưa xong) ===== -->
+@if (setupRequired()) {
+  <section class="setup-required" role="alert">
+    <div class="setup-required__head">
+      <span class="setup-required__icon" aria-hidden="true">⚠</span>
+      <strong>Cần hoàn tất thiết lập trước khi sử dụng hệ thống</strong>
+    </div>
+    <ul class="setup-required__list">
+      @if (mustChangePassword()) {
+        <li>Bạn đang dùng <b>mật khẩu mặc định</b> — vui lòng đổi mật khẩu ngay bên dưới.</li>
+      }
+      @if (mustAddAvatar()) {
+        <li>Bạn <b>chưa có ảnh đại diện</b> — vui lòng tải ảnh lên.</li>
+      }
+    </ul>
+    <p class="setup-required__hint">Sau khi hoàn tất, hệ thống sẽ tự mở khoá điều hướng.</p>
+  </section>
+}
+
+@if (loading()) {
+  <p class="hint">Đang tải thông tin…</p>
+} @else if (profile(); as p) {
+  <div class="account-grid">
+
+    <!-- ===== Khu Ảnh đại diện ===== -->
+    <section class="card account-avatar-card">
+      <div class="card__head"><span class="card__title">Ảnh đại diện</span></div>
+      <div class="account-avatar">
+        @if (avatarSrc(); as src) {
+          <img class="account-avatar__img" [src]="src" alt="Ảnh đại diện" />
+        } @else {
+          <app-avatar [name]="p.fullName || p.username" [size]="96" />
+        }
+        <div class="account-avatar__actions">
+          <label class="btn btn--secondary" [class.is-disabled]="uploading()">
+            {{ uploading() ? 'Đang tải lên…' : 'Tải ảnh lên' }}
+            <input type="file" accept="image/*" hidden [disabled]="uploading()" (change)="onPickAvatar($event)" />
+          </label>
+          <p class="hint">JPEG/PNG/GIF/WEBP, tối đa 10MB.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Khu Thông tin ===== -->
+    <section class="card account-info-card">
+      <div class="card__head"><span class="card__title">Thông tin cá nhân</span></div>
+      <form (ngSubmit)="saveProfile()">
+        <div class="form-2col">
+          <div class="field">
+            <label>Tên đăng nhập</label>
+            <input [value]="p.username" readonly disabled />
+          </div>
+          <div class="field">
+            <label>Họ và tên</label>
+            <input name="fullName" [(ngModel)]="fFullName" [readonly]="p.linkedEmployee" [disabled]="p.linkedEmployee" />
+            @if (p.linkedEmployee) { <small class="hint">Theo hồ sơ nhân sự (QLNS) — không sửa tại đây.</small> }
+          </div>
+          <div class="field">
+            <label>Email</label>
+            <input name="email" type="email" [(ngModel)]="fEmail" placeholder="email@congty.vn" />
+          </div>
+          <div class="field">
+            <label>Số điện thoại</label>
+            <input name="phone" [(ngModel)]="fPhone" placeholder="09xxxxxxxx" />
+          </div>
+        </div>
+        <div class="account-actions">
+          <button type="submit" class="btn btn--primary" [disabled]="savingProfile()">
+            {{ savingProfile() ? 'Đang lưu…' : 'Lưu thông tin' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===== Khu Đổi mật khẩu ===== -->
+    <section class="card account-pwd-card">
+      <div class="card__head"><span class="card__title">Đổi mật khẩu</span></div>
+      <form (ngSubmit)="changePassword()">
+        <div class="form-2col">
+          <div class="field">
+            <label>Mật khẩu hiện tại</label>
+            <input name="oldPwd" type="password" autocomplete="current-password" [(ngModel)]="oldPwd" required />
+          </div>
+          <div class="field"></div>
+          <div class="field">
+            <label>Mật khẩu mới (≥ 4 ký tự)</label>
+            <input name="newPwd" type="password" autocomplete="new-password" [(ngModel)]="newPwd" required />
+          </div>
+          <div class="field">
+            <label>Nhập lại mật khẩu mới</label>
+            <input name="confirmPwd" type="password" autocomplete="new-password" [(ngModel)]="confirmPwd" required />
+          </div>
+        </div>
+        <div class="account-actions">
+          <button type="submit" class="btn btn--primary"
+                  [disabled]="changingPwd() || !oldPwd || !newPwd || !confirmPwd">
+            {{ changingPwd() ? 'Đang đổi…' : 'Đổi mật khẩu' }}
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- ===== Khu Giao diện (lưu theo tài khoản) ===== -->
+    <section class="card account-theme-card">
+      <div class="card__head"><span class="card__title">Giao diện</span></div>
+
+      <div class="theme-block">
+        <label class="theme-block__label">Chế độ</label>
+        <div class="segmented" role="group" aria-label="Chế độ sáng tối">
+          <button type="button" class="segmented__btn"
+                  [class.is-active]="currentTheme() === 'light'"
+                  [attr.aria-pressed]="currentTheme() === 'light'"
+                  (click)="setMode('light')">Sáng</button>
+          <button type="button" class="segmented__btn"
+                  [class.is-active]="currentTheme() === 'dark'"
+                  [attr.aria-pressed]="currentTheme() === 'dark'"
+                  (click)="setMode('dark')">Tối</button>
+        </div>
+      </div>
+
+      <div class="theme-block">
+        <label class="theme-block__label">Giao diện</label>
+        <div class="skin-gallery skin-gallery--account" role="group" aria-label="Bộ giao diện">
+          @for (a of accents; track a.key) {
+            <button type="button" class="skin-card"
+                    [class.is-active]="currentAccent() === a.key"
+                    [attr.aria-pressed]="currentAccent() === a.key"
+                    [attr.title]="a.label"
+                    (click)="setAccent(a.key)">
+              <span class="skin-mock" aria-hidden="true">
+                <span class="skin-mock__side" [style.background]="a.sidebar"></span>
+                <span class="skin-mock__top" [style.background]="a.sidebar"></span>
+                <span class="skin-mock__body"></span>
+                <span class="skin-mock__dot" [style.background]="a.accent"></span>
+              </span>
+              <span class="skin-card__meta">
+                <span class="skin-card__swatch" [style.background]="a.accent" aria-hidden="true"></span>
+                <span class="skin-card__name">{{ a.label }}</span>
+                @if (currentAccent() === a.key) { <span class="skin-card__check">✓</span> }
+              </span>
+            </button>
+          }
+        </div>
+      </div>
+
+      <p class="hint">Tùy chọn được lưu theo tài khoản của bạn.</p>
+    </section>
+
+  </div>
+}

@@ -1,0 +1,212 @@
+<!-- TAB Backlog — cây đa cấp công việc của dự án -->
+<div class="bl-summary">
+  <span class="badge badge--neutral">Tổng công việc: <strong>{{ summary().total }}</strong></span>
+  <span class="badge badge--pending">Tổng est: <strong>{{ summary().totalEst }}</strong> giờ</span>
+  <span class="badge badge--active">Hoàn thành: <strong>{{ summary().pct }}%</strong>
+    ({{ summary().leafDone }}/{{ summary().leaves }} task lá)</span>
+  <!-- % hoàn thành chung — rollup theo est của task gốc -->
+  <span class="bl-summary__overall" [title]="'Hoàn thành chung ' + summary().pct + '%'">
+    <span class="bl-summary__track">
+      <span class="bl-summary__bar" [style.width.%]="summary().pct"></span>
+    </span>
+    <strong>{{ summary().pct }}%</strong>
+  </span>
+</div>
+
+<div class="filter-bar">
+  <button type="button" class="btn btn--ghost btn--sm" (click)="expandAll()">Mở hết</button>
+  <button type="button" class="btn btn--ghost btn--sm" (click)="collapseAll()">Gập hết</button>
+  <!-- Lọc hiển thị theo loại (component chung, lưu cho lần sau) -->
+  <div class="filter-bar__field">
+    <span class="filter-bar__label">Loại</span>
+    <app-type-filter [options]="typeSel" [selected]="typeFilter()"
+                     (toggle)="toggleType($any($event))" />
+  </div>
+  <!-- Lọc người thực hiện (giữ task cha Epic/Story/cha) -->
+  <div class="filter-bar__field">
+    <label>Người</label>
+    <searchable-select [options]="assigneeSel()" [value]="filterAssignee()"
+                       (valueChange)="setAssignee($event)"
+                       [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+  </div>
+  <span class="filter-bar__spacer"></span>
+  <button type="button" class="btn btn--primary btn--sm" (click)="openCreate(null)">＋ Thêm task</button>
+</div>
+
+<div class="bl-tree">
+  <div class="bl-head">
+    <span>Công việc</span>
+    <span>Loại</span>
+    <span>Trạng thái</span>
+    <span>Người thực hiện</span>
+    <span class="bl-num">Est (giờ)</span>
+    <span>% Hoàn thành</span>
+    <span>Từ ngày</span>
+    <span>Đến ngày</span>
+    <span>Duration</span>
+    <span>Ưu tiên</span>
+    <span class="bl-actions">Thao tác</span>
+  </div>
+
+  @if (loading()) {
+    <div class="bl-empty">Đang tải…</div>
+  } @else if (visible().length === 0) {
+    <div class="bl-empty">Chưa có công việc nào — hãy thêm task đầu tiên.</div>
+  } @else {
+    @for (r of visible(); track r.task.id) {
+      <div class="bl-row">
+        <!-- Tên + thụt lề theo cấp -->
+        <span class="bl-title" [style.padding-left.px]="r.level * 18">
+          @if (r.hasChildren) {
+            <button type="button" class="bl-toggle"
+                    (click)="toggle(r.task.id)"
+                    [attr.aria-label]="isCollapsed(r.task.id) ? 'Mở' : 'Gập'">{{ isCollapsed(r.task.id) ? '▸' : '▾' }}</button>
+          } @else { <span class="bl-leaf">·</span> }
+          <span class="bl-code">{{ r.task.code }}</span>
+          <span class="bl-name" role="button" tabindex="0"
+                [title]="r.task.title + ' — bấm để xem chi tiết'"
+                (click)="openDetail(r.task)"
+                (keydown.enter)="openDetail(r.task)">{{ r.task.title }}</span>
+        </span>
+
+        <!-- Loại -->
+        <span><span class="badge" [class]="typeBadge(r.task.type)">{{ typeLabel(r.task.type) }}</span></span>
+
+        <!-- Trạng thái: cha (có con) = TỰ TỔNG HỢP từ con (read-only); lá = đổi nhanh -->
+        @if (r.hasChildren) {
+          <span class="badge" [class]="statusBadge(r.task.status)"
+                title="Tự tổng hợp từ trạng thái các task con">{{ statusLabel(r.task.status) }}</span>
+        } @else {
+          <searchable-select [options]="statusSel" [value]="r.task.status"
+                             (valueChange)="changeStatus(r.task, $event)" placeholder="Trạng thái" />
+        }
+
+        <!-- Người thực hiện: cha (có con) = rollup, hiển thị "—" không gán; lá = gán nhanh -->
+        @if (r.hasChildren) {
+          <span class="bl-num--muted" title="Tự tổng hợp từ task con">—</span>
+        } @else {
+          <searchable-select [options]="peopleSel()" [value]="r.task.assigneeUserId || ''"
+                             (valueChange)="changeAssignee(r.task, $event)"
+                             [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Gán người…" />
+        }
+
+        <!-- Est: cha = tổng est lá (read-only); lá = nhập nhanh tại chỗ -->
+        @if (r.hasChildren) {
+          <span class="bl-num bl-num--muted" title="Tổng est các task con (tự tổng hợp)">{{ rollupEst(r.task.id) }}</span>
+        } @else {
+          <input type="number" class="bl-est" min="0" step="0.5"
+                 [value]="r.task.estimateHours || 0"
+                 (blur)="saveEstInline(r.task, $any($event.target).value)"
+                 (keydown.enter)="$any($event.target).blur()"
+                 title="Nhập est (giờ) — Enter/rời ô để lưu" />
+        }
+
+        <!-- % Hoàn thành (progressPct rollup) -->
+        <span class="bl-progress" [title]="'Hoàn thành ' + (r.task.progressPct || 0) + '%'">
+          <span class="bl-progress__track">
+            <span class="bl-progress__bar"
+                  [class.bl-progress__bar--done]="(r.task.progressPct || 0) >= 100"
+                  [style.width.%]="r.task.progressPct || 0"></span>
+          </span>
+          <span class="bl-progress__label">{{ round(r.task.progressPct) }}%</span>
+        </span>
+
+        <!-- Từ ngày → Đến ngày (cha = rollup từ task con) + Duration -->
+        <span class="bl-date" [class.bl-num--muted]="hasChildrenRow(r.task.id)"
+              [title]="hasChildrenRow(r.task.id) ? 'Tự tổng hợp từ task con' : ''">{{ startOf(r.task) || '—' }}</span>
+        <span class="bl-date" [class.bl-num--muted]="hasChildrenRow(r.task.id)"
+              [title]="hasChildrenRow(r.task.id) ? 'Tự tổng hợp từ task con' : ''">{{ dueOf(r.task) || '—' }}</span>
+        <span class="bl-date bl-num--muted">{{ durationOf(r.task) }}</span>
+
+        <!-- Ưu tiên -->
+        <span><span class="badge" [class]="priorityBadge(r.task.priority)">{{ priorityLabel(r.task.priority) }}</span></span>
+
+        <!-- Thao tác -->
+        <span class="bl-actions">
+          <button type="button" class="btn btn--ghost btn--sm" title="Thêm task con" (click)="openCreate(r.task.id)">＋</button>
+          <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(r.task)">✎</button>
+          <button type="button" class="btn btn--ghost btn--sm" title="Xoá"
+                  [disabled]="r.hasChildren" (click)="remove(r)">🗑</button>
+        </span>
+      </div>
+    }
+  }
+</div>
+
+<!-- Modal tạo / sửa task -->
+<app-modal [open]="modalOpen()" [wide]="true"
+           [title]="editingId() ? 'Sửa công việc' : (f.parentId ? 'Thêm task con' : 'Thêm task')"
+           (closed)="modalOpen.set(false)">
+  <form id="bl-form" class="bl-form" (ngSubmit)="save()">
+    <div class="field">
+      <label>Tiêu đề *</label>
+      <input type="text" name="title" [(ngModel)]="f.title" required placeholder="Tiêu đề công việc…" />
+    </div>
+
+    <div class="form-2col">
+      <div class="field">
+        <label>Loại</label>
+        <searchable-select [options]="typeSel" [value]="f.type || 'TASK'"
+                           (valueChange)="f.type = $any($event)" placeholder="Loại" />
+      </div>
+      <div class="field">
+        <label>Ưu tiên</label>
+        <searchable-select [options]="prioritySel" [value]="f.priority || 'MEDIUM'"
+                           (valueChange)="f.priority = $any($event)" placeholder="Ưu tiên" />
+      </div>
+      <div class="field">
+        <label>Người thực hiện</label>
+        @if (editingHasChildren()) {
+          <input type="text" value="—" disabled />
+          <span class="field-hint">Tự tổng hợp từ task con</span>
+        } @else {
+          <searchable-select [options]="peopleSel()" [value]="f.assigneeUserId || ''"
+                             (valueChange)="f.assigneeUserId = $event || null"
+                             [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
+        }
+      </div>
+      <div class="field">
+        <label>Est (giờ)</label>
+        @if (editingHasChildren()) {
+          <input type="number" [value]="rollupEst(editingId()!)" disabled />
+          <span class="field-hint">Tự tổng hợp từ task con</span>
+        } @else {
+          <input type="number" name="estimateHours" min="0" step="0.5" [(ngModel)]="f.estimateHours" />
+        }
+      </div>
+      <div class="field">
+        <label>Ngày bắt đầu</label>
+        <input type="date" name="startIso" [(ngModel)]="startIso" />
+      </div>
+      <div class="field">
+        <label>Ngày hết hạn</label>
+        <input type="date" name="dueIso" [(ngModel)]="dueIso" />
+      </div>
+    </div>
+
+    @if (isBugLike(f.type)) {
+      <div class="field">
+        <label>Màn hình liên quan</label>
+        <input type="text" name="screen" [(ngModel)]="f.screen" placeholder="Tên màn hình / chức năng…" />
+      </div>
+    }
+
+    <div class="field">
+      <label>Mô tả</label>
+      <textarea name="description" rows="3" [(ngModel)]="f.description" placeholder="Mô tả chi tiết…"></textarea>
+    </div>
+  </form>
+  <div modalFooter>
+    @if (!editingId()) {
+      <label class="bl-keep" title="Lưu xong giữ popup mở để thêm task tiếp">
+        <input type="checkbox" [(ngModel)]="keepAdding" [ngModelOptions]="{ standalone: true }" />
+        <span>Lưu và thêm mới (giữ form)</span>
+      </label>
+    }
+    <span class="bl-toolbar__spacer"></span>
+    <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>
+    <button type="submit" form="bl-form" class="btn btn--primary" [disabled]="saving()">
+      {{ saving() ? 'Đang lưu…' : (keepAdding ? '💾 Lưu & thêm tiếp' : '💾 Lưu') }}
+    </button>
+  </div>
+</app-modal>

@@ -1,0 +1,94 @@
+<!-- Quản trị vị trí/chức danh (Story 1.3): chọn đơn vị → lưới vị trí + popup tạo/gán người. -->
+<section class="page">
+  <app-page-header title="Quản trị vị trí / chức danh"
+                   subtitle="Vị trí là đơn vị phân công; gán người giữ theo từng đơn vị."
+                   [breadcrumb]="[{ label: 'Quản trị hệ thống' }, { label: 'Vị trí / Chức danh' }]" />
+
+  @if (error()) { <p class="alert alert--error" role="alert">{{ error() }}</p> }
+
+  <div class="tree-split">
+    <!-- Cây tổ chức bên trái -->
+    <aside class="card tree-split__aside">
+      <div class="tree-split__head"><strong>Cây đơn vị</strong></div>
+      <org-tree [units]="units()" [selectedId]="selectedUnitId()" (selectedIdChange)="onUnitPick($event)" />
+    </aside>
+
+    <!-- Vị trí của đơn vị đang chọn bên phải -->
+    <div>
+      @if (selectedUnit(); as u) {
+        <data-grid [columns]="cols" [rows]="positions()" [title]="'Vị trí — ' + u.name"
+                   emptyText="Đơn vị chưa có vị trí nào.">
+          <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Thêm vị trí</button>
+
+          <ng-template gridCell="holder" let-p>
+            @if (p.currentHolderUserId) {
+              {{ userName(p.currentHolderUserId) }}
+            } @else {
+              <span class="badge badge--cancel">Trống</span>
+            }
+          </ng-template>
+
+          <ng-template gridCell="actions" let-p>
+            <span class="cell-actions">
+              <button type="button" class="btn btn--secondary btn--sm" (click)="openAssign(p)">Gán người</button>
+              <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(p)">✎ Sửa</button>
+              <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(p)">🗑 Xóa</button>
+            </span>
+          </ng-template>
+        </data-grid>
+      } @else {
+        <div class="card tree-split__detail">
+          <p class="tree-split__empty">Chọn một đơn vị ở cây bên trái để xem và quản lý vị trí của đơn vị đó.</p>
+        </div>
+      }
+    </div>
+  </div>
+</section>
+
+<!-- Popup tạo vị trí -->
+<app-modal [open]="createOpen()" title="Thêm vị trí mới" (closed)="createOpen.set(false)">
+  <form id="create-position" (ngSubmit)="create()">
+    <div class="field">
+      <label for="title">Tên vị trí</label>
+      <input id="title" name="title" [(ngModel)]="newTitle" required placeholder="VD: Vụ trưởng" />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="create-position" class="btn btn--primary">Thêm</button>
+  </ng-container>
+</app-modal>
+
+<!-- Popup sửa vị trí -->
+<app-modal [open]="editOpen()" [title]="'Cập nhật vị trí — ' + (editTarget()?.title || '')" (closed)="editOpen.set(false)">
+  <form id="edit-position" (ngSubmit)="saveEdit()">
+    <div class="field">
+      <label for="etitle">Tên vị trí</label>
+      <input id="etitle" name="etitle" [(ngModel)]="editTitle" required />
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="editOpen.set(false)">Hủy</button>
+    <button type="submit" form="edit-position" class="btn btn--primary">Lưu thay đổi</button>
+  </ng-container>
+</app-modal>
+
+<!-- Xác nhận xóa vị trí -->
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xóa vị trí"
+  [message]="'Xóa vị trí &quot;' + (delTarget()?.title || '') + '&quot;? Không xóa được nếu đang có người giữ.'"
+  confirmLabel="Xóa" [danger]="true"
+  (confirm)="confirmDelete()" (cancel)="delOpen.set(false)" />
+
+<!-- Popup gán người giữ -->
+<app-modal [open]="assignOpen()" [title]="'Gán người giữ — ' + (assignTarget()?.title || '')" (closed)="assignOpen.set(false)">
+  <div class="field">
+    <label>Người giữ (chọn theo cây tổ chức)</label>
+    <org-tree-picker mode="user" [(value)]="assignUserId" />
+  </div>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="assignOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" [disabled]="!assignUserId" (click)="doAssign()">Gán</button>
+  </ng-container>
+</app-modal>

@@ -1,0 +1,198 @@
+<!-- App shell: sidebar trái (nhóm mục, lọc vai trò) + topbar đầy đủ (tham khảo DMS).
+     Chưa đăng nhập → không render shell, chỉ trang đăng nhập căn giữa. -->
+@if (auth.currentUser()) {
+  <a class="skip-link" href="#main-content">Bỏ qua tới nội dung chính</a>
+  <div class="app-shell" [class.collapsed]="collapsed()" [class.app-shell--mobile-open]="mobileOpen()">
+    <!-- Nền mờ phía sau sidebar overlay (chỉ hiện trên mobile khi mở) — bấm để đóng. -->
+    <div class="app-shell__scrim" (click)="closeMobileNav()" aria-hidden="true"></div>
+    <aside class="sidebar">
+      <div class="sidebar__brand">
+        <span class="sidebar__logo vmo-mark" aria-hidden="true">
+          <svg viewBox="0 0 48 48">
+            <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
+            <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
+            <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
+          </svg>
+        </span>
+        <span class="sidebar__brand-text">
+          <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
+          <small>Hệ thống nội bộ</small>
+        </span>
+      </div>
+
+      <nav class="main-nav" aria-label="Điều hướng chính" (click)="closeMobileNav()">
+        <!-- CÁ NHÂN: mọi nhân viên (có gắn chức năng tương ứng) -->
+        <span class="nav-group">Cá nhân</span>
+        <a routerLink="/home" routerLinkActive="active" title="Bảng tin VDX"><span class="nav-ico">🌐</span><span>Bảng tin VDX</span></a>
+        @if (has('INBOX')) {
+          <a routerLink="/inbox" routerLinkActive="active" title="Việc của tôi"><span class="nav-ico">📥</span><span>Việc của tôi</span>
+            @if (inboxCount()) { <span class="nav-badge">{{ inboxCount() }}</span> }</a>
+        }
+        <a routerLink="/my-requests" routerLinkActive="active" title="Hồ sơ của tôi"><span class="nav-ico">🗂️</span><span>Hồ sơ của tôi</span></a>
+        @if (has('MYTASKS')) {
+          <a routerLink="/my-tasks" routerLinkActive="active" title="Việc dự án của tôi"><span class="nav-ico">✅</span><span>Việc dự án của tôi</span>
+            @if (myTaskCount()) { <span class="nav-badge">{{ myTaskCount() }}</span> }</a>
+        }
+        @if (has('OT')) {
+          <a routerLink="/ot" routerLinkActive="active" title="Đăng ký OT"><span class="nav-ico">🕒</span><span>Đăng ký OT</span></a>
+        }
+        @if (has('LEAVE')) {
+          <a routerLink="/leave" routerLinkActive="active" title="Đăng ký nghỉ"><span class="nav-ico">🌴</span><span>Đăng ký nghỉ</span></a>
+        }
+        @if (has('DOCS')) {
+          <a routerLink="/documents" routerLinkActive="active" title="Tài liệu"><span class="nav-ico">📄</span><span>Tài liệu</span></a>
+        }
+
+        <!-- DỰ ÁN -->
+        @if (has('PROJECT')) {
+          <span class="nav-group">Dự án</span>
+          <a routerLink="/projects" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }" title="Quản lý dự án"><span class="nav-ico">📁</span><span>Quản lý dự án</span></a>
+        }
+
+        <!-- BÁO CÁO & THỐNG KÊ -->
+        @if (has('REPORTS')) {
+          <span class="nav-group">Báo cáo &amp; Thống kê</span>
+          <a routerLink="/dashboard" routerLinkActive="active" title="Dashboard"><span class="nav-ico">📊</span><span>Dashboard</span></a>
+          <a routerLink="/reports" routerLinkActive="active" title="Reports vận hành"><span class="nav-ico">📈</span><span>Reports vận hành</span></a>
+        }
+
+        <!-- CÔNG CỤ -->
+        @if (has('IMPORT')) {
+          <span class="nav-group">Công cụ</span>
+          <a routerLink="/excel-reports" routerLinkActive="active" title="Import Excel"><span class="nav-ico">🧰</span><span>Import Excel</span></a>
+        }
+
+        <!-- QUẢN TRỊ HỆ THỐNG -->
+        @if (hasAdminTools()) {
+          <span class="nav-group">Quản trị hệ thống</span>
+          @if (has('HR')) {
+            <a routerLink="/employees" routerLinkActive="active" title="Quản lý nhân sự"><span class="nav-ico">👥</span><span>Quản lý nhân sự</span></a>
+          }
+          @if (has('ACCOUNTS')) {
+            <a routerLink="/accounts" routerLinkActive="active" title="Quản lý tài khoản"><span class="nav-ico">👤</span><span>Quản lý tài khoản</span></a>
+          }
+          @if (has('PERMISSION')) {
+            <a routerLink="/permissions" routerLinkActive="active" title="Phân quyền"><span class="nav-ico">🔐</span><span>Phân quyền</span></a>
+          }
+          @if (has('CATALOG')) {
+            <a routerLink="/catalog" routerLinkActive="active" title="Danh mục"><span class="nav-ico">🗂️</span><span>Danh mục</span></a>
+          }
+          @if (has('PROCESS')) {
+            <a routerLink="/processes" routerLinkActive="active" title="Quy trình"><span class="nav-ico">🔀</span><span>Quy trình</span></a>
+            <a routerLink="/forms" routerLinkActive="active" title="Biểu mẫu"><span class="nav-ico">📋</span><span>Biểu mẫu</span></a>
+          }
+          @if (has('TRACKING')) {
+            <a routerLink="/tracking" routerLinkActive="active" title="Theo dõi quy trình"><span class="nav-ico">📡</span><span>Theo dõi quy trình</span></a>
+          }
+          @if (has('SYSTEM')) {
+            <a routerLink="/system-config" routerLinkActive="active" title="Cấu hình &amp; dữ liệu"><span class="nav-ico">🛠️</span><span>Cấu hình &amp; dữ liệu</span></a>
+          }
+          @if (has('AUDIT')) {
+            <a routerLink="/audit" routerLinkActive="active" title="Truy vết kiểm toán"><span class="nav-ico">📜</span><span>Truy vết kiểm toán</span></a>
+          }
+        }
+      </nav>
+
+      <div class="sidebar__foot">
+        <div class="sidebar__foot-card sidebar__foot-card--static">
+          <span class="nav-ico">🛡️</span>
+          <span class="sidebar__foot-meta">
+            <span>VMO DX</span>
+            <span class="sidebar__foot-ver">Phiên bản 2.0.0</span>
+          </span>
+        </div>
+      </div>
+    </aside>
+
+    <header class="topbar">
+      <!-- ☰: mobile mở/đóng sidebar overlay; desktop thu gọn/mở rộng sidebar. -->
+      <button type="button" class="topbar__icon-btn topbar__menu-btn" (click)="toggleMobileNav()" aria-label="Mở menu điều hướng">☰</button>
+      <button type="button" class="topbar__icon-btn topbar__collapse-btn" (click)="toggleSidebar()"
+              [attr.aria-label]="collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'"
+              [title]="collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">{{ collapsed() ? '⮞' : '⮜' }}</button>
+      <span class="topbar__spacer"></span>
+      <app-global-search />
+      <span class="topbar__spacer"></span>
+      <!-- Giao diện: Sáng/Tối + bộ màu chủ đạo (gộp 1 dropdown cho tiện) -->
+      <div class="topbar__theme">
+        <button type="button" class="topbar__icon-btn" (click)="toggleThemeMenu()"
+                [class.open]="themeMenuOpen()" title="Giao diện: chế độ sáng/tối + màu chủ đạo">
+          {{ themeSvc.theme() === 'dark' ? '🌙' : '🎨' }}
+        </button>
+        @if (themeMenuOpen()) {
+          <div class="topbar__backdrop" (click)="closeThemeMenu()"></div>
+          <div class="theme-pop" role="menu">
+            <div class="theme-pop__label">Chế độ</div>
+            <div class="theme-pop__seg">
+              <button type="button" [class.is-active]="themeSvc.theme() === 'light'" (click)="themeSvc.setMode('light')">☀️ Sáng</button>
+              <button type="button" [class.is-active]="themeSvc.theme() === 'dark'" (click)="themeSvc.setMode('dark')">🌙 Tối</button>
+            </div>
+            <div class="theme-pop__label">Giao diện</div>
+            <div class="skin-gallery" role="group" aria-label="Bộ giao diện">
+              @for (a of themeSvc.presets; track a.key) {
+                <button type="button" class="skin-card" [class.is-active]="themeSvc.accent() === a.key"
+                        [attr.aria-pressed]="themeSvc.accent() === a.key" [title]="a.label"
+                        (click)="themeSvc.setAccent(a.key)">
+                  <span class="skin-mock" aria-hidden="true">
+                    <span class="skin-mock__side" [style.background]="a.sidebar"></span>
+                    <span class="skin-mock__top" [style.background]="a.sidebar"></span>
+                    <span class="skin-mock__body"></span>
+                    <span class="skin-mock__dot" [style.background]="a.accent"></span>
+                  </span>
+                  <span class="skin-card__meta">
+                    <span class="skin-card__swatch" [style.background]="a.accent" aria-hidden="true"></span>
+                    <span class="skin-card__name">{{ a.label }}</span>
+                    @if (themeSvc.accent() === a.key) { <span class="skin-card__check">✓</span> }
+                  </span>
+                </button>
+              }
+            </div>
+          </div>
+        }
+      </div>
+      <app-notification-bell />
+
+      <!-- Menu người dùng: avatar + tên (họ tên) + mũi tên → Thông tin / Đổi MK / Đăng xuất -->
+      <div class="topbar__user">
+        <button type="button" class="topbar__user-block" (click)="toggleUserMenu()"
+                [class.open]="userMenuOpen()" title="Tài khoản của tôi">
+          <span class="topbar__avatar">
+            <img [src]="'/api/v1/me/avatar?v=' + avatarVer()" alt="" referrerpolicy="no-referrer"
+                 (error)="$any($event.target).style.display='none'" />
+            {{ (displayName() || '?')[0] | uppercase }}
+          </span>
+          <span class="topbar__user-meta">
+            <span class="topbar__user-name">{{ displayName() }}</span>
+            <span class="topbar__user-role">{{ isAdmin() ? 'Quản trị' : 'Nhân viên' }}</span>
+          </span>
+          <span class="topbar__chev" [class.up]="userMenuOpen()">▾</span>
+        </button>
+
+        @if (userMenuOpen()) {
+          <div class="topbar__backdrop" (click)="closeUserMenu()"></div>
+          <div class="topbar__menu" role="menu">
+            <a class="topbar__menu-item" routerLink="/account" (click)="closeUserMenu()">
+              <span class="topbar__menu-ic">👤</span> Thông tin của tôi
+            </a>
+            <a class="topbar__menu-item" routerLink="/account" fragment="password" (click)="closeUserMenu()">
+              <span class="topbar__menu-ic">🔑</span> Đổi mật khẩu
+            </a>
+            <div class="topbar__menu-sep"></div>
+            <button type="button" class="topbar__menu-item topbar__menu-item--danger"
+                    (click)="closeUserMenu(); logout()">
+              <span class="topbar__menu-ic">⎋</span> Đăng xuất
+            </button>
+          </div>
+        }
+      </div>
+    </header>
+
+    <main class="content" id="main-content" tabindex="-1">
+      <router-outlet />
+    </main>
+  </div>
+} @else {
+  <router-outlet />
+}
+<app-toast-host />
+

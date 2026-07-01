@@ -1,0 +1,92 @@
+<section class="page">
+  <app-page-header title="Quản lý dự án"
+                   subtitle="Khai báo dự án, phân công công việc, theo dõi tiến độ (backlog · kanban · timeline · báo cáo)."
+                   [breadcrumb]="[{ label: 'Dự án' }]" />
+
+  @if (loading()) {
+    <div class="card"><app-skeleton [rows]="6" /></div>
+  } @else if (rows().length === 0) {
+    <div class="card">
+      <app-empty-state icon="📁" title="Chưa có dự án nào"
+                       hint="Tạo dự án đầu tiên để bắt đầu khai báo công việc, phân công và theo dõi tiến độ.">
+        <button emptyAction type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
+      </app-empty-state>
+    </div>
+  } @else {
+  <data-grid [columns]="cols" [rows]="rows()" [title]="'Dự án (' + rows().length + ')'"
+             [emptyText]="'Chưa có dự án nào — hãy tạo mới.'">
+    <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
+
+    <ng-template gridCell="code" let-p><strong>{{ p.code }}</strong></ng-template>
+    <ng-template gridCell="name" let-p>
+      <a href="javascript:void(0)" (click)="open(p)"><strong>{{ p.name }}</strong></a>
+    </ng-template>
+    <ng-template gridCell="status" let-p>
+      <span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span>
+    </ng-template>
+    <ng-template gridCell="completion" let-p>
+      <div style="display:flex; align-items:center; gap:8px;">
+        <span class="prj-bar"><span class="prj-bar__fill" [style.width.%]="p.completionPct"></span></span>
+        <span>{{ p.completionPct }}%</span>
+      </div>
+    </ng-template>
+    <ng-template gridCell="budget" let-p>{{ formatNumber(p.budget) }}</ng-template>
+    <ng-template gridCell="counts" let-p>{{ p.taskCount }} task · {{ p.memberCount }} người</ng-template>
+    <ng-template gridCell="actions" let-p>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="openEdit(p)">✎ Sửa</button>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="open(p)">Mở →</button>
+    </ng-template>
+  </data-grid>
+  }
+</section>
+
+<app-modal [open]="createOpen()" [title]="editingId() ? 'Sửa dự án' : 'Tạo dự án'" (closed)="createOpen.set(false)">
+  <form id="prj-create" class="form" (ngSubmit)="save()">
+    <div class="form-2col">
+      <div class="field">
+        <label>Mã dự án</label>
+        <input name="code" [(ngModel)]="f.code" placeholder="VD: PRJ" [disabled]="!!editingId()" />
+      </div>
+      <div class="field">
+        <label>Tên dự án *</label>
+        <input name="name" [(ngModel)]="f.name" required />
+      </div>
+      <div class="field">
+        <label>Trạng thái</label>
+        <searchable-select [options]="statusOptions" [value]="f.status || 'PLANNING'"
+                           (valueChange)="f.status = $any($event)" />
+      </div>
+      <div class="field">
+        <label>PM dự án</label>
+        <searchable-select [options]="ownerOptions()" [value]="f.ownerUserId || ''"
+                           (valueChange)="f.ownerUserId = $event" placeholder="Chọn người…" />
+      </div>
+      <div class="field">
+        <label>Bắt đầu</label>
+        <input name="sd" type="date" [(ngModel)]="f.startDate" />
+      </div>
+      <div class="field">
+        <label>Kết thúc</label>
+        <input name="dd" type="date" [(ngModel)]="f.dueDate" />
+      </div>
+      <div class="field">
+        <label>Ngân sách (VNĐ)</label>
+        <input name="budget" type="text" inputmode="numeric" appNumberFormat
+               [(ngModel)]="f.budget" placeholder="VD: 500.000.000" />
+      </div>
+      <div class="field">
+        <label>Nỗ lực kế hoạch (MM)</label>
+        <input name="planMm" type="text" inputmode="decimal" appNumberFormat
+               [(ngModel)]="f.plannedEffortMm" placeholder="VD: 12" />
+      </div>
+    </div>
+    <div class="field">
+      <label>Mô tả</label>
+      <textarea name="desc" rows="2" [(ngModel)]="f.description"></textarea>
+    </div>
+  </form>
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
+    <button type="submit" form="prj-create" class="btn btn--primary">{{ editingId() ? 'Lưu' : 'Tạo' }}</button>
+  </ng-container>
+</app-modal>

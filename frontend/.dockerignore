@@ -1,0 +1,12 @@
+# Không gửi vào build context — npm ci sẽ tự cài lại dependency.
+node_modules/
+dist/
+.angular/
+.git/
+.gitignore
+.vscode/
+.idea/
+*.log
+.DS_Store
+Dockerfile
+.dockerignore

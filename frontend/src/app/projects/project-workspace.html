@@ -1,0 +1,30 @@
+<section class="page">
+  <app-page-header [title]="project()?.name || 'Dự án'"
+                   [subtitle]="(project()?.code || '') + (project()?.description ? ' · ' + project()!.description : '')"
+                   [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
+
+  <div class="pw-tabs">
+    @for (t of tabs; track t.key) {
+      <button type="button" [class.active]="tab() === t.key" (click)="tab.set(t.key)">{{ t.icon }} {{ t.label }}</button>
+    }
+  </div>
+
+  @if (id(); as pid) {
+    <!-- @for keyed theo refresh() để tạo lại tab (tải lại) sau khi đổi từ chi tiết task -->
+    @for (n of [refresh()]; track n) {
+      @switch (tab()) {
+        @case ('overview') { <app-prj-overview [projectId]="pid" /> }
+        @case ('members') { <app-prj-members [projectId]="pid" /> }
+        @case ('backlog') { <app-prj-backlog [projectId]="pid" (openTask)="openDetail($event)" /> }
+        @case ('kanban') { <app-prj-kanban [projectId]="pid" (openTask)="openDetail($event)" /> }
+        @case ('timeline') { <app-prj-timeline [projectId]="pid" /> }
+        @case ('bugs') { <app-prj-bugs [projectId]="pid" /> }
+        @case ('reports-period') { <app-prj-reports-period [projectId]="pid" /> }
+      }
+    }
+
+    <!-- Chi tiết task (kiểu Jira): trạng thái + bình luận + ảnh đính kèm -->
+    <app-prj-task-detail [projectId]="pid" [task]="detailTask()" [open]="detailOpen()"
+                         (closed)="closeDetail()" (changed)="onTaskChanged()" />
+  }
+</section>
