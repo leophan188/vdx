@@ -428,7 +428,7 @@ public class ProjectDemoSeeder {
         ProjectDto.TaskResponse t = taskService.create(projectId, new ProjectDto.TaskRequest(
                 parentId, title, description, type, status, priority, assigneeUserId,
                 estimateHours, fmt(start), fmt(due), null, screen,
-                null, null, null, null, null), actor);
+                null, null, null, null, null, null), actor);
         c.tasks++;
         // Spent giờ: chỉ cho task có estimate (lá) đang/đã làm → spent > 0.
         if (estimateHours > 0) {

@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.bpm.CollaborationServiceTest
--------------------------------------------------------------------------------
-Tests run: 3, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 4.273 s -- in com.bpm.CollaborationServiceTest

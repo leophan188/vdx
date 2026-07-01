@@ -1,0 +1,116 @@
+<app-page-header title="Bug/Issue của tôi"
+                 subtitle="Bug/Issue tôi đã log hoặc đang được giao xử lý, xuyên các dự án.">
+  <button actions type="button" class="btn btn--primary" (click)="openLog()">＋ Log bug/issue</button>
+</app-page-header>
+
+<!-- Bộ lọc chuẩn — control trái → action phải -->
+<div class="filter-bar">
+  <div class="filter-bar__field">
+    <label>Vai trò</label>
+    <searchable-select [options]="roleSel" [value]="filterRole()"
+                       (valueChange)="filterRole.set($event)"
+                       [allowEmpty]="true" emptyLabel="— Mọi vai trò —" placeholder="Vai trò" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Trạng thái</label>
+    <searchable-select [options]="statusSel" [value]="filterStatus()"
+                       (valueChange)="filterStatus.set($event)"
+                       [allowEmpty]="true" emptyLabel="— Mọi trạng thái —" placeholder="Trạng thái" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Loại</label>
+    <searchable-select [options]="typeSel" [value]="filterType()"
+                       (valueChange)="filterType.set($event)"
+                       [allowEmpty]="true" emptyLabel="— Mọi loại —" placeholder="Loại" />
+  </div>
+  <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">Đặt lại</button>
+</div>
+
+<data-grid [columns]="cols" [rows]="filtered()"
+           [title]="'Bug / Issue của tôi (' + filtered().length + ')'"
+           [pageSize]="50" [pageSizes]="[50, 100, 200]"
+           [emptyText]="loading() ? 'Đang tải…' : 'Chưa có bug/issue nào.'">
+  <ng-template gridCell="code" let-b>
+    <button type="button" class="mybug-open" (click)="openWorkspace(b)">{{ b.code }}</button>
+  </ng-template>
+  <ng-template gridCell="title" let-b>
+    <button type="button" class="mybug-open" (click)="openWorkspace(b)">{{ b.title }}</button>
+  </ng-template>
+  <ng-template gridCell="projectName" let-b>
+    <span [title]="b.projectCode + ' · ' + b.projectName">{{ b.projectName }}</span>
+  </ng-template>
+  <ng-template gridCell="type" let-b>
+    <span class="badge" [class]="typeBadge(b.type)">{{ typeLabel(b.type) }}</span>
+  </ng-template>
+  <ng-template gridCell="status" let-b>
+    <span class="badge" [class]="statusBadge(b.status)">{{ statusLabel(b.status) }}</span>
+  </ng-template>
+  <ng-template gridCell="assigneeName" let-b>
+    @if (b.assigneeName) { <employee-chip [name]="b.assigneeName" /> } @else { — Chưa gán — }
+  </ng-template>
+  <ng-template gridCell="reporterName" let-b>
+    @if (b.reporterName) { <employee-chip [name]="b.reporterName" /> } @else { — }
+  </ng-template>
+  <ng-template gridCell="role" let-b>
+    <span [class]="roleBadge(b.role)">{{ roleLabel(b.role) }}</span>
+  </ng-template>
+  <ng-template gridCell="dueDate" let-b>{{ b.dueDate || '—' }}</ng-template>
+</data-grid>
+
+<!-- Modal log bug/issue -->
+<app-modal [open]="modalOpen()" [wide]="true" title="Log bug/issue" (closed)="modalOpen.set(false)">
+  <form id="mybug-form" class="mybug-form" (ngSubmit)="save()">
+    <div class="mybug-note">
+      Bạn là người log (reporter); khi PIC chuyển Kiểm thử, bug tự trả về bạn để verify.
+    </div>
+
+    <div class="field">
+      <label>Dự án *</label>
+      <searchable-select [options]="projectSel()" [value]="f.projectId"
+                         (valueChange)="onProjectChange($event)"
+                         placeholder="Chọn dự án…" />
+    </div>
+
+    <div class="field">
+      <label>Tiêu đề *</label>
+      <input type="text" name="title" [(ngModel)]="f.title" required placeholder="Mô tả ngắn lỗi / vấn đề…" />
+    </div>
+
+    <div class="form-2col">
+      <div class="field">
+        <label>Loại</label>
+        <searchable-select [options]="typeSel" [value]="f.type || 'BUG'"
+                           (valueChange)="f.type = $any($event)" placeholder="Loại" />
+      </div>
+      <div class="field">
+        <label>Ưu tiên</label>
+        <searchable-select [options]="prioritySel" [value]="f.priority || 'MEDIUM'"
+                           (valueChange)="f.priority = $any($event)" placeholder="Ưu tiên" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Người xử lý (PIC)</label>
+      <searchable-select [options]="peopleSel()" [value]="f.assigneeUserId || ''"
+                         (valueChange)="f.assigneeUserId = $event || null"
+                         [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
+      <span class="field-hint">Chọn dự án trước để hiển thị thành viên dự án.</span>
+    </div>
+
+    <div class="field">
+      <label>Mô tả</label>
+      <textarea name="description" rows="3" [(ngModel)]="f.description" placeholder="Chi tiết lỗi / vấn đề…"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Deadline</label>
+      <input type="date" name="dueDate" [(ngModel)]="f.dueDate" />
+    </div>
+  </form>
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>
+    <button type="submit" form="mybug-form" class="btn btn--primary" [disabled]="saving()">
+      {{ saving() ? 'Đang lưu…' : '💾 Log bug/issue' }}
+    </button>
+  </div>
+</app-modal>

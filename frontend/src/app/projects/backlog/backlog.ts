@@ -72,6 +72,11 @@ interface TreeRow {
       box-shadow: 0 0 0 2px var(--color-primary-soft); }
     .field-hint { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: 2px; }
     .bl-form { display: grid; gap: var(--space-3); width: 100%; }
+    /* Chọn loại dạng pill (đồng bộ với quick-create) */
+    .bl-seg { display: flex; gap: 6px; flex-wrap: wrap; }
+    .bl-seg button { border: 1px solid var(--color-border); background: var(--color-surface);
+      padding: 6px 14px; border-radius: 999px; font-size: .85rem; cursor: pointer; color: var(--color-text); }
+    .bl-seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
     .bl-keep { display: inline-flex; align-items: center; gap: var(--space-2);
       font-size: var(--font-size-sm); color: var(--color-text-muted); cursor: pointer; user-select: none; }
     .bl-keep input { width: 16px; height: 16px; cursor: pointer; }
@@ -100,6 +105,9 @@ export class PrjBacklog implements OnInit {
 
   readonly projectId = input.required<string>();
 
+  /** "Backlog của tôi": userId để MẶC ĐỊNH lọc theo người này (vẫn hiện task cha). Rỗng → dùng pref chung của dự án. */
+  readonly presetAssignee = input<string>('');
+
   /** Phát khi bấm tiêu đề một task → cha mở chi tiết task. */
   readonly openTask = output<ProjectTask>();
 
@@ -127,7 +135,7 @@ export class PrjBacklog implements OnInit {
   ];
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
     { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
-    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Đang review' },
+    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
     { value: 'DONE', label: 'Hoàn thành' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
@@ -139,6 +147,55 @@ export class PrjBacklog implements OnInit {
   readonly statusSel: SelectOption[] = this.statusOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
+
+  // ===== Phân cấp cha-con theo LOẠI =====
+  /** Loại cha HỢP LỆ cho một loại con (null = không có cha — chỉ EPIC). */
+  private parentTypeOf(type: TaskType | null | undefined): TaskType[] | null {
+    switch (type) {
+      case 'EPIC': return null;               // gốc, không có cha
+      case 'STORY': return ['EPIC'];
+      case 'TASK': return ['STORY'];
+      case 'SUBTASK': return ['TASK'];
+      case 'BUG':
+      case 'ISSUE': return ['TASK', 'SUBTASK'];
+      default: return null;
+    }
+  }
+  /** Loại CON hợp lệ đầu tiên khi bấm "+" trên 1 dòng theo loại cha. */
+  private firstChildTypeOf(parentType: TaskType | null | undefined): TaskType {
+    switch (parentType) {
+      case 'EPIC': return 'STORY';
+      case 'STORY': return 'TASK';
+      case 'TASK': return 'SUBTASK';
+      case 'SUBTASK': return 'BUG';
+      default: return 'TASK';
+    }
+  }
+  /** Nhãn gọn của loại cha yêu cầu (để hiển thị toast/hint). */
+  parentTypeLabel(type: TaskType | null | undefined): string {
+    const pt = this.parentTypeOf(type);
+    if (!pt) return '';
+    return pt.map((t) => this.typeLabel(t)).join(' hoặc ');
+  }
+  /** Loại con đang chọn CÓ cần cha không (khác EPIC). Method thường để bám theo f.type. */
+  needsParent(): boolean { return this.parentTypeOf(this.f.type) !== null; }
+  /** Danh sách cha hợp lệ theo f.type (loại các task không đúng loại cha yêu cầu). */
+  parentOptions(): SelectOption[] {
+    const allow = this.parentTypeOf(this.f.type);
+    if (!allow) return [];
+    const editing = this.editingId();
+    return this.tasks()
+      .filter((t) => allow.includes(t.type) && t.id !== editing)
+      .map((t) => ({ value: t.id, label: `[${t.code}] ${t.title}` }));
+  }
+  /** Khi đổi loại trong modal → tính lại cha hợp lệ; reset parentId nếu không còn hợp lệ. */
+  onTypeChange(type: TaskType): void {
+    this.f.type = type;
+    const allow = this.parentTypeOf(type);
+    if (!allow) { this.f.parentId = null; return; }        // EPIC → không cha
+    const ok = this.tasks().some((t) => t.id === this.f.parentId && allow.includes(t.type));
+    if (!ok) this.f.parentId = null;                        // cha cũ không hợp loại mới → bỏ
+  }
 
   /** Cây task (byId + childrenOf) — dùng cho rollup est cha / phát hiện có con. */
   readonly tree = computed(() => buildTree(this.tasks()));
@@ -154,7 +211,9 @@ export class PrjBacklog implements OnInit {
   private loadFilterPrefs(): void {
     const saved = loadPref<TaskType[] | null>(this.typeKey(), null);
     if (saved && saved.length) this.typeFilter.set(new Set(saved));
-    this.filterAssignee.set(loadPref<string>(this.asgKey(), ''));
+    // "Backlog của tôi": mặc định lọc theo tôi (không đọc/ghi pref chung của dự án để khỏi ảnh hưởng màn QLDA).
+    const preset = this.presetAssignee();
+    this.filterAssignee.set(preset ? preset : loadPref<string>(this.asgKey(), ''));
   }
   isTypeOn(t: TaskType): boolean { return this.typeFilter().has(t); }
   toggleType(t: TaskType): void {
@@ -166,7 +225,7 @@ export class PrjBacklog implements OnInit {
   }
   setAssignee(uid: string): void {
     this.filterAssignee.set(uid || '');
-    savePref(this.asgKey(), uid || '');
+    if (!this.presetAssignee()) savePref(this.asgKey(), uid || ''); // chế độ "Backlog của tôi" không ghi đè pref QLDA
   }
   /** Danh sách người để lọc — suy từ assignee của các task. */
   readonly assigneeSel = computed<SelectOption[]>(() => {
@@ -311,11 +370,30 @@ export class PrjBacklog implements OnInit {
     this.collapsed.set(new Set(this.rows().filter((r) => r.hasChildren).map((r) => r.task.id)));
   }
 
+  // ===== ROLLUP: task tự tổng hợp (có con HOẶC là EPIC/STORY) → khoá ô nhập =====
+  /** true → cột người/est/ngày/status đều read-only, hiển thị giá trị tự tổng hợp. */
+  isRollup(t: ProjectTask): boolean {
+    return hasChildren(t.id, this.tree()) || t.type === 'EPIC' || t.type === 'STORY';
+  }
+
+  /** Task LÁ đang ở trạng thái Kiểm thử và KHÔNG phải BUG/ISSUE → cột hiển thị ô chọn NGƯỜI KIỂM THỬ. */
+  isTesterCol(t: ProjectTask): boolean {
+    return t.status === 'IN_REVIEW' && !this.isBugLike(t.type);
+  }
+
   // ----- Modal -----
   openCreate(parentId: string | null): void {
     this.editingId.set(null);
     this.f = this.emptyForm();
     this.f.parentId = parentId;
+    if (parentId) {
+      // Preset loại con hợp lệ đầu tiên theo loại cha (vd EPIC→STORY, STORY→TASK, TASK→SUBTASK).
+      const parent = this.tasks().find((t) => t.id === parentId);
+      this.f.type = this.firstChildTypeOf(parent?.type);
+    } else {
+      // Nút "+ Thêm task" ở toolbar → mặc định EPIC (gốc, không cha).
+      this.f.type = 'EPIC';
+    }
     // task con của BUG/ISSUE kế thừa screen từ cha (gợi ý) — để trống mặc định.
     // Mặc định Ngày bắt đầu = Ngày kết thúc = HÔM NAY (vẫn cho sửa).
     this.startIso = this.dueIso = this.todayIso();
@@ -344,6 +422,19 @@ export class PrjBacklog implements OnInit {
 
   save(): void {
     if (!this.f.title?.trim()) { this.toast.warning('Thiếu tiêu đề công việc'); return; }
+    // Validate cha theo phân cấp: mọi loại KHÁC EPIC bắt buộc chọn cha ĐÚNG loại.
+    const allow = this.parentTypeOf(this.f.type);
+    if (allow) {
+      const ok = this.f.parentId && this.tasks().some((t) => t.id === this.f.parentId && allow.includes(t.type));
+      if (!ok) { this.toast.error(`Vui lòng chọn ${this.parentTypeLabel(this.f.type)} cha`); return; }
+    } else {
+      this.f.parentId = null; // EPIC → luôn là gốc
+    }
+    // Chặn est SUB-TASK ≤ 4h (UX sớm — BE cũng chặn).
+    if (this.f.type === 'SUBTASK' && Number(this.f.estimateHours) > 4) {
+      this.toast.error('Ước lượng sub-task không được quá 4 giờ');
+      return;
+    }
     this.saving.set(true);
     const body: TaskRequest = {
       ...this.f,
@@ -377,7 +468,23 @@ export class PrjBacklog implements OnInit {
     });
   }
 
+  /** Dựng TaskRequest ĐẦY ĐỦ từ task hiện có (giữ mọi field) + ghi đè patch. */
+  private buildRequest(t: ProjectTask, patch: Partial<TaskRequest> = {}): TaskRequest {
+    return {
+      parentId: t.parentId, title: t.title, description: t.description ?? '',
+      type: t.type, status: t.status, priority: t.priority,
+      assigneeUserId: t.assigneeUserId, estimateHours: t.estimateHours,
+      screen: t.screen, startDate: t.startDate, dueDate: t.dueDate,
+      orderIndex: t.orderIndex,
+      severity: t.severity, stepsToReproduce: t.stepsToReproduce,
+      expectedResult: t.expectedResult, actualResult: t.actualResult, environment: t.environment,
+      testerUserId: t.testerUserId ?? null,
+      ...patch
+    };
+  }
+
   // ----- Thao tác nhanh trên dòng -----
+  /** Đổi trạng thái: không chặn — chuyển thẳng. Sau khi sang Kiểm thử, cột người tự thành ô nhập NGƯỜI KIỂM THỬ. */
   changeStatus(t: ProjectTask, status: string): void {
     if (!status || status === t.status) return;
     this.svc.updateTaskStatus(this.projectId(), t.id, status as TaskStatus).subscribe({
@@ -387,6 +494,16 @@ export class PrjBacklog implements OnInit {
         this.silentReload(); // tính lại % rollup của cha + tổng ngay (không cần reload tay)
       },
       error: (e) => this.toast.error('Không đổi được trạng thái', e?.error?.message ?? '')
+    });
+  }
+
+  /** Gán NGƯỜI KIỂM THỬ tại cột (khi task lá ở trạng thái Kiểm thử) — updateTask giữ mọi field khác. */
+  changeTester(t: ProjectTask, userId: string): void {
+    const val = userId || null;
+    if (val === (t.testerUserId ?? null)) return;
+    this.svc.updateTask(this.projectId(), t.id, this.buildRequest(t, { testerUserId: val })).subscribe({
+      next: (u) => { this.patchLocal(u); this.toast.success('Đã gán người kiểm thử', u.testerName ?? '— bỏ gán —'); },
+      error: (e) => this.toast.error('Không gán được người kiểm thử', e?.error?.message ?? '')
     });
   }
 
@@ -405,22 +522,16 @@ export class PrjBacklog implements OnInit {
    * + estimateHours mới → không xoá dữ liệu nào. Sau đó cập nhật local.
    */
   saveEstInline(t: ProjectTask, raw: string): void {
-    if (hasChildren(t.id, this.tree())) return; // cha = rollup, không nhập
+    if (this.isRollup(t)) return; // rollup (cha / EPIC / STORY) = tự tổng hợp, không nhập
     const val = Math.max(0, Number(raw) || 0);
     if (val === (t.estimateHours || 0)) return;
-    const body: TaskRequest = {
-      parentId: t.parentId,
-      title: t.title,
-      description: t.description ?? '',
-      type: t.type,
-      status: t.status,
-      priority: t.priority,
-      assigneeUserId: t.assigneeUserId,
-      estimateHours: val,
-      screen: t.screen,
-      startDate: t.startDate,
-      dueDate: t.dueDate
-    };
+    // Chặn est SUB-TASK ≤ 4h (UX sớm — BE cũng chặn); revert bằng silentReload.
+    if (t.type === 'SUBTASK' && val > 4) {
+      this.toast.error('Ước lượng sub-task không được quá 4 giờ');
+      this.silentReload(); // khôi phục giá trị cũ trên lưới
+      return;
+    }
+    const body = this.buildRequest(t, { estimateHours: val });
     this.svc.updateTask(this.projectId(), t.id, body).subscribe({
       next: (u) => {
         this.patchLocal(u);
@@ -483,11 +594,15 @@ export class PrjBacklog implements OnInit {
     return days + ' ngày';
   }
 
-  /** Đang sửa 1 task ĐÃ CÓ con → disable est/người trong modal. */
-  readonly editingHasChildren = computed(() => {
+  /**
+   * Trong modal: rollup khi (đang sửa task CÓ con) HOẶC loại đang chọn là EPIC/STORY → khoá est/người.
+   * Method thường (không computed) để re-đánh giá mỗi lần đổi f.type trong modal.
+   */
+  editingRollup(): boolean {
     const id = this.editingId();
-    return id ? hasChildren(id, this.tree()) : false;
-  });
+    if (id && hasChildren(id, this.tree())) return true;
+    return this.f.type === 'EPIC' || this.f.type === 'STORY';
+  }
 
   remove(r: TreeRow): void {
     if (r.hasChildren) { this.toast.warning('Không thể xoá', 'Công việc còn có task con.'); return; }

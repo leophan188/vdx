@@ -85,7 +85,7 @@ export class PrjReport {
     { status: 'BACKLOG', label: 'Backlog', color: 'var(--color-text-muted)' },
     { status: 'TODO', label: 'Cần làm', color: 'var(--status-pending)' },
     { status: 'IN_PROGRESS', label: 'Đang làm', color: 'var(--status-active)' },
-    { status: 'IN_REVIEW', label: 'Đang review', color: 'var(--color-info)' },
+    { status: 'IN_REVIEW', label: 'Kiểm thử', color: 'var(--color-info)' },
     { status: 'DONE', label: 'Hoàn thành', color: 'var(--status-done)' }
   ];
 

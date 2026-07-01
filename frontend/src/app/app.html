@@ -30,7 +30,7 @@
         }
         <a routerLink="/my-requests" routerLinkActive="active" title="Hồ sơ của tôi"><span class="nav-ico">🗂️</span><span>Hồ sơ của tôi</span></a>
         @if (has('MYTASKS')) {
-          <a routerLink="/my-tasks" routerLinkActive="active" title="Việc dự án của tôi"><span class="nav-ico">✅</span><span>Việc dự án của tôi</span>
+          <a routerLink="/my-tasks" routerLinkActive="active" title="Backlog của tôi"><span class="nav-ico">📋</span><span>Backlog của tôi</span>
             @if (myTaskCount()) { <span class="nav-badge">{{ myTaskCount() }}</span> }</a>
         }
         @if (has('OT')) {
@@ -113,6 +113,9 @@
       <span class="topbar__spacer"></span>
       <app-global-search />
       <span class="topbar__spacer"></span>
+      <!-- TẠO NHANH: bấm ＋ mở THẲNG form tạo (chọn loại ngay trong form) -->
+      <button type="button" class="topbar__icon-btn" (click)="openQuickCreate('TASK')"
+              title="Tạo nhanh (Task / Bug / Issue / Epic / Story / Sub-task)">＋</button>
       <!-- Giao diện: Sáng/Tối + bộ màu chủ đạo (gộp 1 dropdown cho tiện) -->
       <div class="topbar__theme">
         <button type="button" class="topbar__icon-btn" (click)="toggleThemeMenu()"
@@ -191,6 +194,10 @@
       <router-outlet />
     </main>
   </div>
+
+  <!-- Modal TẠO NHANH (toolbar) -->
+  <app-quick-create [open]="quickOpen()" [presetType]="quickType()"
+                    (closed)="closeQuickCreate()" (created)="onQuickCreated()" />
 } @else {
   <router-outlet />
 }

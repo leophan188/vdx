@@ -100,6 +100,11 @@ export interface ProjectTask {
   assigneeCode: string | null;     // mã NV (empCode), hoặc username nếu không có Employee
   assigneePosition: string | null; // chức danh / vị trí (Employee.jobPosition)
   assigneeDept: string | null;     // mã bộ phận (Employee.deptCode)
+  // ===== Người kiểm thử (tester) + người log (reporter) — denorm từ UserAccount =====
+  testerUserId?: string | null;
+  testerName?: string | null;
+  reporterUserId?: string | null;
+  reporterName?: string | null;
   estimateHours: number;
   spentHours: number;           // thời gian thực tế đã log (giờ); cộng dồn qua log-work
   startDate: string | null;     // dd/MM/yyyy
@@ -134,6 +139,7 @@ export interface TaskRequest {
   dueDate?: string | null;      // dd/MM/yyyy
   orderIndex?: number | null;
   screen?: string | null;
+  testerUserId?: string | null; // người kiểm thử (bàn giao khi chuyển Kiểm thử)
   // ===== Chi tiết lỗi (BUG/ISSUE) — đều optional =====
   severity?: BugSeverity | null;
   stepsToReproduce?: string | null;

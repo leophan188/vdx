@@ -168,7 +168,7 @@ export class PrjKanban {
     { status: 'BACKLOG', label: 'Backlog' },
     { status: 'TODO', label: 'Cần làm' },
     { status: 'IN_PROGRESS', label: 'Đang làm' },
-    { status: 'IN_REVIEW', label: 'Đang review' },
+    { status: 'IN_REVIEW', label: 'Kiểm thử' },
     { status: 'DONE', label: 'Hoàn thành' }
   ];
 

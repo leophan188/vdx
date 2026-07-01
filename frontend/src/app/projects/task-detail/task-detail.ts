@@ -13,7 +13,7 @@ type SubTab = 'info' | 'comments' | 'activity';
 /**
  * Chi tiết Task kiểu Jira (modal rộng <app-modal [xwide]>).
  * - Header: code + title + badge type/priority + thanh % hoàn thành (progressPct).
- * - Hàng segmented 5 trạng thái (Backlog/Cần làm/Đang làm/Đang review/Hoàn thành) → updateTaskStatus.
+ * - Hàng segmented 5 trạng thái (Backlog/Cần làm/Đang làm/Kiểm thử/Hoàn thành) → updateTaskStatus.
  * - Thông tin: assignee (searchable-select → assignTask), estimate, ngày, mô tả.
  * - Bình luận (list TaskComment + thêm/sửa/xoá, Enter gửi).
  * - Ảnh đính kèm (lưới thumbnail, lightbox, upload, xoá).
@@ -42,6 +42,19 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__bar { flex: 1; height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
     .td__bar > i { display: block; height: 100%; background: var(--color-primary); transition: width .2s; }
     .td__pct { font-size: .8rem; font-weight: 600; min-width: 38px; text-align: right; }
+
+    /* Khu Vòng đời (thao tác nhanh + đổi PIC) */
+    .td__life { display: grid; gap: var(--space-2); padding: 12px; border-radius: 10px;
+      background: var(--color-surface-alt); border: 1px solid var(--color-border); }
+    .td__life-head { display: flex; align-items: center; gap: 8px; }
+    .td__life-head h4 { margin: 0; font-size: .9rem; }
+    .td__life-hint { font-size: .78rem; color: var(--color-text-muted); }
+    .td__life-acts { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+    .td__life-pick { display: grid; gap: 8px; padding-top: var(--space-2);
+      border-top: 1px dashed var(--color-border); }
+    .td__life-pick searchable-select { min-width: 260px; }
+    .td__life-pickrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .td__life-note { font-size: .78rem; color: var(--color-text-muted); }
 
     .td__seg { display: flex; flex-wrap: wrap; gap: 6px; }
     .td__seg button {
@@ -92,18 +105,6 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__tab.is-active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: 600; }
     .td__tab small { font-weight: 400; opacity: .75; }
 
-    /* Theo dõi thời gian (Spent vs Est) */
-    .td__time { display: grid; gap: var(--space-2); padding: 12px; border-radius: 10px; background: var(--color-surface-alt); }
-    .td__timehead { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; font-size: .85rem; }
-    .td__timehead b { font-size: 1rem; }
-    .td__timehead .td__muted { font-size: .82rem; }
-    .td__hbar { height: 10px; border-radius: 999px; background: var(--color-surface); overflow: hidden; }
-    .td__hbar > i { display: block; height: 100%; background: var(--color-primary); transition: width .25s; }
-    .td__hbar.is-over > i { background: var(--danger, #dc2626); }
-    .td__over { font-size: .78rem; color: var(--danger, #dc2626); font-weight: 600; }
-    .td__logwork { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    .td__logwork input { width: 110px; padding: 6px 8px; border: 1px solid var(--color-border); border-radius: 8px; }
-    .td__logwork .td__muted { font-size: .8rem; }
 
     /* Hoạt động (timeline kiểu Jira) */
     .td__acts { display: grid; gap: 0; max-height: 420px; overflow: auto; }
@@ -188,25 +189,14 @@ export class PrjTaskDetail {
   readonly editDraft = signal('');
   readonly busyStatus = signal(false);
 
+  // ===== Vòng đời: chọn người kiểm thử khi chuyển IN_PROGRESS → IN_REVIEW =====
+  readonly pickTesterOpen = signal(false);
+  readonly testerUserId = signal<string>('');
+  readonly busyLifecycle = signal(false);
+
   // Sub-tab đang xem.
   readonly tab = signal<SubTab>('info');
 
-  // Theo dõi thời gian.
-  readonly logHours = signal<number | null>(null);
-  readonly busyLog = signal(false);
-
-  // % giờ đã làm so với ước lượng (có thể > 100 nếu vượt).
-  readonly hoursPct = computed(() => {
-    const t = this.current();
-    const est = t?.estimateHours || 0;
-    const spent = t?.spentHours || 0;
-    if (est <= 0) return spent > 0 ? 100 : 0;
-    return Math.round((spent / est) * 100);
-  });
-  readonly hoursOver = computed(() => {
-    const t = this.current();
-    return !!t && (t.estimateHours || 0) > 0 && (t.spentHours || 0) > t.estimateHours;
-  });
 
   readonly lightboxIndex = signal<number | null>(null);
   readonly lightboxItem = computed(() => {
@@ -216,7 +206,7 @@ export class PrjTaskDetail {
 
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
     { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
-    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Đang review' },
+    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
     { value: 'DONE', label: 'Hoàn thành' }
   ];
   readonly typeLabels: Record<TaskType, string> = {
@@ -239,6 +229,15 @@ export class PrjTaskDetail {
   readonly isBug = computed(() => {
     const t = this.current();
     return !!t && (t.type === 'BUG' || t.type === 'ISSUE');
+  });
+
+  /**
+   * Rollup = task TỰ TỔNG HỢP từ con: có con (leaf=false) HOẶC là EPIC/STORY.
+   * → khoá ô nhập assignee / tester / est / ngày (read-only), hiển thị "Tự tổng hợp từ task con".
+   */
+  readonly isRollup = computed(() => {
+    const t = this.current();
+    return !!t && (!t.leaf || t.type === 'EPIC' || t.type === 'STORY');
   });
 
   // ===== Sửa inline khối Chi tiết lỗi =====
@@ -269,7 +268,7 @@ export class PrjTaskDetail {
     // Khi mở (open=true & có task) → nạp comments + attachments + hoạt động; về tab Thông tin.
     effect(() => {
       const t = this.task();
-      if (this.open() && t) { this.tab.set('info'); this.logHours.set(null); this.loadDetails(t.id); }
+      if (this.open() && t) { this.tab.set('info'); this.loadDetails(t.id); }
     });
   }
 
@@ -322,6 +321,141 @@ export class PrjTaskDetail {
     this.svc.assignTask(this.projectId(), t.id, userId || null).subscribe({
       next: (u) => { this.model.set(u); this.toast.success('Đã gán người thực hiện', u.code); this.changed.emit(); this.loadActivity(u.id); },
       error: (e) => this.toast.error('Không gán được', e?.error?.message ?? '')
+    });
+  }
+
+  // ===== Tester (người kiểm thử) — lưu qua updateTask (TaskRequest có testerUserId) =====
+  setTester(userId: string | null): void {
+    const t = this.current();
+    if (!t) return;
+    const body = this.buildRequest(t, { testerUserId: userId || null });
+    this.svc.updateTask(this.projectId(), t.id, body).subscribe({
+      next: (u) => { this.model.set(u); this.toast.success('Đã gán người kiểm thử', u.code); this.changed.emit(); this.loadActivity(u.id); },
+      error: (e) => this.toast.error('Không gán được người kiểm thử', e?.error?.message ?? '')
+    });
+  }
+
+  /** Dựng TaskRequest ĐẦY ĐỦ từ task hiện có (giữ mọi field) + ghi đè patch. */
+  private buildRequest(t: ProjectTask, patch: Partial<TaskRequest> = {}): TaskRequest {
+    return {
+      parentId: t.parentId, title: t.title, description: t.description,
+      type: t.type, status: t.status, priority: t.priority,
+      assigneeUserId: t.assigneeUserId, estimateHours: t.estimateHours,
+      startDate: t.startDate, dueDate: t.dueDate, orderIndex: t.orderIndex, screen: t.screen,
+      severity: t.severity, stepsToReproduce: t.stepsToReproduce,
+      expectedResult: t.expectedResult, actualResult: t.actualResult, environment: t.environment,
+      testerUserId: t.testerUserId ?? null,
+      ...patch
+    };
+  }
+
+  // ===== Vòng đời (thao tác nhanh theo status) =====
+  /** TODO → IN_PROGRESS: bắt đầu làm. */
+  startProgress(): void {
+    const t = this.current();
+    if (!t || this.busyLifecycle()) return;
+    this.busyLifecycle.set(true);
+    this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_PROGRESS').subscribe({
+      next: (u) => {
+        this.model.set(u);
+        this.busyLifecycle.set(false);
+        this.toast.success('Đã bắt đầu', 'Trạng thái: Đang làm');
+        this.changed.emit();
+        this.loadActivity(u.id);
+      },
+      error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không đổi được trạng thái', e?.error?.message ?? ''); }
+    });
+  }
+
+  /**
+   * Chuyển Kiểm thử được không mà KHÔNG cần chọn tester?
+   * - BUG/ISSUE → BE tự bàn giao cho người log → luôn được.
+   * - Task thường đã có testerUserId → được.
+   * Ngược lại (task thường chưa có tester) → phải chọn tester trước.
+   */
+  readonly canReviewDirectly = computed(() => {
+    const t = this.current();
+    if (!t) return false;
+    return this.isBug() || !!t.testerUserId;
+  });
+
+  /** Bấm "→ Chuyển Kiểm thử": đủ điều kiện → chuyển ngay; task thường thiếu tester → mở chọn. */
+  toReview(): void {
+    if (this.canReviewDirectly()) { this.doReview(); return; }
+    this.openPickTester();
+  }
+
+  /** Mở/đóng khu chọn người kiểm thử (inline). Mặc định gợi ý tester hiện có. */
+  openPickTester(): void {
+    const t = this.current();
+    this.testerUserId.set(t?.testerUserId || '');
+    this.pickTesterOpen.set(true);
+  }
+  cancelPickTester(): void { this.pickTesterOpen.set(false); }
+
+  /** Chuyển sang KIỂM THỬ (BE tự bàn giao PIC: task→tester, bug/issue→người log). */
+  private doReview(): void {
+    const t = this.current();
+    if (!t || this.busyLifecycle()) return;
+    this.busyLifecycle.set(true);
+    this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_REVIEW').subscribe({
+      next: (u) => {
+        this.model.set(u);
+        this.busyLifecycle.set(false);
+        this.pickTesterOpen.set(false);
+        const name = u.assigneeName || 'người kiểm thử';
+        this.toast.success('Đã chuyển kiểm thử', `Cho ${name}`);
+        this.changed.emit();
+        this.loadActivity(u.id);
+      },
+      error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không chuyển được trạng thái', e?.error?.message ?? ''); }
+    });
+  }
+
+  /**
+   * Task thường CHƯA có tester → chọn người rồi setTester(uid) RỒI updateTaskStatus(IN_REVIEW).
+   */
+  confirmToReview(): void {
+    const t = this.current();
+    if (!t || this.busyLifecycle()) return;
+    const testerId = this.testerUserId() || null;
+    if (!testerId) { this.toast.warning('Chọn người kiểm thử'); return; }
+    this.busyLifecycle.set(true);
+    const body = this.buildRequest(t, { testerUserId: testerId });
+    this.svc.updateTask(this.projectId(), t.id, body).subscribe({
+      next: (afterSet) => {
+        this.model.set(afterSet);
+        this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_REVIEW').subscribe({
+          next: (u) => {
+            this.model.set(u);
+            this.busyLifecycle.set(false);
+            this.pickTesterOpen.set(false);
+            const name = u.assigneeName || afterSet.testerName || 'người kiểm thử';
+            this.toast.success('Đã chuyển kiểm thử', `Cho ${name}`);
+            this.changed.emit();
+            this.loadActivity(u.id);
+          },
+          error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không chuyển được trạng thái', e?.error?.message ?? ''); }
+        });
+      },
+      error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không gán được người kiểm thử', e?.error?.message ?? ''); }
+    });
+  }
+
+  /** IN_REVIEW → DONE: hoàn thành. */
+  completeTask(): void {
+    const t = this.current();
+    if (!t || this.busyLifecycle()) return;
+    this.busyLifecycle.set(true);
+    this.svc.updateTaskStatus(this.projectId(), t.id, 'DONE').subscribe({
+      next: (u) => {
+        this.model.set(u);
+        this.busyLifecycle.set(false);
+        this.toast.success('Đã hoàn thành', u.code);
+        this.changed.emit();
+        this.loadActivity(u.id);
+      },
+      error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không hoàn thành được', e?.error?.message ?? ''); }
     });
   }
 
@@ -379,34 +513,7 @@ export class PrjTaskDetail {
     }
   }
 
-  // ===== Theo dõi thời gian (log work) =====
   setTab(t: SubTab): void { this.tab.set(t); }
-
-  onLogHoursInput(e: Event): void {
-    const v = (e.target as HTMLInputElement).valueAsNumber;
-    this.logHours.set(Number.isNaN(v) ? null : v);
-  }
-
-  submitLogWork(): void {
-    const t = this.current();
-    const h = this.logHours();
-    if (!t || this.busyLog() || h === null || !(h > 0)) {
-      if (h !== null && !(h > 0)) this.toast.error('Số giờ phải lớn hơn 0');
-      return;
-    }
-    this.busyLog.set(true);
-    this.svc.logWork(this.projectId(), t.id, h).subscribe({
-      next: (u) => {
-        this.model.set(u);
-        this.logHours.set(null);
-        this.busyLog.set(false);
-        this.toast.success('Đã ghi nhận giờ làm', `+${h}h`);
-        this.changed.emit();
-        this.loadActivity(u.id);
-      },
-      error: (e) => { this.busyLog.set(false); this.toast.error('Không ghi được giờ làm', e?.error?.message ?? ''); }
-    });
-  }
 
   // ===== Bình luận =====
   submitComment(): void {

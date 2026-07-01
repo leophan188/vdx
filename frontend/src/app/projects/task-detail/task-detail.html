@@ -28,6 +28,58 @@
         </div>
       </div>
 
+      <!-- ===== Vòng đời (thao tác nhanh + đổi PIC) ===== -->
+      @if (t.status === 'TODO' || t.status === 'IN_PROGRESS' || t.status === 'IN_REVIEW') {
+        <div class="td__life">
+          <div class="td__life-head">
+            <h4>⚙️ Vòng đời</h4>
+            <span class="td__life-hint">Thao tác nhanh theo trạng thái hiện tại</span>
+          </div>
+
+          @if (t.status === 'TODO') {
+            <div class="td__life-acts">
+              <button type="button" class="btn btn--primary btn--sm"
+                      [disabled]="busyLifecycle()" (click)="startProgress()">▶ Bắt đầu (Đang làm)</button>
+            </div>
+          }
+
+          @if (t.status === 'IN_PROGRESS') {
+            <div class="td__life-acts">
+              @if (!pickTesterOpen()) {
+                <button type="button" class="btn btn--primary btn--sm"
+                        [disabled]="busyLifecycle()" (click)="toReview()">→ Chuyển Kiểm thử</button>
+                @if (isBug()) {
+                  <span class="td__life-note">ℹ️ Bug/Issue sẽ tự bàn giao cho người log để verify.</span>
+                } @else if (t.testerUserId) {
+                  <span class="td__life-note">ℹ️ Bàn giao cho {{ t.testerName || 'người kiểm thử' }}.</span>
+                }
+              }
+            </div>
+            @if (pickTesterOpen()) {
+              <div class="td__life-pick">
+                <label class="td__life-hint">Người kiểm thử (chưa gán) — chọn để bàn giao</label>
+                <div class="td__life-pickrow">
+                  <searchable-select [options]="peopleSel()" [value]="testerUserId()"
+                                     (valueChange)="testerUserId.set($event)"
+                                     placeholder="Chọn người kiểm thử…" />
+                  <button type="button" class="btn btn--primary btn--sm"
+                          [disabled]="busyLifecycle()" (click)="confirmToReview()">Xác nhận</button>
+                  <button type="button" class="btn btn--ghost btn--sm"
+                          [disabled]="busyLifecycle()" (click)="cancelPickTester()">Huỷ</button>
+                </div>
+              </div>
+            }
+          }
+
+          @if (t.status === 'IN_REVIEW') {
+            <div class="td__life-acts">
+              <button type="button" class="btn btn--primary btn--sm"
+                      [disabled]="busyLifecycle()" (click)="completeTask()">🏁 Hoàn thành</button>
+            </div>
+          }
+        </div>
+      }
+
       <!-- ===== Segmented trạng thái ===== -->
       <div class="td__seg">
         @for (s of statusOptions; track s.value) {
@@ -53,17 +105,44 @@
           <div class="td__info">
             <div class="td__row">
               <label>Người thực hiện</label>
-              <searchable-select [options]="peopleSel()" [value]="t.assigneeUserId || ''"
-                                 (valueChange)="assign($event || null)"
-                                 [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
+              @if (isRollup()) {
+                <span class="td__muted" title="Tự tổng hợp từ task con">— Tự tổng hợp từ task con</span>
+              } @else {
+                <searchable-select [options]="peopleSel()" [value]="t.assigneeUserId || ''"
+                                   (valueChange)="assign($event || null)"
+                                   [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
+              }
             </div>
             <div class="td__row">
+              <label>Người kiểm thử</label>
+              @if (isRollup()) {
+                <span class="td__muted" title="Tự tổng hợp từ task con">— Tự tổng hợp từ task con</span>
+              } @else {
+                <searchable-select [options]="peopleSel()" [value]="t.testerUserId || ''"
+                                   (valueChange)="setTester($event || null)"
+                                   [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người kiểm thử…" />
+              }
+            </div>
+            @if (t.reporterName) {
+              <div class="td__row">
+                <label>Người log</label>
+                <span>{{ t.reporterName }}</span>
+              </div>
+            }
+            <div class="td__row">
               <label>Ngày bắt đầu</label>
-              <span [class.td__muted]="!t.startDate">{{ t.startDate || '—' }}</span>
+              <span [class.td__muted]="!t.startDate"
+                    [title]="isRollup() ? 'Tự tổng hợp từ task con' : ''">{{ t.startDate || '—' }}</span>
             </div>
             <div class="td__row">
               <label>Ngày kết thúc</label>
-              <span [class.td__muted]="!t.dueDate">{{ t.dueDate || '—' }}</span>
+              <span [class.td__muted]="!t.dueDate"
+                    [title]="isRollup() ? 'Tự tổng hợp từ task con' : ''">{{ t.dueDate || '—' }}</span>
+            </div>
+            <div class="td__row">
+              <label>Ước lượng</label>
+              <span [class.td__muted]="!(t.estimateHours)"
+                    [title]="isRollup() ? 'Tự tổng hợp từ task con' : ''">{{ t.estimateHours || 0 }}h</span>
             </div>
             <div class="td__sec">
               <h4>Mô tả</h4>
@@ -150,40 +229,8 @@
             }
           </div>
 
-          <!-- Cột phải: theo dõi thời gian + ảnh đính kèm -->
+          <!-- Cột phải: ảnh đính kèm -->
           <div class="td__info">
-            <div class="td__sec">
-              <h4>Theo dõi thời gian</h4>
-              <div class="td__time">
-                <div class="td__timehead">
-                  <div>
-                    <div class="td__muted">Ước lượng</div>
-                    <b>{{ t.estimateHours || 0 }}h</b>
-                  </div>
-                  <div style="text-align:right">
-                    <div class="td__muted">Đã làm</div>
-                    <b>{{ t.spentHours || 0 }}h</b>
-                  </div>
-                </div>
-                <div class="td__hbar" [class.is-over]="hoursOver()">
-                  <i [style.width.%]="hoursPct() > 100 ? 100 : hoursPct()"></i>
-                </div>
-                @if (hoursOver()) {
-                  <div class="td__over">⚠ Vượt ước lượng ({{ hoursPct() }}%)</div>
-                } @else {
-                  <div class="td__muted" style="font-size:.78rem">{{ hoursPct() }}% ước lượng</div>
-                }
-                <div class="td__logwork">
-                  <input type="number" min="0" step="0.25" placeholder="+ giờ"
-                         [value]="logHours() ?? ''"
-                         (input)="onLogHoursInput($event)"
-                         (keydown.enter)="submitLogWork()" />
-                  <button type="button" class="btn btn--primary btn--sm"
-                          [disabled]="busyLog()" (click)="submitLogWork()">Ghi nhận giờ làm</button>
-                </div>
-              </div>
-            </div>
-
             <div class="td__sec">
               <h4>Ảnh đính kèm ({{ attachments().length }})</h4>
               @if (attachments().length) {

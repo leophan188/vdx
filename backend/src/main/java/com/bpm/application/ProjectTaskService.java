@@ -71,20 +71,23 @@ public class ProjectTaskService {
         List<ProjectTask> tasks = taskRepo.findByProjectIdOrderByOrderIndexAscSeqAsc(projectId);
         Set<String> parentIds = collectParentIds(tasks);
         Map<String, Double> progress = computeProgress(tasks, parentIds);
-        // Hiệu năng: resolve toàn bộ assignee (UserAccount + Employee) bằng 2 query gộp thay vì N+1.
-        Set<String> assigneeIds = new HashSet<>();
+        // Hiệu năng: resolve toàn bộ người liên quan (assignee + tester) (UserAccount + Employee) bằng 2 query gộp thay vì N+1.
+        Set<String> personIds = new HashSet<>();
         for (ProjectTask t : tasks) {
             if (t.getAssigneeUserId() != null) {
-                assigneeIds.add(t.getAssigneeUserId());
+                personIds.add(t.getAssigneeUserId());
+            }
+            if (t.getTesterUserId() != null && !t.getTesterUserId().isBlank()) {
+                personIds.add(t.getTesterUserId());
             }
         }
         Map<String, UserAccount> userById = new HashMap<>();
         Map<String, Employee> empByUser = new HashMap<>();
-        if (!assigneeIds.isEmpty()) {
-            for (UserAccount a : userRepo.findAllById(assigneeIds)) {
+        if (!personIds.isEmpty()) {
+            for (UserAccount a : userRepo.findAllById(personIds)) {
                 userById.put(a.getId(), a);
             }
-            for (Employee e : employeeRepo.findByUserAccountIdIn(assigneeIds)) {
+            for (Employee e : employeeRepo.findByUserAccountIdIn(personIds)) {
                 empByUser.put(e.getUserAccountId(), e);
             }
         }
@@ -136,7 +139,14 @@ public class ProjectTaskService {
                 code = acc != null ? acc.getUsername() : uid; // không có Employee → dùng username làm mã
             }
         }
-        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, dept, leaf, progressPct, parentChain);
+        // Tên người kiểm thử — resolve từ batch map (tránh N+1).
+        String testerName = null;
+        String tid = t.getTesterUserId();
+        if (tid != null && !tid.isBlank()) {
+            testerName = ProjectService.personName(empByUser.get(tid), userById.get(tid), tid);
+        }
+        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, dept, leaf, progressPct,
+                parentChain, reporterName(t), testerName);
     }
 
     /**
@@ -214,6 +224,7 @@ public class ProjectTaskService {
         }
         ProjectTask t = new ProjectTask(projectId, p.nextSeq(), require(req.title(), "tiêu đề"), actor);
         applyFields(t, req, parentId);
+        t.setReporterUserId(userIdOf(actor)); // người LOG = actor (UserAccount id); dùng cho auto-reassign bug
         projectRepo.save(p); // lưu seq mới
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_CREATED", "ProjectTask", saved.getId(), actor,
@@ -271,8 +282,12 @@ public class ProjectTaskService {
         Project p = getProject(projectId);
         ProjectTask t = requireSameProjectTask(projectId, taskId);
         TaskStatus oldStatus = t.getStatus();
-        t.setStatus(parseStatus(status));
+        TaskStatus newStatus = parseStatus(status);
+        t.setStatus(newStatus);
         t.touch();
+        // KHÔNG đổi assignee: người thực hiện (lập trình) + người kiểm thử (tester) + người log (reporter)
+        // là 3 field RIÊNG BIỆT, GIỮ NGUYÊN qua các trạng thái. FE hiển thị "chủ hiện tại" theo status
+        // (Đang làm→lập trình, Kiểm thử→kiểm thử/tester, bug Kiểm thử→người log).
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_STATUS_CHANGED", "ProjectTask", saved.getId(), actor,
                 "status=" + saved.getStatus());
@@ -510,6 +525,14 @@ public class ProjectTaskService {
         return userRepo.findByUsername(username).map(ProjectService::displayName).orElse(username);
     }
 
+    /** UserId người LOG: reporterUserId nếu có; nếu null → thử resolve từ createdBy(username)→userId; vẫn null → null. */
+    private String resolveReporter(ProjectTask t) {
+        if (t.getReporterUserId() != null) {
+            return t.getReporterUserId();
+        }
+        return userIdOf(t.getCreatedBy());
+    }
+
     private String userIdOf(String username) {
         if (username == null) {
             return null;
@@ -527,14 +550,20 @@ public class ProjectTaskService {
     // ===== helpers =====
 
     private void applyFields(ProjectTask t, ProjectDto.TaskRequest req, String parentId) {
+        TaskType type = parseType(req.type());
+        double est = req.estimateHours() == null ? 0.0 : req.estimateHours();
+        // Ràng buộc: SUB-TASK ước lượng KHÔNG quá 4 giờ (đơn vị công việc nhỏ, chia nhỏ nếu lớn hơn).
+        if (type == TaskType.SUBTASK && est > 4.0) {
+            throw new IllegalArgumentException("Ước lượng sub-task không được quá 4 giờ");
+        }
         t.apply(parentId,
                 require(req.title(), "tiêu đề"),
                 blankToNull(req.description()),
-                parseType(req.type()),
+                type,
                 parseStatusOrDefault(req.status()),
                 parsePriority(req.priority()),
                 blankToNull(req.assigneeUserId()),
-                req.estimateHours() == null ? 0.0 : req.estimateHours(),
+                est,
                 parseDate(req.startDate(), "ngày bắt đầu"),
                 parseDate(req.dueDate(), "ngày kết thúc"),
                 req.orderIndex() == null ? 0 : req.orderIndex(),
@@ -543,7 +572,8 @@ public class ProjectTaskService {
                 blankToNull(req.stepsToReproduce()),
                 blankToNull(req.expectedResult()),
                 blankToNull(req.actualResult()),
-                blankToNull(req.environment()));
+                blankToNull(req.environment()),
+                blankToNull(req.testerUserId()));
     }
 
     /** Parse mức độ nghiêm trọng AN TOÀN: rỗng/null/không hợp lệ → null (không ném lỗi). */
@@ -636,7 +666,30 @@ public class ProjectTaskService {
                     projectCode + "-" + par.getSeq(), par.getTitle()));
             pid = par.getParentId();
         }
-        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, dept, leaf, progressPct, chain);
+        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, dept, leaf, progressPct,
+                chain, reporterName(t), testerName(t));
+    }
+
+    /** Tên người LOG (reporter) để hiển thị — resolve theo HỒ SƠ NHÂN SỰ; null cho task cũ chưa có reporter. */
+    private String reporterName(ProjectTask t) {
+        String rid = resolveReporter(t);
+        if (rid == null) {
+            return null;
+        }
+        UserAccount acc = userRepo.findById(rid).orElse(null);
+        Employee emp = employeeRepo.findByUserAccountId(rid).orElse(null);
+        return ProjectService.personName(emp, acc, rid);
+    }
+
+    /** Tên người KIỂM THỬ (tester) để hiển thị — resolve theo HỒ SƠ NHÂN SỰ; null nếu chưa gán. */
+    private String testerName(ProjectTask t) {
+        String tid = t.getTesterUserId();
+        if (tid == null || tid.isBlank()) {
+            return null;
+        }
+        UserAccount acc = userRepo.findById(tid).orElse(null);
+        Employee emp = employeeRepo.findByUserAccountId(tid).orElse(null);
+        return ProjectService.personName(emp, acc, tid);
     }
 
     /** progressPct cho một task đơn (dùng ở các response mutation): lá → theo status; cha → rollup cây con. */

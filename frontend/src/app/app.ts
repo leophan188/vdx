@@ -8,6 +8,8 @@ import { ThemeService } from './shared/theme.service';
 import { ToastHost } from './shared/toast/toast-host';
 import { NotificationBell } from './shared/notification-bell/notification-bell';
 import { GlobalSearch } from './shared/global-search/global-search';
+import { QuickCreate } from './shared/quick-create/quick-create';
+import { QuickCreateType } from './core/me-bug.service';
 
 /** Bản đồ tiền tố URL → tiêu đề trang (khớp startsWith; dài hơn ưu tiên trước cho route con). */
 const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
@@ -18,7 +20,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/employees', 'Quản lý nhân sự'],
   ['/accounts', 'Quản lý tài khoản'],
   ['/inbox', 'Việc của tôi'],
-  ['/my-tasks', 'Việc dự án của tôi'],
+  ['/my-tasks', 'Backlog của tôi'],
   ['/ot', 'Đăng ký OT'],
   ['/leave', 'Đăng ký nghỉ'],
   ['/documents', 'Tài liệu'],
@@ -35,7 +37,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, GlobalSearch],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, GlobalSearch, QuickCreate],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -88,6 +90,20 @@ export class App {
   /** Tên hiển thị trên topbar — ưu tiên họ tên, fallback mã đăng nhập. */
   protected readonly displayName = computed(() =>
     this.auth.currentUser()?.fullName || this.auth.currentUser()?.username || 'Người dùng');
+
+  // ===== TẠO NHANH (toolbar): menu chọn Task/Bug + modal =====
+  protected readonly quickMenuOpen = signal(false);
+  protected readonly quickOpen = signal(false);
+  protected readonly quickType = signal<QuickCreateType>('TASK');
+  protected toggleQuickMenu(): void { this.quickMenuOpen.update((o) => !o); }
+  protected closeQuickMenu(): void { this.quickMenuOpen.set(false); }
+  protected openQuickCreate(type: QuickCreateType): void {
+    this.quickType.set(type);
+    this.quickMenuOpen.set(false);
+    this.quickOpen.set(true);
+  }
+  protected closeQuickCreate(): void { this.quickOpen.set(false); }
+  protected onQuickCreated(): void { this.loadCounts(); }
 
   /** Menu người dùng (đổi MK / thông tin / đăng xuất). */
   protected readonly userMenuOpen = signal(false);

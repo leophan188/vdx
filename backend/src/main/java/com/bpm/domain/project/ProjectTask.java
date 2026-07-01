@@ -61,6 +61,14 @@ public class ProjectTask {
     @Column(name = "assignee_user_id", length = 36)
     private String assigneeUserId;
 
+    /** Người LOG/tạo công việc (UserAccount id, nullable — đặc biệt quan trọng cho BUG/ISSUE). */
+    @Column(name = "reporter_user_id", length = 36)
+    private String reporterUserId;
+
+    /** Người KIỂM THỬ (UserAccount id, nullable). Khi task (không phải BUG/ISSUE) chuyển Kiểm thử → bàn giao cho người này. */
+    @Column(name = "tester_user_id", length = 36)
+    private String testerUserId;
+
     /** Ước lượng thời gian (giờ). */
     @Column(name = "estimate_hours")
     private double estimateHours;
@@ -128,21 +136,21 @@ public class ProjectTask {
         this.updatedAt = Instant.now();
     }
 
-    /** Cập nhật toàn bộ trường nghiệp vụ (PUT) — overload cũ, giữ backward-compat (không đụng chi tiết lỗi). */
+    /** Cập nhật toàn bộ trường nghiệp vụ (PUT) — overload cũ, giữ backward-compat (không đụng chi tiết lỗi/tester). */
     public void apply(String parentId, String title, String description, TaskType type, TaskStatus status,
                       TaskPriority priority, String assigneeUserId, double estimateHours,
                       LocalDate startDate, LocalDate dueDate, int orderIndex, String screen) {
         apply(parentId, title, description, type, status, priority, assigneeUserId, estimateHours,
                 startDate, dueDate, orderIndex, screen,
-                null, null, null, null, null);
+                null, null, null, null, null, null);
     }
 
-    /** Cập nhật toàn bộ trường nghiệp vụ (PUT) — bao gồm chi tiết lỗi (BUG/ISSUE). */
+    /** Cập nhật toàn bộ trường nghiệp vụ (PUT) — bao gồm chi tiết lỗi (BUG/ISSUE) + người kiểm thử. */
     public void apply(String parentId, String title, String description, TaskType type, TaskStatus status,
                       TaskPriority priority, String assigneeUserId, double estimateHours,
                       LocalDate startDate, LocalDate dueDate, int orderIndex, String screen,
                       BugSeverity severity, String stepsToReproduce, String expectedResult,
-                      String actualResult, String environment) {
+                      String actualResult, String environment, String testerUserId) {
         this.parentId = parentId;
         this.title = title;
         this.description = description;
@@ -160,6 +168,7 @@ public class ProjectTask {
         this.expectedResult = expectedResult;
         this.actualResult = actualResult;
         this.environment = environment;
+        this.testerUserId = testerUserId;
         touch();
     }
 
@@ -184,6 +193,10 @@ public class ProjectTask {
     public void setPriority(TaskPriority priority) { this.priority = priority; }
     public String getAssigneeUserId() { return assigneeUserId; }
     public void setAssigneeUserId(String assigneeUserId) { this.assigneeUserId = assigneeUserId; }
+    public String getReporterUserId() { return reporterUserId; }
+    public void setReporterUserId(String reporterUserId) { this.reporterUserId = reporterUserId; }
+    public String getTesterUserId() { return testerUserId; }
+    public void setTesterUserId(String testerUserId) { this.testerUserId = testerUserId; }
     public double getEstimateHours() { return estimateHours; }
     public void setEstimateHours(double estimateHours) { this.estimateHours = estimateHours; }
     public double getSpentHours() { return spentHours; }

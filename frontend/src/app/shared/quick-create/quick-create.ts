@@ -1,0 +1,224 @@
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Modal } from '../modal/modal';
+import { SearchableSelect, SelectOption } from '../searchable-select/searchable-select';
+import { memberPersonOptions } from '../person-options';
+import { ToastService } from '../toast/toast.service';
+import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
+import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority } from '../../core/project.service';
+
+/**
+ * TẠO NHANH (từ toolbar) — form ĐẦY ĐỦ giống modal thêm task của backlog.
+ * Chọn Dự án → nạp task (listTasks) để dựng CHA theo phân cấp + members (listMembers) cho người thực hiện / kiểm thử.
+ * Đủ 6 loại (Epic/Story/Task/Sub-task/Bug/Issue) + chọn cha theo loại + est/deadline/assignee/tester/mô tả.
+ * Submit → POST /api/v1/me/bugs (quickCreate). Toast + đóng.
+ * Dùng: <app-quick-create [open]="o()" [presetType]="'BUG'" (closed)="…" (created)="…" />
+ */
+@Component({
+  selector: 'app-quick-create',
+  imports: [Modal, SearchableSelect],
+  templateUrl: './quick-create.html',
+  styles: [`
+    .qc { display: grid; gap: var(--space-3); width: 100%; }
+    .qc__seg { display: flex; gap: 6px; flex-wrap: wrap; }
+    .qc__seg button {
+      border: 1px solid var(--color-border); background: var(--color-surface);
+      padding: 6px 14px; border-radius: 999px; font-size: .85rem; cursor: pointer; color: var(--color-text);
+    }
+    .qc__seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+    .qc__row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
+    @media (max-width: 620px) { .qc__row2 { grid-template-columns: 1fr; } }
+    .field > label { display: block; font-size: .82rem; color: var(--color-text-muted); margin-bottom: 4px; }
+    .field input, .field textarea {
+      width: 100%; padding: 7px 9px; border: 1px solid var(--color-border); border-radius: 8px;
+      background: var(--color-surface); color: var(--color-text); font: inherit; box-sizing: border-box;
+    }
+    .qc__hint { font-size: var(--font-size-xs, .75rem); color: var(--color-text-muted); margin-top: 4px; }
+  `]
+})
+export class QuickCreate {
+  private meBug = inject(MeBugService);
+  private projectApi = inject(ProjectService);
+  private toast = inject(ToastService);
+
+  readonly open = input(false);
+  /** Loại preset khi mở (nút ＋Task / ＋Bug). Vẫn cho đổi sang loại bất kỳ. */
+  readonly presetType = input<QuickCreateType>('TASK');
+
+  readonly closed = output<void>();
+  readonly created = output<void>();
+
+  readonly projects = signal<SelectOption[]>([]);
+  readonly members = signal<ProjectMember[]>([]);
+  /** Danh sách task của dự án đã chọn — nguồn dựng CHA theo phân cấp. */
+  readonly tasks = signal<ProjectTask[]>([]);
+  readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
+
+  readonly type = signal<QuickCreateType>('TASK');
+  readonly projectId = signal('');
+  readonly parentId = signal('');
+  readonly title = signal('');
+  readonly description = signal('');
+  readonly priority = signal<TaskPriority>('MEDIUM');
+  readonly assigneeUserId = signal('');
+  readonly testerUserId = signal('');
+  readonly estimateHours = signal('');
+  readonly dueIso = signal('');
+  readonly saving = signal(false);
+
+  readonly typeOptions: { value: QuickCreateType; label: string }[] = [
+    { value: 'EPIC', label: 'Epic' }, { value: 'STORY', label: 'Story' },
+    { value: 'TASK', label: 'Task' }, { value: 'SUBTASK', label: 'Sub-task' },
+    { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
+  ];
+  readonly priorityOptions: { value: TaskPriority; label: string }[] = [
+    { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
+    { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
+  ];
+  readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
+
+  // ===== Phân cấp cha-con theo LOẠI (bám backlog) =====
+  /** Loại cha HỢP LỆ cho một loại con (null = không có cha — chỉ EPIC). */
+  private parentTypeOf(type: QuickCreateType | null | undefined): TaskType[] | null {
+    switch (type) {
+      case 'EPIC': return null;
+      case 'STORY': return ['EPIC'];
+      case 'TASK': return ['STORY'];
+      case 'SUBTASK': return ['TASK'];
+      case 'BUG':
+      case 'ISSUE': return ['TASK', 'SUBTASK'];
+      default: return null;
+    }
+  }
+  private typeLabel(t: QuickCreateType | TaskType): string {
+    return this.typeOptions.find((o) => o.value === t)?.label ?? t;
+  }
+  /** Nhãn gọn loại cha yêu cầu (toast/hint). */
+  parentTypeLabel(): string {
+    const pt = this.parentTypeOf(this.type());
+    return pt ? pt.map((t) => this.typeLabel(t)).join(' hoặc ') : '';
+  }
+  /** Loại đang chọn có cần cha không (khác EPIC). */
+  needsParent = computed<boolean>(() => this.parentTypeOf(this.type()) !== null);
+
+  /** Danh sách cha hợp lệ theo loại + dự án đang chọn. */
+  parentOptions = computed<SelectOption[]>(() => {
+    const allow = this.parentTypeOf(this.type());
+    if (!allow) return [];
+    return this.tasks()
+      .filter((t) => allow.includes(t.type))
+      .map((t) => ({ value: t.id, label: `[${t.code}] ${t.title}` }));
+  });
+
+  /** Loại đang chọn là SUB-TASK → chặn est > 4h (UX sớm; BE cũng chặn). */
+  readonly isSubtask = computed<boolean>(() => this.type() === 'SUBTASK');
+
+  constructor() {
+    // Mỗi lần mở → reset form + nạp danh sách dự án; áp preset loại.
+    effect(() => {
+      if (this.open()) {
+        this.reset();
+        this.type.set(this.presetType());
+        this.loadProjects();
+      }
+    });
+  }
+
+  private reset(): void {
+    this.projectId.set('');
+    this.parentId.set('');
+    this.members.set([]);
+    this.tasks.set([]);
+    this.title.set('');
+    this.description.set('');
+    this.priority.set('MEDIUM');
+    this.assigneeUserId.set('');
+    this.testerUserId.set('');
+    this.estimateHours.set('');
+    this.dueIso.set('');
+    this.saving.set(false);
+  }
+
+  private loadProjects(): void {
+    this.meBug.myProjects().subscribe({
+      next: (ps) => this.projects.set(ps.map((p) => ({ value: p.id, label: p.code + ' · ' + p.name }))),
+      error: () => this.projects.set([])
+    });
+  }
+
+  onProject(id: string): void {
+    this.projectId.set(id || '');
+    this.parentId.set('');
+    this.assigneeUserId.set('');
+    this.testerUserId.set('');
+    this.members.set([]);
+    this.tasks.set([]);
+    if (!id) return;
+    this.projectApi.listMembers(id).subscribe({
+      next: (m) => this.members.set(m),
+      error: () => this.members.set([])
+    });
+    this.projectApi.listTasks(id).subscribe({
+      next: (r) => this.tasks.set(r),
+      error: () => this.tasks.set([])
+    });
+  }
+
+  /** Đổi loại → EPIC bỏ cha; loại khác → reset cha nếu không còn hợp lệ. */
+  setType(t: QuickCreateType): void {
+    this.type.set(t);
+    const allow = this.parentTypeOf(t);
+    if (!allow) { this.parentId.set(''); return; }
+    const ok = this.tasks().some((tk) => tk.id === this.parentId() && allow.includes(tk.type));
+    if (!ok) this.parentId.set('');
+    // rời SUB-TASK vẫn giữ est; vào SUB-TASK mà est > 4 → cắt về 4 cho khớp max.
+    if (t === 'SUBTASK' && Number(this.estimateHours()) > 4) this.estimateHours.set('4');
+  }
+
+  onParent(id: string): void { this.parentId.set(id || ''); }
+
+  /** yyyy-MM-dd (từ input date) — dùng thẳng cho ISO dueDate. */
+  onDue(e: Event): void { this.dueIso.set((e.target as HTMLInputElement).value); }
+
+  submit(): void {
+    if (this.saving()) return;
+    if (!this.projectId()) { this.toast.warning('Chọn dự án'); return; }
+    if (!this.title().trim()) { this.toast.warning('Nhập tiêu đề'); return; }
+
+    // Validate CHA theo phân cấp: mọi loại KHÁC EPIC bắt buộc chọn cha đúng loại.
+    const allow = this.parentTypeOf(this.type());
+    if (allow) {
+      const ok = this.parentId() && this.tasks().some((t) => t.id === this.parentId() && allow.includes(t.type));
+      if (!ok) { this.toast.error(`Vui lòng chọn ${this.parentTypeLabel()} cha`); return; }
+    }
+
+    // Chặn est SUB-TASK ≤ 4h (UX sớm — BE cũng chặn).
+    const est = this.estimateHours() ? Number(this.estimateHours()) : 0;
+    if (this.type() === 'SUBTASK' && est > 4) {
+      this.toast.error('Ước lượng sub-task không được quá 4 giờ');
+      return;
+    }
+
+    this.saving.set(true);
+    const body: QuickCreateRequest = {
+      projectId: this.projectId(),
+      type: this.type(),
+      title: this.title().trim(),
+      description: this.description().trim() || null,
+      priority: this.priority(),
+      assigneeUserId: this.assigneeUserId() || null,
+      testerUserId: this.testerUserId() || null,
+      estimateHours: est || null,
+      dueDate: this.dueIso() || null,
+      parentId: allow ? (this.parentId() || null) : null
+    };
+    this.meBug.quickCreate(body).subscribe({
+      next: (r) => {
+        this.saving.set(false);
+        this.toast.success('Đã tạo', r.code ? r.code : 'Thành công');
+        this.created.emit();
+        this.closed.emit();
+      },
+      error: (e) => { this.saving.set(false); this.toast.error('Không tạo được', e?.error?.message ?? ''); }
+    });
+  }
+}

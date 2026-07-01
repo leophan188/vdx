@@ -1,0 +1,101 @@
+<app-modal [open]="open()" [wide]="true" title="Tạo nhanh" (closed)="closed.emit()">
+  <div class="qc">
+    <!-- Loại: đủ 6 (Epic/Story/Task/Sub-task/Bug/Issue) -->
+    <div class="field">
+      <label>Loại</label>
+      <div class="qc__seg">
+        @for (o of typeOptions; track o.value) {
+          <button type="button" [class.is-active]="type() === o.value" (click)="setType(o.value)">{{ o.label }}</button>
+        }
+      </div>
+    </div>
+
+    <!-- Dự án -->
+    <div class="field">
+      <label>Dự án *</label>
+      <searchable-select [options]="projects()" [value]="projectId()"
+                         (valueChange)="onProject($event)" placeholder="Chọn dự án…" />
+    </div>
+
+    <!-- Thuộc (task cha) — ẩn khi EPIC (gốc) -->
+    @if (needsParent()) {
+      <div class="field">
+        <label>Thuộc ({{ parentTypeLabel() }}) *</label>
+        @if (parentOptions().length) {
+          <searchable-select [options]="parentOptions()" [value]="parentId()"
+                             (valueChange)="onParent($event)" placeholder="Chọn {{ parentTypeLabel() }} cha…" />
+        } @else {
+          <div class="qc__hint">Chưa có {{ parentTypeLabel() }} — hãy tạo trước.</div>
+        }
+      </div>
+    }
+
+    <!-- Tiêu đề -->
+    <div class="field">
+      <label>Tiêu đề *</label>
+      <input type="text" [value]="title()" (input)="title.set($any($event.target).value)"
+             placeholder="Tiêu đề công việc…" />
+    </div>
+
+    <!-- Mô tả -->
+    <div class="field">
+      <label>Mô tả</label>
+      <textarea rows="3" [value]="description()" (input)="description.set($any($event.target).value)"
+                placeholder="Mô tả (tuỳ chọn)…"></textarea>
+    </div>
+
+    <div class="qc__row2">
+      <!-- Ưu tiên -->
+      <div class="field">
+        <label>Ưu tiên</label>
+        <searchable-select [options]="prioritySel" [value]="priority()"
+                           (valueChange)="priority.set($any($event))" placeholder="Ưu tiên" />
+      </div>
+      <!-- Est (giờ) -->
+      <div class="field">
+        <label>Est (giờ)</label>
+        <input type="number" min="0" step="0.5" [max]="isSubtask() ? 4 : null"
+               [value]="estimateHours()" (input)="estimateHours.set($any($event.target).value)"
+               placeholder="0" />
+        @if (isSubtask()) {
+          <div class="qc__hint">≤ 4h</div>
+        }
+      </div>
+    </div>
+
+    <div class="qc__row2">
+      <!-- Deadline -->
+      <div class="field">
+        <label>Deadline</label>
+        <input type="date" [value]="dueIso()" (input)="onDue($event)" />
+      </div>
+      <!-- Người thực hiện (PIC) — từ members của dự án đã chọn -->
+      <div class="field">
+        <label>Người thực hiện</label>
+        <searchable-select [options]="peopleSel()" [value]="assigneeUserId()"
+                           (valueChange)="assigneeUserId.set($event)"
+                           [allowEmpty]="true" emptyLabel="— Chưa gán —"
+                           placeholder="Chọn người thực hiện…" />
+      </div>
+    </div>
+
+    <div class="qc__row2">
+      <!-- Người kiểm thử (tuỳ chọn) -->
+      <div class="field">
+        <label>Người kiểm thử</label>
+        <searchable-select [options]="peopleSel()" [value]="testerUserId()"
+                           (valueChange)="testerUserId.set($event)"
+                           [allowEmpty]="true" emptyLabel="— Chưa gán —"
+                           placeholder="Chọn người kiểm thử…" />
+      </div>
+      <div class="field"></div>
+    </div>
+  </div>
+
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" [disabled]="saving()" (click)="closed.emit()">Hủy</button>
+    <button type="button" class="btn btn--primary" [disabled]="saving()" (click)="submit()">
+      {{ saving() ? 'Đang tạo…' : '＋ Tạo' }}
+    </button>
+  </div>
+</app-modal>

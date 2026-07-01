@@ -2,3 +2,14 @@
 
 # Bí mật go-live — KHÔNG commit
 .env
+
+# Build artifacts & dữ liệu cục bộ — KHÔNG commit (tự sinh khi build/run)
+**/target/
+**/node_modules/
+**/dist/
+backend/data/
+vts_db_new.sql
+
+# Rác hệ điều hành
+.DS_Store
+**/.DS_Store

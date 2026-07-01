@@ -100,7 +100,9 @@ public final class ProjectDto {
             String severity, String stepsToReproduce, String expectedResult,
             String actualResult, String environment,
             boolean leaf, double progressPct, List<ParentRef> parentChain,
-            String createdAt, String updatedAt, String createdBy) {
+            String createdAt, String updatedAt, String createdBy,
+            String reporterUserId, String reporterName,
+            String testerUserId, String testerName) {
 
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName, boolean leaf) {
             return of(t, projectCode, assigneeName, null, null, null,
@@ -122,6 +124,24 @@ public final class ProjectDto {
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
                                       String assigneeCode, String assigneePosition, String assigneeDept,
                                       boolean leaf, double progressPct, List<ParentRef> parentChain) {
+            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeDept,
+                    leaf, progressPct, parentChain, null);
+        }
+
+        /** Bản đầy đủ: kèm reporterName (người LOG). reporterUserId/testerUserId lấy trực tiếp từ entity; testerName=null. */
+        public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
+                                      String assigneeCode, String assigneePosition, String assigneeDept,
+                                      boolean leaf, double progressPct, List<ParentRef> parentChain,
+                                      String reporterName) {
+            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeDept,
+                    leaf, progressPct, parentChain, reporterName, null);
+        }
+
+        /** Bản đầy đủ nhất: kèm reporterName (người LOG) + testerName (người kiểm thử). Các userId lấy từ entity. */
+        public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
+                                      String assigneeCode, String assigneePosition, String assigneeDept,
+                                      boolean leaf, double progressPct, List<ParentRef> parentChain,
+                                      String reporterName, String testerName) {
             return new TaskResponse(
                     t.getId(), t.getProjectId(), t.getParentId(), t.getSeq(),
                     projectCode + "-" + t.getSeq(),
@@ -138,7 +158,9 @@ public final class ProjectDto {
                     parentChain == null ? List.of() : parentChain,
                     t.getCreatedAt() == null ? null : t.getCreatedAt().toString(),
                     t.getUpdatedAt() == null ? null : t.getUpdatedAt().toString(),
-                    t.getCreatedBy());
+                    t.getCreatedBy(),
+                    t.getReporterUserId(), reporterName,
+                    t.getTesterUserId(), testerName);
         }
     }
 
@@ -183,7 +205,8 @@ public final class ProjectDto {
             String assigneeUserId, Double estimateHours, String startDate, String dueDate,
             Integer orderIndex, String screen,
             String severity, String stepsToReproduce, String expectedResult,
-            String actualResult, String environment) {
+            String actualResult, String environment,
+            String testerUserId) {
     }
 
     public record StatusRequest(String status) {

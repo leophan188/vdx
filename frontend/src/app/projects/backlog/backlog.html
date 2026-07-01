@@ -72,8 +72,8 @@
         <!-- Loại -->
         <span><span class="badge" [class]="typeBadge(r.task.type)">{{ typeLabel(r.task.type) }}</span></span>
 
-        <!-- Trạng thái: cha (có con) = TỰ TỔNG HỢP từ con (read-only); lá = đổi nhanh -->
-        @if (r.hasChildren) {
+        <!-- Trạng thái: rollup (cha / EPIC / STORY) = TỰ TỔNG HỢP (read-only); lá = đổi nhanh -->
+        @if (isRollup(r.task)) {
           <span class="badge" [class]="statusBadge(r.task.status)"
                 title="Tự tổng hợp từ trạng thái các task con">{{ statusLabel(r.task.status) }}</span>
         } @else {
@@ -81,24 +81,40 @@
                              (valueChange)="changeStatus(r.task, $event)" placeholder="Trạng thái" />
         }
 
-        <!-- Người thực hiện: cha (có con) = rollup, hiển thị "—" không gán; lá = gán nhanh -->
-        @if (r.hasChildren) {
+        <!-- Người thực hiện — THEO TRẠNG THÁI:
+             • rollup → "—" (tự tổng hợp)
+             • Kiểm thử + BUG/ISSUE → NGƯỜI LOG (read-only)
+             • Kiểm thử + task thường → ô chọn NGƯỜI KIỂM THỬ
+             • còn lại → ô chọn NGƯỜI LẬP TRÌNH (assignee) -->
+        @if (isRollup(r.task)) {
           <span class="bl-num--muted" title="Tự tổng hợp từ task con">—</span>
+        } @else if (r.task.status === 'IN_REVIEW' && isBugLike(r.task.type)) {
+          <span title="Người log (BUG/ISSUE) — verify khi kiểm thử">
+            <span class="badge badge--neutral">Người log</span>
+            {{ r.task.reporterName || '—' }}
+          </span>
+        } @else if (r.task.status === 'IN_REVIEW') {
+          <searchable-select [options]="peopleSel()" [value]="r.task.testerUserId || ''"
+                             (valueChange)="changeTester(r.task, $event)"
+                             [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Người kiểm thử…"
+                             title="Người kiểm thử" />
         } @else {
           <searchable-select [options]="peopleSel()" [value]="r.task.assigneeUserId || ''"
                              (valueChange)="changeAssignee(r.task, $event)"
-                             [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Gán người…" />
+                             [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Gán người…"
+                             title="Người lập trình / thực hiện" />
         }
 
-        <!-- Est: cha = tổng est lá (read-only); lá = nhập nhanh tại chỗ -->
-        @if (r.hasChildren) {
+        <!-- Est: rollup = tổng est lá (read-only); lá = nhập nhanh tại chỗ -->
+        @if (isRollup(r.task)) {
           <span class="bl-num bl-num--muted" title="Tổng est các task con (tự tổng hợp)">{{ rollupEst(r.task.id) }}</span>
         } @else {
           <input type="number" class="bl-est" min="0" step="0.5"
+                 [max]="r.task.type === 'SUBTASK' ? 4 : null"
                  [value]="r.task.estimateHours || 0"
                  (blur)="saveEstInline(r.task, $any($event.target).value)"
                  (keydown.enter)="$any($event.target).blur()"
-                 title="Nhập est (giờ) — Enter/rời ô để lưu" />
+                 [title]="r.task.type === 'SUBTASK' ? 'Nhập est (giờ) — ≤ 4h' : 'Nhập est (giờ) — Enter/rời ô để lưu'" />
         }
 
         <!-- % Hoàn thành (progressPct rollup) -->
@@ -111,11 +127,11 @@
           <span class="bl-progress__label">{{ round(r.task.progressPct) }}%</span>
         </span>
 
-        <!-- Từ ngày → Đến ngày (cha = rollup từ task con) + Duration -->
-        <span class="bl-date" [class.bl-num--muted]="hasChildrenRow(r.task.id)"
-              [title]="hasChildrenRow(r.task.id) ? 'Tự tổng hợp từ task con' : ''">{{ startOf(r.task) || '—' }}</span>
-        <span class="bl-date" [class.bl-num--muted]="hasChildrenRow(r.task.id)"
-              [title]="hasChildrenRow(r.task.id) ? 'Tự tổng hợp từ task con' : ''">{{ dueOf(r.task) || '—' }}</span>
+        <!-- Từ ngày → Đến ngày (rollup = tự tổng hợp từ task con) + Duration -->
+        <span class="bl-date" [class.bl-num--muted]="isRollup(r.task)"
+              [title]="isRollup(r.task) ? 'Tự tổng hợp từ task con' : ''">{{ startOf(r.task) || '—' }}</span>
+        <span class="bl-date" [class.bl-num--muted]="isRollup(r.task)"
+              [title]="isRollup(r.task) ? 'Tự tổng hợp từ task con' : ''">{{ dueOf(r.task) || '—' }}</span>
         <span class="bl-date bl-num--muted">{{ durationOf(r.task) }}</span>
 
         <!-- Ưu tiên -->
@@ -146,17 +162,37 @@
     <div class="form-2col">
       <div class="field">
         <label>Loại</label>
-        <searchable-select [options]="typeSel" [value]="f.type || 'TASK'"
-                           (valueChange)="f.type = $any($event)" placeholder="Loại" />
+        <div class="bl-seg">
+          @for (o of typeOptions; track o.value) {
+            <button type="button" [class.is-active]="(f.type || 'TASK') === o.value"
+                    (click)="onTypeChange(o.value)">{{ o.label }}</button>
+          }
+        </div>
       </div>
       <div class="field">
         <label>Ưu tiên</label>
         <searchable-select [options]="prioritySel" [value]="f.priority || 'MEDIUM'"
                            (valueChange)="f.priority = $any($event)" placeholder="Ưu tiên" />
       </div>
+
+      <!-- Thuộc (cha) — theo phân cấp; EPIC không có cha (ẩn) -->
+      @if (needsParent()) {
+        <div class="field">
+          <label>Thuộc ({{ parentTypeLabel(f.type) }} cha) *</label>
+          @if (parentOptions().length) {
+            <searchable-select [options]="parentOptions()" [value]="f.parentId || ''"
+                               (valueChange)="f.parentId = $event || null"
+                               placeholder="Chọn {{ parentTypeLabel(f.type) }} cha…" />
+          } @else {
+            <input type="text" value="—" disabled />
+            <span class="field-hint">Chưa có {{ parentTypeLabel(f.type) }} — hãy tạo trước.</span>
+          }
+        </div>
+      }
+
       <div class="field">
         <label>Người thực hiện</label>
-        @if (editingHasChildren()) {
+        @if (editingRollup()) {
           <input type="text" value="—" disabled />
           <span class="field-hint">Tự tổng hợp từ task con</span>
         } @else {
@@ -167,20 +203,34 @@
       </div>
       <div class="field">
         <label>Est (giờ)</label>
-        @if (editingHasChildren()) {
-          <input type="number" [value]="rollupEst(editingId()!)" disabled />
+        @if (editingRollup()) {
+          <input type="number" [value]="editingId() ? rollupEst(editingId()!) : 0" disabled />
           <span class="field-hint">Tự tổng hợp từ task con</span>
         } @else {
-          <input type="number" name="estimateHours" min="0" step="0.5" [(ngModel)]="f.estimateHours" />
+          <input type="number" name="estimateHours" min="0" step="0.5"
+                 [max]="f.type === 'SUBTASK' ? 4 : null" [(ngModel)]="f.estimateHours" />
+          @if (f.type === 'SUBTASK') {
+            <span class="field-hint">≤ 4h</span>
+          }
         }
       </div>
       <div class="field">
         <label>Ngày bắt đầu</label>
-        <input type="date" name="startIso" [(ngModel)]="startIso" />
+        @if (editingRollup()) {
+          <input type="date" value="" disabled />
+          <span class="field-hint">Tự tổng hợp từ task con</span>
+        } @else {
+          <input type="date" name="startIso" [(ngModel)]="startIso" />
+        }
       </div>
       <div class="field">
         <label>Ngày hết hạn</label>
-        <input type="date" name="dueIso" [(ngModel)]="dueIso" />
+        @if (editingRollup()) {
+          <input type="date" value="" disabled />
+          <span class="field-hint">Tự tổng hợp từ task con</span>
+        } @else {
+          <input type="date" name="dueIso" [(ngModel)]="dueIso" />
+        }
       </div>
     </div>
 
