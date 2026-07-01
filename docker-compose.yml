@@ -44,6 +44,9 @@ services:
       # --- Schema: lần go-live ĐẦU TIÊN dùng 'update' để Hibernate tạo bảng.
       #     Sau khi schema ổn định, đặt BPM_DDL_AUTO=validate trong .env (xem ops/DEPLOY.md). ---
       BPM_DDL_AUTO: ${BPM_DDL_AUTO:-update}
+      # --- Flowable: lần go-live ĐẦU TIÊN đặt 'true' để tạo bảng ACT_*.
+      #     Sau khi schema ổn định, đặt BPM_FLOWABLE_SCHEMA_UPDATE=false trong .env. ---
+      BPM_FLOWABLE_SCHEMA_UPDATE: ${BPM_FLOWABLE_SCHEMA_UPDATE:-false}
       # --- Tài khoản admin khởi tạo (AdminSeeder đọc env này) ---
       BPM_ADMIN_PASSWORD: ${BPM_ADMIN_PASSWORD:?Đặt BPM_ADMIN_PASSWORD trong .env}
       # --- Mật khẩu mặc định khi tạo nhân sự/tài khoản hàng loạt (nếu BE dùng) ---
