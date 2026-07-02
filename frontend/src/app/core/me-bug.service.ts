@@ -48,11 +48,16 @@ export interface LogBugRequest {
   dueDate?: string | null;   // ISO yyyy-MM-dd | null
 }
 
-/** Kết quả tạo bug. */
+/**
+ * Kết quả tạo (khớp backend MeTaskDto.CreateResult):
+ *  - source="PROJECT" → projectTaskId + projectId (task vào backlog chung)
+ *  - source="PERSONAL" → personal có giá trị (task riêng)
+ */
 export interface CreateResult {
-  id?: string;
+  source?: 'PROJECT' | 'PERSONAL';
+  projectTaskId?: string;   // id task dự án vừa tạo (dùng để đính kèm ảnh)
   projectId?: string;
-  code?: string;
+  personal?: { id?: string } | null;
 }
 
 /** Loại cho TẠO NHANH (toolbar): đủ 6 loại như backlog. */

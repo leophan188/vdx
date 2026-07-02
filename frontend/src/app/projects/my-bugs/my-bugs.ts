@@ -156,7 +156,7 @@ export class MyBugs implements OnInit {
     this.meBug.log(body).subscribe({
       next: (r) => {
         this.saving.set(false);
-        this.toast.success('Đã log bug/issue', r.code ?? this.f.title.trim());
+        this.toast.success('Đã log bug/issue', this.f.title.trim());
         this.modalOpen.set(false);
         this.reload();
       },

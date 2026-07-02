@@ -90,6 +90,25 @@
       </div>
       <div class="field"></div>
     </div>
+
+    <!-- Ảnh đính kèm (tuỳ chọn) — tải lên NGAY sau khi tạo task/bug -->
+    <div class="field">
+      <label>Ảnh đính kèm</label>
+      <div class="qc__atts">
+        @for (p of previews(); track p.url) {
+          <div class="qc__att">
+            <img [src]="p.url" [alt]="p.name" />
+            <button type="button" class="qc__att-del" title="Bỏ ảnh"
+                    (click)="removeFile($index)">✕</button>
+          </div>
+        }
+        <label class="qc__att-add" title="Thêm ảnh">
+          ＋
+          <input type="file" accept="image/*" multiple hidden (change)="onFilesPicked($event)" />
+        </label>
+      </div>
+      <div class="qc__hint">Chỉ ảnh (JPEG/PNG/GIF/WEBP), ≤ 10MB mỗi ảnh.</div>
+    </div>
   </div>
 
   <div modalFooter>

@@ -73,11 +73,20 @@ public class MeTaskService {
         return out;
     }
 
-    /** Dự án tôi là thành viên (đổ dropdown khi thêm task gắn dự án). */
+    /**
+     * Dropdown dự án khi tạo nhanh / thêm task gắn dự án.
+     * ADMIN (oversight) → MỌI dự án; nhân sự thường → chỉ dự án mình là thành viên.
+     */
     @Transactional(readOnly = true)
     public List<MeTaskDto.ProjectOption> myProjects(String actor) {
         UserAccount me = require(actor);
         List<MeTaskDto.ProjectOption> out = new ArrayList<>();
+        if (me.isAdmin()) {
+            for (Project p : projectRepo.findAllByOrderByCreatedAtDesc()) {
+                out.add(new MeTaskDto.ProjectOption(p.getId(), p.getCode(), p.getName()));
+            }
+            return out;
+        }
         for (ProjectMember m : memberRepo.findByUserId(me.getId())) {
             projectRepo.findById(m.getProjectId()).ifPresent(p ->
                     out.add(new MeTaskDto.ProjectOption(p.getId(), p.getCode(), p.getName())));
@@ -111,7 +120,7 @@ public class MeTaskService {
         }
 
         String pid = projectId.trim();
-        if (memberRepo.findByProjectIdAndUserId(pid, me.getId()).isEmpty()) {
+        if (!me.isAdmin() && memberRepo.findByProjectIdAndUserId(pid, me.getId()).isEmpty()) {
             throw new IllegalArgumentException("Bạn không thuộc dự án này");
         }
         ProjectDto.TaskRequest req = new ProjectDto.TaskRequest(
@@ -215,7 +224,7 @@ public class MeTaskService {
             throw new IllegalArgumentException("Thiếu dự án");
         }
         String pid = req.projectId().trim();
-        if (memberRepo.findByProjectIdAndUserId(pid, me.getId()).isEmpty()) {
+        if (!me.isAdmin() && memberRepo.findByProjectIdAndUserId(pid, me.getId()).isEmpty()) {
             throw new IllegalArgumentException("Bạn không thuộc dự án này");
         }
         String type = parseBugType(req.type());

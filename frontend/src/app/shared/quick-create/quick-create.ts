@@ -1,10 +1,15 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Modal } from '../modal/modal';
 import { SearchableSelect, SelectOption } from '../searchable-select/searchable-select';
 import { memberPersonOptions } from '../person-options';
 import { ToastService } from '../toast/toast.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
 import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority } from '../../core/project.service';
+
+/** Ảnh chờ đính kèm: file gốc + URL preview (blob) để hiển thị + thu hồi. */
+interface PendingImage { file: File; url: string; name: string; }
 
 /**
  * TẠO NHANH (từ toolbar) — form ĐẦY ĐỦ giống modal thêm task của backlog.
@@ -33,6 +38,20 @@ import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority } fr
       background: var(--color-surface); color: var(--color-text); font: inherit; box-sizing: border-box;
     }
     .qc__hint { font-size: var(--font-size-xs, .75rem); color: var(--color-text-muted); margin-top: 4px; }
+    .qc__atts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .qc__att { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
+    .qc__att img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .qc__att-del {
+      position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0;
+      border: none; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem;
+      line-height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center;
+    }
+    .qc__att-add {
+      width: 72px; height: 72px; border: 1px dashed var(--color-border); border-radius: 8px;
+      display: flex; align-items: center; justify-content: center; font-size: 1.5rem;
+      color: var(--color-text-muted); cursor: pointer; background: var(--color-surface);
+    }
+    .qc__att-add:hover { border-color: var(--color-primary); color: var(--color-primary); }
   `]
 })
 export class QuickCreate {
@@ -64,6 +83,8 @@ export class QuickCreate {
   readonly estimateHours = signal('');
   readonly dueIso = signal('');
   readonly saving = signal(false);
+  /** Ảnh chờ đính kèm — upload sau khi tạo task thành công (nhận được id). */
+  readonly previews = signal<PendingImage[]>([]);
 
   readonly typeOptions: { value: QuickCreateType; label: string }[] = [
     { value: 'EPIC', label: 'Epic' }, { value: 'STORY', label: 'Story' },
@@ -114,12 +135,17 @@ export class QuickCreate {
 
   constructor() {
     // Mỗi lần mở → reset form + nạp danh sách dự án; áp preset loại.
+    // CHỈ phụ thuộc open()/presetType(); reset() có đọc+ghi previews() nên PHẢI bọc
+    // untracked() để tránh effect tự phụ thuộc rồi lặp vô hạn (treo tab).
     effect(() => {
-      if (this.open()) {
+      const isOpen = this.open();
+      const preset = this.presetType();
+      if (!isOpen) return;
+      untracked(() => {
         this.reset();
-        this.type.set(this.presetType());
+        this.type.set(preset);
         this.loadProjects();
-      }
+      });
     });
   }
 
@@ -136,6 +162,32 @@ export class QuickCreate {
     this.estimateHours.set('');
     this.dueIso.set('');
     this.saving.set(false);
+    this.clearImages();
+  }
+
+  /** Thu hồi mọi blob URL đang xem trước rồi xoá danh sách ảnh. */
+  private clearImages(): void {
+    for (const p of this.previews()) { URL.revokeObjectURL(p.url); }
+    this.previews.set([]);
+  }
+
+  /** Chọn thêm ảnh (nhiều) — chỉ nhận image/*, dựng blob URL xem trước. */
+  onFilesPicked(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (picked.length) {
+      const added = picked.map((file) => ({ file, url: URL.createObjectURL(file), name: file.name }));
+      this.previews.update((xs) => [...xs, ...added]);
+    }
+    input.value = ''; // cho phép chọn lại cùng file
+  }
+
+  /** Bỏ 1 ảnh khỏi danh sách chờ + thu hồi blob URL. */
+  removeFile(i: number): void {
+    const list = this.previews();
+    const p = list[i];
+    if (p) { URL.revokeObjectURL(p.url); }
+    this.previews.set(list.filter((_, idx) => idx !== i));
   }
 
   private loadProjects(): void {
@@ -213,12 +265,34 @@ export class QuickCreate {
     };
     this.meBug.quickCreate(body).subscribe({
       next: (r) => {
-        this.saving.set(false);
-        this.toast.success('Đã tạo', r.code ? r.code : 'Thành công');
-        this.created.emit();
-        this.closed.emit();
+        const imgs = this.previews();
+        const taskId = r.projectTaskId; // backend trả projectTaskId (id task dự án)
+        // Không có ảnh → xong ngay.
+        if (!imgs.length || !taskId || !r.projectId) {
+          this.finishOk(imgs.length ? 'Đã tạo nhưng thiếu id để đính kèm ảnh' : undefined);
+          return;
+        }
+        // Có ảnh → tạo xong mới upload từng ảnh vào task vừa tạo (projectTaskId + projectId).
+        const uploads = imgs.map((p) =>
+          this.projectApi.uploadAttachment(r.projectId!, taskId, p.file).pipe(
+            catchError(() => of(null)) // 1 ảnh lỗi không chặn các ảnh khác
+          )
+        );
+        forkJoin(uploads).subscribe((res) => {
+          const failed = res.filter((x) => x === null).length;
+          this.finishOk(failed ? `Tạo xong; ${failed}/${imgs.length} ảnh tải lỗi` : undefined);
+        });
       },
       error: (e) => { this.saving.set(false); this.toast.error('Không tạo được', e?.error?.message ?? ''); }
     });
+  }
+
+  /** Đóng modal sau khi tạo (có/không kèm ảnh). warn có giá trị → cảnh báo mềm thay vì success. */
+  private finishOk(warn?: string): void {
+    this.saving.set(false);
+    if (warn) { this.toast.warning(warn); }
+    else { this.toast.success('Đã tạo', 'Thành công'); }
+    this.created.emit();
+    this.closed.emit();
   }
 }
