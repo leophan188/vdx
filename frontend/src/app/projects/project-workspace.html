@@ -4,7 +4,7 @@
                    [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
 
   <div class="pw-tabs">
-    @for (t of tabs; track t.key) {
+    @for (t of visibleTabs(); track t.key) {
       <button type="button" [class.active]="tab() === t.key" (click)="tab.set(t.key)">{{ t.icon }} {{ t.label }}</button>
     }
   </div>

@@ -26,6 +26,17 @@ public enum Feature {
     LEAVE("Đăng ký nghỉ", "Cá nhân & cộng tác", true),
     DOCS("Tài liệu", "Cá nhân & cộng tác", true),
 
+    // ===== Tab trong Quản lý dự án (phân quyền từng tab) — vẫn cần FEAT_PROJECT để vào dự án =====
+    PRJ_KANBAN("Dự án · Kanban", "Dự án — Tab", true),
+    PRJ_BUGS("Dự án · Bug/Issue", "Dự án — Tab", true),
+    PRJ_BACKLOG("Dự án · Backlog", "Dự án — Tab", true),
+    PRJ_TIMELINE("Dự án · Timeline", "Dự án — Tab", true),
+    PRJ_TIMESHEET("Dự án · Timesheet", "Dự án — Tab", true),
+    PRJ_LOG("Dự án · Log hoạt động", "Dự án — Tab", true),
+    PRJ_DIARY("Dự án · Nhật ký", "Dự án — Tab", true),
+    PRJ_REPORTS("Dự án · Báo cáo ngày/tuần", "Dự án — Tab", true),
+    PRJ_MEMBERS("Dự án · Thành viên", "Dự án — Tab", true),
+
     // ===== Quản lý & quản trị =====
     HR("Quản lý nhân sự", "Quản lý", false),
     IMPORT("Import Excel → Báo cáo", "Quản lý", false),

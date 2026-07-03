@@ -1,7 +1,8 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { PageHeader } from '../shared/page-header/page-header';
 import { ProjectService, Project, ProjectTask } from '../core/project.service';
+import { AuthService } from '../core/auth.service';
 import { PrjOverview } from './overview/overview';
 import { PrjMembers } from './members/members';
 import { PrjBacklog } from './backlog/backlog';
@@ -14,7 +15,7 @@ import { PrjLog } from './log/log';
 import { PrjDiary } from './diary/diary';
 import { PrjTaskDetail } from './task-detail/task-detail';
 
-interface WsTab { key: string; label: string; icon: string; }
+interface WsTab { key: string; label: string; icon: string; feature?: string; }
 
 /** Không gian làm việc của một dự án: tab Tổng quan (gộp thống kê + burndown) / Thành viên / Backlog / Kanban / Timeline / Bug / Báo cáo ngày-tuần. */
 @Component({
@@ -33,6 +34,7 @@ interface WsTab { key: string; label: string; icon: string; }
 export class ProjectWorkspace implements OnInit {
   private route = inject(ActivatedRoute);
   private api = inject(ProjectService);
+  private auth = inject(AuthService);
 
   readonly id = signal<string>('');
   readonly project = signal<Project | null>(null);
@@ -44,21 +46,35 @@ export class ProjectWorkspace implements OnInit {
   readonly detailOpen = signal(false);
 
   readonly tabs: WsTab[] = [
-    { key: 'overview', label: 'Tổng quan', icon: '📊' },
-    { key: 'kanban', label: 'Kanban', icon: '📋' },
-    { key: 'bugs', label: 'Bug / Issue', icon: '🐞' },
-    { key: 'backlog', label: 'Backlog', icon: '🗂️' },
-    { key: 'timeline', label: 'Timeline', icon: '📅' },
-    { key: 'timesheet', label: 'Timesheet', icon: '⏱️' },
-    { key: 'log', label: 'Log', icon: '📜' },
-    { key: 'diary', label: 'Nhật ký', icon: '📔' },
-    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️' },
-    { key: 'members', label: 'Thành viên', icon: '👥' }
+    { key: 'overview', label: 'Tổng quan', icon: '📊' }, // luôn hiện (đã vào được dự án)
+    { key: 'kanban', label: 'Kanban', icon: '📋', feature: 'PRJ_KANBAN' },
+    { key: 'bugs', label: 'Bug / Issue', icon: '🐞', feature: 'PRJ_BUGS' },
+    { key: 'backlog', label: 'Backlog', icon: '🗂️', feature: 'PRJ_BACKLOG' },
+    { key: 'timeline', label: 'Timeline', icon: '📅', feature: 'PRJ_TIMELINE' },
+    { key: 'timesheet', label: 'Timesheet', icon: '⏱️', feature: 'PRJ_TIMESHEET' },
+    { key: 'log', label: 'Log', icon: '📜', feature: 'PRJ_LOG' },
+    { key: 'diary', label: 'Nhật ký', icon: '📔', feature: 'PRJ_DIARY' },
+    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️', feature: 'PRJ_REPORTS' },
+    { key: 'members', label: 'Thành viên', icon: '👥', feature: 'PRJ_MEMBERS' }
   ];
+
+  /** Tab hiển thị theo quyền (FEAT_PRJ_*); tab không có feature → luôn hiện. ADMIN thấy tất cả. */
+  readonly visibleTabs = computed<WsTab[]>(() =>
+    this.tabs.filter((t) => !t.feature || this.auth.hasFeature(t.feature)));
+
+  /** Đảm bảo tab đang chọn nằm trong tab được phép; nếu không → về tab đầu tiên được phép. */
+  selectTab(key: string): void { this.tab.set(key); }
+  private ensureAllowedTab(): void {
+    const allowed = new Set(this.visibleTabs().map((t) => t.key));
+    if (!allowed.has(this.tab())) {
+      this.tab.set(this.visibleTabs()[0]?.key ?? 'overview');
+    }
+  }
 
   ngOnInit(): void {
     const pid = this.route.snapshot.paramMap.get('id') ?? '';
     this.id.set(pid);
+    this.ensureAllowedTab(); // nếu tab mặc định không được phép → về tab đầu tiên được phép
     this.loadProject();
   }
 

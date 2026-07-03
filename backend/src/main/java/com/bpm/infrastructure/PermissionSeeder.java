@@ -78,6 +78,14 @@ public class PermissionSeeder implements ApplicationRunner {
         for (Feature f : fs) {
             s.add(f.name());
         }
+        // Vai trò nào có PROJECT → tự thêm MỌI tab dự án (mặc định thấy đủ tab; admin bỏ bớt sau).
+        if (s.contains(Feature.PROJECT.name())) {
+            for (Feature f : Feature.values()) {
+                if ("Dự án — Tab".equals(f.getGroup())) {
+                    s.add(f.name());
+                }
+            }
+        }
         return s;
     }
 }
