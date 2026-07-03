@@ -316,7 +316,8 @@ public class EmployeeService {
         // Tạo + liên kết tài khoản (username=empCode, mật khẩu mặc định) để đăng nhập / gán vào dự án.
         // NV thuê ngoài QUẢN LÝ TAY: tài khoản luôn ACTIVE khi tạo (KHÔNG auto-khoá theo chuỗi trạng thái)
         // → gán được vào dự án ngay; admin có thể khoá sau ở màn Quản lý tài khoản nếu cần.
-        ensureAccount(emp, actor);
+        UserAccount acc = ensureAccount(emp, actor);
+        ensurePermissionRole(acc, emp.getTitle(), actor);
         Employee saved = employeeRepo.save(emp);
 
         auditPort.record("EMPLOYEE_CREATED_MANUAL", "Employee", saved.getId(), actor,
@@ -552,6 +553,8 @@ public class EmployeeService {
 
             // Tạo/lấy tài khoản đăng nhập (username = empCode).
             UserAccount acc = ensureAccount(emp, actor);
+            // Gán vai trò PHÂN QUYỀN theo chức danh (idempotent — chỉ khi chưa có vai trò).
+            ensurePermissionRole(acc, emp.getTitle(), actor);
             emp = employeeRepo.save(emp);
 
             // Liên thông cơ cấu / vị trí / vai trò (Epic 1 GĐ2 — idempotent).
@@ -649,6 +652,24 @@ public class EmployeeService {
         acc.setFullName(emp.getFullName());
         emp.linkAccount(acc.getId(), actor);
         return acc;
+    }
+
+    /**
+     * Gán vai trò PHÂN QUYỀN (FEAT_* — ma trận) theo CHỨC DANH khi import/đồng bộ.
+     * Quy tắc: chức danh "Nhân viên" (hoặc trống) → {@code NHANVIEN} (Nhóm nhân viên);
+     * còn lại (Giám đốc, Trưởng nhóm, …) → {@code QUANLY} (Quản lý chung).
+     * IDEMPOTENT + tôn trọng chỉnh tay: chỉ gán khi tài khoản CHƯA có vai trò (roleCode trống).
+     */
+    private void ensurePermissionRole(UserAccount acc, String chucDanh, String actor) {
+        if (acc.getRoleCode() != null && !acc.getRoleCode().isBlank()) {
+            return; // đã có vai trò (seed/gán tay) → không ghi đè
+        }
+        String t = blankToNull(chucDanh);
+        String roleCode = (t == null || t.equalsIgnoreCase("Nhân viên")) ? "NHANVIEN" : "QUANLY";
+        acc.setRoleCode(roleCode);
+        userRepo.save(acc);
+        auditPort.record("EMPLOYEE_PERMISSION_ASSIGNED", "UserAccount", acc.getId(), actor,
+                "roleCode=" + roleCode + ", chức danh=" + (t == null ? "(trống)" : t));
     }
 
     /** Mở/khoá tài khoản theo trạng thái nhân sự; nếu phải khoá mà đang giữ việc → HANDOVER. */

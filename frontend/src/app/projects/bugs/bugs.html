@@ -52,7 +52,7 @@
   <ng-template gridCell="assignee" let-t>
     @if (t.assigneeUserId) {
       <employee-chip [code]="t.assigneeCode" [name]="t.assigneeName"
-                     [position]="t.assigneePosition" [dept]="t.assigneeDept" />
+                     [position]="t.assigneePosition" [title]="t.assigneeTitle" [dept]="t.assigneeDept" />
     } @else { — Chưa gán — }
   </ng-template>
   <ng-template gridCell="progress" let-t>

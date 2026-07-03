@@ -126,7 +126,7 @@ public class ProjectTaskService {
                                           Map<String, UserAccount> userById, Map<String, Employee> empByUser,
                                           List<ProjectDto.ParentRef> parentChain) {
         String uid = t.getAssigneeUserId();
-        String name = null, code = null, position = null, dept = null;
+        String name = null, code = null, position = null, title = null, dept = null;
         if (uid != null) {
             UserAccount acc = userById.get(uid);
             Employee emp = empByUser.get(uid);
@@ -134,6 +134,7 @@ public class ProjectTaskService {
             if (emp != null) {
                 code = emp.getEmpCode();
                 position = emp.getJobPosition();
+                title = emp.getTitle();
                 dept = emp.getDeptCode();
             } else {
                 code = acc != null ? acc.getUsername() : uid; // không có Employee → dùng username làm mã
@@ -145,7 +146,7 @@ public class ProjectTaskService {
         if (tid != null && !tid.isBlank()) {
             testerName = ProjectService.personName(empByUser.get(tid), userById.get(tid), tid);
         }
-        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, dept, leaf, progressPct,
+        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, title, dept, leaf, progressPct,
                 parentChain, reporterName(t), testerName);
     }
 
@@ -640,7 +641,7 @@ public class ProjectTaskService {
     /** Dựng TaskResponse cho 1 task (response của mutation): resolve assignee theo userId (1 task → vài query). */
     private ProjectDto.TaskResponse toDto(ProjectTask t, String projectCode, boolean leaf, double progressPct) {
         String uid = t.getAssigneeUserId();
-        String name = null, code = null, position = null, dept = null;
+        String name = null, code = null, position = null, title = null, dept = null;
         if (uid != null) {
             UserAccount acc = userRepo.findById(uid).orElse(null);
             Employee emp = employeeRepo.findByUserAccountId(uid).orElse(null);
@@ -648,6 +649,7 @@ public class ProjectTaskService {
             if (emp != null) {
                 code = emp.getEmpCode();
                 position = emp.getJobPosition();
+                title = emp.getTitle();
                 dept = emp.getDeptCode();
             } else {
                 code = acc != null ? acc.getUsername() : uid;
@@ -666,7 +668,7 @@ public class ProjectTaskService {
                     projectCode + "-" + par.getSeq(), par.getTitle()));
             pid = par.getParentId();
         }
-        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, dept, leaf, progressPct,
+        return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, title, dept, leaf, progressPct,
                 chain, reporterName(t), testerName(t));
     }
 

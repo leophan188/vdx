@@ -7,6 +7,7 @@
 }
 .empchip__name { font-weight: var(--weight-semibold); }
 .empchip__pos { color: var(--color-text-muted); font-size: var(--text-sm); }
+.empchip__title { color: var(--color-text-muted); font-size: var(--text-sm); }
 .empchip__dept {
   font-size: var(--text-xs); padding: 1px 8px; border-radius: var(--radius-full);
   background: var(--color-primary-soft); color: var(--color-primary); flex: none;

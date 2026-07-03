@@ -86,7 +86,7 @@
               <div class="kb-card__meta">
                 @if (t.assigneeUserId) {
                   <employee-chip [code]="t.assigneeCode" [name]="t.assigneeName"
-                                 [position]="t.assigneePosition" [dept]="t.assigneeDept" />
+                                 [position]="t.assigneePosition" [title]="t.assigneeTitle" [dept]="t.assigneeDept" />
                 } @else {
                   <span class="kb-card__est">Chưa giao</span>
                 }

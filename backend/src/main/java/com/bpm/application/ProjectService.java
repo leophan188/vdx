@@ -330,8 +330,9 @@ public class ProjectService {
         String name = personName(emp, acc, m.getUserId());
         String empCode = emp != null ? emp.getEmpCode() : null;
         String jobPosition = emp != null ? emp.getJobPosition() : null;
+        String title = emp != null ? emp.getTitle() : null;
         String deptCode = emp != null ? emp.getDeptCode() : null;
-        return ProjectDto.MemberResponse.of(m, name, empCode, jobPosition, deptCode);
+        return ProjectDto.MemberResponse.of(m, name, empCode, jobPosition, title, deptCode);
     }
 
     /**
@@ -475,6 +476,7 @@ public class ProjectService {
             out.add(new ProjectDto.PersonResponse(a.getId(), personName(e, a, a.getUsername()),
                     e == null ? null : e.getEmpCode(),
                     e == null ? null : e.getJobPosition(),
+                    e == null ? null : e.getTitle(),
                     e == null ? null : e.getDeptCode()));
         }
         out.sort((x, y) -> x.name().compareToIgnoreCase(y.name()));

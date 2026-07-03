@@ -212,7 +212,7 @@ public class PmHrDashboardService {
                 unassigned++;
                 if (availableSample.size() < AVAILABLE_SAMPLE_LIMIT) {
                     availableSample.add(new PersonRef(e.getEmpCode(), e.getFullName(),
-                            e.getDeptCode(), e.getJobPosition()));
+                            e.getDeptCode(), e.getJobPosition(), e.getTitle()));
                 }
             }
         }

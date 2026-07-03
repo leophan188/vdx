@@ -27,7 +27,7 @@ public final class PermissionDto {
 
     /** Một nhân sự (để chọn gán vào vai trò) — kèm chức danh/bộ phận để hiển thị đồng bộ. */
     public record UserRef(String userId, String username, String fullName,
-                          String jobPosition, String deptCode, String roleCode, boolean admin) {
+                          String jobPosition, String title, String deptCode, String roleCode, boolean admin) {
     }
 
     /** Gán danh sách nhân sự cho vai trò {userIds:[...]}. */

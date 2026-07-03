@@ -59,14 +59,14 @@ public final class ProjectDto {
 
     public record MemberResponse(
             String id, String projectId, String userId, String name, String empCode,
-            String jobPosition, String deptCode,
+            String jobPosition, String title, String deptCode,
             String roleInProject, String startDate, String endDate,
             int effortPct, int workdays, int manday, String joinedAt) {
 
         public static MemberResponse of(ProjectMember m, String name, String empCode,
-                                        String jobPosition, String deptCode) {
+                                        String jobPosition, String title, String deptCode) {
             return new MemberResponse(m.getId(), m.getProjectId(), m.getUserId(), name, empCode,
-                    jobPosition, deptCode,
+                    jobPosition, title, deptCode,
                     m.getRoleInProject().name(),
                     m.getStartDate() == null ? null : m.getStartDate().format(DMY),
                     m.getEndDate() == null ? null : m.getEndDate().format(DMY),
@@ -94,7 +94,7 @@ public final class ProjectDto {
             String id, String projectId, String parentId, int seq, String code,
             String title, String description, String type, String status, String priority,
             String assigneeUserId, String assigneeName,
-            String assigneeCode, String assigneePosition, String assigneeDept,
+            String assigneeCode, String assigneePosition, String assigneeTitle, String assigneeDept,
             double estimateHours, double spentHours,
             String startDate, String dueDate, int orderIndex, String screen,
             String severity, String stepsToReproduce, String expectedResult,
@@ -105,41 +105,41 @@ public final class ProjectDto {
             String testerUserId, String testerName) {
 
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName, boolean leaf) {
-            return of(t, projectCode, assigneeName, null, null, null,
+            return of(t, projectCode, assigneeName, null, null, null, null,
                     leaf, leaf && t.getStatus() == com.bpm.domain.project.TaskStatus.DONE ? 100.0 : 0.0, List.of());
         }
 
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
                                       boolean leaf, double progressPct) {
-            return of(t, projectCode, assigneeName, null, null, null, leaf, progressPct, List.of());
+            return of(t, projectCode, assigneeName, null, null, null, null, leaf, progressPct, List.of());
         }
 
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
-                                      String assigneeCode, String assigneePosition, String assigneeDept,
+                                      String assigneeCode, String assigneePosition, String assigneeTitle, String assigneeDept,
                                       boolean leaf, double progressPct) {
-            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeDept,
+            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeTitle, assigneeDept,
                     leaf, progressPct, List.of());
         }
 
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
-                                      String assigneeCode, String assigneePosition, String assigneeDept,
+                                      String assigneeCode, String assigneePosition, String assigneeTitle, String assigneeDept,
                                       boolean leaf, double progressPct, List<ParentRef> parentChain) {
-            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeDept,
+            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeTitle, assigneeDept,
                     leaf, progressPct, parentChain, null);
         }
 
         /** Bản đầy đủ: kèm reporterName (người LOG). reporterUserId/testerUserId lấy trực tiếp từ entity; testerName=null. */
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
-                                      String assigneeCode, String assigneePosition, String assigneeDept,
+                                      String assigneeCode, String assigneePosition, String assigneeTitle, String assigneeDept,
                                       boolean leaf, double progressPct, List<ParentRef> parentChain,
                                       String reporterName) {
-            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeDept,
+            return of(t, projectCode, assigneeName, assigneeCode, assigneePosition, assigneeTitle, assigneeDept,
                     leaf, progressPct, parentChain, reporterName, null);
         }
 
         /** Bản đầy đủ nhất: kèm reporterName (người LOG) + testerName (người kiểm thử). Các userId lấy từ entity. */
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName,
-                                      String assigneeCode, String assigneePosition, String assigneeDept,
+                                      String assigneeCode, String assigneePosition, String assigneeTitle, String assigneeDept,
                                       boolean leaf, double progressPct, List<ParentRef> parentChain,
                                       String reporterName, String testerName) {
             return new TaskResponse(
@@ -147,7 +147,7 @@ public final class ProjectDto {
                     projectCode + "-" + t.getSeq(),
                     t.getTitle(), t.getDescription(), t.getType().name(), t.getStatus().name(),
                     t.getPriority().name(), t.getAssigneeUserId(), assigneeName,
-                    assigneeCode, assigneePosition, assigneeDept,
+                    assigneeCode, assigneePosition, assigneeTitle, assigneeDept,
                     t.getEstimateHours(), t.getSpentHours(),
                     t.getStartDate() == null ? null : t.getStartDate().format(DMY),
                     t.getDueDate() == null ? null : t.getDueDate().format(DMY),
@@ -239,7 +239,7 @@ public final class ProjectDto {
     // ===== People (chọn thành viên / assignee) =====
 
     public record PersonResponse(String userId, String name, String empCode,
-                                 String jobPosition, String deptCode) {
+                                 String jobPosition, String title, String deptCode) {
     }
 
     // ===== Bình luận task (kiểu Jira) =====

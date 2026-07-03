@@ -68,7 +68,7 @@ public final class PmHrDashboardDto {
     }
 
     /** Tham chiếu nhân sự gọn. */
-    public record PersonRef(String empCode, String name, String deptCode, String jobPosition) {
+    public record PersonRef(String empCode, String name, String deptCode, String jobPosition, String title) {
     }
 
     /** Phân bổ nỗ lực theo nhân sự (chỉ người tham gia ≥1 dự án) — dùng cho báo cáo. */

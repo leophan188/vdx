@@ -24,6 +24,7 @@ public record HrHighlightsDto(
             String fullName,
             String deptCode,
             String jobPosition,
+            String title,
             String userId,
             int day,
             int month,
@@ -40,6 +41,7 @@ public record HrHighlightsDto(
             String fullName,
             String deptCode,
             String jobPosition,
+            String title,
             String userId,
             LocalDate joinDate,
             int daysUntil

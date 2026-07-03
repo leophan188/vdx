@@ -120,11 +120,15 @@ public class SearchService {
         return out;
     }
 
-    /** Dòng phụ nhân sự: vị trí + mã bộ phận (bỏ phần rỗng). */
+    /** Dòng phụ nhân sự: vị trí + chức danh + mã bộ phận (bỏ phần rỗng). */
     private static String sub(Employee e) {
         StringBuilder sb = new StringBuilder();
         if (e.getJobPosition() != null && !e.getJobPosition().isBlank()) {
             sb.append(e.getJobPosition().trim());
+        }
+        if (e.getTitle() != null && !e.getTitle().isBlank()) {
+            if (sb.length() > 0) sb.append(" · ");
+            sb.append(e.getTitle().trim());
         }
         if (e.getDeptCode() != null && !e.getDeptCode().isBlank()) {
             if (sb.length() > 0) sb.append(" · ");

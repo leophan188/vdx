@@ -25,6 +25,7 @@ export interface UserRef {
   username: string;
   fullName: string;
   jobPosition: string | null;
+  title: string | null;
   deptCode: string | null;
   roleCode: string | null;
   admin: boolean;

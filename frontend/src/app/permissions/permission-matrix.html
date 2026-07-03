@@ -120,35 +120,61 @@
   @if (memberLoading()) {
     <app-skeleton [rows]="6" />
   } @else {
-    <div class="member-bar">
-      <input class="member-search" [ngModel]="memberQuery()" (ngModelChange)="memberQuery.set($event)" name="mq"
-             placeholder="Tìm theo họ tên hoặc mã nhân viên…" />
-      <span class="member-count">{{ memberSelCount() }} đang chọn</span>
+    <!-- KHU 1: người ĐÃ trong nhóm (hiển thị trước) -->
+    <div class="member-sec">
+      <div class="member-sec__head">
+        <strong>Đang trong nhóm</strong>
+        <span class="member-count">{{ memberCurrent().length }} nhân sự</span>
+      </div>
+      <div class="member-list">
+        @for (u of memberCurrent(); track u.userId) {
+          <div class="member-row">
+            <span class="member-row__main">
+              <employee-chip [code]="u.username" [name]="u.fullName"
+                             [position]="u.jobPosition" [title]="u.title" [dept]="u.deptCode" />
+            </span>
+            <button type="button" class="btn btn--ghost btn--sm member-row__rm"
+                    title="Gỡ khỏi nhóm (về mặc định nhân viên)" (click)="toggleMember(u.userId)">✕ Gỡ</button>
+          </div>
+        } @empty {
+          <div class="member-empty">Chưa có nhân sự nào trong nhóm.</div>
+        }
+      </div>
     </div>
-    <div class="member-list">
-      @for (u of memberFiltered(); track u.userId) {
-        <label class="member-row" [class.is-admin]="u.admin">
-          <input type="checkbox" [checked]="isMember(u.userId)" [disabled]="u.admin"
-                 (change)="toggleMember(u.userId)" />
-          <span class="member-row__main">
-            <employee-chip [code]="u.username" [name]="u.fullName"
-                           [position]="u.jobPosition" [dept]="u.deptCode" />
-          </span>
-          <span class="member-row__tags">
-            @if (u.admin) {
-              <span class="badge badge--neutral">Quản trị — luôn đủ quyền</span>
-            } @else if (otherRoleCode(u)) {
-              <span class="badge badge--pending" [title]="'Sẽ chuyển từ ' + roleName(otherRoleCode(u))">
-                Đang ở: {{ roleName(otherRoleCode(u)) }}
+
+    <!-- KHU 2: tìm để THÊM người mới -->
+    <div class="member-sec">
+      <div class="member-sec__head"><strong>Thêm nhân sự vào nhóm</strong></div>
+      <input class="member-search" [ngModel]="memberQuery()" (ngModelChange)="memberQuery.set($event)" name="mq"
+             placeholder="Gõ họ tên hoặc mã nhân viên để tìm & thêm…" />
+      @if (memberQuery().trim()) {
+        <div class="member-list">
+          @for (u of memberCandidates(); track u.userId) {
+            <div class="member-row">
+              <span class="member-row__main">
+                <employee-chip [code]="u.username" [name]="u.fullName"
+                               [position]="u.jobPosition" [title]="u.title" [dept]="u.deptCode" />
               </span>
-            }
-          </span>
-        </label>
-      } @empty {
-        <div class="member-empty">Không tìm thấy tài khoản phù hợp.</div>
+              <span class="member-row__tags">
+                @if (otherRoleCode(u)) {
+                  <span class="badge badge--pending" [title]="'Sẽ chuyển từ ' + roleName(otherRoleCode(u))">
+                    Đang ở: {{ roleName(otherRoleCode(u)) }}
+                  </span>
+                }
+              </span>
+              <button type="button" class="btn btn--secondary btn--sm"
+                      (click)="toggleMember(u.userId)">＋ Thêm</button>
+            </div>
+          } @empty {
+            <div class="member-empty">Không tìm thấy nhân sự phù hợp (hoặc đã trong nhóm).</div>
+          }
+        </div>
+      } @else {
+        <p class="hint">Gõ từ khoá để tìm nhân sự cần thêm vào nhóm.</p>
       }
     </div>
-    <p class="hint">Bỏ chọn một người sẽ đưa họ về <strong>mặc định (nhân viên)</strong>. Tài khoản quản trị luôn đủ quyền nên không cần gán.</p>
+
+    <p class="hint">Bỏ (Gỡ) một người sẽ đưa họ về <strong>mặc định (nhân viên)</strong>. Tài khoản quản trị luôn đủ quyền nên không cần gán. Nhớ bấm <strong>Lưu thành viên</strong>.</p>
   }
   <ng-container modalFooter>
     <button type="button" class="btn btn--ghost" (click)="memberOpen.set(false)">Hủy</button>

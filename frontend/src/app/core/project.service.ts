@@ -58,6 +58,7 @@ export interface ProjectMember {
   name: string;                 // denorm từ UserAccount
   empCode: string | null;
   jobPosition: string | null;   // denorm từ Employee (theo userId)
+  title: string | null;         // chức danh — denorm từ Employee (theo userId)
   deptCode: string | null;      // denorm từ Employee (theo userId)
   roleInProject: ProjectRole;
   startDate: string | null;     // dd/MM/yyyy
@@ -98,7 +99,8 @@ export interface ProjectTask {
   assigneeUserId: string | null;
   assigneeName: string | null;     // denorm từ UserAccount
   assigneeCode: string | null;     // mã NV (empCode), hoặc username nếu không có Employee
-  assigneePosition: string | null; // chức danh / vị trí (Employee.jobPosition)
+  assigneePosition: string | null; // vị trí (Employee.jobPosition)
+  assigneeTitle: string | null;    // chức danh (Employee.title)
   assigneeDept: string | null;     // mã bộ phận (Employee.deptCode)
   // ===== Người kiểm thử (tester) + người log (reporter) — denorm từ UserAccount =====
   testerUserId?: string | null;
@@ -185,6 +187,7 @@ export interface Person {
   name: string;
   empCode: string | null;
   jobPosition: string | null;
+  title: string | null;
   deptCode: string | null;
 }
 

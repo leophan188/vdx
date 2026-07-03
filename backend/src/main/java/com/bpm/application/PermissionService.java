@@ -53,7 +53,8 @@ public class PermissionService {
     private PermissionDto.UserRef toUserRef(UserAccount u, Map<String, com.bpm.domain.hr.Employee> emp) {
         com.bpm.domain.hr.Employee e = emp.get(u.getId());
         return new PermissionDto.UserRef(u.getId(), u.getUsername(), u.getFullName(),
-                e == null ? null : e.getJobPosition(), e == null ? null : e.getDeptCode(),
+                e == null ? null : e.getJobPosition(), e == null ? null : e.getTitle(),
+                e == null ? null : e.getDeptCode(),
                 u.getRoleCode(), u.isAdmin());
     }
 

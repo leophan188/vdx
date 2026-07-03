@@ -82,12 +82,21 @@ export class PermissionMatrix implements OnInit {
   /** Từ khoá tìm thành viên — PHẢI là signal để computed lọc chạy lại khi gõ. */
   readonly memberQuery = signal('');
 
-  readonly memberFiltered = computed<UserRef[]>(() => {
+  /** NGƯỜI ĐÃ TRONG NHÓM (hiển thị trước, luôn hiện — không phụ thuộc ô tìm). */
+  readonly memberCurrent = computed<UserRef[]>(() => {
+    const sel = this.memberSel();
+    return this.allUsers()
+      .filter((u) => sel.has(u.userId))
+      .sort((a, b) => (a.fullName || '').localeCompare(b.fullName || '', 'vi'));
+  });
+  /** ỨNG VIÊN THÊM MỚI: người CHƯA trong nhóm + không phải admin, khớp ô tìm (chỉ hiện khi đã gõ). */
+  readonly memberCandidates = computed<UserRef[]>(() => {
     const q = this.memberQuery().trim().toLowerCase();
-    const list = this.allUsers();
-    if (!q) return list;
-    return list.filter(
-      (u) => (u.fullName || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q)
+    if (!q) return [];
+    const sel = this.memberSel();
+    return this.allUsers().filter(
+      (u) => !sel.has(u.userId) && !u.admin &&
+        ((u.fullName || '').toLowerCase().includes(q) || (u.username || '').toLowerCase().includes(q))
     );
   });
   readonly memberSelCount = computed(() => this.memberSel().size);

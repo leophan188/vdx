@@ -65,6 +65,7 @@ export interface PersonRef {
   name: string;
   deptCode: string | null;
   jobPosition: string | null;
+  title: string | null;
 }
 
 export interface HrStats {

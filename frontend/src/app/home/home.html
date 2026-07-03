@@ -58,7 +58,7 @@
                 }
                 <div class="ochome-hr__info">
                   <strong class="ochome-hr__name">{{ b.fullName }}</strong>
-                  <span class="ochome-hr__sub">{{ b.jobPosition || '—' }} · {{ b.deptCode }}</span>
+                  <span class="ochome-hr__sub">{{ b.jobPosition || '—' }}@if (b.title) { · {{ b.title }} } · {{ b.deptCode }}</span>
                 </div>
               </li>
             }
@@ -82,7 +82,7 @@
                 }
                 <div class="ochome-hr__info">
                   <strong class="ochome-hr__name">{{ o.fullName }}</strong>
-                  <span class="ochome-hr__sub">{{ o.jobPosition || '—' }} · {{ o.deptCode }}</span>
+                  <span class="ochome-hr__sub">{{ o.jobPosition || '—' }}@if (o.title) { · {{ o.title }} } · {{ o.deptCode }}</span>
                   <span class="ochome-hr__badge" [class.ochome-hr__badge--soon]="o.daysUntil <= 7">
                     còn {{ o.daysUntil }} ngày Onboard
                   </span>

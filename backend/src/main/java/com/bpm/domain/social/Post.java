@@ -33,13 +33,13 @@ public class Post {
     @Column(name = "author_name", length = 200, nullable = false)
     private String authorName;
 
-    @Lob
-    @Column(name = "body", nullable = false)
+    // KHÔNG dùng @Lob (Hibernate 6 map @Lob String -> TINYTEXT/255 trên MariaDB -> bài dài lỗi 500).
+    // length lớn -> MariaDB tạo LONGTEXT, H2 tạo VARCHAR lớn: an toàn đa CSDL.
+    @Column(name = "body", nullable = false, length = 100_000_000)
     private String body;
 
     /** JSON mảng media descriptor: [{"id","kind","name","contentType","size"}]. "[]" nếu không có. */
-    @Lob
-    @Column(name = "media_paths")
+    @Column(name = "media_paths", length = 100_000_000)
     private String mediaPaths = "[]";
 
     /** ALL | ORG_UNIT. */

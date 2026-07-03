@@ -73,7 +73,7 @@
     <button gridActions type="button" class="btn btn--primary" (click)="openImport()">⤓ Import nhân sự</button>
 
     <ng-template gridCell="employee" let-e>
-      <employee-chip [code]="e.empCode" [name]="e.fullName" [position]="e.jobPosition" [dept]="e.deptCode" />
+      <employee-chip [code]="e.empCode" [name]="e.fullName" [position]="e.jobPosition" [title]="e.title" [dept]="e.deptCode" />
       @if (e.external) {
         <span class="badge badge--pending emp-ext-badge" title="Nhân sự thuê ngoài / mượn — cập nhật thủ công, không bị import đụng vào">Thuê ngoài</span>
       }

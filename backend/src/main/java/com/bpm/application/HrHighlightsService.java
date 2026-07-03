@@ -84,7 +84,7 @@ public class HrHighlightsService {
                 int daysUntil = (int) ChronoUnit.DAYS.between(today, e.getJoinDate());
                 if (daysUntil > 0) {
                     onboardingSoon.add(new OnboardingView(e.getEmpCode(), e.getFullName(), e.getDeptCode(),
-                            e.getJobPosition(), e.getUserAccountId(), e.getJoinDate(), daysUntil));
+                            e.getJobPosition(), e.getTitle(), e.getUserAccountId(), e.getJoinDate(), daysUntil));
                     maybeNotifyOnboarding(e, daysUntil);
                 }
             }
@@ -106,7 +106,7 @@ public class HrHighlightsService {
     }
 
     private static BirthdayView birthdayView(Employee e, int inDays) {
-        return new BirthdayView(e.getEmpCode(), e.getFullName(), e.getDeptCode(), e.getJobPosition(),
+        return new BirthdayView(e.getEmpCode(), e.getFullName(), e.getDeptCode(), e.getJobPosition(), e.getTitle(),
                 e.getUserAccountId(), e.getBirthDate().getDayOfMonth(), e.getBirthDate().getMonthValue(), inDays);
     }
 

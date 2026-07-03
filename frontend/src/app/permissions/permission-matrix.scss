@@ -129,14 +129,27 @@
   white-space: nowrap;
 }
 
+/* Khu vực: "Đang trong nhóm" và "Thêm nhân sự" */
+.member-sec { margin-bottom: var(--space-4); }
+.member-sec__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+  font-size: var(--text-sm);
+}
+.member-sec .member-search { width: 100%; margin-bottom: var(--space-2); }
+
 .member-list {
   display: flex;
   flex-direction: column;
-  max-height: 50vh;
+  max-height: 34vh;
   overflow-y: auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md);
 }
+.member-row__rm { flex: none; }
 .member-row {
   display: flex;
   align-items: center;

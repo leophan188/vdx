@@ -8,6 +8,7 @@ export interface BirthdayView {
   fullName: string;
   deptCode: string | null;
   jobPosition: string | null;
+  title: string | null;
   userId: string | null;
   day: number;
   month: number;
@@ -20,6 +21,7 @@ export interface OnboardingView {
   fullName: string;
   deptCode: string | null;
   jobPosition: string | null;
+  title: string | null;
   userId: string | null;
   joinDate: string;
   daysUntil: number;
