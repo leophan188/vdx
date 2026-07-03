@@ -22,6 +22,11 @@
 <div class="filter-bar">
   <button type="button" class="btn btn--ghost btn--sm" (click)="expandAll()">Mở hết</button>
   <button type="button" class="btn btn--ghost btn--sm" (click)="collapseAll()">Gập hết</button>
+  <!-- Tìm theo tên/mã công việc (giữ cả cấp cha) -->
+  <div class="filter-bar__field">
+    <input type="search" class="bl-search" placeholder="🔍 Tìm tên / mã công việc…"
+           [value]="search()" (input)="search.set($any($event.target).value)" />
+  </div>
   <!-- Lọc hiển thị theo loại (component chung, lưu cho lần sau) -->
   <div class="filter-bar__field">
     <span class="filter-bar__label">Loại</span>

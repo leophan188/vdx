@@ -54,6 +54,8 @@ interface TreeRow {
     .bl-row--story { border-left-color: var(--type-story); background: var(--type-story-bg); }
     .bl-row--story .bl-title { font-weight: 600; }
     .bl-row--parent { border-left-color: var(--type-parent); background: var(--type-parent-bg); }
+    .bl-search { height: var(--control-h-sm); min-width: 220px; padding: 0 var(--space-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); }
     .bl-legend { display: inline-flex; gap: 12px; align-items: center; margin-left: auto; font-size: var(--text-xs); color: var(--color-text-muted); }
     .bl-legend__item { display: inline-flex; align-items: center; gap: 4px; }
     .bl-legend__dot { width: 12px; height: 12px; border-radius: 3px; border-left: 4px solid; }
@@ -224,6 +226,8 @@ export class PrjBacklog implements OnInit {
   readonly statusFilter = signal<Set<TaskStatus>>(new Set(this.allStatuses));
   /** Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả; '__UNASSIGNED__' = chưa gán) — lưu theo dự án. */
   readonly filterAssignee = signal('');
+  /** Tìm theo từ khoá (tên/mã task) — không lưu, giữ cả cấp cha khi khớp. */
+  readonly search = signal('');
   /** Giá trị đặc biệt cho lọc "Chưa gán". */
   readonly UNASSIGNED = '__UNASSIGNED__';
   private typeKey(): string { return 'bpm.backlog.typeFilter.' + (this.projectId() || 'x'); }
@@ -302,6 +306,7 @@ export class PrjBacklog implements OnInit {
     const types = this.typeFilter();
     const statuses = this.statusFilter();
     const asg = this.filterAssignee();
+    const q = this.search().trim().toLowerCase();
     const byId = new Map(this.tasks().map((t) => [t.id, t]));
 
     // Thêm mọi tổ tiên của id vào set (để lọc vẫn thấy Epic/Story/task cha của task khớp).
@@ -330,7 +335,19 @@ export class PrjBacklog implements OnInit {
       }
     }
 
+    // TÌM theo từ khoá (tên/mã task) — giữ task khớp + MỌI cấp cha.
+    let searchKeep: Set<string> | null = null;
+    if (q) {
+      searchKeep = new Set<string>();
+      for (const t of this.tasks()) {
+        if ((t.title || '').toLowerCase().includes(q) || (t.code || '').toLowerCase().includes(q)) {
+          addAncestors(searchKeep, t);
+        }
+      }
+    }
+
     return this.rows().filter((r) => {
+      if (searchKeep && !searchKeep.has(r.task.id)) return false;
       if (!types.has(r.task.type)) return false;
       if (assigneeKeep && !assigneeKeep.has(r.task.id)) return false;
       if (statusKeep && !statusKeep.has(r.task.id)) return false;

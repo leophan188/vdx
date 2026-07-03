@@ -200,7 +200,8 @@ export class PrjKanban {
     const a = this.filterAssignee();
     const df = this.dateFilter();
     const prio = this.priorityFilter();
-    let ts = this.tasks().filter((t) => t.type !== 'EPIC' && t.type !== 'STORY');
+    // CHỈ task LÁ (nhỏ nhất — không có con). Bỏ mọi task CHA (EPIC/Story/Task cha).
+    let ts = this.tasks().filter((t) => t.leaf && t.type !== 'EPIC' && t.type !== 'STORY');
     if (a) ts = ts.filter((t) => t.assigneeUserId === a);
     if (prio.size < 4) ts = ts.filter((t) => prio.has(t.priority));
     if (df !== 'ALL') ts = ts.filter((t) => this.matchDate(t, df));
