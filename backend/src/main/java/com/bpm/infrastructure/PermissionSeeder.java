@@ -45,13 +45,13 @@ public class PermissionSeeder implements ApplicationRunner {
         int created = 0;
         created += ensure("QUANTRI", "Quản trị hệ thống", "Toàn quyền mọi chức năng", all());
         created += ensure("QUANLY", "Quản lý chung", "Dự án, báo cáo, quy trình",
-                keys(Feature.SOCIAL, Feature.PROJECT, Feature.OT, Feature.DOCS,
+                keys(Feature.SOCIAL, Feature.REQUESTS, Feature.PROJECT, Feature.OT, Feature.DOCS,
                         Feature.REPORTS, Feature.TRACKING, Feature.PROCESS));
         created += ensure("NHANSU", "Nhân sự (HR)", "Quản lý nhân sự + import + báo cáo",
-                keys(Feature.SOCIAL, Feature.PROJECT, Feature.OT, Feature.DOCS,
+                keys(Feature.SOCIAL, Feature.REQUESTS, Feature.PROJECT, Feature.OT, Feature.DOCS,
                         Feature.HR, Feature.IMPORT, Feature.REPORTS));
         created += ensure("NHANVIEN", "Nhân viên", "Cá nhân & cộng tác (mặc định)",
-                keys(Feature.SOCIAL, Feature.PROJECT, Feature.OT, Feature.DOCS));
+                keys(Feature.SOCIAL, Feature.REQUESTS, Feature.INBOX, Feature.MYTASKS, Feature.PROJECT, Feature.OT, Feature.DOCS));
         if (created > 0) {
             log.info("PermissionSeeder: tạo {} vai trò phân quyền mẫu", created);
         }

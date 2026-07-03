@@ -18,6 +18,7 @@ public enum Feature {
 
     // ===== Cá nhân & cộng tác (mặc định cho nhân viên) =====
     INBOX("Việc của tôi", "Cá nhân & cộng tác", true),
+    REQUESTS("Hồ sơ của tôi", "Cá nhân & cộng tác", true),
     MYTASKS("Việc dự án của tôi", "Cá nhân & cộng tác", true),
     SOCIAL("Mạng xã hội nội bộ", "Cá nhân & cộng tác", true),
     SOCIAL_POST("Đăng bài mạng xã hội", "Cá nhân & cộng tác", false),

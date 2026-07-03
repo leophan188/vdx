@@ -23,12 +23,16 @@
       <nav class="main-nav" aria-label="Điều hướng chính" (click)="closeMobileNav()">
         <!-- CÁ NHÂN: mọi nhân viên (có gắn chức năng tương ứng) -->
         <span class="nav-group">Cá nhân</span>
-        <a routerLink="/home" routerLinkActive="active" title="Bảng tin VDX"><span class="nav-ico">🌐</span><span>Bảng tin VDX</span></a>
+        @if (has('SOCIAL')) {
+          <a routerLink="/home" routerLinkActive="active" title="Bảng tin VDX"><span class="nav-ico">🌐</span><span>Bảng tin VDX</span></a>
+        }
         @if (has('INBOX')) {
           <a routerLink="/inbox" routerLinkActive="active" title="Việc của tôi"><span class="nav-ico">📥</span><span>Việc của tôi</span>
             @if (inboxCount()) { <span class="nav-badge">{{ inboxCount() }}</span> }</a>
         }
-        <a routerLink="/my-requests" routerLinkActive="active" title="Hồ sơ của tôi"><span class="nav-ico">🗂️</span><span>Hồ sơ của tôi</span></a>
+        @if (has('REQUESTS')) {
+          <a routerLink="/my-requests" routerLinkActive="active" title="Hồ sơ của tôi"><span class="nav-ico">🗂️</span><span>Hồ sơ của tôi</span></a>
+        }
         @if (has('MYTASKS')) {
           <a routerLink="/my-tasks" routerLinkActive="active" title="Backlog của tôi"><span class="nav-ico">📋</span><span>Backlog của tôi</span>
             @if (myTaskCount()) { <span class="nav-badge">{{ myTaskCount() }}</span> }</a>
