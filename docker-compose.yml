@@ -21,7 +21,11 @@ services:
       - mariadb-data:/var/lib/mysql
     networks:
       - bpm-net
-    # Không publish 3306 ra ngoài: DB chỉ truy cập trong mạng nội bộ compose.
+    # Publish 3306 CHỈ ra loopback server (127.0.0.1) — KHÔNG lộ internet.
+    # Cho phép: (a) truy cập DB ngay trên host server, (b) SSH tunnel từ máy local.
+    # Muốn khoá hẳn (chỉ mạng compose) → xoá mục ports này. Đổi cổng host: BPM_DB_HOST_PORT.
+    ports:
+      - "127.0.0.1:${BPM_DB_HOST_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
