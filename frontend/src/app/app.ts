@@ -91,6 +91,13 @@ export class App {
   protected readonly displayName = computed(() =>
     this.auth.currentUser()?.fullName || this.auth.currentUser()?.username || 'Người dùng');
 
+  /** Dòng phụ dưới tên: vị trí công việc thật (hồ sơ nhân sự); nếu chưa liên kết → nhãn theo quyền. */
+  protected readonly userPosition = computed(() => {
+    const jt = this.auth.currentUser()?.jobTitle;
+    if (jt && jt.trim()) return jt.trim();
+    return this.isAdmin() ? 'Quản trị' : 'Nhân viên';
+  });
+
   // ===== TẠO NHANH (toolbar): menu chọn Task/Bug + modal =====
   protected readonly quickMenuOpen = signal(false);
   protected readonly quickOpen = signal(false);

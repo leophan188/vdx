@@ -117,7 +117,7 @@
         <app-mention-box placeholder="Viết bình luận... (gõ @ để nhắc tên)" [value]="draft()"
                          (textChange)="draft.set($event)" (mentionsChange)="draftMentions.set($event)"
                          (enter)="submitComment()"></app-mention-box>
-        <button class="ochome-btn-primary ochome-btn--sm" (click)="submitComment()">Gửi</button>
+        <button class="ochome-btn-primary ochome-btn--sm" [disabled]="sendingComment()" (click)="submitComment()">Gửi</button>
       </div>
     </div>
   }
@@ -165,7 +165,7 @@
         <app-mention-box placeholder="Trả lời... (gõ @ để nhắc tên)" [value]="replyDraft()"
                          (textChange)="replyDraft.set($event)" (mentionsChange)="replyMentions.set($event)"
                          (enter)="submitReply(c)"></app-mention-box>
-        <button class="ochome-btn-primary ochome-btn--sm" (click)="submitReply(c)">Gửi</button>
+        <button class="ochome-btn-primary ochome-btn--sm" [disabled]="sendingReply()" (click)="submitReply(c)">Gửi</button>
         <button class="ochome-modbtn" (click)="cancelReply()">Huỷ</button>
       </div>
     }

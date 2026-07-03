@@ -170,7 +170,7 @@
           </span>
           <span class="topbar__user-meta">
             <span class="topbar__user-name">{{ displayName() }}</span>
-            <span class="topbar__user-role">{{ isAdmin() ? 'Quản trị' : 'Nhân viên' }}</span>
+            <span class="topbar__user-role" [title]="userPosition()">{{ userPosition() }}</span>
           </span>
           <span class="topbar__chev" [class.up]="userMenuOpen()">▾</span>
         </button>

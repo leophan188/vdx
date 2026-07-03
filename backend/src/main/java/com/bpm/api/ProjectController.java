@@ -73,6 +73,21 @@ public class ProjectController {
         return false;
     }
 
+    /** Admin luôn true; ngược lại phải có authority FEAT_{key}. */
+    private static boolean hasFeature(Authentication a, String key) {
+        if (a == null) {
+            return false;
+        }
+        String want = "FEAT_" + key;
+        for (GrantedAuthority ga : a.getAuthorities()) {
+            String au = ga.getAuthority();
+            if ("ROLE_ADMIN".equals(au) || want.equals(au)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     // ===== Project =====
 
     @GetMapping
@@ -88,6 +103,9 @@ public class ProjectController {
 
     @PostMapping
     public ProjectDto.ProjectResponse create(@RequestBody ProjectDto.ProjectRequest req, Authentication auth) {
+        if (!hasFeature(auth, "PROJECT_CREATE")) {
+            throw new org.springframework.security.access.AccessDeniedException("Bạn không có quyền thêm mới dự án.");
+        }
         return projectService.create(req, actor(auth));
     }
 

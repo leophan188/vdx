@@ -3,6 +3,8 @@ package com.bpm.api;
 import com.bpm.api.dto.LoginRequest;
 import com.bpm.application.AuthService;
 import com.bpm.domain.UserAccount;
+import com.bpm.domain.hr.Employee;
+import com.bpm.infrastructure.EmployeeRepository;
 import com.bpm.infrastructure.UserAccountRepository;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,11 +31,14 @@ public class AuthController {
 
     private final AuthService authService;
     private final UserAccountRepository accounts;
+    private final EmployeeRepository employees;
     private final PasswordEncoder passwordEncoder;
 
-    public AuthController(AuthService authService, UserAccountRepository accounts, PasswordEncoder passwordEncoder) {
+    public AuthController(AuthService authService, UserAccountRepository accounts,
+                          EmployeeRepository employees, PasswordEncoder passwordEncoder) {
         this.authService = authService;
         this.accounts = accounts;
+        this.employees = employees;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -83,15 +88,31 @@ public class AuthController {
         boolean mustChange = acc != null && !acc.isAdmin() && Boolean.TRUE.equals(acc.getPasswordIsDefault());
         boolean hasAvatar = acc != null && acc.getAvatarPath() != null;
         Map<String, Object> out = new LinkedHashMap<>();
+        // Vị trí công việc + phòng ban lấy từ hồ sơ nhân sự liên kết (nếu có) — hiển thị trên toolbar.
+        Employee emp = acc == null ? null : employees.findByUserAccountId(acc.getId()).orElse(null);
+        String jobTitle = null;
+        if (emp != null) {
+            jobTitle = notBlank(emp.getJobPosition()) ? emp.getJobPosition()
+                    : (notBlank(emp.getTitle()) ? emp.getTitle() : null);
+        }
+        // Tên hiển thị ưu tiên hồ sơ nhân sự (khớp màn Tài khoản của tôi).
+        String fullName = emp != null && notBlank(emp.getFullName()) ? emp.getFullName()
+                : (acc != null ? acc.getFullName() : auth.getName());
         out.put("username", auth.getName());
-        out.put("fullName", acc != null ? acc.getFullName() : auth.getName());
+        out.put("fullName", fullName);
         out.put("userId", acc != null ? acc.getId() : "");
         out.put("authorities", auth.getAuthorities());
         out.put("mustChangePassword", mustChange);
         out.put("hasAvatar", hasAvatar);
+        out.put("jobTitle", jobTitle);
+        out.put("deptCode", emp != null ? emp.getDeptCode() : null);
         out.put("themeAccent", acc != null ? acc.getThemeAccent() : null);
         out.put("themeMode", acc != null ? acc.getThemeMode() : null);
         return out;
+    }
+
+    private static boolean notBlank(String s) {
+        return s != null && !s.isBlank();
     }
 
     @PostMapping("/logout")

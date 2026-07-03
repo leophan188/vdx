@@ -12,7 +12,8 @@ const ACTION_META: Record<string, ActionMeta> = {
   EDIT: { icon: '✎', verb: 'sửa', label: 'Sửa' },
   COMMENT: { icon: '💬', verb: 'bình luận', label: 'Bình luận' },
   ATTACH: { icon: '📎', verb: 'đính kèm', label: 'Đính kèm' },
-  SPENT: { icon: '⏱️', verb: 'log giờ', label: 'Log giờ' }
+  SPENT: { icon: '⏱️', verb: 'log giờ', label: 'Log giờ' },
+  DIARY: { icon: '📔', verb: 'ghi nhật ký', label: 'Nhật ký' }
 };
 
 /**

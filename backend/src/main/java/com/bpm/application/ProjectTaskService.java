@@ -6,12 +6,14 @@ import com.bpm.domain.audit.AuditPort;
 import com.bpm.domain.hr.Employee;
 import com.bpm.domain.project.BugSeverity;
 import com.bpm.domain.project.Project;
+import com.bpm.domain.project.ProjectDiary;
 import com.bpm.domain.project.ProjectTask;
 import com.bpm.domain.project.TaskActivity;
 import com.bpm.domain.project.TaskPriority;
 import com.bpm.domain.project.TaskStatus;
 import com.bpm.domain.project.TaskType;
 import com.bpm.infrastructure.EmployeeRepository;
+import com.bpm.infrastructure.ProjectDiaryRepository;
 import com.bpm.infrastructure.ProjectRepository;
 import com.bpm.infrastructure.ProjectTaskRepository;
 import com.bpm.infrastructure.TaskActivityRepository;
@@ -46,6 +48,7 @@ public class ProjectTaskService {
     private final TaskCommentRepository commentRepo;
     private final TaskAttachmentRepository attachmentRepo;
     private final TaskActivityRepository activityRepo;
+    private final ProjectDiaryRepository diaryRepo;
     private final AuditPort auditPort;
     private final NotificationService notificationService;
 
@@ -53,6 +56,7 @@ public class ProjectTaskService {
                               UserAccountRepository userRepo, EmployeeRepository employeeRepo,
                               TaskCommentRepository commentRepo,
                               TaskAttachmentRepository attachmentRepo, TaskActivityRepository activityRepo,
+                              ProjectDiaryRepository diaryRepo,
                               AuditPort auditPort, NotificationService notificationService) {
         this.projectRepo = projectRepo;
         this.taskRepo = taskRepo;
@@ -61,6 +65,7 @@ public class ProjectTaskService {
         this.commentRepo = commentRepo;
         this.attachmentRepo = attachmentRepo;
         this.activityRepo = activityRepo;
+        this.diaryRepo = diaryRepo;
         this.auditPort = auditPort;
         this.notificationService = notificationService;
     }
@@ -502,7 +507,43 @@ public class ProjectTaskService {
                     a.getActorName(), a.getAction(), a.getDetail(),
                     a.getCreatedAt() == null ? null : a.getCreatedAt().toString()));
         }
+        // Gộp Nhật ký dự án vào cùng dòng thời gian (action = DIARY) để tab Log thấy được.
+        for (ProjectDiary d : diaryRepo.findByProjectIdOrderByWorkDateDescCreatedAtDesc(projectId)) {
+            out.add(new ProjectDto.ProjectActivityItem(d.getId(), null, null, diaryTitle(d),
+                    d.getCreatedByName(), "DIARY", diaryDetail(d),
+                    d.getCreatedAt() == null ? null : d.getCreatedAt().toString()));
+        }
+        // Sắp xếp lại theo thời gian giảm dần (createdAt ISO so sánh chuỗi được; null xuống cuối).
+        out.sort((x, y) -> {
+            String cx = x.createdAt(), cy = y.createdAt();
+            if (cx == null && cy == null) return 0;
+            if (cx == null) return 1;
+            if (cy == null) return -1;
+            return cy.compareTo(cx);
+        });
         return out;
+    }
+
+    /** Tiêu đề hiển thị cho dòng nhật ký ở tab Log: "Nhật ký · {phân loại} ({ngày})". */
+    private static String diaryTitle(ProjectDiary d) {
+        StringBuilder sb = new StringBuilder("Nhật ký");
+        if (d.getCategory() != null && !d.getCategory().isBlank()) {
+            sb.append(" · ").append(d.getCategory());
+        }
+        if (d.getWorkDate() != null) {
+            sb.append(" (").append(d.getWorkDate()).append(")");
+        }
+        return sb.toString();
+    }
+
+    /** Chi tiết dòng nhật ký: trích nội dung (rút gọn) để đọc nhanh trên timeline. */
+    private static String diaryDetail(ProjectDiary d) {
+        String c = d.getContent();
+        if (c == null || c.isBlank()) {
+            return "Ghi nhật ký buổi làm việc";
+        }
+        c = c.strip().replaceAll("\\s+", " ");
+        return c.length() > 160 ? c.substring(0, 160) + "…" : c;
     }
 
     // ===== helpers (activity / notify) =====

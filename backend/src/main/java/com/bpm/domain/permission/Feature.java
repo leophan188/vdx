@@ -23,6 +23,7 @@ public enum Feature {
     SOCIAL("Mạng xã hội nội bộ", "Cá nhân & cộng tác", true),
     SOCIAL_POST("Đăng bài mạng xã hội", "Cá nhân & cộng tác", false),
     PROJECT("Quản lý dự án", "Cá nhân & cộng tác", true),
+    PROJECT_CREATE("Thêm mới dự án", "Cá nhân & cộng tác", false),
     OT("Đăng ký OT", "Cá nhân & cộng tác", true),
     LEAVE("Đăng ký nghỉ", "Cá nhân & cộng tác", true),
     DOCS("Tài liệu", "Cá nhân & cộng tác", true),

@@ -9,13 +9,17 @@
     <div class="card">
       <app-empty-state icon="📁" title="Chưa có dự án nào"
                        hint="Tạo dự án đầu tiên để bắt đầu khai báo công việc, phân công và theo dõi tiến độ.">
-        <button emptyAction type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
+        @if (canCreate()) {
+          <button emptyAction type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
+        }
       </app-empty-state>
     </div>
   } @else {
   <data-grid [columns]="cols" [rows]="rows()" [title]="'Dự án (' + rows().length + ')'"
              [emptyText]="'Chưa có dự án nào — hãy tạo mới.'">
-    <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
+    @if (canCreate()) {
+      <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
+    }
 
     <ng-template gridCell="code" let-p><strong>{{ p.code }}</strong></ng-template>
     <ng-template gridCell="name" let-p>

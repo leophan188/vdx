@@ -83,6 +83,9 @@ export class PostCard {
   readonly showComments = signal(false);
   readonly draft = signal('');
   readonly draftMentions = signal<string[]>([]);
+  /** Chặn gửi trùng: Enter + click (hoặc bấm 2 lần) trong lúc POST chưa trả về → tạo 2 bình luận. */
+  readonly sendingComment = signal(false);
+  readonly sendingReply = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly editDraft = signal('');
 
@@ -218,14 +221,16 @@ export class PostCard {
 
   submitComment(): void {
     const body = this.draft().trim();
-    if (!body) return;
+    if (!body || this.sendingComment()) return;      // đang gửi → bỏ qua lần gọi thứ 2 (Enter + click)
+    this.sendingComment.set(true);
     this.api.addComment(this.current().id, body, null, this.draftMentions()).subscribe({
       next: (c) => {
         this.appendComment(c);
         this.draft.set('');
         this.draftMentions.set([]);
+        this.sendingComment.set(false);
       },
-      error: () => this.toast.error('Không gửi được bình luận')
+      error: () => { this.sendingComment.set(false); this.toast.error('Không gửi được bình luận'); }
     });
   }
 
@@ -242,13 +247,15 @@ export class PostCard {
   }
   submitReply(parent: CommentView): void {
     const body = this.replyDraft().trim();
-    if (!body) return;
+    if (!body || this.sendingReply()) return;        // chặn gửi trùng (Enter + click)
+    this.sendingReply.set(true);
     this.api.addComment(this.current().id, body, parent.id, this.replyMentions()).subscribe({
       next: (c) => {
         this.appendComment(c);
         this.cancelReply();
+        this.sendingReply.set(false);
       },
-      error: () => this.toast.error('Không gửi được trả lời')
+      error: () => { this.sendingReply.set(false); this.toast.error('Không gửi được trả lời'); }
     });
   }
 

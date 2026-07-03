@@ -9,6 +9,7 @@ import { SearchableSelect, SelectOption } from '../shared/searchable-select/sear
 import { Skeleton, EmptyState } from '../shared/skeleton/skeleton';
 import { ToastService } from '../shared/toast/toast.service';
 import { ProjectService, Project, ProjectRequest, Person } from '../core/project.service';
+import { AuthService } from '../core/auth.service';
 import { formatThousands } from '../shared/format';
 import { NumberFormatDirective } from '../shared/number-format.directive';
 
@@ -26,6 +27,10 @@ export class Projects implements OnInit {
   private api = inject(ProjectService);
   private toast = inject(ToastService);
   private router = inject(Router);
+  private auth = inject(AuthService);
+
+  /** Quyền "Thêm mới dự án" — ẩn nút Tạo nếu vai trò không được cấp. */
+  readonly canCreate = computed(() => this.auth.hasFeature('PROJECT_CREATE'));
 
   readonly rows = signal<Project[]>([]);
   readonly loading = signal(true);

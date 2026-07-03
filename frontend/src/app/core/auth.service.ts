@@ -6,6 +6,10 @@ export interface LoginResult {
   username: string;
   fullName?: string;
   userId?: string;
+  /** Vị trí công việc (từ hồ sơ nhân sự liên kết) — hiển thị dưới tên ở toolbar. */
+  jobTitle?: string | null;
+  /** Mã phòng ban (nếu có). */
+  deptCode?: string | null;
   authorities: { authority: string }[];
   /** Đang dùng mật khẩu mặc định và không phải admin → BUỘC đổi trước khi vào app. */
   mustChangePassword?: boolean;
