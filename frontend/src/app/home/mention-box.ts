@@ -41,7 +41,7 @@ import { PostService, MentionSuggestion } from '../core/post.service';
     .mbox__menu {
       position: absolute; left: 0; right: 0; top: calc(100% + 2px); z-index: 40;
       margin: 0; padding: 4px; list-style: none;
-      background: var(--surface, #fff); border: 1px solid var(--border, #e2e8f0);
+      background: var(--color-surface); border: 1px solid var(--color-border);
       border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.12);
       max-height: 220px; overflow-y: auto;
     }
@@ -49,7 +49,7 @@ import { PostService, MentionSuggestion } from '../core/post.service';
       padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 14px;
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     }
-    .mbox__item:hover, .mbox__item--active { background: var(--surface-hover, #eef2ff); }
+    .mbox__item:hover, .mbox__item--active { background: var(--color-surface-alt); }
   `]
 })
 export class MentionBox {

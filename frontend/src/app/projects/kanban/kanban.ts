@@ -75,7 +75,7 @@ interface Column {
     .kb-ghost {
       position: fixed; z-index: 3000; pointer-events: none; transform: translate(14px, 14px);
       max-width: 260px; padding: var(--space-2) var(--space-3);
-      background: var(--color-primary, #2563eb); color: #fff;
+      background: var(--color-primary); color: var(--color-text-invert);
       border-radius: var(--radius-md); box-shadow: var(--shadow-pop);
       font-size: var(--text-xs); font-weight: var(--weight-semibold);
       white-space: nowrap; overflow: hidden; text-overflow: ellipsis;

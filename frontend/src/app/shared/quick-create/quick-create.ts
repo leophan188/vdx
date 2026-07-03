@@ -29,7 +29,7 @@ interface PendingImage { file: File; url: string; name: string; }
       border: 1px solid var(--color-border); background: var(--color-surface);
       padding: 6px 14px; border-radius: 999px; font-size: .85rem; cursor: pointer; color: var(--color-text);
     }
-    .qc__seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+    .qc__seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-invert); font-weight: 600; }
     .qc__row2 { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); }
     @media (max-width: 620px) { .qc__row2 { grid-template-columns: 1fr; } }
     .field > label { display: block; font-size: .82rem; color: var(--color-text-muted); margin-bottom: 4px; }

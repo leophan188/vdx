@@ -31,8 +31,8 @@
           <ng-template gridCell="actions" let-p>
             <span class="cell-actions">
               <button type="button" class="btn btn--secondary btn--sm" (click)="openAssign(p)">Gán người</button>
-              <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(p)">✎ Sửa</button>
-              <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(p)">🗑 Xóa</button>
+              <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(p)">✎</button>
+              <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(p)">🗑</button>
             </span>
           </ng-template>
         </data-grid>

@@ -26,8 +26,8 @@
         </div>
         <div class="cell-actions" style="margin-top:var(--space-4)">
           <button type="button" class="btn btn--secondary btn--sm" (click)="openCreateUnder(u)">＋ Thêm đơn vị con</button>
-          <button type="button" class="btn btn--ghost btn--sm" (click)="openEdit(u)">✎ Sửa</button>
-          <button type="button" class="btn btn--ghost btn--sm" (click)="askDelete(u)">🗑 Xóa</button>
+          <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(u)">✎</button>
+          <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(u)">🗑</button>
         </div>
       } @else {
         <p class="tree-split__empty">Chọn một đơn vị ở cây bên trái để xem chi tiết và thao tác (Thêm con / Sửa / Xóa).</p>

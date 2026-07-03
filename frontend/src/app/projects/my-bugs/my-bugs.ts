@@ -32,9 +32,9 @@ import { MeBugService, MyBug, MyBugType, MyBugRole, LogBugRequest } from '../../
     .mybug-open { background: none; border: none; padding: 0; color: var(--color-primary);
       cursor: pointer; font-weight: 600; text-align: left; }
     .role { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; line-height: 18px; white-space: nowrap; }
-    .role--rep { background: #ede9fe; color: #6d28d9; }
-    .role--asg { background: #dbeafe; color: #1d4ed8; }
-    .role--both { background: #dcfce7; color: #15803d; }
+    .role--rep { background: var(--type-epic-bg); color: var(--type-epic); }
+    .role--asg { background: var(--type-story-bg); color: var(--type-story); }
+    .role--both { background: var(--status-done-bg); color: var(--status-done); }
   `]
 })
 export class MyBugs implements OnInit {

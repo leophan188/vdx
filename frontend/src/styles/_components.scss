@@ -23,6 +23,16 @@
 .btn--ghost:hover { background: var(--color-surface-alt); }
 .btn--danger { background: var(--overdue); color: var(--color-text-invert); }   /* chỉ hành động phá hủy */
 .btn--sm { height: var(--control-h-sm); padding: 0 var(--space-3); font-size: var(--text-sm); }
+/* Nút HÀNH ĐỘNG CHỈ-ICON (chuẩn dùng lại cho hành động trong lưới: Sửa/Xoá/Gỡ/Xem…).
+   LUÔN kèm title="…" để có tooltip + trợ năng. Đọc rõ ở cả light lẫn dark. */
+.btn--icon {
+  width: var(--control-h-sm); height: var(--control-h-sm);
+  padding: 0; gap: 0; border-color: transparent; border-radius: var(--radius-md);
+  background: transparent; color: var(--color-text-muted); font-size: 1rem; line-height: 1;
+}
+.btn--icon:hover { background: var(--color-surface-alt); color: var(--color-text); }
+.btn--icon:disabled { opacity: .4; cursor: default; }
+.btn--icon-danger:hover { background: var(--overdue-bg); color: var(--overdue); }
 
 /* --- Field + Form --- */
 .form, .create-form {   /* .create-form: alias tương thích màn 1.1–1.8 */

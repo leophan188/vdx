@@ -25,8 +25,8 @@
     <strong>{{ mm(m.manday) }}</strong> <span class="hint">MM</span>
   </ng-template>
   <ng-template gridCell="actions" let-m>
-    <button type="button" class="btn btn--ghost btn--sm" title="Sửa thông tin thành viên" (click)="openEdit(m)">✎ Sửa</button>
-    <button type="button" class="btn btn--ghost btn--sm" title="Gỡ khỏi dự án" (click)="remove(m)">🗑 Gỡ</button>
+    <button type="button" class="btn btn--icon" title="Sửa thông tin thành viên" (click)="openEdit(m)">✎</button>
+    <button type="button" class="btn btn--icon btn--icon-danger" title="Gỡ khỏi dự án" (click)="remove(m)">🗑</button>
   </ng-template>
 </data-grid>
 

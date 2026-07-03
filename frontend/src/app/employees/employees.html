@@ -98,9 +98,9 @@
     </ng-template>
     <ng-template gridCell="level" let-e>{{ e.level || '—' }}</ng-template>
     <ng-template gridCell="actions" let-e>
-      <button type="button" class="btn btn--ghost btn--sm" title="Xem chi tiết / sửa" (click)="openDetail(e)">👁 ✎</button>
+      <button type="button" class="btn btn--icon" title="Xem chi tiết / sửa" (click)="openDetail(e)">👁</button>
       @if (e.external) {
-        <button type="button" class="btn btn--ghost btn--sm" title="Xoá nhân sự thuê ngoài"
+        <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá nhân sự thuê ngoài"
                 (click)="removeExternal(e)">🗑</button>
       }
     </ng-template>

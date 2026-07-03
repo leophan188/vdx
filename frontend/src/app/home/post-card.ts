@@ -24,7 +24,7 @@ export interface CommentNode extends CommentView {
     .ochome-comment--reply { margin-left: 38px; }
     .ochome-comment--reply.is-deep { margin-left: 0; }
     .ochome-comment__replybox { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 6px 38px; }
-    .ochome-mention { color: var(--accent, #2563eb); font-weight: 600; white-space: nowrap; }
+    .ochome-mention { color: var(--color-primary); font-weight: 600; white-space: nowrap; }
     .ochome-celebrate-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 8px 0 14px; }
     .ochome-celebrate-hero__ring { display: inline-flex; padding: 5px; border-radius: 50%;
       background: linear-gradient(135deg, #db2777, #ea580c 55%, #f59e0b);

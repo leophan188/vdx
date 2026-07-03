@@ -45,21 +45,21 @@ interface TreeRow {
     }
     .bl-head { font-weight: 600; font-size: var(--font-size-sm); color: var(--color-text-muted);
       background: var(--color-surface-alt); border-bottom: 1px solid var(--color-border); }
-    .bl-row { border-bottom: 1px solid var(--color-border); border-left: 3px solid transparent; }
+    .bl-row { border-bottom: 1px solid var(--color-border); border-left: 4px solid transparent; }
     .bl-row:last-child { border-bottom: 0; }
     .bl-row:hover { background: var(--color-surface-alt); }
-    /* Tô màu nhận diện theo loại: EPIC (tím) · Story (xanh dương) · Task cha (xanh ngọc). */
-    .bl-row--epic { border-left-color: #7c3aed; background: color-mix(in srgb, #7c3aed 9%, transparent); }
-    .bl-row--epic .bl-title { font-weight: 700; }
-    .bl-row--story { border-left-color: #2563eb; background: color-mix(in srgb, #2563eb 7%, transparent); }
+    /* Nhận diện theo loại (token có dark riêng): EPIC (tím) · Story (xanh dương) · Task cha (xanh ngọc). */
+    .bl-row--epic { border-left-color: var(--type-epic); background: var(--type-epic-bg); }
+    .bl-row--epic .bl-title { font-weight: 700; color: var(--type-epic); }
+    .bl-row--story { border-left-color: var(--type-story); background: var(--type-story-bg); }
     .bl-row--story .bl-title { font-weight: 600; }
-    .bl-row--parent { border-left-color: #0d9488; background: color-mix(in srgb, #0d9488 5%, transparent); }
+    .bl-row--parent { border-left-color: var(--type-parent); background: var(--type-parent-bg); }
     .bl-legend { display: inline-flex; gap: 12px; align-items: center; margin-left: auto; font-size: var(--text-xs); color: var(--color-text-muted); }
     .bl-legend__item { display: inline-flex; align-items: center; gap: 4px; }
-    .bl-legend__dot { width: 10px; height: 10px; border-radius: 3px; border-left: 3px solid; }
-    .bl-legend__dot--epic { border-left-color: #7c3aed; background: color-mix(in srgb, #7c3aed 22%, transparent); }
-    .bl-legend__dot--story { border-left-color: #2563eb; background: color-mix(in srgb, #2563eb 20%, transparent); }
-    .bl-legend__dot--parent { border-left-color: #0d9488; background: color-mix(in srgb, #0d9488 16%, transparent); }
+    .bl-legend__dot { width: 12px; height: 12px; border-radius: 3px; border-left: 4px solid; }
+    .bl-legend__dot--epic { border-left-color: var(--type-epic); background: var(--type-epic-bg); }
+    .bl-legend__dot--story { border-left-color: var(--type-story); background: var(--type-story-bg); }
+    .bl-legend__dot--parent { border-left-color: var(--type-parent); background: var(--type-parent-bg); }
     .bl-row--dragging { opacity: .45; }
     .bl-row--dragover { box-shadow: inset 0 2px 0 0 var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
     .bl-drag { cursor: grab; color: var(--color-text-muted); font-size: .8rem; padding: 0 2px; user-select: none; flex: none; }
@@ -92,7 +92,7 @@ interface TreeRow {
     .bl-seg { display: flex; gap: 6px; flex-wrap: wrap; }
     .bl-seg button { border: 1px solid var(--color-border); background: var(--color-surface);
       padding: 6px 14px; border-radius: 999px; font-size: .85rem; cursor: pointer; color: var(--color-text); }
-    .bl-seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+    .bl-seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-invert); font-weight: 600; }
     .bl-keep { display: inline-flex; align-items: center; gap: var(--space-2);
       font-size: var(--font-size-sm); color: var(--color-text-muted); cursor: pointer; user-select: none; }
     .bl-keep input { width: 16px; height: 16px; cursor: pointer; }

@@ -62,7 +62,7 @@ type SubTab = 'info' | 'comments' | 'activity';
       padding: 6px 12px; border-radius: 999px; font-size: .82rem; cursor: pointer; color: var(--color-text);
     }
     .td__seg button:hover { background: var(--color-surface-alt); }
-    .td__seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; font-weight: 600; }
+    .td__seg button.is-active { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-invert); font-weight: 600; }
     .td__seg button:disabled { opacity: .6; cursor: default; }
 
     .td__grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-4); }
@@ -91,8 +91,8 @@ type SubTab = 'info' | 'comments' | 'activity';
     }
     .bug__acts { display: flex; gap: 8px; }
     .sev { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; line-height: 18px; }
-    .sev--red { background: #fee2e2; color: #b91c1c; }
-    .sev--orange { background: #ffedd5; color: #c2410c; }
+    .sev--red { background: var(--overdue-bg); color: var(--overdue); }
+    .sev--orange { background: var(--status-pending-bg); color: var(--status-pending); }
     .sev--gray { background: var(--color-surface); color: var(--color-text-muted); }
 
     /* Sub-tabs (Thông tin | Bình luận | Hoạt động) */
@@ -136,7 +136,7 @@ type SubTab = 'info' | 'comments' | 'activity';
     .cmt__body { font-size: .88rem; white-space: pre-wrap; line-height: 1.4; }
     .cmt__acts { display: flex; gap: 8px; }
     .linkbtn { background: none; border: none; padding: 0; cursor: pointer; color: var(--color-primary); font-size: .75rem; }
-    .linkbtn--danger { color: var(--danger, #dc2626); }
+    .linkbtn--danger { color: var(--color-error); }
     .cmt__edit { display: grid; gap: 6px; }
     .cmt__editacts { display: flex; gap: 8px; }
     .td__newcmt { display: flex; gap: 8px; align-items: flex-start; margin-top: var(--space-2); }

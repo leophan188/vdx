@@ -45,8 +45,8 @@ import {
     .bug-att__add:hover { border-color: var(--color-primary); color: var(--color-primary); }
     /* Badge mức độ nghiêm trọng (semantic màu cứng: đỏ/cam/xám) */
     .sev { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: .72rem; font-weight: 600; line-height: 18px; white-space: nowrap; }
-    .sev--red { background: #fee2e2; color: #b91c1c; }
-    .sev--orange { background: #ffedd5; color: #c2410c; }
+    .sev--red { background: var(--overdue-bg); color: var(--overdue); }
+    .sev--orange { background: var(--status-pending-bg); color: var(--status-pending); }
     .sev--gray { background: var(--color-surface-alt, #eef1f5); color: var(--color-text-muted, #64748b); }
     .bug-edit { background: none; border: none; cursor: pointer; color: var(--color-text-muted, #64748b); font-size: 1rem; padding: 2px 6px; border-radius: 6px; }
     .bug-edit:hover { background: var(--color-surface-alt, #eef1f5); color: var(--color-primary, #2563eb); }

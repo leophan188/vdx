@@ -61,8 +61,8 @@
 
           <div class="role-card__actions">
             <button type="button" class="btn btn--secondary btn--sm" (click)="openMembers(r)">👥 Thành viên</button>
-            <button type="button" class="btn btn--ghost btn--sm" (click)="openEdit(r)">✎ Sửa</button>
-            <button type="button" class="btn btn--ghost btn--sm" (click)="askDelete(r)">🗑 Xoá</button>
+            <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(r)">✎</button>
+            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(r)">🗑</button>
             <span class="role-card__spacer"></span>
             <button type="button" class="btn btn--ghost btn--sm"
                     [disabled]="!isDirty(r.code) || !!saving()"

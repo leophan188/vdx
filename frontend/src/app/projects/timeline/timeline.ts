@@ -73,18 +73,18 @@ const DAY_MS = 86_400_000;
     .gantt__list-head { height: 48px; display: flex; align-items: center;
       font-weight: var(--weight-semibold); border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
     .gantt__list-row { height: var(--row-h); display: flex; align-items: center;
-      border-bottom: 1px solid var(--color-border); border-left: 3px solid transparent; white-space: nowrap; }
+      border-bottom: 1px solid var(--color-border); border-left: 4px solid transparent; white-space: nowrap; }
     .gantt__list-row:last-child { border-bottom: 0; }
-    /* Tô màu nhận diện theo loại: EPIC (tím) · Story (xanh dương) · Task cha (xanh ngọc). */
-    .gantt__list-row--epic { border-left-color: #7c3aed; background: color-mix(in srgb, #7c3aed 9%, transparent); }
-    .gantt__list-row--epic .gantt__title { font-weight: 700; }
-    .gantt__list-row--story { border-left-color: #2563eb; background: color-mix(in srgb, #2563eb 7%, transparent); }
+    /* Nhận diện theo loại (token có dark riêng): EPIC (tím) · Story (xanh dương) · Task cha (xanh ngọc). */
+    .gantt__list-row--epic { border-left-color: var(--type-epic); background: var(--type-epic-bg); }
+    .gantt__list-row--epic .gantt__title { font-weight: 700; color: var(--type-epic); }
+    .gantt__list-row--story { border-left-color: var(--type-story); background: var(--type-story-bg); }
     .gantt__list-row--story .gantt__title { font-weight: 600; }
-    .gantt__list-row--parent { border-left-color: #0d9488; background: color-mix(in srgb, #0d9488 5%, transparent); }
+    .gantt__list-row--parent { border-left-color: var(--type-parent); background: var(--type-parent-bg); }
     .gantt__legend-sep { width: 1px; height: 14px; background: var(--color-border); display: inline-block; }
-    .gantt__swatch--epic { background: color-mix(in srgb, #7c3aed 30%, transparent); border-left: 3px solid #7c3aed; }
-    .gantt__swatch--story { background: color-mix(in srgb, #2563eb 28%, transparent); border-left: 3px solid #2563eb; }
-    .gantt__swatch--parent { background: color-mix(in srgb, #0d9488 24%, transparent); border-left: 3px solid #0d9488; }
+    .gantt__swatch--epic { background: var(--type-epic-bg); border-left: 4px solid var(--type-epic); }
+    .gantt__swatch--story { background: var(--type-story-bg); border-left: 4px solid var(--type-story); }
+    .gantt__swatch--parent { background: var(--type-parent-bg); border-left: 4px solid var(--type-parent); }
 
     /* Các cột con của bảng trái */
     .gantt__c-task { flex: 1 1 240px; min-width: 200px; display: flex; align-items: center; gap: var(--space-2);

@@ -46,13 +46,13 @@
     </ng-template>
     <ng-template gridCell="actions" let-u>
       <span class="cell-actions">
-        <button type="button" class="btn btn--ghost btn--sm" title="Xem chi tiết" (click)="openDetail(u)">👁</button>
-        <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(u)">✎</button>
-        <button type="button" class="btn btn--ghost btn--sm" title="Đổi mật khẩu" (click)="openReset(u)">🔑</button>
+        <button type="button" class="btn btn--icon" title="Xem chi tiết" (click)="openDetail(u)">👁</button>
+        <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(u)">✎</button>
+        <button type="button" class="btn btn--icon" title="Đổi mật khẩu" (click)="openReset(u)">🔑</button>
         <button type="button" class="btn btn--secondary btn--sm" (click)="askLock(u)">
           {{ u.status === 'LOCKED' ? 'Mở' : 'Khóa' }}
         </button>
-        <button type="button" class="btn btn--ghost btn--sm" title="Xóa" (click)="askDelete(u)">🗑</button>
+        <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(u)">🗑</button>
       </span>
     </ng-template>
   </data-grid>

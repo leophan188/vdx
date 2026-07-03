@@ -27,6 +27,11 @@
   --overdue: #c53030;
   --overdue-bg: #fce8e8;
 
+  /* --- Màu NHẬN DIỆN LOẠI công việc (Backlog/Timeline) — dùng lại, có dark riêng --- */
+  --type-epic: #7c3aed;   --type-epic-bg: #f0eafc;    /* EPIC — tím */
+  --type-story: #2563eb;  --type-story-bg: #e6effd;   /* Story — xanh dương */
+  --type-parent: #0f9488; --type-parent-bg: #ddf3f0;  /* Task cha — xanh ngọc */
+
   /* --- Phản hồi chung --- */
   --color-error: #c53030;
   --color-success: #2f855a;
@@ -100,6 +105,11 @@
 
   --overdue: #f08a8a;
   --overdue-bg: #371d1d;
+
+  /* Màu nhận diện loại — DARK: chữ sáng hơn, nền tối để nổi nhưng không chói */
+  --type-epic: #c4a7f5;   --type-epic-bg: #241a3a;
+  --type-story: #85b0f8;  --type-story-bg: #142338;
+  --type-parent: #4fd1c5; --type-parent-bg: #10302c;
 
   --color-error: #f08a8a;
   --color-success: #5cc08a;
