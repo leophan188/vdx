@@ -13,7 +13,9 @@
       <input id="ts-to" type="date" [value]="to()" (change)="to.set($any($event.target).value)" />
     </div>
     <div class="ts__legend">
-      <span class="ts__swatch"></span> Ô &gt; 8h/ngày = quá tải
+      <span class="ts__swatch ts__swatch--under"></span> &lt; 8h (thiếu)
+      <span class="ts__swatch ts__swatch--over"></span> &gt; 8h (dư)
+      <span>· = 8h bình thường</span>
     </div>
   </div>
 
@@ -47,7 +49,8 @@
                                [position]="r.member.jobPosition" [title]="r.member.title" [dept]="r.member.deptCode" />
               </td>
               @for (v of r.days; track $index) {
-                <td class="ts__num" [class.ts__over]="isOver(v)" [class.ts__zero]="!v">{{ fmt(v) || '·' }}</td>
+                <td class="ts__num" [class.ts__over]="isOver(v)" [class.ts__under]="isUnder(v)"
+                    [class.ts__zero]="!v">{{ fmt(v) || '·' }}</td>
               }
               <td class="ts__num ts__total-col">{{ fmt(r.total) || '·' }}</td>
               @if (hasUnscheduled()) {
@@ -60,7 +63,7 @@
           <tr>
             <td class="ts__who">Tổng theo ngày</td>
             @for (v of dayTotals(); track $index) {
-              <td class="ts__num" [class.ts__over]="isOver(v)">{{ fmt(v) || '·' }}</td>
+              <td class="ts__num">{{ fmt(v) || '·' }}</td>
             }
             <td class="ts__num">{{ fmt(grandTotal()) || '·' }}</td>
             @if (hasUnscheduled()) { <td class="ts__num">{{ fmt(unscheduledTotal()) || '·' }}</td> }

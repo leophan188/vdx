@@ -199,6 +199,25 @@ public class ProjectTask {
     public void setTesterUserId(String testerUserId) { this.testerUserId = testerUserId; }
     public double getEstimateHours() { return estimateHours; }
     public void setEstimateHours(double estimateHours) { this.estimateHours = estimateHours; }
+    /**
+     * Giờ HIỆU LỰC cho tính % hoàn thành: ƯU TIÊN estimateHours; nếu chưa nhập est (=0)
+     * → suy từ DURATION = số ngày công (T2–T6) trong [startDate, dueDate] × 8 giờ. Thiếu ngày → 0.
+     */
+    public double effectiveHours() {
+        if (estimateHours > 0) {
+            return estimateHours;
+        }
+        if (startDate == null || dueDate == null || dueDate.isBefore(startDate)) {
+            return 0.0;
+        }
+        int workdays = 0;
+        for (LocalDate d = startDate; !d.isAfter(dueDate); d = d.plusDays(1)) {
+            if (d.getDayOfWeek().getValue() <= 5) { // T2–T6
+                workdays++;
+            }
+        }
+        return workdays * 8.0;
+    }
     public double getSpentHours() { return spentHours; }
     public void setSpentHours(double spentHours) { this.spentHours = spentHours; }
     /** Cộng dồn thời gian thực tế (giờ) + chạm updatedAt. */

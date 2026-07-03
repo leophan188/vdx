@@ -470,10 +470,11 @@ public class ProjectService {
                 continue; // không phải lá
             }
             leaf++;
-            leafEst += t.getEstimateHours();
+            double w = t.effectiveHours(); // ưu tiên est; không có est → duration ngày công × 8
+            leafEst += w;
             if (t.getStatus() == TaskStatus.DONE) {
                 leafDone++;
-                leafDoneEst += t.getEstimateHours();
+                leafDoneEst += w;
             }
         }
         return completionFrom(leafEst, leafDoneEst, leaf, leafDone);

@@ -55,15 +55,17 @@ const WDAY_VN = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
     .ts__dnum { display: block; font-size: var(--text-sm); }
     .ts__zero { color: var(--color-text-muted); }
     .ts__total-col { font-weight: var(--weight-semibold); background: var(--color-surface-alt); }
-    .ts__over { background: var(--overdue-bg); color: var(--overdue); font-weight: var(--weight-semibold); }
+    .ts__over { background: var(--status-done-bg); color: var(--status-done); font-weight: var(--weight-semibold); }
+    .ts__under { background: var(--overdue-bg); color: var(--overdue); font-weight: var(--weight-semibold); }
     .ts__grid tfoot td { font-weight: var(--weight-semibold); background: var(--color-surface-alt);
       border-top: 2px solid var(--color-border); border-bottom: 0; }
     .ts__grid tfoot td.ts__who { color: var(--color-text); }
 
     .ts__legend { display: flex; align-items: center; gap: var(--space-2); color: var(--color-text-muted);
       font-size: var(--text-xs); }
-    .ts__swatch { width: 14px; height: 14px; border-radius: var(--radius-sm); background: var(--overdue-bg);
-      border: 1px solid var(--overdue); display: inline-block; }
+    .ts__swatch { width: 14px; height: 14px; border-radius: var(--radius-sm); display: inline-block; vertical-align: middle; }
+    .ts__swatch--under { background: var(--overdue-bg); border: 1px solid var(--overdue); }
+    .ts__swatch--over { background: var(--status-done-bg); border: 1px solid var(--status-done); }
 
     .ts__empty, .ts__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
   `]
@@ -206,7 +208,10 @@ export class PrjTimesheet {
     if (!v) return '';
     return String(Math.round(v * 10) / 10);
   }
+  /** > 8h/ngày → XANH (dư giờ). */
   isOver(v: number): boolean { return v > 8; }
+  /** > 0 và < 8h/ngày → ĐỎ (thiếu giờ). = 8h hoặc = 0 → bình thường. */
+  isUnder(v: number): boolean { return v > 0 && v < 8; }
 
   // ----- Helpers ngày -----
   /** Chọn THÁNG (yyyy-MM từ input[type=month]) → đặt khoảng = đầu → cuối tháng đó. */

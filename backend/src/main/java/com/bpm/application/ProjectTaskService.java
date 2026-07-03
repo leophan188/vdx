@@ -186,9 +186,9 @@ public class ProjectTaskService {
     private double[] rollup(ProjectTask t, Map<String, List<ProjectTask>> children, Map<String, Double> pct) {
         List<ProjectTask> kids = children.get(t.getId());
         if (kids == null || kids.isEmpty()) {
-            // LÁ
+            // LÁ — trọng số = giờ HIỆU LỰC (ưu tiên est; không có est → duration ngày công × 8).
             boolean done = t.getStatus() == TaskStatus.DONE;
-            double est = t.getEstimateHours();
+            double est = t.effectiveHours();
             pct.put(t.getId(), done ? 100.0 : 0.0);
             return new double[]{est, done ? est : 0.0, 1, done ? 1 : 0};
         }

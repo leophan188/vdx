@@ -103,7 +103,7 @@ export class QuickCreate {
     switch (type) {
       case 'EPIC': return null;
       case 'STORY': return ['EPIC'];
-      case 'TASK': return ['STORY'];
+      case 'TASK': return ['STORY', 'EPIC'];   // Task gắn dưới Story HOẶC thẳng lên Epic
       case 'SUBTASK': return ['TASK'];
       case 'BUG':
       case 'ISSUE': return ['TASK', 'SUBTASK'];
