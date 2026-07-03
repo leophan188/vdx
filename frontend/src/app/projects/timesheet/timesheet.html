@@ -32,7 +32,9 @@
         <thead>
           <tr>
             <th class="ts__who">Thành viên</th>
-            @for (c of cols(); track c.key) { <th>{{ c.label }}</th> }
+            @for (c of cols(); track c.key) {
+              <th class="ts__day"><span class="ts__wd">{{ c.wd }}</span><span class="ts__dnum">{{ c.dnum }}</span></th>
+            }
             <th class="ts__total-col">Tổng</th>
             @if (hasUnscheduled()) { <th>Chưa xếp lịch</th> }
           </tr>

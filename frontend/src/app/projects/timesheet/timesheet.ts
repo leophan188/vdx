@@ -5,7 +5,8 @@ import { ProjectService, ProjectMember, ProjectTask } from '../../core/project.s
 /** Một cột NGÀY CÔNG (T2–T6) trong khoảng đang xem. */
 interface DayCol {
   key: string;    // yyyy-MM-dd (khoá so khớp)
-  label: string;  // "T2 03/07"
+  wd: string;     // thứ ("T2") — dòng trên, nhỏ
+  dnum: string;   // số ngày ("03") — dòng dưới
 }
 
 /** Một hàng người: giờ theo từng ngày công + tổng + giờ chưa xếp lịch. */
@@ -40,13 +41,18 @@ const WDAY_VN = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
 
     .ts__wrap { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-lg);
       background: var(--color-surface); box-shadow: var(--shadow-sm); }
-    table.ts__grid { border-collapse: collapse; width: 100%; min-width: 640px; }
+    table.ts__grid { border-collapse: collapse; width: 100%; }
     .ts__grid th, .ts__grid td { padding: var(--space-2) var(--space-3); text-align: center; white-space: nowrap;
       border-bottom: 1px solid var(--color-border); }
     .ts__grid thead th { background: var(--color-surface-alt); font-weight: var(--weight-semibold);
       color: var(--color-text-muted); font-size: var(--text-xs); position: sticky; top: 0; }
-    .ts__grid th.ts__who, .ts__grid td.ts__who { text-align: left; min-width: 220px; }
-    .ts__grid td.ts__num { font-variant-numeric: tabular-nums; }
+    .ts__grid th.ts__who, .ts__grid td.ts__who { text-align: left; min-width: 200px; }
+    /* Cột NGÀY thu gọn: hẹp, padding nhỏ, nhãn 2 dòng (thứ nhỏ + số ngày) */
+    .ts__grid th.ts__day, .ts__grid td.ts__num { min-width: 32px; width: 32px; padding: 4px 3px; }
+    .ts__grid td.ts__num { font-variant-numeric: tabular-nums; font-size: var(--text-sm); }
+    .ts__day { line-height: 1.1; }
+    .ts__wd { display: block; font-size: 10px; font-weight: 500; color: var(--color-text-muted); }
+    .ts__dnum { display: block; font-size: var(--text-sm); }
     .ts__zero { color: var(--color-text-muted); }
     .ts__total-col { font-weight: var(--weight-semibold); background: var(--color-surface-alt); }
     .ts__over { background: var(--overdue-bg); color: var(--overdue); font-weight: var(--weight-semibold); }
@@ -108,7 +114,7 @@ export class PrjTimesheet {
     while (cur.getTime() <= hi.getTime() && guard++ < 400) {
       const d = cur.getDay();
       if (d >= 1 && d <= 5) {
-        out.push({ key: this.toIso(cur), label: `${WDAY_VN[d]} ${this.dm(cur)}` });
+        out.push({ key: this.toIso(cur), wd: WDAY_VN[d], dnum: this.pad(cur.getDate()) });
       }
       cur.setDate(cur.getDate() + 1);
     }
