@@ -1,6 +1,10 @@
 <section class="ts">
   <div class="ts__head">
     <div class="ts__field">
+      <label for="ts-month">Tháng</label>
+      <input id="ts-month" type="month" [value]="month()" (change)="setMonth($any($event.target).value)" />
+    </div>
+    <div class="ts__field">
       <label for="ts-from">Từ ngày</label>
       <input id="ts-from" type="date" [value]="from()" (change)="from.set($any($event.target).value)" />
     </div>

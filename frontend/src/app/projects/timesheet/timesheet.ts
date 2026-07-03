@@ -71,14 +71,15 @@ export class PrjTimesheet {
   readonly members = signal<ProjectMember[]>([]);
   readonly tasks = signal<ProjectTask[]>([]);
 
-  // Khoảng ngày (yyyy-MM-dd cho input[type=date]); mặc định = tuần hiện tại T2→T6.
+  // Tháng đang chọn (yyyy-MM cho input[type=month]) + khoảng ngày dẫn xuất (yyyy-MM-dd).
+  readonly month = signal<string>('');
   readonly from = signal<string>('');
   readonly to = signal<string>('');
 
   constructor() {
-    const { mon, fri } = this.currentWeek();
-    this.from.set(this.toIso(mon));
-    this.to.set(this.toIso(fri));
+    // Mặc định = THÁNG HIỆN TẠI (đầu → cuối tháng).
+    const now = new Date();
+    this.applyMonth(`${now.getFullYear()}-${this.pad(now.getMonth() + 1)}`);
 
     // Chỉ TẢI dữ liệu khi projectId đổi (không đọc from/to ở đây → tránh vòng lặp).
     effect(() => {
@@ -202,13 +203,14 @@ export class PrjTimesheet {
   isOver(v: number): boolean { return v > 8; }
 
   // ----- Helpers ngày -----
-  private currentWeek(): { mon: Date; fri: Date } {
-    const now = new Date();
-    const day = now.getDay();                          // 0 CN … 6 T7
-    const diffToMon = day === 0 ? -6 : 1 - day;
-    const mon = new Date(now.getFullYear(), now.getMonth(), now.getDate() + diffToMon);
-    const fri = new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + 4);
-    return { mon, fri };
+  /** Chọn THÁNG (yyyy-MM từ input[type=month]) → đặt khoảng = đầu → cuối tháng đó. */
+  setMonth(ym: string): void { if (ym) this.applyMonth(ym); }
+  private applyMonth(ym: string): void {
+    const [y, m] = ym.split('-').map(Number);
+    if (!y || !m) return;
+    this.month.set(ym);
+    this.from.set(this.toIso(new Date(y, m - 1, 1)));   // ngày 1 của tháng
+    this.to.set(this.toIso(new Date(y, m, 0)));         // ngày 0 của tháng kế = ngày cuối tháng này
   }
   private toIso(d: Date): string {
     return `${d.getFullYear()}-${this.pad(d.getMonth() + 1)}-${this.pad(d.getDate())}`;
