@@ -44,14 +44,14 @@ export class ProjectWorkspace implements OnInit {
 
   readonly tabs: WsTab[] = [
     { key: 'overview', label: 'Tổng quan', icon: '📊' },
-    { key: 'members', label: 'Thành viên', icon: '👥' },
-    { key: 'backlog', label: 'Backlog', icon: '🗂️' },
     { key: 'kanban', label: 'Kanban', icon: '📋' },
-    { key: 'timeline', label: 'Timeline', icon: '📅' },
     { key: 'bugs', label: 'Bug / Issue', icon: '🐞' },
-    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️' },
+    { key: 'backlog', label: 'Backlog', icon: '🗂️' },
+    { key: 'timeline', label: 'Timeline', icon: '📅' },
     { key: 'timesheet', label: 'Timesheet', icon: '⏱️' },
-    { key: 'log', label: 'Log', icon: '📜' }
+    { key: 'log', label: 'Log', icon: '📜' },
+    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️' },
+    { key: 'members', label: 'Thành viên', icon: '👥' }
   ];
 
   ngOnInit(): void {
