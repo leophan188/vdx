@@ -4,7 +4,7 @@ import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
-  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, ProjectMember
+  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, ProjectMember, ReorderItem
 } from '../../core/project.service';
 import { memberPersonOptions } from '../../shared/person-options';
 import { buildTree, hasChildren, subtreeLeafEstimate } from '../../shared/task-tree';
@@ -48,6 +48,10 @@ interface TreeRow {
     .bl-row { border-bottom: 1px solid var(--color-border); }
     .bl-row:last-child { border-bottom: 0; }
     .bl-row:hover { background: var(--color-surface-alt); }
+    .bl-row--dragging { opacity: .45; }
+    .bl-row--dragover { box-shadow: inset 0 2px 0 0 var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+    .bl-drag { cursor: grab; color: var(--color-text-muted); font-size: .8rem; padding: 0 2px; user-select: none; flex: none; }
+    .bl-drag:active { cursor: grabbing; }
     .bl-title { display: flex; align-items: center; gap: 2px; min-width: 0; }
     .bl-toggle { background: none; border: 0; cursor: pointer; width: 18px; font-size: var(--font-size-sm);
       color: var(--color-text-muted); padding: 0; flex: 0 0 auto; }
@@ -357,6 +361,56 @@ export class PrjBacklog implements OnInit {
       error: () => { /* giữ nguyên dữ liệu hiện tại nếu lỗi */ }
     });
   }
+
+  // ===== Kéo-thả SẮP XẾP thứ tự (chỉ trong CÙNG CẤP: cùng parentId) =====
+  readonly dragId = signal<string>('');
+  readonly dragOverId = signal<string>('');
+
+  private sameParent(a: ProjectTask, b: ProjectTask): boolean {
+    return (a.parentId ?? null) === (b.parentId ?? null);
+  }
+
+  onDragStart(r: TreeRow, ev: DragEvent): void {
+    this.dragId.set(r.task.id);
+    if (ev.dataTransfer) { ev.dataTransfer.effectAllowed = 'move'; ev.dataTransfer.setData('text/plain', r.task.id); }
+  }
+  onDragOver(r: TreeRow, ev: DragEvent): void {
+    const drag = this.tasks().find((t) => t.id === this.dragId());
+    if (!drag || drag.id === r.task.id || !this.sameParent(drag, r.task)) return;
+    ev.preventDefault();                        // chỉ cho THẢ khi cùng cấp
+    if (ev.dataTransfer) ev.dataTransfer.dropEffect = 'move';
+    this.dragOverId.set(r.task.id);
+  }
+  onDragLeave(r: TreeRow): void {
+    if (this.dragOverId() === r.task.id) this.dragOverId.set('');
+  }
+  onDrop(r: TreeRow): void {
+    const dragId = this.dragId();
+    this.dragOverId.set('');
+    this.dragId.set('');
+    if (!dragId || dragId === r.task.id) return;
+    const all = this.tasks();
+    const drag = all.find((t) => t.id === dragId);
+    if (!drag) return;
+    if (!this.sameParent(drag, r.task)) {
+      this.toast.warning('Chỉ sắp xếp thứ tự trong cùng cấp (cùng cha).');
+      return;
+    }
+    // Nhóm anh em (cùng parentId) theo thứ tự hiện tại → di chuyển dragged tới vị trí target.
+    const key = drag.parentId ?? null;
+    const siblings = all.filter((t) => (t.parentId ?? null) === key)
+      .sort((a, b) => (a.orderIndex - b.orderIndex) || (a.seq - b.seq));
+    const from = siblings.findIndex((t) => t.id === dragId);
+    const to = siblings.findIndex((t) => t.id === r.task.id);
+    if (from < 0 || to < 0) return;
+    siblings.splice(to, 0, siblings.splice(from, 1)[0]);
+    const items: ReorderItem[] = siblings.map((t, i) => ({ taskId: t.id, parentId: t.parentId ?? null, orderIndex: i }));
+    this.svc.reorderTasks(this.projectId(), items).subscribe({
+      next: () => { this.toast.success('Đã sắp xếp lại thứ tự'); this.silentReload(); },
+      error: (e) => this.toast.error('Không sắp xếp được', e?.error?.message ?? '')
+    });
+  }
+  onDragEnd(): void { this.dragId.set(''); this.dragOverId.set(''); }
 
   // ----- Cây gập/mở -----
   isCollapsed(id: string): boolean { return this.collapsed().has(id); }

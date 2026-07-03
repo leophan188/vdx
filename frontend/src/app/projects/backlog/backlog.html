@@ -54,9 +54,13 @@
     <div class="bl-empty">Chưa có công việc nào — hãy thêm task đầu tiên.</div>
   } @else {
     @for (r of visible(); track r.task.id) {
-      <div class="bl-row">
+      <div class="bl-row" [class.bl-row--dragover]="dragOverId() === r.task.id"
+           [class.bl-row--dragging]="dragId() === r.task.id"
+           (dragover)="onDragOver(r, $event)" (dragleave)="onDragLeave(r)" (drop)="onDrop(r)">
         <!-- Tên + thụt lề theo cấp -->
         <span class="bl-title" [style.padding-left.px]="r.level * 18">
+          <span class="bl-drag" title="Kéo để sắp xếp thứ tự" draggable="true"
+                (dragstart)="onDragStart(r, $event)" (dragend)="onDragEnd()" aria-hidden="true">⠿</span>
           @if (r.hasChildren) {
             <button type="button" class="bl-toggle"
                     (click)="toggle(r.task.id)"
