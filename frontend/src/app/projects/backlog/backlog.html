@@ -11,6 +11,12 @@
     </span>
     <strong>{{ summary().pct }}%</strong>
   </span>
+  <!-- Chú thích màu nhận diện loại -->
+  <span class="bl-legend">
+    <span class="bl-legend__item"><i class="bl-legend__dot bl-legend__dot--epic"></i>Epic</span>
+    <span class="bl-legend__item"><i class="bl-legend__dot bl-legend__dot--story"></i>Story</span>
+    <span class="bl-legend__item"><i class="bl-legend__dot bl-legend__dot--parent"></i>Task cha</span>
+  </span>
 </div>
 
 <div class="filter-bar">
@@ -54,7 +60,8 @@
     <div class="bl-empty">Chưa có công việc nào — hãy thêm task đầu tiên.</div>
   } @else {
     @for (r of visible(); track r.task.id) {
-      <div class="bl-row" [class.bl-row--dragover]="dragOverId() === r.task.id"
+      <div class="bl-row" [class]="rowTypeClass(r)"
+           [class.bl-row--dragover]="dragOverId() === r.task.id"
            [class.bl-row--dragging]="dragId() === r.task.id"
            (dragover)="onDragOver(r, $event)" (dragleave)="onDragLeave(r)" (drop)="onDrop(r)">
         <!-- Tên + thụt lề theo cấp -->

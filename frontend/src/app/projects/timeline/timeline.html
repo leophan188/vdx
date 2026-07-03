@@ -15,6 +15,10 @@
           <i class="gantt__swatch" [class]="'gantt__bar--' + l.status"></i>{{ l.label }}
         </span>
       }
+      <span class="gantt__legend-sep"></span>
+      <span><i class="gantt__swatch gantt__swatch--epic"></i>Epic</span>
+      <span><i class="gantt__swatch gantt__swatch--story"></i>Story</span>
+      <span><i class="gantt__swatch gantt__swatch--parent"></i>Task cha</span>
     </div>
   </div>
 
@@ -58,7 +62,7 @@
             <span class="gantt__c-pct">% Hoàn thành</span>
           </div>
           @for (r of rows(); track r.task.id) {
-            <div class="gantt__list-row" [title]="r.task.code + ' · ' + r.task.title">
+            <div class="gantt__list-row" [class]="rowTypeClass(r)" [title]="r.task.code + ' · ' + r.task.title">
               <span class="gantt__c-task" [style.padding-left]="indentPx(r.depth)">
                 <span class="gantt__code">{{ r.task.code }}</span>
                 <span class="gantt__title">{{ r.task.title }}</span>

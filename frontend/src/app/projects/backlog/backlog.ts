@@ -45,9 +45,21 @@ interface TreeRow {
     }
     .bl-head { font-weight: 600; font-size: var(--font-size-sm); color: var(--color-text-muted);
       background: var(--color-surface-alt); border-bottom: 1px solid var(--color-border); }
-    .bl-row { border-bottom: 1px solid var(--color-border); }
+    .bl-row { border-bottom: 1px solid var(--color-border); border-left: 3px solid transparent; }
     .bl-row:last-child { border-bottom: 0; }
     .bl-row:hover { background: var(--color-surface-alt); }
+    /* Tô màu nhận diện theo loại: EPIC (tím) · Story (xanh dương) · Task cha (xanh ngọc). */
+    .bl-row--epic { border-left-color: #7c3aed; background: color-mix(in srgb, #7c3aed 9%, transparent); }
+    .bl-row--epic .bl-title { font-weight: 700; }
+    .bl-row--story { border-left-color: #2563eb; background: color-mix(in srgb, #2563eb 7%, transparent); }
+    .bl-row--story .bl-title { font-weight: 600; }
+    .bl-row--parent { border-left-color: #0d9488; background: color-mix(in srgb, #0d9488 5%, transparent); }
+    .bl-legend { display: inline-flex; gap: 12px; align-items: center; margin-left: auto; font-size: var(--text-xs); color: var(--color-text-muted); }
+    .bl-legend__item { display: inline-flex; align-items: center; gap: 4px; }
+    .bl-legend__dot { width: 10px; height: 10px; border-radius: 3px; border-left: 3px solid; }
+    .bl-legend__dot--epic { border-left-color: #7c3aed; background: color-mix(in srgb, #7c3aed 22%, transparent); }
+    .bl-legend__dot--story { border-left-color: #2563eb; background: color-mix(in srgb, #2563eb 20%, transparent); }
+    .bl-legend__dot--parent { border-left-color: #0d9488; background: color-mix(in srgb, #0d9488 16%, transparent); }
     .bl-row--dragging { opacity: .45; }
     .bl-row--dragover { box-shadow: inset 0 2px 0 0 var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
     .bl-drag { cursor: grab; color: var(--color-text-muted); font-size: .8rem; padding: 0 2px; user-select: none; flex: none; }
@@ -680,6 +692,13 @@ export class PrjBacklog implements OnInit {
       case 'ISSUE': return 'badge--cancel';
       default: return 'badge--neutral';
     }
+  }
+  /** Class tô màu DÒNG theo loại để nhận diện: EPIC / Story / Task cha (có con). */
+  rowTypeClass(r: TreeRow): string {
+    if (r.task.type === 'EPIC') return 'bl-row--epic';
+    if (r.task.type === 'STORY') return 'bl-row--story';
+    if (r.task.type === 'TASK' && r.hasChildren) return 'bl-row--parent';
+    return '';
   }
   statusBadge(s: TaskStatus): string {
     switch (s) {
