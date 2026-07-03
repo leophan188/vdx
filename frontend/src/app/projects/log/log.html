@@ -1,0 +1,29 @@
+<section class="lg">
+  <div class="lg__head">
+    <app-type-filter [options]="filterOptions()" [selected]="selected()" (toggle)="toggleFilter($event)" />
+    <span class="lg__count">{{ filtered().length }} hoạt động</span>
+  </div>
+
+  @if (loading()) {
+    <div class="lg__loading">Đang tải nhật ký…</div>
+  } @else if (filtered().length === 0) {
+    <div class="lg__empty">Chưa có hoạt động nào trong dự án.</div>
+  } @else {
+    <div class="lg__list">
+      @for (a of filtered(); track a.id) {
+        <div class="lg__row">
+          <span class="lg__icon">{{ icon(a.action) }}</span>
+          <span class="lg__body">
+            <span class="lg__actor">{{ a.actorName }}</span>
+            <span class="lg__verb">{{ verb(a.action) }}</span>
+            @if (a.detail) { <span class="lg__detail">{{ a.detail }}</span> }
+            @if (a.taskCode) { <span class="lg__code">[{{ a.taskCode }}]</span> }
+            @if (a.taskTitle) { <span class="lg__title">{{ a.taskTitle }}</span> }
+            @else { <span class="lg__deleted">(công việc đã xoá)</span> }
+          </span>
+          <span class="lg__time">{{ when(a.createdAt) }}</span>
+        </div>
+      }
+    </div>
+  }
+</section>

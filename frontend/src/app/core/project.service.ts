@@ -258,6 +258,18 @@ export interface TaskActivity {
   createdAt: string | null;      // ISO Instant
 }
 
+// ===== Nhật ký hoạt động cấp DỰ ÁN (kiểu Jira "Activity stream") =====
+export interface ProjectActivityItem {
+  id: string;
+  taskId: string;
+  taskCode: string | null;       // null nếu task đã xoá
+  taskTitle: string | null;      // null nếu task đã xoá
+  actorName: string;
+  action: TaskActivityAction;
+  detail: string | null;
+  createdAt: string | null;      // ISO Instant
+}
+
 // ===== Báo cáo ngày / tuần =====
 export interface ReportTaskItem {
   taskId: string;
@@ -378,6 +390,10 @@ export class ProjectService {
   /** Log work: cộng thêm giờ thực tế (hours > 0) vào spentHours của công việc; trả task đã cập nhật. */
   logWork(projectId: string, taskId: string, hours: number): Observable<ProjectTask> {
     return this.http.post<ProjectTask>(`${this.base}/${projectId}/tasks/${taskId}/log-work`, { hours }, this.opts);
+  }
+  /** Nhật ký hoạt động toàn dự án (mới → cũ). */
+  projectActivity(projectId: string): Observable<ProjectActivityItem[]> {
+    return this.http.get<ProjectActivityItem[]>(`${this.base}/${projectId}/activity`, this.opts);
   }
 
   // ===== Bình luận task (kiểu Jira) =====

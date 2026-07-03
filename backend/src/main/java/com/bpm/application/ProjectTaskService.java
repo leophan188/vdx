@@ -471,6 +471,40 @@ public class ProjectTaskService {
         return out;
     }
 
+    /**
+     * Nhật ký hoạt động toàn dự án (mới → cũ, tối đa 300 dòng gần nhất).
+     * Resolve taskCode (= projectCode + "-" + seq) và taskTitle từ ProjectTask;
+     * task đã xoá → taskCode/taskTitle null nhưng vẫn giữ dòng.
+     */
+    @Transactional(readOnly = true)
+    public List<ProjectDto.ProjectActivityItem> listProjectActivity(String projectId) {
+        Project p = getProject(projectId);
+        List<TaskActivity> activities = activityRepo.findTop300ByProjectIdOrderByCreatedAtDesc(projectId);
+        // Resolve task (code + title) bằng 1 query gộp theo taskId (tránh N+1).
+        Set<String> taskIds = new HashSet<>();
+        for (TaskActivity a : activities) {
+            if (a.getTaskId() != null) {
+                taskIds.add(a.getTaskId());
+            }
+        }
+        Map<String, ProjectTask> taskById = new HashMap<>();
+        if (!taskIds.isEmpty()) {
+            for (ProjectTask t : taskRepo.findAllById(taskIds)) {
+                taskById.put(t.getId(), t);
+            }
+        }
+        List<ProjectDto.ProjectActivityItem> out = new ArrayList<>();
+        for (TaskActivity a : activities) {
+            ProjectTask t = taskById.get(a.getTaskId());
+            String taskCode = t == null ? null : p.getCode() + "-" + t.getSeq();
+            String taskTitle = t == null ? null : t.getTitle();
+            out.add(new ProjectDto.ProjectActivityItem(a.getId(), a.getTaskId(), taskCode, taskTitle,
+                    a.getActorName(), a.getAction(), a.getDetail(),
+                    a.getCreatedAt() == null ? null : a.getCreatedAt().toString()));
+        }
+        return out;
+    }
+
     // ===== helpers (activity / notify) =====
 
     private void recordActivity(ProjectTask t, String actor, String action, String detail) {

@@ -194,6 +194,13 @@ public class ProjectController {
         return taskService.listActivity(id, taskId);
     }
 
+    /** Nhật ký hoạt động toàn dự án (mới → cũ): tạo/đổi trạng thái/gán/sửa… của mọi task. */
+    @GetMapping("/{id}/activity")
+    public List<ProjectDto.ProjectActivityItem> projectActivity(@PathVariable String id, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return taskService.listProjectActivity(id);
+    }
+
     /** Log work: cộng thêm giờ thực tế vào công việc. */
     @PostMapping("/{id}/tasks/{taskId}/log-work")
     public ProjectDto.TaskResponse logWork(@PathVariable String id, @PathVariable String taskId,

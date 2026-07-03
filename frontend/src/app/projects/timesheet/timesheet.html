@@ -1,0 +1,66 @@
+<section class="ts">
+  <div class="ts__head">
+    <div class="ts__field">
+      <label for="ts-from">Từ ngày</label>
+      <input id="ts-from" type="date" [value]="from()" (change)="from.set($any($event.target).value)" />
+    </div>
+    <div class="ts__field">
+      <label for="ts-to">Đến ngày</label>
+      <input id="ts-to" type="date" [value]="to()" (change)="to.set($any($event.target).value)" />
+    </div>
+    <div class="ts__legend">
+      <span class="ts__swatch"></span> Ô &gt; 8h/ngày = quá tải
+    </div>
+  </div>
+
+  @if (loading()) {
+    <div class="ts__loading">Đang tải dữ liệu…</div>
+  } @else if (cols().length === 0) {
+    <div class="ts__empty">Khoảng ngày không có ngày công (T2–T6). Hãy chọn lại “Từ ngày / Đến ngày”.</div>
+  } @else if (rows().length === 0) {
+    <div class="ts__empty">Dự án chưa có thành viên để lập timesheet.</div>
+  } @else {
+    <p class="ts__hint">
+      Giờ suy từ <strong>ước lượng (est)</strong> của task lá, phân bổ đều theo ngày công trong khoảng bắt đầu → kết thúc.
+    </p>
+    <div class="ts__wrap">
+      <table class="ts__grid">
+        <thead>
+          <tr>
+            <th class="ts__who">Thành viên</th>
+            @for (c of cols(); track c.key) { <th>{{ c.label }}</th> }
+            <th class="ts__total-col">Tổng</th>
+            @if (hasUnscheduled()) { <th>Chưa xếp lịch</th> }
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows(); track r.member.id) {
+            <tr>
+              <td class="ts__who">
+                <employee-chip [code]="r.member.empCode" [name]="r.member.name"
+                               [position]="r.member.jobPosition" [title]="r.member.title" [dept]="r.member.deptCode" />
+              </td>
+              @for (v of r.days; track $index) {
+                <td class="ts__num" [class.ts__over]="isOver(v)" [class.ts__zero]="!v">{{ fmt(v) || '·' }}</td>
+              }
+              <td class="ts__num ts__total-col">{{ fmt(r.total) || '·' }}</td>
+              @if (hasUnscheduled()) {
+                <td class="ts__num" [class.ts__zero]="!r.unscheduled">{{ fmt(r.unscheduled) || '·' }}</td>
+              }
+            </tr>
+          }
+        </tbody>
+        <tfoot>
+          <tr>
+            <td class="ts__who">Tổng theo ngày</td>
+            @for (v of dayTotals(); track $index) {
+              <td class="ts__num" [class.ts__over]="isOver(v)">{{ fmt(v) || '·' }}</td>
+            }
+            <td class="ts__num">{{ fmt(grandTotal()) || '·' }}</td>
+            @if (hasUnscheduled()) { <td class="ts__num">{{ fmt(unscheduledTotal()) || '·' }}</td> }
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  }
+</section>

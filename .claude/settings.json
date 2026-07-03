@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd /Users/leophan188/Downloads/BPMN *)"
+    ],
+    "additionalDirectories": [
+      "/Users/leophan188/Downloads/BPMN/.claude/skills/bmad-agent-architect"
+    ]
+  }
+}

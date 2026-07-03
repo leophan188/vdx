@@ -9,6 +9,8 @@ import { PrjKanban } from './kanban/kanban';
 import { PrjTimeline } from './timeline/timeline';
 import { PrjBugs } from './bugs/bugs';
 import { PrjReportsPeriod } from './reports-period/reports-period';
+import { PrjTimesheet } from './timesheet/timesheet';
+import { PrjLog } from './log/log';
 import { PrjTaskDetail } from './task-detail/task-detail';
 
 interface WsTab { key: string; label: string; icon: string; }
@@ -17,7 +19,7 @@ interface WsTab { key: string; label: string; icon: string; }
 @Component({
   selector: 'app-project-workspace',
   imports: [PageHeader, PrjOverview, PrjMembers, PrjBacklog, PrjKanban, PrjTimeline, PrjBugs,
-    PrjReportsPeriod, PrjTaskDetail],
+    PrjReportsPeriod, PrjTimesheet, PrjLog, PrjTaskDetail],
   templateUrl: './project-workspace.html',
   styles: [`
     .pw-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); }
@@ -47,7 +49,9 @@ export class ProjectWorkspace implements OnInit {
     { key: 'kanban', label: 'Kanban', icon: '📋' },
     { key: 'timeline', label: 'Timeline', icon: '📅' },
     { key: 'bugs', label: 'Bug / Issue', icon: '🐞' },
-    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️' }
+    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️' },
+    { key: 'timesheet', label: 'Timesheet', icon: '⏱️' },
+    { key: 'log', label: 'Log', icon: '📜' }
   ];
 
   ngOnInit(): void {

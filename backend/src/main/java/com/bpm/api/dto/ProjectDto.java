@@ -180,6 +180,15 @@ public final class ProjectDto {
         }
     }
 
+    /**
+     * Một dòng nhật ký hoạt động cấp DỰ ÁN (kiểu Jira "Activity stream").
+     * {@code taskCode}/{@code taskTitle} có thể null nếu task đã bị xoá. {@code createdAt} = Instant.toString().
+     */
+    public record ProjectActivityItem(
+            String id, String taskId, String taskCode, String taskTitle,
+            String actorName, String action, String detail, String createdAt) {
+    }
+
     /** Log work: {hours} (giờ) — cộng dồn vào spentHours của task. */
     public record LogWorkRequest(Double hours) {
     }
