@@ -3,18 +3,24 @@
   <div class="dg__head">
     <div>
       <strong>Nhật ký dự án</strong>
-      <span class="dg__count">{{ entries().length }}</span>
+      <span class="dg__count">{{ filtered().length }}/{{ entries().length }}</span>
     </div>
-    <button type="button" class="btn btn--primary" (click)="openAdd()">＋ Thêm nhật ký</button>
+    <div class="dg__head-actions">
+      <input type="search" class="dg__search" placeholder="🔍 Tìm nội dung / kết luận / khách hàng…"
+             [value]="search()" (input)="search.set($any($event.target).value)" />
+      <button type="button" class="btn btn--primary" (click)="openAdd()">＋ Thêm nhật ký</button>
+    </div>
   </div>
 
   @if (loading()) {
     <div class="dg__loading">Đang tải…</div>
   } @else if (entries().length === 0) {
     <div class="dg__empty">Chưa có bản ghi — hãy thêm nhật ký buổi làm việc với khách hàng.</div>
+  } @else if (filtered().length === 0) {
+    <div class="dg__empty">Không có nhật ký khớp từ khoá "{{ search() }}".</div>
   } @else {
     <div class="dg__list">
-      @for (e of entries(); track e.id) {
+      @for (e of filtered(); track e.id) {
         <div class="dg__card">
           <div class="dg__row1">
             <span class="dg__date">📅 {{ e.workDate || '—' }}</span>

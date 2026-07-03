@@ -33,6 +33,9 @@ const CATEGORIES: Category[] = [
   styles: [`
     .dg { display: grid; gap: var(--space-4); color: var(--color-text); }
     .dg__head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; }
+    .dg__head-actions { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; }
+    .dg__search { height: var(--control-h-sm); min-width: 260px; padding: 0 var(--space-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); }
     .dg__count { font-size: var(--text-xs); color: var(--color-text-muted);
       background: var(--color-surface-alt); padding: 1px var(--space-2); border-radius: var(--radius-full); }
 
@@ -85,6 +88,15 @@ export class PrjDiary {
   readonly loading = signal(true);
   readonly entries = signal<DiaryEntry[]>([]);
   readonly members = signal<ProjectMember[]>([]);
+  /** Tìm kiếm nội dung nhật ký (nội dung/kết luận/phân loại/khách hàng/người/ngày). */
+  readonly search = signal('');
+  readonly filtered = computed<DiaryEntry[]>(() => {
+    const q = this.search().trim().toLowerCase();
+    if (!q) return this.entries();
+    return this.entries().filter((e) =>
+      [e.content, e.conclusion, e.category, e.clientContacts, (e.teamNames || []).join(' '), e.createdByName, e.workDate]
+        .some((v) => (v || '').toLowerCase().includes(q)));
+  });
 
   readonly categories = CATEGORIES;
   readonly categoryOptions: SelectOption[] = CATEGORIES.map((c) => ({ value: c.value, label: c.value }));

@@ -91,6 +91,46 @@
       <div class="field"></div>
     </div>
 
+    <!-- ===== Chi tiết lỗi — chỉ BUG/ISSUE (đồng bộ task-detail) ===== -->
+    @if (isBugLike()) {
+      <div class="qc__row2">
+        <div class="field">
+          <label>Mức độ nghiêm trọng</label>
+          <searchable-select [options]="severitySel" [value]="severity()"
+                             (valueChange)="severity.set($any($event) || '')"
+                             [allowEmpty]="true" emptyLabel="— Chưa đánh giá —" placeholder="Mức độ…" />
+        </div>
+        <div class="field">
+          <label>Màn hình liên quan</label>
+          <input type="text" [value]="screen()" (input)="screen.set($any($event.target).value)"
+                 placeholder="Tên màn hình / chức năng…" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Môi trường</label>
+        <input type="text" [value]="environment()" (input)="environment.set($any($event.target).value)"
+               placeholder="Trình duyệt / OS / phiên bản" />
+      </div>
+      <div class="field">
+        <label>Các bước tái hiện</label>
+        <textarea rows="3" [value]="stepsToReproduce()"
+                  (input)="stepsToReproduce.set($any($event.target).value)"
+                  placeholder="1. …&#10;2. …"></textarea>
+      </div>
+      <div class="qc__row2">
+        <div class="field">
+          <label>Kết quả mong đợi</label>
+          <textarea rows="2" [value]="expectedResult()"
+                    (input)="expectedResult.set($any($event.target).value)"></textarea>
+        </div>
+        <div class="field">
+          <label>Kết quả thực tế</label>
+          <textarea rows="2" [value]="actualResult()"
+                    (input)="actualResult.set($any($event.target).value)"></textarea>
+        </div>
+      </div>
+    }
+
     <!-- Ảnh đính kèm (tuỳ chọn) — tải lên NGAY sau khi tạo task/bug -->
     <div class="field">
       <label>Ảnh đính kèm</label>

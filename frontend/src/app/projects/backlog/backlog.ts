@@ -6,7 +6,7 @@ import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
-  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, ProjectMember, ReorderItem
+  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember, ReorderItem
 } from '../../core/project.service';
 import { memberPersonOptions } from '../../shared/person-options';
 import { buildTree, hasChildren, subtreeLeafEstimate } from '../../shared/task-tree';
@@ -196,9 +196,17 @@ export class PrjBacklog implements OnInit {
     { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
   ];
 
+  /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ với task-detail. */
+  readonly severityOptions: { value: BugSeverity; label: string }[] = [
+    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
+    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
+    { value: 'TRIVIAL', label: 'Không đáng kể' }
+  ];
+
   readonly typeSel: SelectOption[] = this.typeOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly statusSel: SelectOption[] = this.statusOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
+  readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
 
   // ===== Phân cấp cha-con theo LOẠI =====
@@ -567,7 +575,13 @@ export class PrjBacklog implements OnInit {
       estimateHours: t.estimateHours,
       screen: t.screen ?? '',
       startDate: t.startDate,
-      dueDate: t.dueDate
+      dueDate: t.dueDate,
+      // Chi tiết lỗi (BUG/ISSUE) — đổ sẵn để form Sửa hiển thị đúng.
+      severity: t.severity ?? null,
+      stepsToReproduce: t.stepsToReproduce ?? '',
+      expectedResult: t.expectedResult ?? '',
+      actualResult: t.actualResult ?? '',
+      environment: t.environment ?? ''
     };
     this.startIso = this.toIso(t.startDate);
     this.dueIso = this.toIso(t.dueDate);
@@ -590,13 +604,20 @@ export class PrjBacklog implements OnInit {
       return;
     }
     this.saving.set(true);
+    const bug = this.isBugLike(this.f.type);
     const body: TaskRequest = {
       ...this.f,
       title: this.f.title.trim(),
       estimateHours: this.f.estimateHours ? Number(this.f.estimateHours) : 0,
       startDate: this.fromIso(this.startIso),
       dueDate: this.fromIso(this.dueIso),
-      screen: this.isBugLike(this.f.type) ? (this.f.screen || null) : null
+      // Khối "Chi tiết lỗi" chỉ áp dụng cho BUG/ISSUE — loại khác gửi null (xoá dữ liệu cũ nếu đổi loại).
+      screen: bug ? (this.f.screen || null) : null,
+      severity: bug ? (this.f.severity || null) : null,
+      stepsToReproduce: bug ? (this.f.stepsToReproduce || null) : null,
+      expectedResult: bug ? (this.f.expectedResult || null) : null,
+      actualResult: bug ? (this.f.actualResult || null) : null,
+      environment: bug ? (this.f.environment || null) : null
     };
     const id = this.editingId();
     const call = id
@@ -830,7 +851,9 @@ export class PrjBacklog implements OnInit {
     return {
       parentId: null, title: '', description: '', type: 'TASK', status: 'BACKLOG',
       priority: 'MEDIUM', assigneeUserId: null, estimateHours: 0, screen: '',
-      startDate: null, dueDate: null
+      startDate: null, dueDate: null,
+      // Chi tiết lỗi (BUG/ISSUE) — mặc định rỗng, chỉ dùng khi loại là BUG/ISSUE.
+      severity: null, stepsToReproduce: '', expectedResult: '', actualResult: '', environment: ''
     };
   }
 

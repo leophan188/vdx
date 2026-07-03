@@ -9,7 +9,7 @@ import { SearchableSelect, SelectOption } from '../../shared/searchable-select/s
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { memberPersonOptions } from '../../shared/person-options';
 import { ToastService } from '../../shared/toast/toast.service';
-import { ProjectService, ProjectMember, TaskStatus, TaskPriority } from '../../core/project.service';
+import { ProjectService, ProjectMember, TaskStatus, TaskPriority, BugSeverity } from '../../core/project.service';
 import { ProjectOption } from '../../core/me-task.service';
 import { MeBugService, MyBug, MyBugType, MyBugRole, LogBugRequest } from '../../core/me-bug.service';
 
@@ -70,6 +70,14 @@ export class MyBugs implements OnInit {
     { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
     { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
   ];
+
+  /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ task-detail. */
+  readonly severityOptions: { value: BugSeverity; label: string }[] = [
+    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
+    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
+    { value: 'TRIVIAL', label: 'Không đáng kể' }
+  ];
+  readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
 
   readonly roleSel: SelectOption[] = this.roleOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly typeSel: SelectOption[] = this.typeOptions.map((o) => ({ value: o.value, label: o.label }));
@@ -147,11 +155,19 @@ export class MyBugs implements OnInit {
     if (!this.f.projectId) { this.toast.warning('Bắt buộc chọn dự án'); return; }
     if (!this.f.title?.trim()) { this.toast.warning('Thiếu tiêu đề'); return; }
     this.saving.set(true);
+    const bug = this.isBugLike(this.f.type);
     const body: LogBugRequest = {
       ...this.f,
       title: this.f.title.trim(),
       description: this.f.description?.trim() || null,
-      dueDate: this.f.dueDate || null
+      dueDate: this.f.dueDate || null,
+      // Chi tiết lỗi — chỉ gửi khi BUG/ISSUE (loại khác gửi null).
+      severity: bug ? (this.f.severity || null) : null,
+      screen: bug ? (this.f.screen?.trim() || null) : null,
+      environment: bug ? (this.f.environment?.trim() || null) : null,
+      stepsToReproduce: bug ? (this.f.stepsToReproduce?.trim() || null) : null,
+      expectedResult: bug ? (this.f.expectedResult?.trim() || null) : null,
+      actualResult: bug ? (this.f.actualResult?.trim() || null) : null
     };
     this.meBug.log(body).subscribe({
       next: (r) => {
@@ -191,10 +207,16 @@ export class MyBugs implements OnInit {
     }
   }
 
+  /** Loại là BUG/ISSUE → hiện khối "Chi tiết lỗi" (ở màn này luôn đúng). */
+  isBugLike(t: MyBugType | null | undefined): boolean { return t === 'BUG' || t === 'ISSUE'; }
+
   private emptyForm(): LogBugRequest {
     return {
       projectId: '', type: 'BUG', title: '', description: '',
-      priority: 'MEDIUM', assigneeUserId: null, estimateHours: null, dueDate: null
+      priority: 'MEDIUM', assigneeUserId: null, estimateHours: null, dueDate: null,
+      // Chi tiết lỗi (BUG/ISSUE)
+      severity: null, screen: '', environment: '',
+      stepsToReproduce: '', expectedResult: '', actualResult: ''
     };
   }
 }

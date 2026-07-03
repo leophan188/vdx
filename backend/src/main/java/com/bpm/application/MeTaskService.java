@@ -236,7 +236,10 @@ public class MeTaskService {
         ProjectDto.TaskRequest taskReq = new ProjectDto.TaskRequest(
                 blankToNull(req.parentId()), cleanTitle, blankToNull(req.description()), type, "TODO", priority,
                 blankToNull(req.assigneeUserId()), est, null, dueDate,
-                null, null, null, null, null, null, null, blankToNull(req.testerUserId()));
+                null, blankToNull(req.screen()),
+                blankToNull(req.severity()), blankToNull(req.stepsToReproduce()), blankToNull(req.expectedResult()),
+                blankToNull(req.actualResult()), blankToNull(req.environment()),
+                blankToNull(req.testerUserId()));
         ProjectDto.TaskResponse created = projectTaskService.create(pid, taskReq, actor);
         auditPort.record("ME_QUICK_CREATED", "ProjectTask", created.id(), actor,
                 "projectId=" + pid + ", type=" + type);

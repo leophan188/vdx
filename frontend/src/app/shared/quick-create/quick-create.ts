@@ -6,7 +6,7 @@ import { SearchableSelect, SelectOption } from '../searchable-select/searchable-
 import { memberPersonOptions } from '../person-options';
 import { ToastService } from '../toast/toast.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
-import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority } from '../../core/project.service';
+import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority, BugSeverity } from '../../core/project.service';
 
 /** Ảnh chờ đính kèm: file gốc + URL preview (blob) để hiển thị + thu hồi. */
 interface PendingImage { file: File; url: string; name: string; }
@@ -82,6 +82,13 @@ export class QuickCreate {
   readonly testerUserId = signal('');
   readonly estimateHours = signal('');
   readonly dueIso = signal('');
+  // ===== Chi tiết lỗi (chỉ BUG/ISSUE) =====
+  readonly severity = signal<BugSeverity | ''>('');
+  readonly screen = signal('');
+  readonly environment = signal('');
+  readonly stepsToReproduce = signal('');
+  readonly expectedResult = signal('');
+  readonly actualResult = signal('');
   readonly saving = signal(false);
   /** Ảnh chờ đính kèm — upload sau khi tạo task thành công (nhận được id). */
   readonly previews = signal<PendingImage[]>([]);
@@ -96,6 +103,15 @@ export class QuickCreate {
     { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
   ];
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
+  /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ task-detail. */
+  readonly severityOptions: { value: BugSeverity; label: string }[] = [
+    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
+    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
+    { value: 'TRIVIAL', label: 'Không đáng kể' }
+  ];
+  readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
+  /** Loại đang chọn là BUG/ISSUE → hiện khối "Chi tiết lỗi". */
+  readonly isBugLike = computed<boolean>(() => this.type() === 'BUG' || this.type() === 'ISSUE');
 
   // ===== Phân cấp cha-con theo LOẠI (bám backlog) =====
   /** Loại cha HỢP LỆ cho một loại con (null = không có cha — chỉ EPIC). */
@@ -161,6 +177,12 @@ export class QuickCreate {
     this.testerUserId.set('');
     this.estimateHours.set('');
     this.dueIso.set('');
+    this.severity.set('');
+    this.screen.set('');
+    this.environment.set('');
+    this.stepsToReproduce.set('');
+    this.expectedResult.set('');
+    this.actualResult.set('');
     this.saving.set(false);
     this.clearImages();
   }
@@ -251,6 +273,7 @@ export class QuickCreate {
     }
 
     this.saving.set(true);
+    const bug = this.isBugLike();
     const body: QuickCreateRequest = {
       projectId: this.projectId(),
       type: this.type(),
@@ -261,7 +284,14 @@ export class QuickCreate {
       testerUserId: this.testerUserId() || null,
       estimateHours: est || null,
       dueDate: this.dueIso() || null,
-      parentId: allow ? (this.parentId() || null) : null
+      parentId: allow ? (this.parentId() || null) : null,
+      // Chi tiết lỗi — chỉ gửi khi BUG/ISSUE (loại khác gửi null).
+      severity: bug ? (this.severity() || null) : null,
+      screen: bug ? (this.screen().trim() || null) : null,
+      environment: bug ? (this.environment().trim() || null) : null,
+      stepsToReproduce: bug ? (this.stepsToReproduce().trim() || null) : null,
+      expectedResult: bug ? (this.expectedResult().trim() || null) : null,
+      actualResult: bug ? (this.actualResult().trim() || null) : null
     };
     this.meBug.quickCreate(body).subscribe({
       next: (r) => {

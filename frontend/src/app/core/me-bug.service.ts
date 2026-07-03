@@ -2,7 +2,7 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { ProjectOption } from './me-task.service';
-import { TaskStatus, TaskPriority } from './project.service';
+import { TaskStatus, TaskPriority, BugSeverity } from './project.service';
 
 /**
  * API client cho BUG/ISSUE CÁ NHÂN (xuyên dự án) — màn "Bug/Issue của tôi".
@@ -46,6 +46,13 @@ export interface LogBugRequest {
   assigneeUserId?: string | null;
   estimateHours?: number | null;
   dueDate?: string | null;   // ISO yyyy-MM-dd | null
+  // Chi tiết lỗi (BUG/ISSUE)
+  severity?: BugSeverity | null;
+  screen?: string | null;
+  environment?: string | null;
+  stepsToReproduce?: string | null;
+  expectedResult?: string | null;
+  actualResult?: string | null;
 }
 
 /**
@@ -75,6 +82,13 @@ export interface QuickCreateRequest {
   estimateHours?: number | null;
   dueDate?: string | null;         // ISO yyyy-MM-dd | null
   parentId?: string | null;        // task cha (theo phân cấp loại); EPIC = null
+  // Chi tiết lỗi (chỉ BUG/ISSUE)
+  severity?: BugSeverity | null;
+  screen?: string | null;
+  environment?: string | null;
+  stepsToReproduce?: string | null;
+  expectedResult?: string | null;
+  actualResult?: string | null;
 }
 
 @Injectable({ providedIn: 'root' })

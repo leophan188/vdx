@@ -92,6 +92,8 @@ public final class MeTaskDto {
     public record LogBugRequest(
             String projectId, String type, String title, String description,
             String priority, String assigneeUserId, Double estimateHours, String dueDate,
-            String testerUserId, String parentId) {
+            String testerUserId, String parentId,
+            String severity, String screen, String environment,
+            String stepsToReproduce, String expectedResult, String actualResult) {
     }
 }
