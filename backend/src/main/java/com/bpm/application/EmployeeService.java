@@ -52,10 +52,10 @@ public class EmployeeService {
     private static final Logger log = LoggerFactory.getLogger(EmployeeService.class);
 
     /**
-     * Mật khẩu khởi tạo cho tài khoản nhân sự khi import (username=mã NV). Mặc định "1111",
+     * Mật khẩu khởi tạo cho tài khoản nhân sự khi import (username=mã NV). Mặc định "123456",
      * đổi được qua biến môi trường BPM_HR_DEFAULT_PASSWORD mà không sửa code — admin/nhân sự đổi sau.
      */
-    @org.springframework.beans.factory.annotation.Value("${bpm.hr.default-password:1111}")
+    @org.springframework.beans.factory.annotation.Value("${bpm.hr.default-password:123456}")
     private String defaultPassword;
     private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
