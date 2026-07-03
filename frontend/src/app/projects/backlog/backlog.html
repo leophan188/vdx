@@ -267,6 +267,23 @@
       <label>Mô tả</label>
       <textarea name="description" rows="3" [(ngModel)]="f.description" placeholder="Mô tả chi tiết…"></textarea>
     </div>
+
+    <!-- Ảnh đính kèm (tuỳ chọn) — tải lên NGAY sau khi lưu task -->
+    <div class="field">
+      <label>Ảnh đính kèm</label>
+      <div class="bl-atts">
+        @for (p of previews(); track p.url) {
+          <div class="bl-att">
+            <img [src]="p.url" [alt]="p.name" />
+            <button type="button" class="bl-att-del" title="Bỏ ảnh" (click)="removeFile($index)">✕</button>
+          </div>
+        }
+        <label class="bl-att-add" title="Thêm ảnh">＋
+          <input type="file" accept="image/*" multiple hidden (change)="onFilesPicked($event)" />
+        </label>
+      </div>
+      <div class="bl-att-hint">Chỉ ảnh (JPEG/PNG/GIF/WEBP), ≤ 10MB mỗi ảnh.</div>
+    </div>
   </form>
   <div modalFooter>
     @if (!editingId()) {

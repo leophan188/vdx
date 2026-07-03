@@ -1,5 +1,7 @@
 import { Component, OnInit, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { ToastService } from '../../shared/toast/toast.service';
@@ -56,6 +58,16 @@ interface TreeRow {
     .bl-row--parent { border-left-color: var(--type-parent); background: var(--type-parent-bg); }
     .bl-search { height: var(--control-h-sm); min-width: 220px; padding: 0 var(--space-3); border: 1px solid var(--color-border);
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); }
+    .bl-atts { display: flex; flex-wrap: wrap; gap: 8px; }
+    .bl-att { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
+    .bl-att img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bl-att-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0; border: none;
+      border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem; line-height: 20px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; }
+    .bl-att-add { width: 72px; height: 72px; border: 1px dashed var(--color-border); border-radius: 8px; display: flex;
+      align-items: center; justify-content: center; font-size: 1.5rem; color: var(--color-text-muted); cursor: pointer; background: var(--color-surface); }
+    .bl-att-add:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .bl-att-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 4px; }
     .bl-legend { display: inline-flex; gap: 12px; align-items: center; margin-left: auto; font-size: var(--text-xs); color: var(--color-text-muted); }
     .bl-legend__item { display: inline-flex; align-items: center; gap: 4px; }
     .bl-legend__dot { width: 12px; height: 12px; border-radius: 3px; border-left: 4px solid; }
@@ -138,6 +150,29 @@ export class PrjBacklog implements OnInit {
   // ----- Modal tạo/sửa -----
   readonly modalOpen = signal(false);
   readonly editingId = signal<string | null>(null);
+  /** Ảnh chờ đính kèm — upload sau khi tạo/lưu task (cần id task). */
+  readonly previews = signal<{ file: File; url: string; name: string }[]>([]);
+
+  /** Thu hồi blob URL + xoá danh sách ảnh chờ. */
+  private clearImages(): void {
+    for (const p of this.previews()) { URL.revokeObjectURL(p.url); }
+    this.previews.set([]);
+  }
+  /** Chọn thêm ảnh (nhiều) — chỉ image/*, dựng blob URL xem trước. */
+  onFilesPicked(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    const picked = Array.from(input.files ?? []).filter((f) => f.type.startsWith('image/'));
+    if (picked.length) {
+      this.previews.update((xs) => [...xs, ...picked.map((file) => ({ file, url: URL.createObjectURL(file), name: file.name }))]);
+    }
+    input.value = '';
+  }
+  /** Bỏ 1 ảnh chờ. */
+  removeFile(i: number): void {
+    const p = this.previews()[i];
+    if (p) { URL.revokeObjectURL(p.url); }
+    this.previews.set(this.previews().filter((_, idx) => idx !== i));
+  }
   readonly saving = signal(false);
   f: TaskRequest = this.emptyForm();
   // ngày dạng yyyy-MM-dd cho <input type=date>; convert khi gửi.
@@ -501,6 +536,7 @@ export class PrjBacklog implements OnInit {
   // ----- Modal -----
   openCreate(parentId: string | null): void {
     this.editingId.set(null);
+    this.clearImages();
     this.f = this.emptyForm();
     this.f.parentId = parentId;
     if (parentId) {
@@ -519,6 +555,7 @@ export class PrjBacklog implements OnInit {
 
   openEdit(t: ProjectTask): void {
     this.editingId.set(t.id);
+    this.clearImages();
     this.f = {
       parentId: t.parentId,
       title: t.title,
@@ -566,19 +603,29 @@ export class PrjBacklog implements OnInit {
       ? this.svc.updateTask(this.projectId(), id, body)
       : this.svc.createTask(this.projectId(), body);
     call.subscribe({
-      next: () => {
-        this.saving.set(false);
-        this.toast.success(id ? 'Đã cập nhật công việc' : 'Đã tạo công việc');
-        this.reload();
-        if (!id && this.keepAdding) {
-          // Nhập nhanh: giữ popup + giữ cấp cha/loại/ưu tiên/người; xoá tiêu đề + est + ngày + mô tả.
-          const { parentId, type, priority, assigneeUserId } = this.f;
-          this.f = { ...this.emptyForm(), parentId, type, priority, assigneeUserId };
-          this.startIso = this.dueIso = '';
-          setTimeout(() =>
-            document.querySelector<HTMLInputElement>('#bl-form input[name=title]')?.focus(), 0);
+      next: (saved) => {
+        const taskId = id ?? saved.id;      // tạo mới → lấy id từ task trả về
+        const imgs = this.previews();
+        const done = (warn?: string) => {
+          this.saving.set(false);
+          this.clearImages();
+          if (warn) { this.toast.warning(warn); } else { this.toast.success(id ? 'Đã cập nhật công việc' : 'Đã tạo công việc'); }
+          this.reload();
+          if (!id && this.keepAdding) {
+            const { parentId, type, priority, assigneeUserId } = this.f;
+            this.f = { ...this.emptyForm(), parentId, type, priority, assigneeUserId };
+            this.startIso = this.dueIso = '';
+            setTimeout(() => document.querySelector<HTMLInputElement>('#bl-form input[name=title]')?.focus(), 0);
+          } else {
+            this.modalOpen.set(false);
+          }
+        };
+        // Có ảnh → upload vào task (id) rồi mới đóng; 1 ảnh lỗi không chặn ảnh khác.
+        if (imgs.length && taskId) {
+          forkJoin(imgs.map((p) => this.svc.uploadAttachment(this.projectId(), taskId, p.file).pipe(catchError(() => of(null)))))
+            .subscribe((res) => done(res.filter((x) => x === null).length ? `Đã lưu; ${res.filter((x) => x === null).length}/${imgs.length} ảnh tải lỗi` : undefined));
         } else {
-          this.modalOpen.set(false);
+          done();
         }
       },
       error: (e) => { this.saving.set(false); this.toast.error('Không lưu được', e?.error?.message ?? ''); }
