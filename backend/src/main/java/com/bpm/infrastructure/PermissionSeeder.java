@@ -42,6 +42,12 @@ public class PermissionSeeder implements ApplicationRunner {
             }
         }
 
+        // CHỈ seed vai trò mẫu khi bảng RỖNG (bootstrap lần đầu). Đã có dữ liệu → tôn trọng
+        // việc admin đã thêm/xoá; KHÔNG tự tạo lại vai trò đã xoá sau mỗi lần khởi động/deploy.
+        if (roleRepo.count() > 0) {
+            return;
+        }
+
         int created = 0;
         created += ensure("QUANTRI", "Quản trị hệ thống", "Toàn quyền mọi chức năng", all());
         created += ensure("QUANLY", "Quản lý chung", "Dự án, báo cáo, quy trình",
