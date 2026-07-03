@@ -124,6 +124,7 @@
 /* --- Tìm kiếm toàn cục (quick-jump) --- */
 .gsearch { position: relative; flex: 1 1 960px; max-width: 1230px; min-width: 0; }
 .gsearch__box {
+  width: 100%;   /* lấp đầy .gsearch (nếu thiếu, box tự co theo nội dung -> luôn ngắn) */
   height: var(--control-h); gap: var(--space-2);
   /* Nền solid surface để ô search luôn ĐỌC RÕ trên topbar đã nhuốm màu theme. */
   background: var(--color-surface); border: 1px solid var(--color-border);
