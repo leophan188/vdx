@@ -1,74 +1,93 @@
-import { Component, computed, inject, signal, OnInit } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
-import { DashboardService, PmHrDashboard } from '../core/dashboard.service';
-import { StatCard } from '../shared/stat-card/stat-card';
 import { PageHeader } from '../shared/page-header/page-header';
+import { StatCard } from '../shared/stat-card/stat-card';
 import { EmployeeChip } from '../shared/employee-chip/employee-chip';
-import { formatThousands } from '../shared/format';
+import { WorkReportService, WorkReport, ReportRow } from '../core/work-report.service';
 
-/** Bảng điều khiển — trọng tâm DỰ ÁN (mini-Jira) + NHÂN SỰ (HR). */
+/** Màu 4 nhóm (token trạng thái). */
+const GROUP_COLORS = {
+  inProgress: 'var(--status-active)', // đang làm — xanh dương
+  done: 'var(--status-done)',         // đã xong — xanh lá
+  overdue: 'var(--overdue)',          // trễ — đỏ
+  upcoming: 'var(--status-cancel)'    // sắp làm — xám
+};
+
+interface DonutSeg {
+  key: string;
+  label: string;
+  color: string;
+  est: number;
+  pct: number;
+  dash: string;      // stroke-dasharray "len rest"
+  offset: number;    // stroke-dashoffset
+}
+
+/**
+ * Bảng điều khiển — BÁO CÁO CÔNG VIỆC (snapshot hôm nay). Đo bằng EST GIỜ của task lá.
+ * KPI 4 nhóm + donut phân bố + bảng Theo dự án + bảng Theo thành viên.
+ */
 @Component({
   selector: 'app-dashboard',
-  imports: [StatCard, PageHeader, EmployeeChip],
+  imports: [PageHeader, StatCard, EmployeeChip],
   templateUrl: './dashboard.html'
 })
 export class Dashboard implements OnInit {
-  private dash = inject(DashboardService);
+  private api = inject(WorkReportService);
   private router = inject(Router);
 
-  readonly data = signal<PmHrDashboard | null>(null);
+  readonly data = signal<WorkReport | null>(null);
   readonly loading = signal(true);
 
-  // ----- Khối DỰ ÁN: phân bổ theo trạng thái (cho thanh) -----
-  readonly statusOrder = ['PLANNING', 'ACTIVE', 'ON_HOLD', 'DONE', 'CANCELLED'];
-  readonly statusBars = computed(() => {
-    const by = this.data()?.project.byStatus ?? {};
-    const total = Object.values(by).reduce((a, b) => a + b, 0) || 1;
-    return this.statusOrder.map((s) => ({
-      status: s,
-      label: this.statusLabel(s),
-      count: by[s] ?? 0,
-      pct: Math.round(((by[s] ?? 0) / total) * 100),
-      badge: this.statusBadge(s)
-    }));
-  });
+  readonly colors = GROUP_COLORS;
 
-  // ----- Khối NHÂN SỰ: phân bổ theo bộ phận (thanh ngang) -----
-  readonly deptBars = computed(() => {
-    const by = this.data()?.hr.byDept ?? {};
-    const entries = Object.entries(by);
-    const max = Math.max(1, ...entries.map(([, v]) => v));
-    return entries.map(([dept, count]) => ({ dept, count, pct: Math.round((count / max) * 100) }));
+  // Donut (SVG thuần) — r = 54, chu vi = 2πr.
+  readonly R = 54;
+  readonly circ = 2 * Math.PI * 54;
+
+  readonly donut = computed<DonutSeg[]>(() => {
+    const o = this.data()?.overview;
+    if (!o || o.totalEst <= 0) return [];
+    // 3 nhóm partition (đang làm / đã xong / sắp làm) — trễ là cắt ngang nên không vẽ trong donut.
+    const segs = [
+      { key: 'inProgress', label: 'Đang làm', color: GROUP_COLORS.inProgress, g: o.inProgress },
+      { key: 'done', label: 'Đã xong', color: GROUP_COLORS.done, g: o.done },
+      { key: 'upcoming', label: 'Sắp làm', color: GROUP_COLORS.upcoming, g: o.upcoming }
+    ];
+    let acc = 0;
+    const out: DonutSeg[] = [];
+    for (const s of segs) {
+      if (s.g.estimateHours <= 0) continue;
+      const len = (s.g.estimateHours / o.totalEst) * this.circ;
+      out.push({
+        key: s.key,
+        label: s.label,
+        color: s.color,
+        est: s.g.estimateHours,
+        pct: s.g.pct,
+        dash: `${len} ${this.circ - len}`,
+        offset: -acc
+      });
+      acc += len;
+    }
+    return out;
   });
 
   ngOnInit(): void {
-    this.dash.pmHr().subscribe({
+    this.api.dashboard().subscribe({
       next: (d) => { this.data.set(d); this.loading.set(false); },
       error: () => { this.loading.set(false); }
     });
   }
 
-  fmt(n: number | null | undefined): string { return formatThousands(n); }
-
-  openProject(id: string): void { this.router.navigate(['/projects', id]); }
-
-  statusLabel(s: string): string {
-    switch (s) {
-      case 'PLANNING': return 'Lên kế hoạch';
-      case 'ACTIVE': return 'Đang chạy';
-      case 'ON_HOLD': return 'Tạm dừng';
-      case 'DONE': return 'Hoàn thành';
-      case 'CANCELLED': return 'Đã hủy';
-      default: return s;
-    }
+  openProject(id: string): void {
+    if (id && id !== 'ALL' && id !== 'UNASSIGNED') this.router.navigate(['/projects', id]);
   }
-  statusBadge(s: string): string {
-    switch (s) {
-      case 'ACTIVE': return 'badge--active';
-      case 'DONE': return 'badge--done';
-      case 'CANCELLED': return 'badge--cancel';
-      case 'ON_HOLD': return 'badge--pending';
-      default: return 'badge--neutral';
-    }
+
+  fmt(n: number | null | undefined): string {
+    if (n == null || isNaN(n)) return '0';
+    return Number.isInteger(n) ? String(n) : n.toFixed(1);
   }
+
+  trackRow = (_: number, r: ReportRow) => r.id;
 }

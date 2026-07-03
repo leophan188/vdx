@@ -1,85 +1,107 @@
-<!-- Báo cáo CHI TIẾT dự án + phân bổ nỗ lực nhân sự (mini-Jira + HR). -->
+<!-- Báo cáo CÔNG VIỆC — Ngày / Tuần (snapshot live theo est giờ của task lá). -->
 <section class="page">
-  <app-page-header title="Báo cáo dự án &amp; nhân sự"
-                   subtitle="Thống kê chi tiết theo dự án và phân bổ nỗ lực theo nhân sự."
-                   [breadcrumb]="[{ label: 'Báo cáo & Thống kê' }, { label: 'Dự án & Nhân sự' }]">
-    <button actions type="button" class="btn btn--ghost btn--sm no-print" (click)="printReport()">🖨 In / PDF</button>
+  <app-page-header title="Báo cáo công việc"
+                   subtitle="Thống kê theo est giờ (task lá) — chọn kỳ Ngày hoặc Tuần."
+                   [breadcrumb]="[{ label: 'Báo cáo & Thống kê' }, { label: 'Báo cáo công việc' }]">
+    <button actions type="button" class="btn btn--primary btn--sm no-print" (click)="exportExcel()">⬇ Xuất Excel</button>
   </app-page-header>
+
+  <!-- ===== Bộ lọc kỳ ===== -->
+  <div class="card no-print" style="display:flex; align-items:flex-end; gap:var(--space-4); flex-wrap:wrap;">
+    <div class="tabs">
+      <button type="button" class="tab" [class.active]="period() === 'DAILY'" (click)="setPeriod('DAILY')">Ngày</button>
+      <button type="button" class="tab" [class.active]="period() === 'WEEKLY'" (click)="setPeriod('WEEKLY')">Tuần</button>
+    </div>
+    <div class="field field--inline">
+      <label>{{ period() === 'WEEKLY' ? 'Ngày trong tuần' : 'Ngày' }}</label>
+      <input type="date" [value]="date()" (change)="onDate($any($event.target).value)" />
+    </div>
+    @if (data(); as d) {
+      <span class="badge badge--neutral">{{ d.periodLabel }}</span>
+    }
+  </div>
 
   @if (loading()) {
     <p class="hint">Đang tải…</p>
   } @else if (data(); as d) {
 
-    <!-- ===== Bảng 1: Dự án ===== -->
+    <!-- ===== Tổng quan nhanh ===== -->
     <div class="card">
-      <div class="card__head"><span class="card__title">1 · Dự án</span></div>
+      <div class="card__head"><span class="card__title">Tổng quan · {{ d.periodLabel }}</span></div>
+      <div class="bar-row" style="grid-template-columns:1fr auto;">
+        <span>% hoàn thành chung</span>
+        <span class="bar-row__val"><strong>{{ fmt(d.overview.completionPct) }}%</strong> · tổng {{ fmt(d.overview.totalEst) }} giờ</span>
+      </div>
+      <div style="display:flex; gap:var(--space-4); flex-wrap:wrap; margin-top:var(--space-2)">
+        <span><span style="color:var(--status-active)">●</span> Đang làm {{ fmt(d.overview.inProgress.estimateHours) }}g ({{ fmt(d.overview.inProgress.pct) }}%)</span>
+        <span><span style="color:var(--status-done)">●</span> Đã xong {{ fmt(d.overview.done.estimateHours) }}g ({{ fmt(d.overview.done.pct) }}%)</span>
+        <span><span style="color:var(--overdue)">●</span> Trễ {{ fmt(d.overview.overdue.estimateHours) }}g ({{ d.overview.overdue.taskCount }} task)</span>
+        <span><span style="color:var(--status-cancel)">●</span> Sắp làm {{ fmt(d.overview.upcoming.estimateHours) }}g ({{ fmt(d.overview.upcoming.pct) }}%)</span>
+      </div>
+    </div>
+
+    <!-- ===== Bảng 1: Theo dự án ===== -->
+    <div class="card">
+      <div class="card__head"><span class="card__title">1 · Theo dự án</span></div>
       <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
         <table class="report-table">
           <thead>
             <tr>
-              <th>Mã</th><th>Tên dự án</th><th>Trạng thái</th><th class="num">% hoàn thành</th>
-              <th class="num">Thành viên</th><th class="num">Nỗ lực KH (MM)</th><th class="num">Nỗ lực TT (MM)</th>
-              <th class="num">Ngân sách (VND)</th><th class="num">Task trễ</th><th class="num">Bug mở</th>
+              <th>Dự án</th><th class="num">Tổng est</th>
+              <th class="num">Đang làm</th><th class="num">Đã xong</th>
+              <th class="num">Trễ</th><th class="num">Sắp làm</th>
+              <th class="num">% hoàn thành</th><th class="num">Task trễ</th>
             </tr>
           </thead>
           <tbody>
-            @for (p of d.projects; track p.id) {
+            @for (r of d.byProject; track trackRow($index, r)) {
               <tr>
-                <td>{{ p.code }}</td>
-                <td><a href="javascript:void(0)" (click)="openProject(p.id)">{{ p.name }}</a></td>
-                <td><span class="badge {{ statusBadge(p.status) }}">{{ statusLabel(p.status) }}</span></td>
-                <td class="num">{{ p.completionPct }}%</td>
-                <td class="num">{{ p.memberCount }}</td>
-                <td class="num">{{ p.plannedMm }}</td>
-                <td class="num">{{ p.actualMm }}</td>
-                <td class="num">{{ fmt(p.budget) }}</td>
-                <td class="num">@if (p.overdue) { <span class="badge badge--cancel">{{ p.overdue }}</span> } @else { 0 }</td>
-                <td class="num">@if (p.bugOpen) { <span class="badge badge--pending">{{ p.bugOpen }}</span> } @else { 0 }</td>
+                <td>
+                  <a href="javascript:void(0)" (click)="openProject(r.id)">{{ r.name }}</a>
+                  @if (r.code) { <span class="hint"> · {{ r.code }}</span> }
+                </td>
+                <td class="num">{{ fmt(r.totalEst) }}</td>
+                <td class="num" [style.color]="colors.inProgress">{{ fmt(r.inProgress.estimateHours) }} <span class="hint">({{ fmt(r.inProgress.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.done">{{ fmt(r.done.estimateHours) }} <span class="hint">({{ fmt(r.done.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.overdue">{{ fmt(r.overdue.estimateHours) }} <span class="hint">({{ fmt(r.overdue.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.upcoming.estimateHours) }} <span class="hint">({{ fmt(r.upcoming.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.completionPct) }}%</td>
+                <td class="num">@if (r.overdue.taskCount) { <span class="badge badge--cancel">{{ r.overdue.taskCount }}</span> } @else { 0 }</td>
               </tr>
             }
-            @if (!d.projects.length) { <tr><td colspan="10" class="hint">Chưa có dự án nào.</td></tr> }
-            @if (d.projects.length) {
-              <tr class="report-table__total">
-                <td colspan="7">Tổng</td>
-                <td class="num">{{ fmt(d.project.totalBudget) }}</td>
-                <td class="num">{{ d.project.overdueTasks }}</td>
-                <td class="num">{{ d.project.openBugs }}</td>
-              </tr>
-            }
+            @if (!d.byProject.length) { <tr><td colspan="8" class="hint">Chưa có dữ liệu dự án.</td></tr> }
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- ===== Bảng 2: Phân bổ nỗ lực theo nhân sự ===== -->
+    <!-- ===== Bảng 2: Theo thành viên ===== -->
     <div class="card">
-      <div class="card__head"><span class="card__title">2 · Phân bổ nỗ lực theo nhân sự</span></div>
+      <div class="card__head"><span class="card__title">2 · Theo thành viên</span></div>
       <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
         <table class="report-table">
           <thead>
             <tr>
-              <th>Mã</th><th>Nhân sự</th><th>Bộ phận</th>
-              <th class="num">Số dự án</th><th class="num">Tổng % effort</th>
-              <th class="num">Tổng man-day</th><th class="num">Tổng MM</th>
+              <th>Nhân sự</th><th class="num">Tổng est</th>
+              <th class="num">Đang làm</th><th class="num">Đã xong</th>
+              <th class="num">Trễ</th><th class="num">Sắp làm</th>
+              <th class="num">% hoàn thành</th><th class="num">Task trễ</th>
             </tr>
           </thead>
           <tbody>
-            @for (e of d.effortByPerson; track e.empCode) {
+            @for (r of d.byMember; track trackRow($index, r)) {
               <tr>
-                <td>{{ e.empCode || '—' }}</td>
-                <td><employee-chip [code]="null" [name]="e.name" /></td>
-                <td>{{ e.deptCode || '—' }}</td>
-                <td class="num">{{ e.projectsCount }}</td>
-                <td class="num">
-                  @if (e.totalEffort > 100) {
-                    <span class="badge badge--cancel">{{ e.totalEffort }}%</span>
-                  } @else { {{ e.totalEffort }}% }
-                </td>
-                <td class="num">{{ e.totalManday }}</td>
-                <td class="num">{{ e.totalMM }}</td>
+                <td><employee-chip [code]="r.code" [name]="r.name" [dept]="r.extra" /></td>
+                <td class="num">{{ fmt(r.totalEst) }}</td>
+                <td class="num" [style.color]="colors.inProgress">{{ fmt(r.inProgress.estimateHours) }} <span class="hint">({{ fmt(r.inProgress.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.done">{{ fmt(r.done.estimateHours) }} <span class="hint">({{ fmt(r.done.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.overdue">{{ fmt(r.overdue.estimateHours) }} <span class="hint">({{ fmt(r.overdue.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.upcoming.estimateHours) }} <span class="hint">({{ fmt(r.upcoming.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.completionPct) }}%</td>
+                <td class="num">@if (r.overdue.taskCount) { <span class="badge badge--cancel">{{ r.overdue.taskCount }}</span> } @else { 0 }</td>
               </tr>
             }
-            @if (!d.effortByPerson.length) { <tr><td colspan="7" class="hint">Chưa có nhân sự nào tham gia dự án.</td></tr> }
+            @if (!d.byMember.length) { <tr><td colspan="8" class="hint">Chưa có công việc gán cho nhân sự.</td></tr> }
           </tbody>
         </table>
       </div>

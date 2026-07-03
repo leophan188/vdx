@@ -1,111 +1,130 @@
-<!-- Bảng điều khiển — trọng tâm DỰ ÁN (mini-Jira) + NHÂN SỰ (HR). -->
+<!-- Bảng điều khiển — BÁO CÁO CÔNG VIỆC (snapshot hôm nay). Đo theo EST GIỜ của task lá. -->
 <section class="page">
   <app-page-header title="Bảng điều khiển"
-                   subtitle="Tổng quan dự án và nhân sự toàn hệ thống." />
+                   subtitle="Báo cáo công việc theo est giờ (task lá) — snapshot hôm nay." />
 
   @if (loading()) {
     <p class="hint">Đang tải…</p>
   } @else if (data(); as d) {
 
-    <!-- ============ KHU DỰ ÁN ============ -->
-    <h3 class="section-title">Dự án</h3>
+    <p class="hint" style="margin-bottom:var(--space-3)">Mốc dữ liệu: {{ d.snapshotDate }} · đơn vị đo = est giờ của task lá</p>
+
+    <!-- ============ KPI 4 nhóm + % hoàn thành ============ -->
     <div class="stats-grid">
-      <stat-card icon="📁" label="Tổng dự án" [value]="d.project.totalProjects" tint="var(--color-primary)" />
-      <stat-card icon="🚀" label="Đang chạy" [value]="d.project.byStatus['ACTIVE'] || 0" tint="var(--status-active)" />
-      <stat-card icon="📈" label="% hoàn thành TB" [value]="d.project.avgCompletionPct + '%'" tint="var(--status-done)" />
-      <stat-card icon="⚠️" label="Task trễ hạn" [value]="d.project.overdueTasks" tint="var(--status-cancel)" trend="cần xử lý" />
-      <stat-card icon="🐞" label="Bug đang mở" [value]="d.project.openBugs" tint="var(--status-pending)" />
-      <stat-card icon="💰" label="Tổng ngân sách" [value]="fmt(d.project.totalBudget)" tint="var(--color-primary)" trend="VND" />
-      <stat-card icon="🧮" label="Nỗ lực KH → TT (MM)" [value]="d.project.totalPlannedMM + ' → ' + d.project.totalActualMM" tint="var(--status-active)" trend="man-month" />
-      <stat-card icon="✅" label="Task hoàn thành" [value]="d.project.doneTasks + '/' + d.project.totalTasks" tint="var(--status-done)" />
+      <stat-card icon="✅" label="% hoàn thành chung" [value]="fmt(d.overview.completionPct) + '%'" tint="var(--status-done)"
+                 [trend]="fmt(d.overview.done.estimateHours) + ' / ' + fmt(d.overview.totalEst) + ' giờ'" />
+      <stat-card icon="🔵" label="Đang làm (giờ)" [value]="fmt(d.overview.inProgress.estimateHours)" tint="var(--status-active)"
+                 [trend]="fmt(d.overview.inProgress.pct) + '% · ' + d.overview.inProgress.taskCount + ' task'" />
+      <stat-card icon="🟢" label="Đã xong (giờ)" [value]="fmt(d.overview.done.estimateHours)" tint="var(--status-done)"
+                 [trend]="fmt(d.overview.done.pct) + '% · ' + d.overview.done.taskCount + ' task'" />
+      <stat-card icon="🔴" label="Trễ (giờ)" [value]="fmt(d.overview.overdue.estimateHours)" tint="var(--overdue)"
+                 [trend]="fmt(d.overview.overdue.pct) + '% · ' + d.overview.overdue.taskCount + ' task'" />
+      <stat-card icon="⚪" label="Sắp làm (giờ)" [value]="fmt(d.overview.upcoming.estimateHours)" tint="var(--status-cancel)"
+                 [trend]="fmt(d.overview.upcoming.pct) + '% · ' + d.overview.upcoming.taskCount + ' task'" />
     </div>
 
+    <!-- ============ Donut phân bố + chú thích ============ -->
     <div class="panel-grid">
       <div class="card">
-        <div class="card__head"><span class="card__title">Phân bổ theo trạng thái dự án</span></div>
-        @for (b of statusBars(); track b.status) {
-          <div class="bar-row">
-            <span style="min-width:130px"><span class="badge {{ b.badge }}">{{ b.label }}</span></span>
-            <span class="bar"><span class="bar__fill" [style.width.%]="b.pct"></span></span>
-            <span class="bar-row__val">{{ b.count }}</span>
+        <div class="card__head"><span class="card__title">Phân bố nỗ lực theo nhóm</span></div>
+        @if (donut().length && d.overview.totalEst > 0) {
+          <div style="display:flex; align-items:center; gap:var(--space-5); flex-wrap:wrap;">
+            <svg viewBox="0 0 140 140" width="150" height="150" style="flex:none">
+              <g transform="rotate(-90 70 70)">
+                <circle cx="70" cy="70" [attr.r]="R" fill="none" stroke="var(--color-surface-alt)" stroke-width="16" />
+                @for (s of donut(); track s.key) {
+                  <circle cx="70" cy="70" [attr.r]="R" fill="none" [attr.stroke]="s.color" stroke-width="16"
+                          [attr.stroke-dasharray]="s.dash" [attr.stroke-dashoffset]="s.offset" />
+                }
+              </g>
+              <text x="70" y="66" text-anchor="middle" style="font-size:20px; font-weight:700; fill:var(--color-text)">{{ fmt(d.overview.completionPct) }}%</text>
+              <text x="70" y="84" text-anchor="middle" style="font-size:10px; fill:var(--color-text-muted)">hoàn thành</text>
+            </svg>
+            <div style="flex:1; min-width:180px">
+              @for (s of donut(); track s.key) {
+                <div class="bar-row" style="grid-template-columns:14px 1fr auto;">
+                  <span style="width:12px; height:12px; border-radius:3px;" [style.background]="s.color"></span>
+                  <span>{{ s.label }}</span>
+                  <span class="bar-row__val">{{ fmt(s.est) }} giờ · {{ fmt(s.pct) }}%</span>
+                </div>
+              }
+              <div class="bar-row" style="grid-template-columns:14px 1fr auto;">
+                <span style="width:12px; height:12px; border-radius:3px;" [style.background]="colors.overdue"></span>
+                <span>Trễ (cắt ngang)</span>
+                <span class="bar-row__val">{{ fmt(d.overview.overdue.estimateHours) }} giờ · {{ d.overview.overdue.taskCount }} task</span>
+              </div>
+            </div>
           </div>
+        } @else {
+          <p class="hint">Chưa có công việc nào để thống kê.</p>
         }
-        @if (!d.project.totalProjects) { <p class="hint">Chưa có dự án nào.</p> }
       </div>
     </div>
 
+    <!-- ============ Bảng theo Dự án ============ -->
     <div class="card">
-      <div class="card__head"><span class="card__title">Danh sách dự án</span></div>
+      <div class="card__head"><span class="card__title">Theo dự án</span></div>
       <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
         <table class="report-table">
           <thead>
             <tr>
-              <th>Mã</th><th>Tên dự án</th><th>Trạng thái</th><th style="min-width:140px">% hoàn thành</th>
-              <th class="num">Thành viên</th><th class="num">Nỗ lực KH→TT (MM)</th>
-              <th class="num">Ngân sách (VND)</th><th class="num">Trễ</th><th class="num">Bug</th>
+              <th>Dự án</th><th class="num">Tổng est</th>
+              <th class="num">Đang làm</th><th class="num">Đã xong</th>
+              <th class="num">Trễ</th><th class="num">Sắp làm</th>
+              <th class="num">% hoàn thành</th><th class="num">Task trễ</th>
             </tr>
           </thead>
           <tbody>
-            @for (p of d.projects; track p.id) {
+            @for (r of d.byProject; track trackRow($index, r)) {
               <tr>
-                <td>{{ p.code }}</td>
-                <td><a href="javascript:void(0)" (click)="openProject(p.id)">{{ p.name }}</a></td>
-                <td><span class="badge {{ statusBadge(p.status) }}">{{ statusLabel(p.status) }}</span></td>
                 <td>
-                  <span style="display:inline-flex; align-items:center; gap:8px;">
-                    <span class="bar" style="width:90px; display:inline-block;"><span class="bar__fill" [style.width.%]="p.completionPct"></span></span>
-                    <span>{{ p.completionPct }}%</span>
-                  </span>
+                  <a href="javascript:void(0)" (click)="openProject(r.id)">{{ r.name }}</a>
+                  @if (r.code) { <span class="hint"> · {{ r.code }}</span> }
                 </td>
-                <td class="num">{{ p.memberCount }}</td>
-                <td class="num">{{ p.plannedMm }} → {{ p.actualMm }}</td>
-                <td class="num">{{ fmt(p.budget) }}</td>
-                <td class="num">@if (p.overdue) { <span class="badge badge--cancel">{{ p.overdue }}</span> } @else { 0 }</td>
-                <td class="num">@if (p.bugOpen) { <span class="badge badge--pending">{{ p.bugOpen }}</span> } @else { 0 }</td>
+                <td class="num">{{ fmt(r.totalEst) }}</td>
+                <td class="num" [style.color]="colors.inProgress">{{ fmt(r.inProgress.estimateHours) }} <span class="hint">({{ fmt(r.inProgress.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.done">{{ fmt(r.done.estimateHours) }} <span class="hint">({{ fmt(r.done.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.overdue">{{ fmt(r.overdue.estimateHours) }} <span class="hint">({{ fmt(r.overdue.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.upcoming.estimateHours) }} <span class="hint">({{ fmt(r.upcoming.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.completionPct) }}%</td>
+                <td class="num">@if (r.overdue.taskCount) { <span class="badge badge--cancel">{{ r.overdue.taskCount }}</span> } @else { 0 }</td>
               </tr>
             }
-            @if (!d.projects.length) { <tr><td colspan="9" class="hint">Chưa có dự án nào.</td></tr> }
+            @if (!d.byProject.length) { <tr><td colspan="8" class="hint">Chưa có dữ liệu dự án.</td></tr> }
           </tbody>
         </table>
       </div>
     </div>
 
-    <!-- ============ KHU NHÂN SỰ ============ -->
-    <h3 class="section-title">Nhân sự</h3>
-    <div class="stats-grid">
-      <stat-card icon="👥" label="Tổng nhân sự" [value]="d.hr.totalEmployees" tint="var(--color-primary)" />
-      <stat-card icon="🟢" label="Đang làm" [value]="d.hr.active" tint="var(--status-active)" />
-      <stat-card icon="🤝" label="Thuê ngoài" [value]="d.hr.external" tint="var(--status-pending)" />
-      <stat-card icon="🪑" label="Chưa join dự án" [value]="d.hr.unassigned" tint="var(--status-cancel)" trend="có thể phân bổ" />
-    </div>
-
-    <div class="panel-grid">
-      <div class="card">
-        <div class="card__head"><span class="card__title">Phân bổ theo bộ phận</span></div>
-        @for (b of deptBars(); track b.dept) {
-          <div class="bar-row">
-            <span style="min-width:120px">{{ b.dept }}</span>
-            <span class="bar"><span class="bar__fill" [style.width.%]="b.pct"></span></span>
-            <span class="bar-row__val">{{ b.count }}</span>
-          </div>
-        }
-        @if (!deptBars().length) { <p class="hint">Chưa có dữ liệu nhân sự.</p> }
-      </div>
-
-      <div class="card">
-        <div class="card__head">
-          <span class="card__title">⚠ Quá tải (tổng effort &gt; 100%)</span>
-        </div>
-        @for (o of d.hr.overloaded; track o.empCode) {
-          <div style="display:flex; align-items:flex-start; gap:var(--space-3); padding:var(--space-2) 0; border-bottom:1px solid var(--color-border);">
-            <span style="flex:1">
-              <employee-chip [code]="o.empCode" [name]="o.name" />
-              <span class="hint" style="display:block; margin-top:2px">{{ o.projects.join(', ') }}</span>
-            </span>
-            <span class="badge badge--cancel">{{ o.totalEffort }}%</span>
-          </div>
-        }
-        @if (!d.hr.overloaded.length) { <p class="hint">Không có nhân sự nào quá tải.</p> }
+    <!-- ============ Bảng theo Thành viên ============ -->
+    <div class="card">
+      <div class="card__head"><span class="card__title">Theo thành viên</span></div>
+      <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Nhân sự</th><th class="num">Tổng est</th>
+              <th class="num">Đang làm</th><th class="num">Đã xong</th>
+              <th class="num">Trễ</th><th class="num">Sắp làm</th>
+              <th class="num">% hoàn thành</th><th class="num">Task trễ</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (r of d.byMember; track trackRow($index, r)) {
+              <tr>
+                <td><employee-chip [code]="r.code" [name]="r.name" [dept]="r.extra" /></td>
+                <td class="num">{{ fmt(r.totalEst) }}</td>
+                <td class="num" [style.color]="colors.inProgress">{{ fmt(r.inProgress.estimateHours) }} <span class="hint">({{ fmt(r.inProgress.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.done">{{ fmt(r.done.estimateHours) }} <span class="hint">({{ fmt(r.done.pct) }}%)</span></td>
+                <td class="num" [style.color]="colors.overdue">{{ fmt(r.overdue.estimateHours) }} <span class="hint">({{ fmt(r.overdue.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.upcoming.estimateHours) }} <span class="hint">({{ fmt(r.upcoming.pct) }}%)</span></td>
+                <td class="num">{{ fmt(r.completionPct) }}%</td>
+                <td class="num">@if (r.overdue.taskCount) { <span class="badge badge--cancel">{{ r.overdue.taskCount }}</span> } @else { 0 }</td>
+              </tr>
+            }
+            @if (!d.byMember.length) { <tr><td colspan="8" class="hint">Chưa có công việc gán cho nhân sự.</td></tr> }
+          </tbody>
+        </table>
       </div>
     </div>
   } @else {
