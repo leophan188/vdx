@@ -11,6 +11,7 @@ import { PrjBugs } from './bugs/bugs';
 import { PrjReportsPeriod } from './reports-period/reports-period';
 import { PrjTimesheet } from './timesheet/timesheet';
 import { PrjLog } from './log/log';
+import { PrjDiary } from './diary/diary';
 import { PrjTaskDetail } from './task-detail/task-detail';
 
 interface WsTab { key: string; label: string; icon: string; }
@@ -19,7 +20,7 @@ interface WsTab { key: string; label: string; icon: string; }
 @Component({
   selector: 'app-project-workspace',
   imports: [PageHeader, PrjOverview, PrjMembers, PrjBacklog, PrjKanban, PrjTimeline, PrjBugs,
-    PrjReportsPeriod, PrjTimesheet, PrjLog, PrjTaskDetail],
+    PrjReportsPeriod, PrjTimesheet, PrjLog, PrjDiary, PrjTaskDetail],
   templateUrl: './project-workspace.html',
   styles: [`
     .pw-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); }
@@ -50,6 +51,7 @@ export class ProjectWorkspace implements OnInit {
     { key: 'timeline', label: 'Timeline', icon: '📅' },
     { key: 'timesheet', label: 'Timesheet', icon: '⏱️' },
     { key: 'log', label: 'Log', icon: '📜' },
+    { key: 'diary', label: 'Nhật ký', icon: '📔' },
     { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️' },
     { key: 'members', label: 'Thành viên', icon: '👥' }
   ];

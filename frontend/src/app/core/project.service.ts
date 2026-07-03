@@ -320,6 +320,33 @@ export interface Burndown {
   points: BurndownPoint[];
 }
 
+// ===== Nhật ký dự án (ghi tay buổi làm việc với khách hàng) =====
+/** Một bản ghi nhật ký (khớp DTO ProjectDto.DiaryEntry). */
+export interface DiaryEntry {
+  id: string;
+  workDate: string | null;        // dd/MM/yyyy
+  category: string | null;        // Demo/Khảo sát/UAT/…
+  teamUserIds: string[];          // userId nhân sự team tham gia
+  teamNames: string[];            // tên đã resolve từ teamUserIds
+  clientContacts: string | null;  // người phía khách hàng (text tự do)
+  content: string | null;
+  conclusion: string | null;
+  createdBy: string | null;
+  createdByName: string | null;
+  createdAt: string | null;       // ISO Instant
+  canEdit: boolean;               // creator/admin/PM/owner
+}
+
+/** Tạo/sửa nhật ký. workDate chấp nhận dd/MM/yyyy hoặc yyyy-MM-dd. */
+export interface DiaryRequest {
+  workDate?: string | null;
+  category?: string | null;
+  teamUserIds?: string[];
+  clientContacts?: string | null;
+  content?: string | null;
+  conclusion?: string | null;
+}
+
 @Injectable({ providedIn: 'root' })
 export class ProjectService {
   private http = inject(HttpClient);
@@ -441,6 +468,20 @@ export class ProjectService {
   /** Biểu đồ burndown: giờ ước lượng còn lại theo thời gian (ideal vs actual). */
   burndown(projectId: string): Observable<Burndown> {
     return this.http.get<Burndown>(`${this.base}/${projectId}/burndown`, this.opts);
+  }
+
+  // ===== Nhật ký dự án (ghi tay buổi làm việc với khách hàng) =====
+  listDiary(projectId: string): Observable<DiaryEntry[]> {
+    return this.http.get<DiaryEntry[]>(`${this.base}/${projectId}/diary`, this.opts);
+  }
+  createDiary(projectId: string, body: DiaryRequest): Observable<DiaryEntry> {
+    return this.http.post<DiaryEntry>(`${this.base}/${projectId}/diary`, body, this.opts);
+  }
+  updateDiary(projectId: string, id: string, body: DiaryRequest): Observable<DiaryEntry> {
+    return this.http.put<DiaryEntry>(`${this.base}/${projectId}/diary/${id}`, body, this.opts);
+  }
+  deleteDiary(projectId: string, id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${projectId}/diary/${id}`, this.opts);
   }
 
   // ===== People (chọn thành viên / assignee) =====

@@ -3,6 +3,7 @@ package com.bpm.api;
 import com.bpm.api.dto.ProjectDto;
 import com.bpm.application.ProjectCollabService;
 import com.bpm.application.ProjectReportService;
+import com.bpm.application.ProjectDiaryService;
 import com.bpm.application.ProjectService;
 import com.bpm.application.ProjectTaskService;
 import com.bpm.application.MediaStorageService;
@@ -42,15 +43,17 @@ public class ProjectController {
     private final ProjectTaskService taskService;
     private final ProjectCollabService collabService;
     private final ProjectReportService reportService;
+    private final ProjectDiaryService diaryService;
     private final MediaStorageService mediaStorage;
 
     public ProjectController(ProjectService projectService, ProjectTaskService taskService,
                              ProjectCollabService collabService, ProjectReportService reportService,
-                             MediaStorageService mediaStorage) {
+                             ProjectDiaryService diaryService, MediaStorageService mediaStorage) {
         this.projectService = projectService;
         this.taskService = taskService;
         this.collabService = collabService;
         this.reportService = reportService;
+        this.diaryService = diaryService;
         this.mediaStorage = mediaStorage;
     }
 
@@ -307,6 +310,34 @@ public class ProjectController {
     public ProjectDto.BurndownResponse burndown(@PathVariable String id, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
         return reportService.burndown(id);
+    }
+
+    // ===== Nhật ký dự án (ghi tay buổi làm việc với khách hàng) =====
+
+    @GetMapping("/{id}/diary")
+    public List<ProjectDto.DiaryEntry> diary(@PathVariable String id, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return diaryService.list(id, actor(auth), isAdmin(auth));
+    }
+
+    @PostMapping("/{id}/diary")
+    public ProjectDto.DiaryEntry createDiary(@PathVariable String id,
+                                             @RequestBody ProjectDto.DiaryRequest req, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return diaryService.create(id, req, actor(auth));
+    }
+
+    @PutMapping("/{id}/diary/{entryId}")
+    public ProjectDto.DiaryEntry updateDiary(@PathVariable String id, @PathVariable String entryId,
+                                             @RequestBody ProjectDto.DiaryRequest req, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return diaryService.update(id, entryId, req, actor(auth), isAdmin(auth));
+    }
+
+    @DeleteMapping("/{id}/diary/{entryId}")
+    public void deleteDiary(@PathVariable String id, @PathVariable String entryId, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        diaryService.delete(id, entryId, actor(auth), isAdmin(auth));
     }
 
     // ===== People (chọn thành viên / assignee) =====

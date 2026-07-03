@@ -1,0 +1,132 @@
+<!-- Tab Nhật ký dự án — ghi tay buổi làm việc với khách hàng -->
+<div class="dg">
+  <div class="dg__head">
+    <div>
+      <strong>Nhật ký dự án</strong>
+      <span class="dg__count">{{ entries().length }}</span>
+    </div>
+    <button type="button" class="btn btn--primary" (click)="openAdd()">＋ Thêm nhật ký</button>
+  </div>
+
+  @if (loading()) {
+    <div class="dg__loading">Đang tải…</div>
+  } @else if (entries().length === 0) {
+    <div class="dg__empty">Chưa có bản ghi — hãy thêm nhật ký buổi làm việc với khách hàng.</div>
+  } @else {
+    <div class="dg__list">
+      @for (e of entries(); track e.id) {
+        <div class="dg__card">
+          <div class="dg__row1">
+            <span class="dg__date">📅 {{ e.workDate || '—' }}</span>
+            @if (e.category) { <span class="dg-cat" [class]="catBadge(e.category)">{{ e.category }}</span> }
+            <span class="dg__spacer"></span>
+            @if (e.canEdit) {
+              <button type="button" class="btn btn--icon" title="Sửa nhật ký" (click)="openEdit(e)">✎</button>
+              <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá nhật ký" (click)="remove(e)">🗑</button>
+            }
+          </div>
+
+          @if (e.teamUserIds.length) {
+            <div class="dg__meta">
+              <span class="dg__label">Nhân sự team</span>
+              <div class="dg__team">
+                @for (uid of e.teamUserIds; track uid) {
+                  @if (memberOf(uid); as m) {
+                    <employee-chip [code]="m.empCode" [name]="m.name" [position]="m.jobPosition"
+                                   [title]="m.title" [dept]="m.deptCode" />
+                  } @else {
+                    <employee-chip [name]="'—'" />
+                  }
+                }
+              </div>
+            </div>
+          }
+
+          @if (e.clientContacts) {
+            <div class="dg__meta">
+              <span class="dg__label">Phía khách hàng</span>
+              <span class="dg__text">{{ e.clientContacts }}</span>
+            </div>
+          }
+
+          @if (e.content) {
+            <div class="dg__meta">
+              <span class="dg__label">Nội dung</span>
+              <span class="dg__text">{{ e.content }}</span>
+            </div>
+          }
+
+          @if (e.conclusion) {
+            <div class="dg__meta">
+              <span class="dg__label">Kết luận</span>
+              <span class="dg__text">{{ e.conclusion }}</span>
+            </div>
+          }
+
+          <div class="dg__foot">
+            <span>✍️ {{ e.createdByName || '—' }}</span>
+            @if (e.createdAt) { <span>· {{ when(e.createdAt) }}</span> }
+          </div>
+        </div>
+      }
+    </div>
+  }
+</div>
+
+<!-- Modal thêm / sửa nhật ký -->
+<app-modal [open]="modalOpen()"
+           [title]="editingId() ? 'Sửa nhật ký' : 'Thêm nhật ký'"
+           [wide]="true"
+           (closed)="modalOpen.set(false)">
+  <div class="dg-form">
+    <div class="form-2col">
+      <div class="field">
+        <label>Ngày làm việc</label>
+        <input type="date" [(ngModel)]="fWorkDate" name="dgdate" />
+      </div>
+      <div class="field">
+        <label>Phân loại công việc</label>
+        <searchable-select [options]="categoryOptions" [value]="fCategory"
+                           (valueChange)="fCategory = $event" placeholder="Chọn phân loại…" />
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Nhân sự team tham gia</label>
+      @if (members().length) {
+        <div class="dg-form__members">
+          @for (m of members(); track m.userId) {
+            <label class="dg-form__mrow">
+              <input type="checkbox" [checked]="memberChecked(m.userId)" (change)="toggleMember(m.userId)" />
+              <employee-chip [code]="m.empCode" [name]="m.name" [dept]="m.deptCode" />
+            </label>
+          }
+        </div>
+      } @else {
+        <p class="hint">Dự án chưa có thành viên — hãy thêm thành viên ở tab Thành viên.</p>
+      }
+    </div>
+
+    <div class="field">
+      <label>Người phía khách hàng</label>
+      <input type="text" [(ngModel)]="fClient" name="dgclient" placeholder="VD: Anh A (Trưởng phòng), Chị B…" />
+    </div>
+
+    <div class="field">
+      <label>Nội dung</label>
+      <textarea [(ngModel)]="fContent" name="dgcontent" placeholder="Nội dung buổi làm việc…"></textarea>
+    </div>
+
+    <div class="field">
+      <label>Kết luận</label>
+      <textarea [(ngModel)]="fConclusion" name="dgconcl" placeholder="Kết luận / việc tiếp theo…"></textarea>
+    </div>
+  </div>
+
+  <div modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>
+    <button type="button" class="btn btn--primary" [disabled]="saving() || !fWorkDate" (click)="save()">
+      {{ saving() ? 'Đang lưu…' : (editingId() ? 'Lưu thay đổi' : 'Thêm nhật ký') }}
+    </button>
+  </div>
+</app-modal>

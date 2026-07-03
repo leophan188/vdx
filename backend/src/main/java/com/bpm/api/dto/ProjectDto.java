@@ -326,4 +326,23 @@ public final class ProjectDto {
             double totalEstimate, double totalSpent, int teamManday,
             String unit, List<BurndownPoint> points) {
     }
+
+    // ===== Nhật ký dự án (ghi tay buổi làm việc với khách hàng) =====
+
+    /**
+     * Một bản ghi nhật ký dự án. {@code workDate} dạng dd/MM/yyyy; {@code createdAt} là ISO Instant.
+     * {@code teamNames} là tên hiển thị đã resolve từ {@code teamUserIds}. {@code canEdit} = creator/admin/PM.
+     */
+    public record DiaryEntry(
+            String id, String workDate, String category,
+            List<String> teamUserIds, List<String> teamNames,
+            String clientContacts, String content, String conclusion,
+            String createdBy, String createdByName, String createdAt, boolean canEdit) {
+    }
+
+    /** Tạo/sửa nhật ký. {@code workDate} chấp nhận dd/MM/yyyy hoặc yyyy-MM-dd. */
+    public record DiaryRequest(
+            String workDate, String category, List<String> teamUserIds,
+            String clientContacts, String content, String conclusion) {
+    }
 }
