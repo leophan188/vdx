@@ -95,13 +95,14 @@ export class PostCard {
   readonly commentTree = computed<CommentNode[]>(() => this.buildTree(this.current().comments));
 
   private buildTree(flat: CommentView[]): CommentNode[] {
+    // byId khử trùng id (nếu list lỡ có comment trùng do race optimistic-append + reload).
     const byId = new Map<string, CommentNode>();
     for (const c of flat) byId.set(c.id, { ...c, children: [], depth: 0 });
     const roots: CommentNode[] = [];
-    for (const c of flat) {
-      const node = byId.get(c.id)!;
-      const parent = c.parentId ? byId.get(c.parentId) : undefined;
-      if (parent) {
+    // DUYỆT NODE DUY NHẤT (byId.values) — KHÔNG duyệt flat (tránh push trùng khi flat có id lặp).
+    for (const node of byId.values()) {
+      const parent = node.parentId ? byId.get(node.parentId) : undefined;
+      if (parent && parent !== node) {
         node.depth = Math.min(parent.depth + 1, this.MAX_INDENT_DEPTH);
         parent.children.push(node);
       } else {
@@ -208,12 +209,19 @@ export class PostCard {
     }
   }
 
+  /** Thêm 1 comment vào list — BỎ QUA nếu id đã tồn tại (tránh trùng do race optimistic + reload). */
+  private appendComment(c: CommentView): void {
+    const list = this.current().comments;
+    if (list.some((x) => x.id === c.id)) return; // đã có (list vừa reload kèm nó) → không thêm lại
+    this.patch({ comments: [...list, c], commentCount: this.current().commentCount + 1 });
+  }
+
   submitComment(): void {
     const body = this.draft().trim();
     if (!body) return;
     this.api.addComment(this.current().id, body, null, this.draftMentions()).subscribe({
       next: (c) => {
-        this.patch({ comments: [...this.current().comments, c], commentCount: this.current().commentCount + 1 });
+        this.appendComment(c);
         this.draft.set('');
         this.draftMentions.set([]);
       },
@@ -237,7 +245,7 @@ export class PostCard {
     if (!body) return;
     this.api.addComment(this.current().id, body, parent.id, this.replyMentions()).subscribe({
       next: (c) => {
-        this.patch({ comments: [...this.current().comments, c], commentCount: this.current().commentCount + 1 });
+        this.appendComment(c);
         this.cancelReply();
       },
       error: () => this.toast.error('Không gửi được trả lời')
