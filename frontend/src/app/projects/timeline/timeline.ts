@@ -218,9 +218,16 @@ export class PrjTimeline implements OnInit {
   }
   setFromDate(v: string): void { this.fromDate.set(v); savePref(this.fromKey(), v); }
   setToDate(v: string): void { this.toDate.set(v); savePref(this.toKey(), v); }
+  /** dd/MM/yyyy → yyyy-MM-dd (đổ vào input type=date). */
+  private vnToIso(d: string | null): string {
+    const m = d ? /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d) : null;
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+  }
   resetCustom(): void {
-    this.fromDate.set('');
-    this.toDate.set('');
+    // "Đặt lại" → quay về ngày KHAI BÁO của dự án (không phải trống), khớp mặc định.
+    const p = this.project();
+    this.fromDate.set(p?.startDate ? this.vnToIso(p.startDate) : '');
+    this.toDate.set(p?.dueDate ? this.vnToIso(p.dueDate) : '');
     this.typeFilter.set({ EPIC: true, STORY: true, TASK: true, SUBTASK: true, BUG: true, ISSUE: true });
     savePref(this.fromKey(), '');
     savePref(this.toKey(), '');
@@ -254,9 +261,14 @@ export class PrjTimeline implements OnInit {
         next: (t) => { this.tasks.set(t); this.loading.set(false); },
         error: () => { this.tasks.set([]); this.loading.set(false); }
       });
-      // Tải thông tin dự án → khung thời gian MẶC ĐỊNH vẽ theo ngày bắt đầu/kết thúc của DỰ ÁN.
+      // Tải thông tin dự án → ĐIỀN SẴN ô Từ/Đến theo ngày bắt đầu/kết thúc khai báo của DỰ ÁN
+      // (chỉ khi người dùng chưa tự đặt khung), để nhìn thấy + sửa được ngày vẽ.
       this.svc.get(pid).subscribe({
-        next: (p) => this.project.set(p),
+        next: (p) => {
+          this.project.set(p);
+          if (!this.fromDate() && p.startDate) this.fromDate.set(this.vnToIso(p.startDate));
+          if (!this.toDate() && p.dueDate) this.toDate.set(this.vnToIso(p.dueDate));
+        },
         error: () => this.project.set(null)
       });
     });
