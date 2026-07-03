@@ -123,6 +123,14 @@ public class ProjectController {
                 req.effortPct(), actor(auth));
     }
 
+    @PutMapping("/{id}/members/{memberId}")
+    public ProjectDto.MemberResponse updateMember(@PathVariable String id, @PathVariable String memberId,
+                                                  @RequestBody ProjectDto.UpdateMemberRequest req, Authentication auth) {
+        projectService.requireCanManage(id, actor(auth), isAdmin(auth));
+        return projectService.updateMember(id, memberId, req.role(), req.startDate(), req.endDate(),
+                req.effortPct(), actor(auth));
+    }
+
     @DeleteMapping("/{id}/members/{memberId}")
     public void removeMember(@PathVariable String id, @PathVariable String memberId, Authentication auth) {
         projectService.requireCanManage(id, actor(auth), isAdmin(auth));

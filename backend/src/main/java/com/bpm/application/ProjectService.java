@@ -324,6 +324,37 @@ public class ProjectService {
                 "projectId=" + projectId + ", userId=" + m.getUserId());
     }
 
+    /** Sửa thông tin thành viên (vai trò / % effort / ngày). KHÔNG đổi người. */
+    @Transactional
+    public ProjectDto.MemberResponse updateMember(String projectId, String memberId, String role,
+                                                  String startDate, String endDate, Integer effortPct, String actor) {
+        get(projectId);
+        ProjectMember m = memberRepo.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thành viên"));
+        if (!m.getProjectId().equals(projectId)) {
+            throw new IllegalArgumentException("Thành viên không thuộc dự án này");
+        }
+        // % effort: kẹp 1–100. Tổng effort qua các dự án KHÁC (loại chính membership này) + mới ≤ 100.
+        int newEffort = (effortPct == null) ? m.getEffortPct() : Math.max(1, Math.min(100, effortPct));
+        int usedEffort = memberRepo.findByUserId(m.getUserId()).stream()
+                .filter(pm -> !pm.getId().equals(memberId))
+                .mapToInt(ProjectMember::getEffortPct).sum();
+        if (usedEffort + newEffort > 100) {
+            throw new IllegalArgumentException("Tổng % effort của nhân sự sẽ vượt 100% ("
+                    + usedEffort + "% ở dự án khác + " + newEffort + "%). Hãy giảm % effort.");
+        }
+        if (role != null && !role.isBlank()) {
+            m.setRoleInProject(parseRole(role, m.getRoleInProject()));
+        }
+        m.setStartDate(parseDate(startDate, "ngày bắt đầu"));
+        m.setEndDate(parseDate(endDate, "ngày kết thúc"));
+        m.setEffortPct(newEffort);
+        ProjectMember saved = memberRepo.save(m);
+        auditPort.record("PROJECT_MEMBER_UPDATED", "ProjectMember", saved.getId(), actor,
+                "projectId=" + projectId + ", role=" + saved.getRoleInProject() + ", effort=" + newEffort);
+        return toMemberDto(saved);
+    }
+
     private ProjectDto.MemberResponse toMemberDto(ProjectMember m) {
         UserAccount acc = userRepo.findById(m.getUserId()).orElse(null);
         Employee emp = employeeRepo.findByUserAccountId(m.getUserId()).orElse(null);

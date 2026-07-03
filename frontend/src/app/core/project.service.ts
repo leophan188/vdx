@@ -77,6 +77,14 @@ export interface AddMemberRequest {
   effortPct?: number | null;    // % effort (1–100), trống → 100
 }
 
+/** Sửa thành viên — KHÔNG đổi người. */
+export interface UpdateMemberRequest {
+  role?: ProjectRole | null;
+  startDate?: string | null;    // dd/MM/yyyy
+  endDate?: string | null;      // dd/MM/yyyy
+  effortPct?: number | null;
+}
+
 /** Một mắt xích cha của task (Epic/Story/Task cha). */
 export interface ParentRef {
   type: TaskType;
@@ -333,6 +341,9 @@ export class ProjectService {
   }
   addMember(projectId: string, body: AddMemberRequest): Observable<ProjectMember> {
     return this.http.post<ProjectMember>(`${this.base}/${projectId}/members`, body, this.opts);
+  }
+  updateMember(projectId: string, memberId: string, body: UpdateMemberRequest): Observable<ProjectMember> {
+    return this.http.put<ProjectMember>(`${this.base}/${projectId}/members/${memberId}`, body, this.opts);
   }
   removeMember(projectId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${projectId}/members/${memberId}`, this.opts);

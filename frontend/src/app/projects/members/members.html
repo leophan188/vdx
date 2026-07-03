@@ -25,19 +25,24 @@
     <strong>{{ mm(m.manday) }}</strong> <span class="hint">MM</span>
   </ng-template>
   <ng-template gridCell="actions" let-m>
+    <button type="button" class="btn btn--ghost btn--sm" title="Sửa thông tin thành viên" (click)="openEdit(m)">✎ Sửa</button>
     <button type="button" class="btn btn--ghost btn--sm" title="Gỡ khỏi dự án" (click)="remove(m)">🗑 Gỡ</button>
   </ng-template>
 </data-grid>
 
-<!-- Modal thêm thành viên -->
-<app-modal [open]="addOpen()" title="Thêm thành viên vào dự án" (closed)="addOpen.set(false)">
+<!-- Modal thêm / sửa thành viên -->
+<app-modal [open]="addOpen()"
+           [title]="editingId() ? ('Sửa thành viên — ' + editName) : 'Thêm thành viên vào dự án'"
+           (closed)="addOpen.set(false)">
   <div class="prj-mb__add">
-    <div class="field">
-      <label>Chọn người</label>
-      <searchable-select [options]="peopleOptions()" [value]="selUserId"
-                         (valueChange)="selUserId = $event"
-                         placeholder="Gõ tên hoặc mã nhân viên…" />
-    </div>
+    @if (!editingId()) {
+      <div class="field">
+        <label>Chọn người</label>
+        <searchable-select [options]="peopleOptions()" [value]="selUserId"
+                           (valueChange)="selUserId = $event"
+                           placeholder="Gõ tên hoặc mã nhân viên…" />
+      </div>
+    }
     <div class="field">
       <label>Vai trò trong dự án</label>
       <div class="prj-mb__roles">
@@ -72,8 +77,8 @@
 
   <div modalFooter>
     <button type="button" class="btn btn--ghost" (click)="addOpen.set(false)">Hủy</button>
-    <button type="button" class="btn btn--primary" [disabled]="saving() || !selUserId" (click)="save()">
-      {{ saving() ? 'Đang thêm…' : 'Thêm vào dự án' }}
+    <button type="button" class="btn btn--primary" [disabled]="saving() || (!editingId() && !selUserId)" (click)="save()">
+      {{ saving() ? 'Đang lưu…' : (editingId() ? 'Lưu thay đổi' : 'Thêm vào dự án') }}
     </button>
   </div>
 </app-modal>

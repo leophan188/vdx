@@ -6,7 +6,7 @@ import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { ToastService } from '../../shared/toast/toast.service';
-import { ProjectService, ProjectMember, Person, ProjectRole } from '../../core/project.service';
+import { ProjectService, ProjectMember, Person, ProjectRole, UpdateMemberRequest } from '../../core/project.service';
 
 /**
  * Tab "Thành viên dự án" (selector app-prj-members) — load người vào dự án.
@@ -42,6 +42,9 @@ export class PrjMembers {
 
   readonly addOpen = signal(false);
   readonly saving = signal(false);
+  /** Rỗng = chế độ THÊM; có id = chế độ SỬA thành viên (không đổi người). */
+  readonly editingId = signal('');
+  editName = '';   // tên người đang sửa (hiển thị read-only trong modal)
   selUserId = '';
   selRole: ProjectRole = 'MEMBER';
   selStart = '';  // yyyy-MM-dd (input type=date)
@@ -75,6 +78,12 @@ export class PrjMembers {
     if (!d) return undefined;
     const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
     return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
+  }
+  /** dd/MM/yyyy → yyyy-MM-dd (đổ vào input type=date khi sửa). */
+  private fromDmy(d: string | null): string {
+    if (!d) return '';
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : d;
   }
   private workdays(s: string, e: string): number {
     if (!s || !e) return 0;
@@ -113,6 +122,8 @@ export class PrjMembers {
   }
 
   openAdd(): void {
+    this.editingId.set('');
+    this.editName = '';
     this.selUserId = '';
     this.selRole = 'MEMBER';
     this.selStart = '';
@@ -126,27 +137,53 @@ export class PrjMembers {
     });
   }
 
+  /** Mở modal SỬA thành viên — giữ nguyên người, đổ sẵn vai trò/ngày/%effort. */
+  openEdit(m: ProjectMember): void {
+    this.editingId.set(m.id);
+    this.editName = m.name;
+    this.selUserId = m.userId;
+    this.selRole = m.roleInProject;
+    this.selStart = this.fromDmy(m.startDate);
+    this.selEnd = this.fromDmy(m.endDate);
+    this.selEffort = m.effortPct;
+    this.addOpen.set(true);
+  }
+
   pickRole(r: ProjectRole): void { this.selRole = r; }
 
   save(): void {
-    if (!this.selUserId) { this.toast.warning('Hãy chọn người để thêm vào dự án.'); return; }
     this.saving.set(true);
+    const done = (verb: string) => (m: ProjectMember) => {
+      this.saving.set(false);
+      this.addOpen.set(false);
+      this.toast.success(verb, `${m.name} · ${this.roleLabel(m.roleInProject)}`);
+      this.reload(this.projectId());
+    };
+    const fail = (verb: string) => (e: { error?: { message?: string; detail?: string } }) => {
+      this.saving.set(false);
+      this.toast.error(verb, e?.error?.message ?? e?.error?.detail ?? '');
+    };
+    const effort = Math.max(1, Math.min(100, Number(this.selEffort) || 100));
+
+    // Chế độ SỬA — không đổi người.
+    if (this.editingId()) {
+      const body: UpdateMemberRequest = {
+        role: this.selRole,
+        startDate: this.toDmy(this.selStart), endDate: this.toDmy(this.selEnd),
+        effortPct: effort
+      };
+      this.svc.updateMember(this.projectId(), this.editingId(), body)
+        .subscribe({ next: done('Đã cập nhật thành viên'), error: fail('Không cập nhật được thành viên') });
+      return;
+    }
+
+    // Chế độ THÊM.
+    if (!this.selUserId) { this.saving.set(false); this.toast.warning('Hãy chọn người để thêm vào dự án.'); return; }
     this.svc.addMember(this.projectId(), {
       userId: this.selUserId, role: this.selRole,
       startDate: this.toDmy(this.selStart), endDate: this.toDmy(this.selEnd),
-      effortPct: Math.max(1, Math.min(100, Number(this.selEffort) || 100))
-    }).subscribe({
-      next: (m) => {
-        this.saving.set(false);
-        this.addOpen.set(false);
-        this.toast.success('Đã thêm thành viên', `${m.name} · ${this.roleLabel(m.roleInProject)}`);
-        this.reload(this.projectId());
-      },
-      error: (e) => {
-        this.saving.set(false);
-        this.toast.error('Không thêm được thành viên', e?.error?.message ?? e?.error?.detail ?? '');
-      }
-    });
+      effortPct: effort
+    }).subscribe({ next: done('Đã thêm thành viên'), error: fail('Không thêm được thành viên') });
   }
 
   remove(m: ProjectMember): void {

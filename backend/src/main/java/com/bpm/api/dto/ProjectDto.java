@@ -79,6 +79,10 @@ public final class ProjectDto {
     public record AddMemberRequest(String userId, String role, String startDate, String endDate, Integer effortPct) {
     }
 
+    /** Sửa thành viên — KHÔNG đổi người, chỉ vai trò/ngày/%effort. */
+    public record UpdateMemberRequest(String role, String startDate, String endDate, Integer effortPct) {
+    }
+
     // ===== Task =====
 
     /**
