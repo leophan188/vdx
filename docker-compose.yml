@@ -21,11 +21,11 @@ services:
       - mariadb-data:/var/lib/mysql
     networks:
       - bpm-net
-    # Publish 3306 CHỈ ra loopback server (127.0.0.1) — KHÔNG lộ internet.
-    # Cho phép: (a) truy cập DB ngay trên host server, (b) SSH tunnel từ máy local.
-    # Muốn khoá hẳn (chỉ mạng compose) → xoá mục ports này. Đổi cổng host: BPM_DB_HOST_PORT.
+    # Publish 3306 ra host. Mặc định CHỈ loopback (127.0.0.1) — an toàn, không lộ internet.
+    # Muốn LOCAL nối thẳng server-ip:3306 → đặt BPM_DB_BIND_ADDR=0.0.0.0 trong .env server
+    # (kèm firewall giới hạn IP nguồn). Khoá hẳn (chỉ mạng compose) → xoá mục ports này.
     ports:
-      - "127.0.0.1:${BPM_DB_HOST_PORT:-3306}:3306"
+      - "${BPM_DB_BIND_ADDR:-127.0.0.1}:${BPM_DB_HOST_PORT:-3306}:3306"
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 10s
