@@ -656,8 +656,8 @@ public class EmployeeService {
 
     /**
      * Gán vai trò PHÂN QUYỀN (FEAT_* — ma trận) theo CHỨC DANH khi import/đồng bộ.
-     * Quy tắc: chức danh "Nhân viên" (hoặc trống) → {@code NHANVIEN} (Nhóm nhân viên);
-     * còn lại (Giám đốc, Trưởng nhóm, …) → {@code QUANLY} (Quản lý chung).
+     * Quy tắc: CHỈ chức danh QUẢN LÝ (Giám đốc / Trưởng… / Quản lý) → {@code QUANLY} (Quản lý chung);
+     * còn lại (Nhân viên, Cộng tác viên, Thực tập sinh, trống, …) → {@code NHANVIEN} (Nhóm nhân viên).
      * IDEMPOTENT + tôn trọng chỉnh tay: chỉ gán khi tài khoản CHƯA có vai trò (roleCode trống).
      */
     private void ensurePermissionRole(UserAccount acc, String chucDanh, String actor) {
@@ -665,11 +665,22 @@ public class EmployeeService {
             return; // đã có vai trò (seed/gán tay) → không ghi đè
         }
         String t = blankToNull(chucDanh);
-        String roleCode = (t == null || t.equalsIgnoreCase("Nhân viên")) ? "NHANVIEN" : "QUANLY";
+        String roleCode = isManagerTitle(t) ? "QUANLY" : "NHANVIEN";
         acc.setRoleCode(roleCode);
         userRepo.save(acc);
         auditPort.record("EMPLOYEE_PERMISSION_ASSIGNED", "UserAccount", acc.getId(), actor,
                 "roleCode=" + roleCode + ", chức danh=" + (t == null ? "(trống)" : t));
+    }
+
+    /** Chức danh QUẢN LÝ (khử dấu, không phân biệt hoa/thường): chứa "giam doc" / "truong" / "quan ly". */
+    static boolean isManagerTitle(String chucDanh) {
+        if (chucDanh == null || chucDanh.isBlank()) {
+            return false;
+        }
+        String s = Normalizer.normalize(chucDanh, Normalizer.Form.NFD)
+                .replaceAll("\\p{M}", "").replace('đ', 'd').replace('Đ', 'd')
+                .toLowerCase().trim();
+        return s.contains("giam doc") || s.contains("truong") || s.contains("quan ly");
     }
 
     /** Mở/khoá tài khoản theo trạng thái nhân sự; nếu phải khoá mà đang giữ việc → HANDOVER. */
