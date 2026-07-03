@@ -151,14 +151,15 @@ public class ProjectController {
     @PostMapping("/{id}/tasks")
     public ProjectDto.TaskResponse createTask(@PathVariable String id,
                                               @RequestBody ProjectDto.TaskRequest req, Authentication auth) {
-        projectService.requireCanManage(id, actor(auth), isAdmin(auth));
+        // Mọi THÀNH VIÊN được tạo task (nhất quán với tạo nhanh /me/bugs). Xoá vẫn dành PM/admin.
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
         return taskService.create(id, req, actor(auth));
     }
 
     @PutMapping("/{id}/tasks/{taskId}")
     public ProjectDto.TaskResponse updateTask(@PathVariable String id, @PathVariable String taskId,
                                               @RequestBody ProjectDto.TaskRequest req, Authentication auth) {
-        projectService.requireCanManage(id, actor(auth), isAdmin(auth));
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
         return taskService.update(id, taskId, req, actor(auth));
     }
 
@@ -179,7 +180,8 @@ public class ProjectController {
     @PostMapping("/{id}/tasks/reorder")
     public void reorderTasks(@PathVariable String id,
                              @RequestBody ProjectDto.ReorderRequest req, Authentication auth) {
-        projectService.requireCanManage(id, actor(auth), isAdmin(auth));
+        // Thành viên được kéo-sắp thứ tự backlog (khớp tính năng drag đã bật cho mọi thành viên).
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
         taskService.reorder(id, req, actor(auth));
     }
 
