@@ -28,6 +28,12 @@
     <app-type-filter [options]="typeSel" [selected]="typeFilter()"
                      (toggle)="toggleType($any($event))" />
   </div>
+  <!-- Lọc theo TRẠNG THÁI (giữ cả cấp cha của task khớp) -->
+  <div class="filter-bar__field">
+    <span class="filter-bar__label">Trạng thái</span>
+    <app-type-filter [options]="statusSel" [selected]="statusFilter()"
+                     (toggle)="toggleStatus($any($event))" />
+  </div>
   <!-- Lọc người thực hiện (giữ task cha Epic/Story/cha) -->
   <div class="filter-bar__field">
     <label>Người</label>

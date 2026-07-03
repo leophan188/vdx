@@ -219,14 +219,22 @@ export class PrjBacklog implements OnInit {
   /** Lọc theo LOẠI (Epic/Story/Task/Sub-task/Bug/Issue) — lưu localStorage THEO DỰ ÁN cho lần sau. */
   readonly allTypes: TaskType[] = ['EPIC', 'STORY', 'TASK', 'SUBTASK', 'BUG', 'ISSUE'];
   readonly typeFilter = signal<Set<TaskType>>(new Set(this.allTypes));
-  /** Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả) — lưu theo dự án. */
+  /** Lọc theo TRẠNG THÁI — bật hết = không lọc. Giữ cả task cha của task khớp. */
+  readonly allStatuses: TaskStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+  readonly statusFilter = signal<Set<TaskStatus>>(new Set(this.allStatuses));
+  /** Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả; '__UNASSIGNED__' = chưa gán) — lưu theo dự án. */
   readonly filterAssignee = signal('');
+  /** Giá trị đặc biệt cho lọc "Chưa gán". */
+  readonly UNASSIGNED = '__UNASSIGNED__';
   private typeKey(): string { return 'bpm.backlog.typeFilter.' + (this.projectId() || 'x'); }
+  private statusKey(): string { return 'bpm.backlog.statusFilter.' + (this.projectId() || 'x'); }
   private asgKey(): string { return 'bpm.backlog.assignee.' + (this.projectId() || 'x'); }
   /** Nạp cấu hình lọc đã lưu của dự án (gọi khi có projectId). */
   private loadFilterPrefs(): void {
     const saved = loadPref<TaskType[] | null>(this.typeKey(), null);
     if (saved && saved.length) this.typeFilter.set(new Set(saved));
+    const savedSt = loadPref<TaskStatus[] | null>(this.statusKey(), null);
+    if (savedSt && savedSt.length) this.statusFilter.set(new Set(savedSt));
     // "Backlog của tôi": mặc định lọc theo tôi (không đọc/ghi pref chung của dự án để khỏi ảnh hưởng màn QLDA).
     const preset = this.presetAssignee();
     this.filterAssignee.set(preset ? preset : loadPref<string>(this.asgKey(), ''));
@@ -239,18 +247,29 @@ export class PrjBacklog implements OnInit {
     this.typeFilter.set(s);
     savePref(this.typeKey(), [...s]);
   }
+  toggleStatus(st: TaskStatus): void {
+    const s = new Set(this.statusFilter());
+    s.has(st) ? s.delete(st) : s.add(st);
+    if (s.size === 0) { this.allStatuses.forEach((x) => s.add(x)); } // không cho ẩn hết
+    this.statusFilter.set(s);
+    savePref(this.statusKey(), [...s]);
+  }
   setAssignee(uid: string): void {
     this.filterAssignee.set(uid || '');
     if (!this.presetAssignee()) savePref(this.asgKey(), uid || ''); // chế độ "Backlog của tôi" không ghi đè pref QLDA
   }
-  /** Danh sách người để lọc — suy từ assignee của các task. */
+  /** Danh sách người để lọc — suy từ assignee của các task; kèm mục "Chưa gán". */
   readonly assigneeSel = computed<SelectOption[]>(() => {
     const map = new Map<string, string>();
+    let hasUnassigned = false;
     for (const t of this.tasks()) {
       if (t.assigneeUserId) map.set(t.assigneeUserId, t.assigneeName || t.assigneeUserId);
+      else hasUnassigned = true;
     }
-    return [...map.entries()].map(([value, label]) => ({ value, label }))
+    const people = [...map.entries()].map(([value, label]) => ({ value, label }))
       .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+    // "Chưa gán" lên đầu để lọc nhanh các task chưa có người thực hiện.
+    return hasUnassigned ? [{ value: this.UNASSIGNED, label: '— Chưa gán —' }, ...people] : people;
   });
   /** Làm tròn % về số nguyên (không lấy thập phân). */
   round(n: number | null | undefined): number { return Math.round(n || 0); }
@@ -281,25 +300,40 @@ export class PrjBacklog implements OnInit {
   readonly visible = computed<TreeRow[]>(() => {
     const col = this.collapsed();
     const types = this.typeFilter();
+    const statuses = this.statusFilter();
     const asg = this.filterAssignee();
     const byId = new Map(this.tasks().map((t) => [t.id, t]));
 
-    // Lọc NGƯỜI: giữ task khớp người + MỌI tổ tiên của chúng (để vẫn thấy Epic/Story/task cha).
+    // Thêm mọi tổ tiên của id vào set (để lọc vẫn thấy Epic/Story/task cha của task khớp).
+    const addAncestors = (set: Set<string>, t: ProjectTask) => {
+      set.add(t.id);
+      let p = t.parentId;
+      while (p) { set.add(p); p = byId.get(p)?.parentId ?? null; }
+    };
+
+    // Lọc NGƯỜI: '__UNASSIGNED__' = chưa gán; ngược lại = khớp userId. Giữ cả cấp cha.
     let assigneeKeep: Set<string> | null = null;
     if (asg) {
       assigneeKeep = new Set<string>();
       for (const t of this.tasks()) {
-        if (t.assigneeUserId === asg) {
-          assigneeKeep.add(t.id);
-          let p = t.parentId;
-          while (p) { assigneeKeep.add(p); p = byId.get(p)?.parentId ?? null; }
-        }
+        const match = asg === this.UNASSIGNED ? !t.assigneeUserId : t.assigneeUserId === asg;
+        if (match) addAncestors(assigneeKeep, t);
+      }
+    }
+
+    // Lọc TRẠNG THÁI: nếu không phải "tất cả" → giữ task khớp trạng thái + MỌI cấp cha.
+    let statusKeep: Set<string> | null = null;
+    if (statuses.size < this.allStatuses.length) {
+      statusKeep = new Set<string>();
+      for (const t of this.tasks()) {
+        if (statuses.has(t.status)) addAncestors(statusKeep, t);
       }
     }
 
     return this.rows().filter((r) => {
       if (!types.has(r.task.type)) return false;
       if (assigneeKeep && !assigneeKeep.has(r.task.id)) return false;
+      if (statusKeep && !statusKeep.has(r.task.id)) return false;
       let p = r.task.parentId;
       while (p) {
         if (col.has(p)) return false;
