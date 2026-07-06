@@ -5,6 +5,7 @@ import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { memberPersonOptions } from '../../shared/person-options';
+import { buildParentOptions } from '../work-stats';
 import { forkJoin, of } from 'rxjs';
 import { ToastService } from '../../shared/toast/toast.service';
 import { PrjTaskDetail } from '../task-detail/task-detail';
@@ -110,9 +111,8 @@ export class PrjBugs implements OnInit {
   readonly bugs = computed<ProjectTask[]>(() =>
     this.tasks().filter((t) => t.type === 'BUG' || t.type === 'ISSUE'));
 
-  /** Mọi task — để gắn bug vào task cha (parentId). */
-  readonly parentSel = computed<SelectOption[]>(() =>
-    this.tasks().map((t) => ({ value: t.id, label: `${t.code} · ${t.title}` })));
+  /** Mọi task — để gắn bug vào task cha (parentId). Badge loại + chuỗi cha (đồng bộ Backlog/Tạo nhanh). */
+  readonly parentSel = computed<SelectOption[]>(() => buildParentOptions(this.tasks(), this.tasks()));
 
   readonly filtered = computed<ProjectTask[]>(() =>
     this.bugs().filter((t) =>

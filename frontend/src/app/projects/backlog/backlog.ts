@@ -4,7 +4,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
-import { TYPE_META } from '../work-stats';
+import { buildParentOptions } from '../work-stats';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
   ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember, ReorderItem
@@ -246,12 +246,8 @@ export class PrjBacklog implements OnInit {
     const allow = this.parentTypeOf(this.f.type);
     if (!allow) return [];
     const editing = this.editingId();
-    return this.tasks()
-      .filter((t) => allow.includes(t.type) && t.id !== editing)
-      .map((t) => ({
-        value: t.id, label: `[${t.code}] ${t.title}`,
-        badge: TYPE_META[t.type]?.short ?? t.type, badgeColor: TYPE_META[t.type]?.color
-      }));
+    return buildParentOptions(this.tasks(),
+      this.tasks().filter((t) => allow.includes(t.type) && t.id !== editing));
   }
   /** Khi đổi loại trong modal → tính lại cha hợp lệ; reset parentId nếu không còn hợp lệ. */
   onTypeChange(type: TaskType): void {

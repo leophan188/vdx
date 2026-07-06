@@ -1,4 +1,5 @@
-import { TaskType, TaskStatus } from '../core/project.service';
+import { TaskType, TaskStatus, ProjectTask } from '../core/project.service';
+import { SelectOption } from '../shared/searchable-select/searchable-select';
 
 /** Nhóm thống kê công việc: gộp Task (Task+Sub-task), Bug, Issue riêng biệt. Bỏ EPIC/STORY (cấp nhóm). */
 export type WorkCat = 'TASK' | 'BUG' | 'ISSUE';
@@ -18,6 +19,39 @@ export const TYPE_META: Record<TaskType, { short: string; color: string }> = {
   BUG:     { short: 'Bug',      color: 'var(--overdue, #e5484d)' },
   ISSUE:   { short: 'Issue',    color: 'var(--status-pending, #d97706)' }
 };
+
+/** Chuỗi TỔ TIÊN (Epic › Story › Task cha) của một task — để hiện "thuộc gì" khi chọn cha. Rỗng nếu là gốc. */
+export function ancestorPath(t: ProjectTask, byId: Map<string, ProjectTask>): string {
+  const chain: string[] = [];
+  let cur = t.parentId ? byId.get(t.parentId) : undefined;
+  let guard = 0;
+  while (cur && guard++ < 12) {
+    chain.unshift(`${TYPE_META[cur.type]?.short ?? cur.type}: ${cur.title}`);
+    cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+  }
+  return chain.length ? '↳ thuộc ' + chain.join(' › ') : '';
+}
+
+/** Một option cho dropdown CHỌN TASK CHA: badge loại + [mã] tiêu đề + dòng phụ chuỗi cha. */
+export function parentOptionOf(t: ProjectTask, byId: Map<string, ProjectTask>): SelectOption {
+  const meta = TYPE_META[t.type];
+  const path = ancestorPath(t, byId);
+  const opt: SelectOption = {
+    value: t.id,
+    label: `[${t.code}] ${t.title}`,
+    badge: meta?.short ?? t.type,
+    badgeColor: meta?.color
+  };
+  if (path) opt.sub = path;
+  return opt;
+}
+
+/** Build options chọn cha ĐỒNG BỘ (dùng chung cho Backlog / Tạo nhanh / Bug). */
+export function buildParentOptions(all: ProjectTask[], filtered: ProjectTask[]): SelectOption[] {
+  const byId = new Map<string, ProjectTask>();
+  for (const t of all) byId.set(t.id, t);
+  return filtered.map((t) => parentOptionOf(t, byId));
+}
 
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
 export function catOf(type: TaskType): WorkCat | null {
