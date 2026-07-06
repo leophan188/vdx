@@ -7,6 +7,10 @@
                        [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
   </div>
   <div class="filter-bar__field">
+    <label>Loại công việc</label>
+    <app-type-filter [options]="typeChips" [selected]="typeFilter()" (toggle)="toggleType($event)" />
+  </div>
+  <div class="filter-bar__field">
     <label>Ưu tiên</label>
     <app-type-filter [options]="priorityChips" [selected]="priorityFilter()" (toggle)="togglePriority($event)" />
   </div>

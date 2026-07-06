@@ -185,6 +185,20 @@ export class PrjKanban {
     this.priorityFilter.set(set);
   }
 
+  /** Lọc LOẠI công việc (chỉ các loại lá hiện trên Kanban). Mặc định hiện hết. */
+  private static readonly TYPE_KEYS = ['TASK', 'SUBTASK', 'BUG', 'ISSUE'];
+  readonly typeChips = [
+    { value: 'TASK', label: 'Task' }, { value: 'SUBTASK', label: 'Sub-task' },
+    { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
+  ];
+  readonly typeFilter = signal<Set<string>>(new Set(PrjKanban.TYPE_KEYS));
+  toggleType(t: string): void {
+    const set = new Set(this.typeFilter());
+    set.has(t) ? set.delete(t) : set.add(t);
+    if (set.size === 0) PrjKanban.TYPE_KEYS.forEach((x) => set.add(x));
+    this.typeFilter.set(set);
+  }
+
   /** Danh sách assignee (suy ra từ task) cho bộ lọc. */
   readonly assigneeSel = computed<SelectOption[]>(() => {
     const map = new Map<string, string>();
@@ -200,9 +214,11 @@ export class PrjKanban {
     const a = this.filterAssignee();
     const df = this.dateFilter();
     const prio = this.priorityFilter();
+    const typ = this.typeFilter();
     // CHỈ task LÁ (nhỏ nhất — không có con). Bỏ mọi task CHA (EPIC/Story/Task cha).
     let ts = this.tasks().filter((t) => t.leaf && t.type !== 'EPIC' && t.type !== 'STORY');
     if (a) ts = ts.filter((t) => t.assigneeUserId === a);
+    if (typ.size < PrjKanban.TYPE_KEYS.length) ts = ts.filter((t) => typ.has(t.type));
     if (prio.size < 4) ts = ts.filter((t) => prio.has(t.priority));
     if (df !== 'ALL') ts = ts.filter((t) => this.matchDate(t, df));
     return ts;
