@@ -117,6 +117,15 @@ export class PrjLog {
   icon(a: string): string { return ACTION_META[a]?.icon ?? '•'; }
   verb(a: string): string { return ACTION_META[a]?.verb ?? a; }
 
+  /** Nhãn trạng thái tiếng Việt (dịch cả bản ghi CŨ đã lưu mã TODO/IN_REVIEW…). */
+  private static readonly STATUS_VI: Record<string, string> = {
+    BACKLOG: 'Backlog', TODO: 'Cần làm', IN_PROGRESS: 'Đang làm', IN_REVIEW: 'Kiểm thử', DONE: 'Hoàn thành'
+  };
+  displayDetail(detail: string | null): string {
+    if (!detail) return '';
+    return detail.replace(/\b(BACKLOG|TODO|IN_PROGRESS|IN_REVIEW|DONE)\b/g, (m) => PrjLog.STATUS_VI[m] ?? m);
+  }
+
   /** ISO Instant → "dd/MM/yyyy HH:mm" (giờ địa phương). */
   when(iso: string | null): string {
     if (!iso) return '';
