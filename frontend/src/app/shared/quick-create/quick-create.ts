@@ -6,6 +6,7 @@ import { SearchableSelect, SelectOption } from '../searchable-select/searchable-
 import { buildParentOptions } from '../../projects/work-stats';
 import { memberPersonOptions } from '../person-options';
 import { ToastService } from '../toast/toast.service';
+import { AuthService } from '../../core/auth.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
 import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority, BugSeverity } from '../../core/project.service';
 
@@ -59,6 +60,7 @@ export class QuickCreate {
   private meBug = inject(MeBugService);
   private projectApi = inject(ProjectService);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
 
   readonly open = input(false);
   /** Loại preset khi mở (nút ＋Task / ＋Bug). Vẫn cho đổi sang loại bất kỳ. */
@@ -173,7 +175,7 @@ export class QuickCreate {
     this.description.set('');
     this.priority.set('MEDIUM');
     this.assigneeUserId.set('');
-    this.testerUserId.set('');
+    this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
     this.estimateHours.set('');
     this.dueIso.set('');
     this.severity.set('');
@@ -222,7 +224,7 @@ export class QuickCreate {
     this.projectId.set(id || '');
     this.parentId.set('');
     this.assigneeUserId.set('');
-    this.testerUserId.set('');
+    this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
     this.members.set([]);
     this.tasks.set([]);
     if (!id) return;

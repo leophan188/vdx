@@ -231,6 +231,11 @@ public class ProjectTaskService {
         ProjectTask t = new ProjectTask(projectId, p.nextSeq(), require(req.title(), "tiêu đề"), actor);
         applyFields(t, req, parentId);
         t.setReporterUserId(userIdOf(actor)); // người LOG = actor (UserAccount id); dùng cho auto-reassign bug
+        // Người kiểm thử MẶC ĐỊNH = người LOG khi tạo Bug/Issue chưa chọn — đồng bộ mọi màn (Tạo nhanh/Backlog/Bug/my-bugs).
+        if ((t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE)
+                && (t.getTesterUserId() == null || t.getTesterUserId().isBlank())) {
+            t.setTesterUserId(t.getReporterUserId());
+        }
         projectRepo.save(p); // lưu seq mới
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_CREATED", "ProjectTask", saved.getId(), actor,
