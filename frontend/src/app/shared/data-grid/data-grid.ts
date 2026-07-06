@@ -34,6 +34,10 @@ export class DataGrid {
   readonly pageSize = input(50);
   readonly pageSizes = input<number[]>([50, 100, 200]);
   readonly expandable = input(false);
+  /** Hiện nút "Xuất Excel" (mặc định bật cho MỌI lưới). */
+  readonly exportable = input(true);
+  /** Tên file khi xuất (không kèm .xlsx); rỗng → dùng title/tiêu đề mặc định. */
+  readonly exportName = input('');
 
   private readonly cellDirs = contentChildren(GridCellDirective);
   private readonly detailDir = contentChild(GridDetailDirective);
@@ -160,5 +164,73 @@ export class DataGrid {
 
   cellValue(row: unknown, key: string): unknown {
     return (row as Record<string, unknown>)[key];
+  }
+
+  readonly exporting = signal(false);
+
+  /** Cột được xuất: bỏ cột không có tiêu đề (thường là cột nút thao tác). */
+  private exportColumns(): GridColumn[] {
+    return this.columns().filter((c) => (c.header ?? '').trim().length > 0);
+  }
+
+  /** Giá trị ô để ghi Excel: giữ số, gộp mảng, JSON cho object, rỗng nếu trống. */
+  private exportCell(row: unknown, key: string): string | number {
+    const v = (row as Record<string, unknown>)[key];
+    if (v == null) return '';
+    if (typeof v === 'number' || typeof v === 'string') return v;
+    if (typeof v === 'boolean') return v ? 'Có' : 'Không';
+    if (Array.isArray(v)) return v.join(', ');
+    try { return JSON.stringify(v); } catch { return String(v); }
+  }
+
+  /** Xuất TOÀN BỘ dòng đang lọc (mọi trang, theo thứ tự đang sắp) ra file .xlsx. */
+  async exportExcel(): Promise<void> {
+    if (this.exporting() || this.total() === 0) return;
+    this.exporting.set(true);
+    try {
+      const cols = this.exportColumns();
+      const rows = this.sorted();
+      const aoa: (string | number)[][] = [
+        cols.map((c) => c.header),
+        ...rows.map((r) => cols.map((c) => this.exportCell(r, c.key)))
+      ];
+      const mod: any = await import('xlsx');
+      const XLSX = mod?.utils ? mod : (mod?.default ?? mod);
+      const ws = XLSX.utils.aoa_to_sheet(aoa);
+      // Độ rộng cột theo nội dung (giới hạn 10..60 ký tự) cho dễ đọc.
+      ws['!cols'] = cols.map((c, i) => {
+        const maxLen = Math.max(c.header.length, ...aoa.slice(1).map((row) => String(row[i] ?? '').length));
+        return { wch: Math.min(60, Math.max(10, maxLen + 2)) };
+      });
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, this.sheetName());
+      // Xuất qua Blob + <a download> (đáng tin cậy hơn XLSX.writeFile trong môi trường bundler).
+      const buf: ArrayBuffer = XLSX.write(wb, { type: 'array', bookType: 'xlsx' });
+      const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url; a.download = this.fileName();
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 1500);
+    } catch (e) {
+      console.error('Xuất Excel lỗi:', e);
+    } finally {
+      this.exporting.set(false);
+    }
+  }
+
+  private sheetName(): string {
+    const base = (this.exportName() || this.title() || 'Dữ liệu').replace(/[\\/*?:\[\]]/g, ' ').trim();
+    return (base || 'Dữ liệu').slice(0, 31);
+  }
+
+  private fileName(): string {
+    const base = (this.exportName() || this.title() || 'du-lieu')
+      .toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/đ/g, 'd')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'du-lieu';
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}${p(d.getMonth() + 1)}${p(d.getDate())}_${p(d.getHours())}${p(d.getMinutes())}`;
+    return `${base}_${stamp}.xlsx`;
   }
 }

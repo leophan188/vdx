@@ -9,6 +9,13 @@
              [value]="query()" (input)="onSearch($any($event.target).value)" />
     }
     <ng-content select="[gridActions]" />
+    @if (exportable()) {
+      <button type="button" class="btn btn--ghost btn--sm grid__export"
+              [disabled]="exporting() || total() === 0"
+              (click)="exportExcel()" title="Xuất dữ liệu ra Excel (.xlsx)">
+        {{ exporting() ? '⏳ Đang xuất…' : '⬇ Excel' }}
+      </button>
+    }
   </div>
 
   <div class="grid__scroll">
