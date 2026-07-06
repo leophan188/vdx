@@ -4,6 +4,7 @@ import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
+import { TypeFilter } from '../../shared/type-filter/type-filter';
 import { memberPersonOptions } from '../../shared/person-options';
 import { buildParentOptions } from '../work-stats';
 import { forkJoin, of } from 'rxjs';
@@ -21,7 +22,7 @@ import {
  */
 @Component({
   selector: 'app-prj-bugs',
-  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip],
+  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter],
   templateUrl: './bugs.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
@@ -66,9 +67,23 @@ export class PrjBugs implements OnInit {
   /** Ảnh đính kèm chờ tải lên (queue khi báo lỗi, upload sau khi tạo task). */
   readonly queuedFiles = signal<{ file: File; url: string }[]>([]);
 
-  // ----- Bộ lọc -----
-  filterStatus = '';
-  filterType = '';
+  // ----- Bộ lọc (chip đa chọn — signal để computed lọc CHẠY LẠI khi đổi; đồng bộ với Kanban/Log) -----
+  readonly STATUS_KEYS = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+  readonly TYPE_KEYS = ['BUG', 'ISSUE'];
+  readonly statusFilter = signal<Set<string>>(new Set(this.STATUS_KEYS));
+  readonly typeFilter = signal<Set<string>>(new Set(this.TYPE_KEYS));
+  toggleStatus(v: string): void {
+    const s = new Set(this.statusFilter());
+    s.has(v) ? s.delete(v) : s.add(v);
+    if (s.size === 0) this.STATUS_KEYS.forEach((x) => s.add(x));
+    this.statusFilter.set(s);
+  }
+  toggleType(v: string): void {
+    const s = new Set(this.typeFilter());
+    s.has(v) ? s.delete(v) : s.add(v);
+    if (s.size === 0) this.TYPE_KEYS.forEach((x) => s.add(x));
+    this.typeFilter.set(s);
+  }
 
   readonly typeOptions: { value: TaskType; label: string }[] = [
     { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
@@ -114,10 +129,13 @@ export class PrjBugs implements OnInit {
   /** Mọi task — để gắn bug vào task cha (parentId). Badge loại + chuỗi cha (đồng bộ Backlog/Tạo nhanh). */
   readonly parentSel = computed<SelectOption[]>(() => buildParentOptions(this.tasks(), this.tasks()));
 
-  readonly filtered = computed<ProjectTask[]>(() =>
-    this.bugs().filter((t) =>
-      (!this.filterStatus || t.status === this.filterStatus) &&
-      (!this.filterType || t.type === this.filterType)));
+  readonly filtered = computed<ProjectTask[]>(() => {
+    const st = this.statusFilter();
+    const ty = this.typeFilter();
+    return this.bugs().filter((t) =>
+      (st.size >= this.STATUS_KEYS.length || st.has(t.status)) &&
+      (ty.size >= this.TYPE_KEYS.length || ty.has(t.type)));
+  });
 
   readonly stats = computed(() => {
     const b = this.bugs();
@@ -192,7 +210,8 @@ export class PrjBugs implements OnInit {
   }
 
   resetFilter(): void {
-    this.filterStatus = this.filterType = '';
+    this.statusFilter.set(new Set(this.STATUS_KEYS));
+    this.typeFilter.set(new Set(this.TYPE_KEYS));
   }
 
   // ----- Modal -----

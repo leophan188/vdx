@@ -9,15 +9,11 @@
 <div class="filter-bar">
   <div class="filter-bar__field">
     <label>Trạng thái</label>
-    <searchable-select [options]="statusSel" [value]="filterStatus"
-                       (valueChange)="filterStatus = $event"
-                       [allowEmpty]="true" emptyLabel="— Mọi trạng thái —" placeholder="Trạng thái" />
+    <app-type-filter [options]="statusOptions" [selected]="statusFilter()" (toggle)="toggleStatus($event)" />
   </div>
   <div class="filter-bar__field">
     <label>Loại</label>
-    <searchable-select [options]="typeSel" [value]="filterType"
-                       (valueChange)="filterType = $event"
-                       [allowEmpty]="true" emptyLabel="— Mọi loại —" placeholder="Loại" />
+    <app-type-filter [options]="typeOptions" [selected]="typeFilter()" (toggle)="toggleType($event)" />
   </div>
   <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">Đặt lại</button>
   <span class="filter-bar__spacer"></span>
