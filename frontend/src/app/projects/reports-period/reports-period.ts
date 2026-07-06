@@ -4,7 +4,6 @@ import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { StatCard } from '../../shared/stat-card/stat-card';
 import { Modal } from '../../shared/modal/modal';
-import { TaskCard } from '../task-card/task-card';
 import {
   ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority
 } from '../../core/project.service';
@@ -61,7 +60,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
  */
 @Component({
   selector: 'app-prj-reports-period',
-  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal, TaskCard],
+  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal],
   templateUrl: './reports-period.html',
   styles: [`
     .rpp { display: grid; gap: var(--space-4); font-size: var(--text-sm); color: var(--color-text); }
@@ -151,9 +150,9 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
       background: color-mix(in srgb, var(--overdue, #e5484d) 15%, transparent); color: var(--overdue, #e5484d);
       padding: 0 9px; border-radius: 999px; font-size: var(--text-xs); }
 
-    /* Các khối danh sách (thu gọn được) — lưới card */
-    .rpp__cards { display: grid; gap: var(--space-3);
-      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
+    /* Dòng phụ chuỗi cha trong lưới danh sách */
+    .rpp__li-parent { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 520px; }
 
     .rpp__pct-cell { display: flex; align-items: center; gap: var(--space-2); }
     .rpp__mini-bar { flex: 1; min-width: 56px; height: 8px; border-radius: var(--radius-full);

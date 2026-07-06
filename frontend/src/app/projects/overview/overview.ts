@@ -3,11 +3,10 @@ import { StatCard } from '../../shared/stat-card/stat-card';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
-import { BurndownChart } from './burndown-chart';
 import { formatThousands } from '../../shared/format';
 import { categoryStats, CatStat } from '../work-stats';
 import {
-  ProjectService, Project, ProjectReport, ProjectStatus, Burndown, TaskStatus, TaskType, ProjectTask
+  ProjectService, Project, ProjectReport, ProjectStatus, TaskStatus, TaskType, ProjectTask
 } from '../../core/project.service';
 
 interface StatusBar { status: TaskStatus; label: string; color: string; count: number; pct: number; }
@@ -22,7 +21,7 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
 @Component({
   selector: 'app-prj-overview',
   standalone: true,
-  imports: [StatCard, DataGrid, GridCellDirective, EmployeeChip, BurndownChart],
+  imports: [StatCard, DataGrid, GridCellDirective, EmployeeChip],
   templateUrl: './overview.html',
   styles: [`
     .prj-ov { display: grid; gap: var(--space-4); }
@@ -138,7 +137,6 @@ export class PrjOverview {
 
   readonly project = signal<Project | null>(null);
   readonly report = signal<ProjectReport | null>(null);
-  readonly burndown = signal<Burndown | null>(null);
   readonly tasks = signal<ProjectTask[]>([]);
   readonly loading = signal(true);
 
@@ -249,10 +247,6 @@ export class PrjOverview {
     this.svc.report(id).subscribe({
       next: (r) => { this.report.set(r); this.loading.set(false); },
       error: () => { this.report.set(null); this.loading.set(false); }
-    });
-    this.svc.burndown(id).subscribe({
-      next: (b) => this.burndown.set(b),
-      error: () => this.burndown.set(null)
     });
     this.svc.listTasks(id).subscribe({
       next: (t) => this.tasks.set(t ?? []),

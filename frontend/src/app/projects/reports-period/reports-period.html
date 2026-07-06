@@ -172,18 +172,33 @@
         </button>
         @if (!isCollapsed(b.key)) {
           <div class="rpp__sec-body">
-            @if (b.rows.length === 0) {
-              <span class="rpp__empty-note">{{ b.emptyText }}</span>
-            } @else {
-              <div class="rpp__cards">
-                @for (t of b.rows; track t.taskId) {
-                  <app-task-card [code]="t.code" [title]="t.title" [type]="t.type" [status]="t.status"
-                                 [parentPath]="t.parentPath" [assigneeName]="t.assigneeName"
-                                 [dueDate]="t.dueDate" [progressPct]="t.progressPct"
-                                 [overdue]="b.key === 'overdue'" />
-                }
-              </div>
-            }
+            <data-grid [columns]="cols" [rows]="b.rows" [exportName]="b.title"
+                       [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                       [emptyText]="b.emptyText">
+              <ng-template gridCell="code" let-t>
+                <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)"
+                      [title]="typeLabel(t.type)">{{ t.code }}</span>
+              </ng-template>
+              <ng-template gridCell="title" let-t>
+                <div>
+                  <span [title]="t.title">{{ t.title }}</span>
+                  <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
+                </div>
+                @if (t.parentPath) { <div class="rpp__li-parent" [title]="t.parentPath">↳ {{ t.parentPath }}</div> }
+              </ng-template>
+              <ng-template gridCell="assigneeName" let-t>
+                @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
+                @else { <span class="rpp__pct-val">— Chưa gán —</span> }
+              </ng-template>
+              <ng-template gridCell="estimateHours" let-t>{{ t.estimateHours || 0 }}</ng-template>
+              <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
+              <ng-template gridCell="progressPct" let-t>
+                <div class="rpp__pct-cell">
+                  <div class="rpp__mini-bar"><div class="rpp__mini-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
+                  <span class="rpp__pct-val">{{ clampPct(t.progressPct) }}%</span>
+                </div>
+              </ng-template>
+            </data-grid>
           </div>
         }
       </section>
