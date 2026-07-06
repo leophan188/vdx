@@ -77,9 +77,9 @@ export class AuthService {
     }
   }
 
-  login(username: string, password: string): Observable<LoginResult> {
+  login(username: string, password: string, rememberMe = false): Observable<LoginResult> {
     return this.http
-      .post<LoginResult>(`${this.base}/auth/login`, { username, password }, { withCredentials: true })
+      .post<LoginResult>(`${this.base}/auth/login`, { username, password, rememberMe }, { withCredentials: true })
       .pipe(tap((r) => this.currentUser.set(r)));
   }
 

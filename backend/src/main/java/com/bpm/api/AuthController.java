@@ -13,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.security.web.authentication.RememberMeServices;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -33,13 +34,16 @@ public class AuthController {
     private final UserAccountRepository accounts;
     private final EmployeeRepository employees;
     private final PasswordEncoder passwordEncoder;
+    private final RememberMeServices rememberMeServices;
 
     public AuthController(AuthService authService, UserAccountRepository accounts,
-                          EmployeeRepository employees, PasswordEncoder passwordEncoder) {
+                          EmployeeRepository employees, PasswordEncoder passwordEncoder,
+                          RememberMeServices rememberMeServices) {
         this.authService = authService;
         this.accounts = accounts;
         this.employees = employees;
         this.passwordEncoder = passwordEncoder;
+        this.rememberMeServices = rememberMeServices;
     }
 
     @PostMapping("/login")
@@ -49,6 +53,10 @@ public class AuthController {
         Authentication auth = authService.login(req.username(), req.password(), request, response);
         // CÓ raw password tại đây → tính lại cờ "đang dùng mật khẩu mặc định" và lưu.
         markDefaultPasswordFlag(auth.getName(), req.password());
+        // Tick "Ghi nhớ đăng nhập" → phát cookie remember-me (tự đăng nhập lại sau khi phiên hết).
+        if (Boolean.TRUE.equals(req.rememberMe())) {
+            rememberMeServices.loginSuccess(request, response, auth);
+        }
         return ResponseEntity.ok(principal(auth));
     }
 
@@ -116,10 +124,16 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    public ResponseEntity<Void> logout(HttpServletRequest request) {
+    public ResponseEntity<Void> logout(HttpServletRequest request, HttpServletResponse response) {
         if (request.getSession(false) != null) {
             request.getSession(false).invalidate();
         }
+        // Xoá cookie remember-me để không tự đăng nhập lại sau khi đăng xuất.
+        jakarta.servlet.http.Cookie kill = new jakarta.servlet.http.Cookie("VDX_REMEMBER", "");
+        kill.setPath("/");
+        kill.setMaxAge(0);
+        kill.setHttpOnly(true);
+        response.addCookie(kill);
         return ResponseEntity.noContent().build();
     }
 }

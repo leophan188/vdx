@@ -31,7 +31,7 @@ export class Login {
     if (this.loading()) return;
     this.error.set(null);
     this.loading.set(true);
-    this.auth.login(this.username, this.password).subscribe({
+    this.auth.login(this.username, this.password, this.rememberMe).subscribe({
       next: () => {
         this.loading.set(false);
         this.router.navigate(['/home']);

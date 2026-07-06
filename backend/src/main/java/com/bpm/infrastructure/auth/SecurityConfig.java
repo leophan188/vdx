@@ -8,11 +8,16 @@ import org.springframework.security.config.annotation.authentication.configurati
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.RememberMeServices;
+import org.springframework.security.web.authentication.rememberme.TokenBasedRememberMeServices;
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.security.web.context.SecurityContextRepository;
+
+import java.time.Duration;
 
 /**
  * Cấu hình bảo mật (AD-9, NFR-04). Phiên dựa trên HttpSession; phần đăng nhập do AuthController xử lý
@@ -21,9 +26,28 @@ import org.springframework.security.web.context.SecurityContextRepository;
 @Configuration
 public class SecurityConfig {
 
+    /** Khoá ký token remember-me (đổi được qua biến môi trường; PHẢI ổn định giữa các lần restart). */
+    private static final String REMEMBER_KEY =
+            System.getenv().getOrDefault("BPM_REMEMBER_KEY", "vdx-remember-me-secret-2026");
+
     @Bean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
+    }
+
+    /**
+     * "Ghi nhớ đăng nhập": phát cookie token (VDX_REMEMBER) sống 30 ngày → tự đăng nhập lại
+     * sau khi phiên hết hạn / đóng trình duyệt. alwaysRemember=true vì ta CHỦ ĐỘNG gọi loginSuccess
+     * chỉ khi người dùng tick ô nhớ (ở AuthController).
+     */
+    @Bean
+    public RememberMeServices rememberMeServices(UserDetailsService userDetailsService) {
+        TokenBasedRememberMeServices services =
+                new TokenBasedRememberMeServices(REMEMBER_KEY, userDetailsService);
+        services.setAlwaysRemember(true);
+        services.setTokenValiditySeconds((int) Duration.ofDays(30).toSeconds());
+        services.setCookieName("VDX_REMEMBER");
+        return services;
     }
 
     @Bean
@@ -37,10 +61,12 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, RememberMeServices rememberMeServices) throws Exception {
         http
             .csrf(AbstractHttpConfigurer::disable)
             .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED))
+            // Tự đăng nhập lại từ cookie remember-me khi phiên không còn (đóng trình duyệt / hết hạn).
+            .rememberMe(rm -> rm.rememberMeServices(rememberMeServices).key(REMEMBER_KEY))
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/auth/login").permitAll()
                 .requestMatchers("/actuator/health/**", "/actuator/info").permitAll()
