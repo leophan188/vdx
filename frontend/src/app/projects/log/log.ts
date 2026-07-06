@@ -1,6 +1,6 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { TypeFilter, TypeChip } from '../../shared/type-filter/type-filter';
-import { ProjectService, ProjectActivityItem, TaskActivityAction } from '../../core/project.service';
+import { ProjectService, ProjectActivityItem, TaskActivityAction, ProjectTask } from '../../core/project.service';
 
 /** Metadata hiển thị theo loại hành động. */
 interface ActionMeta { icon: string; verb: string; label: string; }
@@ -44,6 +44,8 @@ const ACTION_META: Record<string, ActionMeta> = {
     .lg__detail { color: var(--color-text); background: var(--color-surface-alt);
       padding: 0 6px; border-radius: var(--radius-sm); }
     .lg__code { font-weight: var(--weight-semibold); color: var(--color-primary); }
+    .lg__code--link { background: none; border: 0; padding: 0; font: inherit; cursor: pointer; }
+    .lg__code--link:hover { text-decoration: underline; }
     .lg__title { color: var(--color-text-muted); overflow-wrap: anywhere; }
     .lg__deleted { color: var(--color-text-muted); font-style: italic; }
     .lg__time { color: var(--color-text-muted); font-size: var(--text-xs); white-space: nowrap;
@@ -60,6 +62,16 @@ export class PrjLog {
   readonly loading = signal(true);
   readonly items = signal<ProjectActivityItem[]>([]);
   readonly selected = signal<Set<string>>(new Set());
+
+  /** Bấm mã công việc → mở chi tiết (cha render app-prj-task-detail). */
+  readonly openTask = output<ProjectTask>();
+  private readonly tasksById = signal<Map<string, ProjectTask>>(new Map());
+  hasTask(taskId: string | null): boolean { return !!taskId && this.tasksById().has(taskId); }
+  openDetail(taskId: string | null): void {
+    if (!taskId) return;
+    const t = this.tasksById().get(taskId);
+    if (t) this.openTask.emit(t);
+  }
 
   /** Chip lọc: chỉ các loại action THỰC SỰ xuất hiện trong log. */
   readonly filterOptions = computed<TypeChip[]>(() => {
@@ -83,6 +95,15 @@ export class PrjLog {
       this.svc.projectActivity(pid).subscribe({
         next: (rows) => { this.items.set(rows ?? []); this.loading.set(false); },
         error: () => { this.items.set([]); this.loading.set(false); }
+      });
+      // Nạp danh sách task để tra khi bấm mã (mở chi tiết).
+      this.svc.listTasks(pid).subscribe({
+        next: (ts) => {
+          const m = new Map<string, ProjectTask>();
+          for (const t of ts ?? []) m.set(t.id, t);
+          this.tasksById.set(m);
+        },
+        error: () => this.tasksById.set(new Map())
       });
     });
   }

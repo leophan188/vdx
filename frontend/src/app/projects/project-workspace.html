@@ -21,7 +21,7 @@
         @case ('bugs') { <app-prj-bugs [projectId]="pid" /> }
         @case ('reports-period') { <app-prj-reports-period [projectId]="pid" /> }
         @case ('timesheet') { <app-prj-timesheet [projectId]="pid" /> }
-        @case ('log') { <app-prj-log [projectId]="pid" /> }
+        @case ('log') { <app-prj-log [projectId]="pid" (openTask)="openDetail($event)" /> }
         @case ('diary') { <app-prj-diary [projectId]="pid" /> }
       }
     }

@@ -153,6 +153,8 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     /* Dòng phụ chuỗi cha trong lưới danh sách */
     .rpp__li-parent { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px;
       overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 520px; }
+    /* Số lượng đã hiện ở tiêu đề section → ẩn "N mục" của lưới bên trong (tránh trùng). */
+    .rpp__sec-body ::ng-deep .grid__count { display: none; }
 
     .rpp__pct-cell { display: flex; align-items: center; gap: var(--space-2); }
     .rpp__mini-bar { flex: 1; min-width: 56px; height: 8px; border-radius: var(--radius-full);

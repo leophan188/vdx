@@ -167,8 +167,7 @@
       <section class="rpp__sec rpp__block">
         <button type="button" class="rpp__sec-head" (click)="toggle(b.key)">
           <span class="rpp__sec-caret" [class.is-collapsed]="isCollapsed(b.key)">▾</span>
-          <span>{{ b.icon }} {{ b.title }}</span>
-          <span class="rpp__sec-count">{{ b.rows.length }}</span>
+          <span>{{ b.icon }} {{ b.title }} — {{ b.rows.length }} mục</span>
         </button>
         @if (!isCollapsed(b.key)) {
           <div class="rpp__sec-body">
