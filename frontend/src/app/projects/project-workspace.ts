@@ -17,7 +17,7 @@ import { PrjTaskDetail } from './task-detail/task-detail';
 
 interface WsTab { key: string; label: string; icon: string; feature?: string; }
 
-/** Không gian làm việc của một dự án: tab Tổng quan (gộp thống kê + burndown) / Thành viên / Backlog / Kanban / Timeline / Bug / Báo cáo ngày-tuần. */
+/** Không gian làm việc của một dự án: tab Tổng quan (gộp thống kê) / Thành viên / Backlog / Kanban / Timeline / Bug / Báo cáo ngày-tuần. */
 @Component({
   selector: 'app-project-workspace',
   imports: [PageHeader, PrjOverview, PrjMembers, PrjBacklog, PrjKanban, PrjTimeline, PrjBugs,

@@ -15,8 +15,8 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
 /**
  * Tab "Tổng quan" HỢP NHẤT (selector app-prj-overview).
  * Gộp tóm tắt dự án (get) + báo cáo (report: tiến độ, est/spent, bug, overdue,
- * byStatus/byType/byAssignee) + biểu đồ BURNDOWN (burndown). Bố cục nhóm:
- * "Tiến độ" · "Burndown" · "Phân bổ" · "Theo người".
+ * byStatus/byType/byAssignee) + thống kê Task/Bug/Issue. Bố cục nhóm:
+ * "Tiến độ" · "Phân bổ" · "Theo người".
  */
 @Component({
   selector: 'app-prj-overview',
