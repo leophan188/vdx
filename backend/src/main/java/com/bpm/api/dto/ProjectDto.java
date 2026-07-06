@@ -292,7 +292,8 @@ public final class ProjectDto {
     /** Một dòng tóm tắt task trong báo cáo ngày/tuần. */
     public record ReportTaskItem(
             String taskId, String code, String title, String type, String status,
-            String assigneeName, double estimateHours, String dueDate, double progressPct) {
+            String assigneeName, double estimateHours, String dueDate, double progressPct,
+            String priority, String severity, String assigneeUserId) {
     }
 
     /** Số liệu tổng quan của kỳ báo cáo. */

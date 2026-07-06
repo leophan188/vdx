@@ -275,7 +275,10 @@ public class ProjectReportService {
         }
         return new ProjectDto.ReportTaskItem(t.getId(), projectCode + "-" + t.getSeq(), t.getTitle(),
                 t.getType().name(), t.getStatus().name(), assignee, t.getEstimateHours(),
-                t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct);
+                t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct,
+                t.getPriority() == null ? null : t.getPriority().name(),
+                t.getSeverity() == null ? null : t.getSeverity().name(),
+                t.getAssigneeUserId());
     }
 
     // ===== progress rollup (cùng quy tắc ProjectTaskService) =====

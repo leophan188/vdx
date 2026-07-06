@@ -281,6 +281,9 @@ export interface ReportTaskItem {
   estimateHours: number;
   dueDate: string | null;        // dd/MM/yyyy
   progressPct: number;           // 0..100
+  priority: TaskPriority | null; // ưu tiên (thống kê bug/issue theo mức ưu tiên)
+  severity: BugSeverity | null;  // mức độ nghiêm trọng (bug)
+  assigneeUserId: string | null; // gộp theo nhân sự
 }
 
 export interface ReportOverview {
