@@ -208,6 +208,11 @@ public class ProjectReportService {
         }
         Map<String, Double> progress = computeProgress(tasks, parentIds);
         Map<String, String> nameCache = new HashMap<>();
+        // Map id→task để dựng chuỗi cha (Epic › Story › …) cho từng công việc.
+        Map<String, ProjectTask> taskById = new HashMap<>();
+        for (ProjectTask t : tasks) {
+            taskById.put(t.getId(), t);
+        }
 
         LocalDate today = LocalDate.now();
         Instant startOfPeriod = periodStart.atStartOfDay(ZONE).toInstant();
@@ -237,7 +242,7 @@ public class ProjectReportService {
             }
 
             ProjectDto.ReportTaskItem item = item(t, p.getCode(), nameCache,
-                    progress.getOrDefault(t.getId(), 0.0));
+                    progress.getOrDefault(t.getId(), 0.0), taskById);
 
             if (isDone) {
                 Instant upd = t.getUpdatedAt();
@@ -267,10 +272,16 @@ public class ProjectReportService {
     }
 
     private ProjectDto.ReportTaskItem item(ProjectTask t, String projectCode,
-                                           Map<String, String> nameCache, double progressPct) {
+                                           Map<String, String> nameCache, double progressPct,
+                                           Map<String, ProjectTask> taskById) {
         String assignee = null;
         if (t.getAssigneeUserId() != null) {
             assignee = nameCache.computeIfAbsent(t.getAssigneeUserId(), uid ->
+                    userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
+        }
+        String reporter = null;
+        if (t.getReporterUserId() != null) {
+            reporter = nameCache.computeIfAbsent(t.getReporterUserId(), uid ->
                     userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
         }
         return new ProjectDto.ReportTaskItem(t.getId(), projectCode + "-" + t.getSeq(), t.getTitle(),
@@ -278,7 +289,32 @@ public class ProjectReportService {
                 t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct,
                 t.getPriority() == null ? null : t.getPriority().name(),
                 t.getSeverity() == null ? null : t.getSeverity().name(),
-                t.getAssigneeUserId());
+                t.getAssigneeUserId(), parentPath(t, taskById),
+                t.getReporterUserId(), reporter);
+    }
+
+    /** Chuỗi cha "Epic: … › Story: …" (gốc→gần); null nếu không có cha. */
+    private static String parentPath(ProjectTask t, Map<String, ProjectTask> taskById) {
+        java.util.Deque<String> chain = new java.util.ArrayDeque<>();
+        ProjectTask cur = t.getParentId() == null ? null : taskById.get(t.getParentId());
+        int guard = 0;
+        while (cur != null && guard++ < 12) {
+            chain.addFirst(typeShort(cur.getType()) + ": " + cur.getTitle());
+            cur = cur.getParentId() == null ? null : taskById.get(cur.getParentId());
+        }
+        return chain.isEmpty() ? null : String.join(" › ", chain);
+    }
+
+    private static String typeShort(TaskType t) {
+        switch (t) {
+            case EPIC: return "Epic";
+            case STORY: return "Story";
+            case TASK: return "Task";
+            case SUBTASK: return "Sub-task";
+            case BUG: return "Bug";
+            case ISSUE: return "Issue";
+            default: return t.name();
+        }
     }
 
     // ===== progress rollup (cùng quy tắc ProjectTaskService) =====

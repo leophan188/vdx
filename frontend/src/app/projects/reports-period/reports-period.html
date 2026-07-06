@@ -90,6 +90,47 @@
       }
     </section>
 
+    <!-- Bug/Issue theo nhân sự: tester đã log vs dev bị log -->
+    <section class="rpp__sec">
+      <button type="button" class="rpp__sec-head" (click)="toggle('bugpeople')">
+        <span class="rpp__sec-caret" [class.is-collapsed]="isCollapsed('bugpeople')">▾</span>
+        <span>🎯 Bug/Issue theo nhân sự (kiểm soát chất lượng)</span>
+        <span class="rpp__sec-count">{{ bugsInPeriod().length }} bug/issue</span>
+      </button>
+      @if (!isCollapsed('bugpeople')) {
+        <div class="rpp__sec-body">
+          @if (bugsInPeriod().length === 0) {
+            <span class="rpp__empty-note">Không có bug/issue nào trong kỳ. 🎉</span>
+          } @else {
+            <div class="rpp__bugcols">
+              <div>
+                <h4 class="rpp__bugcol-title">🔎 Tester đã log bug (ai báo nhiều)</h4>
+                @for (p of bugByReporter(); track p.name; let i = $index) {
+                  <button type="button" class="rpp__bugrow" (click)="openBugPerson(p, 'Bug do ' + p.name + ' log')">
+                    <span class="rpp__bugrow-name"><span class="rpp__bugrank">{{ i + 1 }}.</span>
+                      @if (p.userId) { <employee-chip [name]="p.name" /> } @else { {{ p.name }} }
+                    </span>
+                    <span class="rpp__bugcount">{{ p.count }}</span>
+                  </button>
+                }
+              </div>
+              <div>
+                <h4 class="rpp__bugcol-title">🐞 Dev bị log bug (ai bị nhiều)</h4>
+                @for (p of bugByAssignee(); track p.name; let i = $index) {
+                  <button type="button" class="rpp__bugrow" (click)="openBugPerson(p, 'Bug của ' + p.name)">
+                    <span class="rpp__bugrow-name"><span class="rpp__bugrank">{{ i + 1 }}.</span>
+                      @if (p.userId) { <employee-chip [name]="p.name" /> } @else { {{ p.name }} }
+                    </span>
+                    <span class="rpp__bugcount">{{ p.count }}</span>
+                  </button>
+                }
+              </div>
+            </div>
+          }
+        </div>
+      }
+    </section>
+
     <!-- (4) Thống kê theo nhân sự -->
     <section class="rpp__sec">
       <button type="button" class="rpp__sec-head" (click)="toggle('people')">
@@ -131,30 +172,18 @@
         </button>
         @if (!isCollapsed(b.key)) {
           <div class="rpp__sec-body">
-            <data-grid [columns]="cols" [rows]="b.rows" [exportName]="b.title"
-                       [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
-                       [emptyText]="b.emptyText">
-              <ng-template gridCell="code" let-t>
-                <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)"
-                      [title]="typeLabel(t.type)">{{ t.code }}</span>
-              </ng-template>
-              <ng-template gridCell="title" let-t>
-                <span [title]="t.title">{{ t.title }}</span>
-                <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
-              </ng-template>
-              <ng-template gridCell="assigneeName" let-t>
-                @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
-                @else { <span class="rpp__pct-val">— Chưa gán —</span> }
-              </ng-template>
-              <ng-template gridCell="estimateHours" let-t>{{ t.estimateHours || 0 }}</ng-template>
-              <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
-              <ng-template gridCell="progressPct" let-t>
-                <div class="rpp__pct-cell">
-                  <div class="rpp__mini-bar"><div class="rpp__mini-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
-                  <span class="rpp__pct-val">{{ clampPct(t.progressPct) }}%</span>
-                </div>
-              </ng-template>
-            </data-grid>
+            @if (b.rows.length === 0) {
+              <span class="rpp__empty-note">{{ b.emptyText }}</span>
+            } @else {
+              <div class="rpp__cards">
+                @for (t of b.rows; track t.taskId) {
+                  <app-task-card [code]="t.code" [title]="t.title" [type]="t.type" [status]="t.status"
+                                 [parentPath]="t.parentPath" [assigneeName]="t.assigneeName"
+                                 [dueDate]="t.dueDate" [progressPct]="t.progressPct"
+                                 [overdue]="b.key === 'overdue'" />
+                }
+              </div>
+            }
           </div>
         }
       </section>
@@ -164,11 +193,11 @@
   }
 </div>
 
-<!-- Popup: chi tiết công việc của 1 nhân sự -->
-<app-modal [open]="!!personModal()" [title]="'Công việc của ' + (personModal()?.name || '')"
-           [wide]="true" (closed)="personModal.set(null)">
-  @if (personModal(); as p) {
-    <data-grid [columns]="personCols" [rows]="p.items" [exportName]="'Cong viec - ' + p.name"
+<!-- Popup: chi tiết danh sách công việc (theo nhân sự / theo bug) -->
+<app-modal [open]="!!detailModal()" [title]="detailModal()?.title || ''"
+           [wide]="true" (closed)="detailModal.set(null)">
+  @if (detailModal(); as p) {
+    <data-grid [columns]="personCols" [rows]="p.items" [exportName]="p.title"
                [pageSize]="50" [pageSizes]="[50, 100, 200]" searchPlaceholder="Tìm công việc…">
       <ng-template gridCell="code" let-t>
         <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)">{{ t.code }}</span>

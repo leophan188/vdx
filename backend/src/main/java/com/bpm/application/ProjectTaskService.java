@@ -235,7 +235,8 @@ public class ProjectTaskService {
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_CREATED", "ProjectTask", saved.getId(), actor,
                 "projectId=" + projectId + ", code=" + p.getCode() + "-" + saved.getSeq());
-        recordActivity(saved, actor, TaskActivity.CREATED, "Tạo công việc " + code(p, saved));
+        recordActivity(saved, actor, TaskActivity.CREATED,
+                "Tạo " + typeLabel(saved.getType()) + " " + code(p, saved));
         // Nếu tạo task có sẵn assignee → báo người được giao (trừ chính người thao tác).
         if (saved.getAssigneeUserId() != null) {
             notifyAssign(saved, p, code(p, saved), actor);
@@ -264,7 +265,8 @@ public class ProjectTaskService {
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_UPDATED", "ProjectTask", saved.getId(), actor,
                 "projectId=" + projectId + ", code=" + p.getCode() + "-" + saved.getSeq());
-        recordActivity(saved, actor, TaskActivity.EDIT, "Sửa công việc " + code(p, saved));
+        recordActivity(saved, actor, TaskActivity.EDIT,
+                "Sửa " + typeLabel(saved.getType()) + " " + code(p, saved));
         // Trạng thái đổi qua PUT cũng ghi nhận + thông báo assignee.
         if (saved.getStatus() != oldStatus) {
             recordActivity(saved, actor, TaskActivity.STATUS,
@@ -592,6 +594,22 @@ public class ProjectTaskService {
 
     private String code(Project p, ProjectTask t) {
         return p.getCode() + "-" + t.getSeq();
+    }
+
+    /** Nhãn LOẠI công việc để ghi Log rõ ràng (Epic/Story/Task/Sub-task/Bug/Issue). */
+    private static String typeLabel(TaskType type) {
+        if (type == null) {
+            return "công việc";
+        }
+        switch (type) {
+            case EPIC: return "Epic";
+            case STORY: return "Story";
+            case TASK: return "Task";
+            case SUBTASK: return "Sub-task";
+            case BUG: return "Bug";
+            case ISSUE: return "Issue";
+            default: return "công việc";
+        }
     }
 
     private String actorName(String username) {

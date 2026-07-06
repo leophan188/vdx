@@ -284,6 +284,9 @@ export interface ReportTaskItem {
   priority: TaskPriority | null; // ưu tiên (thống kê bug/issue theo mức ưu tiên)
   severity: BugSeverity | null;  // mức độ nghiêm trọng (bug)
   assigneeUserId: string | null; // gộp theo nhân sự
+  parentPath: string | null;     // "Epic: … › Story: …" (ngữ cảnh cha)
+  reporterUserId: string | null; // người LOG (tester tạo bug/việc)
+  reporterName: string | null;
 }
 
 export interface ReportOverview {

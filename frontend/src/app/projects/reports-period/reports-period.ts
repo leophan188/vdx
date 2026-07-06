@@ -4,6 +4,7 @@ import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { StatCard } from '../../shared/stat-card/stat-card';
 import { Modal } from '../../shared/modal/modal';
+import { TaskCard } from '../task-card/task-card';
 import {
   ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority
 } from '../../core/project.service';
@@ -48,6 +49,7 @@ interface PersonStat {
   total: number; task: number; bug: number; issue: number; done: number;
   items: ReportTaskItem[];
 }
+interface BugPerson { userId: string | null; name: string; count: number; items: ReportTaskItem[]; }
 
 /**
  * Báo cáo Daily & Weekly (selector app-prj-reports-period).
@@ -59,7 +61,7 @@ interface PersonStat {
  */
 @Component({
   selector: 'app-prj-reports-period',
-  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal],
+  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal, TaskCard],
   templateUrl: './reports-period.html',
   styles: [`
     .rpp { display: grid; gap: var(--space-4); font-size: var(--text-sm); color: var(--color-text); }
@@ -135,9 +137,23 @@ interface PersonStat {
     .rpp__ptotal { font-weight: var(--weight-semibold); }
     .rpp__pchev { color: var(--color-text-muted); }
 
-    /* Các khối danh sách (thu gọn được) */
-    .rpp__block { display: grid; gap: 0; }
-    .rpp__block .rpp__sec-body { gap: 0; }
+    /* Bug/Issue theo nhân sự: tester log vs dev bị log */
+    .rpp__bugcols { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .rpp__bugcol-title { font-size: var(--text-sm); font-weight: var(--weight-semibold);
+      color: var(--color-text); margin: 0 0 var(--space-2); display: flex; align-items: center; gap: 6px; }
+    .rpp__bugrow { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: var(--space-2); width: 100%;
+      padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-alt);
+      border: 0; cursor: pointer; font: inherit; color: var(--color-text); text-align: left; margin-bottom: 2px; }
+    .rpp__bugrow:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+    .rpp__bugrow-name { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0; }
+    .rpp__bugrank { color: var(--color-text-muted); font-size: var(--text-xs); min-width: 18px; }
+    .rpp__bugcount { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums;
+      background: color-mix(in srgb, var(--overdue, #e5484d) 15%, transparent); color: var(--overdue, #e5484d);
+      padding: 0 9px; border-radius: 999px; font-size: var(--text-xs); }
+
+    /* Các khối danh sách (thu gọn được) — lưới card */
+    .rpp__cards { display: grid; gap: var(--space-3);
+      grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); }
 
     .rpp__pct-cell { display: flex; align-items: center; gap: var(--space-2); }
     .rpp__mini-bar { flex: 1; min-width: 56px; height: 8px; border-radius: var(--radius-full);
@@ -172,8 +188,8 @@ export class PrjReportsPeriod {
     this.collapsed.set(s);
   }
 
-  /** Popup danh sách công việc của 1 nhân sự. */
-  readonly personModal = signal<PersonStat | null>(null);
+  /** Popup danh sách công việc chi tiết (theo nhân sự / theo bug). */
+  readonly detailModal = signal<{ title: string; items: ReportTaskItem[] } | null>(null);
 
   readonly pct = computed(() =>
     Math.max(0, Math.min(100, Math.round(this.report()?.overview.completionPct ?? 0)))
@@ -231,6 +247,33 @@ export class PrjReportsPeriod {
     return [...map.values()].sort((a, b) => b.total - a.total);
   });
 
+  // ===== Bug/Issue theo nhân sự: tester đã LOG vs dev BỊ LOG =====
+  readonly bugsInPeriod = computed<ReportTaskItem[]>(() =>
+    this.allItems().filter((i) => i.type === 'BUG' || i.type === 'ISSUE'));
+
+  /** Tester ĐÃ log bug (nhóm theo người tạo/report). */
+  readonly bugByReporter = computed<BugPerson[]>(() => this.groupBugs('reporter'));
+  /** Dev BỊ log bug (nhóm theo người thực hiện). */
+  readonly bugByAssignee = computed<BugPerson[]>(() => this.groupBugs('assignee'));
+
+  private groupBugs(kind: 'reporter' | 'assignee'): BugPerson[] {
+    const map = new Map<string, BugPerson>();
+    for (const b of this.bugsInPeriod()) {
+      const id = kind === 'reporter' ? b.reporterUserId : b.assigneeUserId;
+      const name = kind === 'reporter' ? b.reporterName : b.assigneeName;
+      const key = id || name || '__none__';
+      let p = map.get(key);
+      if (!p) { p = { userId: id, name: name || '— Không rõ —', count: 0, items: [] }; map.set(key, p); }
+      p.count++;
+      p.items.push(b);
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count);
+  }
+
+  openBugPerson(p: BugPerson, prefix: string): void {
+    this.detailModal.set({ title: prefix + p.name, items: p.items });
+  }
+
   // ===== (3) 4 khối trạng thái =====
   readonly blocks = computed<ReportBlock[]>(() => {
     const r = this.report();
@@ -279,7 +322,7 @@ export class PrjReportsPeriod {
   setPeriod(p: Period): void { this.period.set(p); }
   clampPct(v: number): number { return Math.max(0, Math.min(100, Math.round(v ?? 0))); }
 
-  openPerson(p: PersonStat): void { this.personModal.set(p); }
+  openPerson(p: PersonStat): void { this.detailModal.set({ title: 'Công việc của ' + p.name, items: p.items }); }
 
   typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }
 

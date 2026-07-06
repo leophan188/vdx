@@ -89,6 +89,31 @@
       }
     </section>
 
+    <!-- ===== Nhóm: Bug/Issue theo nhân sự (kiểm soát chất lượng) ===== -->
+    @if (bugCount() > 0) {
+      <h3 class="prj-ov__section-title">Bug/Issue theo nhân sự — {{ bugCount() }} bug/issue</h3>
+      <div class="prj-ov__bugcols">
+        <div class="prj-ov__panel">
+          <h4 class="prj-ov__bugcol-title">🔎 Tester đã log bug (ai báo nhiều)</h4>
+          @for (p of bugByReporter(); track p.name; let i = $index) {
+            <div class="prj-ov__bugrow">
+              <span><span class="prj-ov__bugrank">{{ i + 1 }}.</span> {{ p.name }}</span>
+              <span class="prj-ov__bugcount">{{ p.count }}</span>
+            </div>
+          }
+        </div>
+        <div class="prj-ov__panel">
+          <h4 class="prj-ov__bugcol-title">🐞 Dev bị log bug (ai bị nhiều)</h4>
+          @for (p of bugByAssignee(); track p.name; let i = $index) {
+            <div class="prj-ov__bugrow">
+              <span><span class="prj-ov__bugrank">{{ i + 1 }}.</span> {{ p.name }}</span>
+              <span class="prj-ov__bugcount">{{ p.count }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    }
+
     <!-- ===== Nhóm: Burndown ===== -->
     <h3 class="prj-ov__section-title">Burndown</h3>
     <app-burndown-chart [data]="burndown()" />

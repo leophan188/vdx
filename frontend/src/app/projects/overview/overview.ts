@@ -118,6 +118,17 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .prj-ov__cat-cell--over { color: var(--overdue, #e5484d); }
     .prj-ov__cat-cell--over b { color: var(--overdue, #e5484d); }
     .prj-ov__cat-pct { font-size: var(--text-xs); color: var(--color-text-muted); }
+
+    /* Bug/Issue theo nhân sự */
+    .prj-ov__bugcols { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
+    .prj-ov__bugcol-title { margin: 0 0 var(--space-3); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .prj-ov__bugrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+      padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-alt);
+      margin-bottom: 2px; font-size: var(--text-sm); }
+    .prj-ov__bugrank { color: var(--color-text-muted); font-size: var(--text-xs); margin-right: 4px; }
+    .prj-ov__bugcount { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums;
+      background: color-mix(in srgb, var(--overdue, #e5484d) 15%, transparent); color: var(--overdue, #e5484d);
+      padding: 0 9px; border-radius: 999px; font-size: var(--text-xs); }
   `]
 })
 export class PrjOverview {
@@ -133,6 +144,26 @@ export class PrjOverview {
 
   /** Thống kê RIÊNG BIỆT Task / Bug / Issue (tổng, xong, đang làm, chưa làm, trễ hạn, %). */
   readonly catStats = computed<CatStat[]>(() => categoryStats(this.tasks()));
+
+  /** Bug/Issue của dự án — để kiểm soát chất lượng theo nhân sự. */
+  private readonly bugList = computed(() => this.tasks().filter((t) => t.type === 'BUG' || t.type === 'ISSUE'));
+  readonly bugCount = computed(() => this.bugList().length);
+  /** Tester ĐÃ log bug (nhóm theo người tạo/report). */
+  readonly bugByReporter = computed(() => this.rankBugs('reporter'));
+  /** Dev BỊ log bug (nhóm theo người thực hiện). */
+  readonly bugByAssignee = computed(() => this.rankBugs('assignee'));
+  private rankBugs(kind: 'reporter' | 'assignee'): { name: string; count: number }[] {
+    const map = new Map<string, { name: string; count: number }>();
+    for (const b of this.bugList()) {
+      const id = kind === 'reporter' ? b.reporterUserId : b.assigneeUserId;
+      const name = kind === 'reporter' ? b.reporterName : b.assigneeName;
+      const key = id || name || '__none__';
+      const cur = map.get(key) ?? { name: name || '— Không rõ —', count: 0 };
+      cur.count++;
+      map.set(key, cur);
+    }
+    return [...map.values()].sort((a, b) => b.count - a.count);
+  }
 
   /** % hoàn thành ưu tiên report (chi tiết hơn), fallback Project.completionPct. */
   readonly pct = computed(() =>

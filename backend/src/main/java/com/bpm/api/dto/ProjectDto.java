@@ -293,7 +293,11 @@ public final class ProjectDto {
     public record ReportTaskItem(
             String taskId, String code, String title, String type, String status,
             String assigneeName, double estimateHours, String dueDate, double progressPct,
-            String priority, String severity, String assigneeUserId) {
+            String priority, String severity, String assigneeUserId,
+            /** Chuỗi cha "Epic: … › Story: …" (null nếu là gốc) — làm rõ ngữ cảnh công việc. */
+            String parentPath,
+            /** Người LOG (tester tạo bug/việc) — để thống kê "tester log nhiều bug". */
+            String reporterUserId, String reporterName) {
     }
 
     /** Số liệu tổng quan của kỳ báo cáo. */
