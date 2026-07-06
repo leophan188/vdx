@@ -70,25 +70,7 @@
     </div>
   }
 
-  @if (lightboxItem(); as lb) {
-    <div class="ochome-lightbox" (click)="closeLightbox()">
-      <button class="ochome-lightbox__close" (click)="closeLightbox()" aria-label="Đóng">✕</button>
-      @if (mediaList().length > 1) {
-        <button class="ochome-lightbox__nav ochome-lightbox__nav--prev"
-                (click)="$event.stopPropagation(); prevMedia()" aria-label="Ảnh trước">‹</button>
-        <button class="ochome-lightbox__nav ochome-lightbox__nav--next"
-                (click)="$event.stopPropagation(); nextMedia()" aria-label="Ảnh sau">›</button>
-      }
-      <div class="ochome-lightbox__stage" (click)="$event.stopPropagation()">
-        @if (lb.kind === 'IMAGE') {
-          <img class="ochome-lightbox__media" [src]="lb.url" [alt]="lb.name" />
-        } @else {
-          <video class="ochome-lightbox__media" [src]="lb.url" controls autoplay></video>
-        }
-      </div>
-      <span class="ochome-lightbox__counter">{{ lightboxIndex()! + 1 }} / {{ mediaList().length }}</span>
-    </div>
-  }
+  <app-image-lightbox [items]="mediaList()" [index]="lightboxIndex()" (closed)="closeLightbox()" />
 
   <div class="ochome-post__stats">
     <span>{{ current().likeCount }} lượt thích</span>

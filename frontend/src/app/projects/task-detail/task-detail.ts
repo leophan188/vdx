@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { Modal } from '../../shared/modal/modal';
+import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { memberPersonOptions } from '../../shared/person-options';
 import { ToastService } from '../../shared/toast/toast.service';
@@ -23,7 +24,7 @@ type SubTab = 'info' | 'comments' | 'activity';
  */
 @Component({
   selector: 'app-prj-task-detail',
-  imports: [Modal, SearchableSelect],
+  imports: [Modal, SearchableSelect, ImageLightbox],
   templateUrl: './task-detail.html',
   styles: [`
     .td { display: grid; gap: var(--space-4); width: 100%; }
@@ -183,6 +184,10 @@ export class PrjTaskDetail {
   readonly comments = signal<TaskComment[]>([]);
   readonly attachments = signal<TaskAttachment[]>([]);
   readonly activities = signal<TaskActivity[]>([]);
+
+  /** Ảnh đính kèm → phần tử cho lightbox chung (zoom được). */
+  readonly lightboxItems = computed<LightboxItem[]>(() =>
+    this.attachments().map((a) => ({ url: this.attUrl(a), name: a.fileName, kind: 'IMAGE' as const })));
 
   readonly draft = signal('');
   readonly editingId = signal<string | null>(null);

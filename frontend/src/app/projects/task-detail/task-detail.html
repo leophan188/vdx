@@ -331,17 +331,5 @@
   </div>
 </app-modal>
 
-<!-- ===== Lightbox xem ảnh lớn ===== -->
-@if (lightboxItem(); as lb) {
-  <div class="lb" (click)="closeLightbox()">
-    <button type="button" class="lb__close" aria-label="Đóng" (click)="closeLightbox()">✕</button>
-    @if (attachments().length > 1) {
-      <button type="button" class="lb__nav lb__nav--prev" aria-label="Ảnh trước"
-              (click)="$event.stopPropagation(); prevImg()">‹</button>
-      <button type="button" class="lb__nav lb__nav--next" aria-label="Ảnh sau"
-              (click)="$event.stopPropagation(); nextImg()">›</button>
-    }
-    <img [src]="attUrl(lb)" [alt]="lb.fileName" (click)="$event.stopPropagation()" />
-    <span class="lb__counter">{{ lightboxIndex()! + 1 }} / {{ attachments().length }}</span>
-  </div>
-}
+<!-- ===== Lightbox xem ảnh lớn (zoom in/out) ===== -->
+<app-image-lightbox [items]="lightboxItems()" [index]="lightboxIndex()" (closed)="closeLightbox()" />

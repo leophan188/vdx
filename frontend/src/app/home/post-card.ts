@@ -4,6 +4,7 @@ import { DomSanitizer, SafeHtml } from '@angular/platform-browser';
 import { PostService, PostView, CommentView, MentionView } from '../core/post.service';
 import { ToastService } from '../shared/toast/toast.service';
 import { Avatar } from '../shared/avatar/avatar';
+import { ImageLightbox } from '../shared/image-lightbox/image-lightbox';
 import { MentionBox } from './mention-box';
 
 /** Node cây bình luận: bình luận + danh sách reply (đệ quy) + cấp thụt lề. */
@@ -18,7 +19,7 @@ export interface CommentNode extends CommentView {
  */
 @Component({
   selector: 'app-post-card',
-  imports: [MentionBox, NgTemplateOutlet, Avatar],
+  imports: [MentionBox, NgTemplateOutlet, Avatar, ImageLightbox],
   templateUrl: './post-card.html',
   styles: [`
     .ochome-comment--reply { margin-left: 38px; }
