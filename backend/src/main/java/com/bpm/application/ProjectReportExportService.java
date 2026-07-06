@@ -46,7 +46,7 @@ public class ProjectReportExportService {
     private static final String LABEL_HEX = "F0F3F7";
 
     private static final String[] COLS =
-            {"Mã", "Loại", "Công việc", "Thuộc (Epic/Story)", "Trạng thái", "Người thực hiện", "Hạn", "% HT"};
+            {"Mã", "Loại", "Công việc", "Thuộc (Epic/Story)", "Trạng thái", "Hạn", "% HT"};
 
     private record Section(String title, List<ProjectDto.ReportTaskItem> rows) {}
 
@@ -62,7 +62,7 @@ public class ProjectReportExportService {
     private String[] rowOf(ProjectDto.ReportTaskItem t) {
         return new String[]{
                 nz(t.code()), typeLabel(t.type()), nz(t.title()), nz(t.parentPath()),
-                statusLabel(t.status()), nz(t.assigneeName()), nz(t.dueDate()), Math.round(t.progressPct()) + "%"};
+                statusLabel(t.status()), nz(t.dueDate()), Math.round(t.progressPct()) + "%"};
     }
 
     /** Chỉ số tổng quan — dùng chung. */
@@ -117,13 +117,13 @@ public class ProjectReportExportService {
                     for (ProjectDto.ReportTaskItem t : sec.rows()) {
                         Row row = sh.createRow(rr++);
                         String[] vals = rowOf(t);
-                        for (int c = 0; c < vals.length; c++) put(row, c, vals[c], (c == 1 || c == 4 || c == 7) ? center : cell);
+                        for (int c = 0; c < vals.length; c++) put(row, c, vals[c], (c == 1 || c == 4 || c == 6) ? center : cell);
                     }
                 }
                 rr++; // trống giữa các khối
             }
 
-            int[] w = {3200, 3200, 15000, 13000, 3800, 6000, 3200, 2600};
+            int[] w = {3200, 3200, 16000, 14000, 4000, 3400, 2600};
             for (int c = 0; c < COLS.length; c++) sh.setColumnWidth(c, w[c]);
             wb.write(out);
             return out.toByteArray();

@@ -9,6 +9,7 @@ import { memberPersonOptions } from '../../shared/person-options';
 import { buildParentOptions } from '../work-stats';
 import { forkJoin, of } from 'rxjs';
 import { ToastService } from '../../shared/toast/toast.service';
+import { AuthService } from '../../core/auth.service';
 import { PrjTaskDetail } from '../task-detail/task-detail';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import {
@@ -57,6 +58,7 @@ import {
 export class PrjBugs implements OnInit {
   private svc = inject(ProjectService);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
 
   readonly projectId = input.required<string>();
 
@@ -228,7 +230,7 @@ export class PrjBugs implements OnInit {
     this.f = {
       parentId: t.parentId, title: t.title, description: t.description ?? '',
       type: t.type, status: t.status, priority: t.priority,
-      assigneeUserId: t.assigneeUserId, estimateHours: t.estimateHours,
+      assigneeUserId: t.assigneeUserId, testerUserId: t.testerUserId, estimateHours: t.estimateHours,
       startDate: t.startDate, dueDate: t.dueDate,
       severity: t.severity, stepsToReproduce: t.stepsToReproduce ?? '',
       expectedResult: t.expectedResult ?? '', actualResult: t.actualResult ?? '',
@@ -369,6 +371,8 @@ export class PrjBugs implements OnInit {
       parentId: null, title: '', description: '', type: 'BUG', status: 'BACKLOG',
       priority: 'MEDIUM', assigneeUserId: null, estimateHours: 0,
       startDate: null, dueDate: null,
+      // Người kiểm thử MẶC ĐỊNH = người log/tạo (chính mình) — vẫn cho chỉnh lại.
+      testerUserId: this.auth.currentUser()?.userId ?? null,
       severity: null, stepsToReproduce: '', expectedResult: '', actualResult: '', environment: ''
     };
   }

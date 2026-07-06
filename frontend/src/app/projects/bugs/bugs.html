@@ -101,6 +101,12 @@
                            (valueChange)="f.assigneeUserId = $event || null"
                            [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người…" />
       </div>
+      <div class="field">
+        <label>Người kiểm thử</label>
+        <searchable-select [options]="peopleSel()" [value]="f.testerUserId || ''"
+                           (valueChange)="f.testerUserId = $event || null"
+                           [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Mặc định người log…" />
+      </div>
     </div>
 
     <div class="field">
