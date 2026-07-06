@@ -58,15 +58,21 @@
           @if (e.content) {
             <div class="dg__meta">
               <span class="dg__label">Nội dung</span>
-              <span class="dg__text">{{ e.content }}</span>
+              <span class="dg__text" [class.dg__text--clamp]="isLong(e) && !isExpanded(e.id)">{{ e.content }}</span>
             </div>
           }
 
           @if (e.conclusion) {
             <div class="dg__meta">
               <span class="dg__label">Kết luận</span>
-              <span class="dg__text">{{ e.conclusion }}</span>
+              <span class="dg__text" [class.dg__text--clamp]="isLong(e) && !isExpanded(e.id)">{{ e.conclusion }}</span>
             </div>
+          }
+
+          @if (isLong(e)) {
+            <button type="button" class="dg__more" (click)="toggleExpand(e.id)">
+              {{ isExpanded(e.id) ? 'Thu gọn ▴' : 'Xem thêm ▾' }}
+            </button>
           }
 
           <div class="dg__foot">
@@ -120,7 +126,8 @@
 
     <div class="field">
       <label>Nội dung</label>
-      <textarea [(ngModel)]="fContent" name="dgcontent" placeholder="Nội dung buổi làm việc…"></textarea>
+      <textarea class="dg-form__tall" [(ngModel)]="fContent" name="dgcontent"
+                placeholder="Nội dung buổi làm việc…"></textarea>
     </div>
 
     <div class="field">

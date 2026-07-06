@@ -62,16 +62,22 @@ const CATEGORIES: Category[] = [
     .dg__meta { display: grid; gap: 4px; font-size: var(--text-sm); }
     .dg__label { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-semibold); }
     .dg__text { white-space: pre-wrap; overflow-wrap: anywhere; }
+    .dg__text--clamp { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical;
+      overflow: hidden; }
+    .dg__more { align-self: flex-start; background: none; border: none; padding: 2px 0; cursor: pointer;
+      color: var(--color-primary); font-size: var(--text-xs); font-weight: var(--weight-semibold); }
+    .dg__more:hover { text-decoration: underline; }
     .dg__foot { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs);
       color: var(--color-text-muted); border-top: 1px dashed var(--color-border); padding-top: var(--space-2); }
     .dg__foot-actions { margin-left: auto; display: flex; gap: 4px; }
 
     .dg__empty, .dg__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
 
-    .dg-form { display: grid; gap: var(--space-4); width: 100%; min-width: 360px; }
+    .dg-form { display: grid; gap: var(--space-4); width: 100%; min-width: min(680px, 82vw); }
     .dg-form .field { display: grid; gap: var(--space-2); }
     .dg-form label { font-size: var(--text-sm); font-weight: 600; }
-    .dg-form textarea { min-height: 84px; resize: vertical; }
+    .dg-form textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
+    .dg-form textarea.dg-form__tall { min-height: 220px; }
     .dg-form__members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
       gap: var(--space-2); max-height: 220px; overflow: auto; border: 1px solid var(--color-border);
       border-radius: var(--radius-md); padding: var(--space-2); }
@@ -97,6 +103,20 @@ export class PrjDiary {
       [e.content, e.conclusion, e.category, e.clientContacts, (e.teamNames || []).join(' '), e.createdByName, e.workDate]
         .some((v) => (v || '').toLowerCase().includes(q)));
   });
+
+  /** Các bản ghi đang mở rộng (id) — mặc định thu gọn để danh sách gọn. */
+  readonly expanded = signal<Set<string>>(new Set());
+  isExpanded(id: string): boolean { return this.expanded().has(id); }
+  toggleExpand(id: string): void {
+    const next = new Set(this.expanded());
+    if (next.has(id)) next.delete(id); else next.add(id);
+    this.expanded.set(next);
+  }
+  /** Nội dung/kết luận đủ dài để cần thu gọn (theo số ký tự hoặc số dòng). */
+  isLong(e: DiaryEntry): boolean {
+    const long = (s: string | null) => !!s && (s.length > 140 || (s.match(/\n/g)?.length ?? 0) >= 2);
+    return long(e.content) || long(e.conclusion);
+  }
 
   readonly categories = CATEGORIES;
   readonly categoryOptions: SelectOption[] = CATEGORIES.map((c) => ({ value: c.value, label: c.value }));
