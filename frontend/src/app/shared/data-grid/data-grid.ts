@@ -1,4 +1,4 @@
-import { Component, computed, contentChild, contentChildren, input, signal, TemplateRef } from '@angular/core';
+import { Component, ElementRef, computed, contentChild, contentChildren, inject, input, signal, TemplateRef } from '@angular/core';
 import { NgTemplateOutlet } from '@angular/common';
 import { GridCellDirective } from './grid-cell.directive';
 import { GridDetailDirective } from './grid-detail.directive';
@@ -24,6 +24,8 @@ type SortDir = 'asc' | 'desc' | null;
   templateUrl: './data-grid.html'
 })
 export class DataGrid {
+  private readonly host = inject(ElementRef<HTMLElement>);
+
   readonly columns = input<GridColumn[]>([]);
   readonly rows = input<readonly unknown[]>([]);
   readonly title = input('');
@@ -173,27 +175,54 @@ export class DataGrid {
     return this.columns().filter((c) => (c.header ?? '').trim().length > 0);
   }
 
-  /** Giá trị ô để ghi Excel: giữ số, gộp mảng, JSON cho object, rỗng nếu trống. */
-  private exportCell(row: unknown, key: string): string | number {
+  /** Giá trị thô nếu là kiểu nguyên thủy (dùng trực tiếp); null nếu là object/không có (sẽ đọc từ ô hiển thị). */
+  private rawPrimitive(row: unknown, key: string): string | number | null {
     const v = (row as Record<string, unknown>)[key];
-    if (v == null) return '';
+    if (v == null) return null;
     if (typeof v === 'number' || typeof v === 'string') return v;
     if (typeof v === 'boolean') return v ? 'Có' : 'Không';
-    if (Array.isArray(v)) return v.join(', ');
-    try { return JSON.stringify(v); } catch { return String(v); }
+    return null;
   }
 
-  /** Xuất TOÀN BỘ dòng đang lọc (mọi trang, theo thứ tự đang sắp) ra file .xlsx. */
+  /** Chuỗi số thuần → số (để Excel tính được); còn lại giữ nguyên chuỗi. */
+  private coerceNum(s: string): string | number {
+    return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : s;
+  }
+
+  /**
+   * Xuất TOÀN BỘ dòng đang lọc (mọi trang, theo thứ tự đang sắp) ra .xlsx.
+   * Ưu tiên dữ liệu thô theo key; cột render bằng template (không có key) → đọc TEXT ô đã hiển thị
+   * (tạm render hết dòng để đọc), nên mọi lưới đều xuất được nội dung.
+   */
   async exportExcel(): Promise<void> {
     if (this.exporting() || this.total() === 0) return;
     this.exporting.set(true);
+    const prevOverride = this.pageSizeOverride();
+    const prevPage = this.page();
     try {
       const cols = this.exportColumns();
+      const allCols = this.columns();
       const rows = this.sorted();
-      const aoa: (string | number)[][] = [
-        cols.map((c) => c.header),
-        ...rows.map((r) => cols.map((c) => this.exportCell(r, c.key)))
-      ];
+      // Tạm render TẤT CẢ dòng để đọc được text các ô dùng template.
+      this.pageSizeOverride.set(Math.max(1, rows.length));
+      this.page.set(1);
+      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(null))));
+      const trs = Array.from(
+        this.host.nativeElement.querySelectorAll('.grid__scroll tbody > tr:not(.grid__detail-row)')
+      ) as HTMLElement[];
+      const off = this.expandable() ? 1 : 0;
+      const aoa: (string | number)[][] = [cols.map((c) => c.header)];
+      rows.forEach((r, ri) => {
+        const tds = trs[ri] ? (Array.from(trs[ri].children) as HTMLElement[]) : [];
+        aoa.push(cols.map((c) => {
+          // Ưu tiên ĐÚNG NHƯ HIỂN THỊ (nhãn, ô ghép, số đã định dạng); rỗng thì mới lấy dữ liệu thô.
+          const td = tds[off + allCols.indexOf(c)];
+          const txt = (td?.textContent ?? '').replace(/\s+/g, ' ').trim();
+          if (txt !== '') return this.coerceNum(txt);
+          const raw = this.rawPrimitive(r, c.key);
+          return raw !== null ? raw : '';
+        }));
+      });
       const mod: any = await import('xlsx');
       const XLSX = mod?.utils ? mod : (mod?.default ?? mod);
       const ws = XLSX.utils.aoa_to_sheet(aoa);
@@ -215,6 +244,8 @@ export class DataGrid {
     } catch (e) {
       console.error('Xuất Excel lỗi:', e);
     } finally {
+      this.pageSizeOverride.set(prevOverride);
+      this.page.set(prevPage);
       this.exporting.set(false);
     }
   }
