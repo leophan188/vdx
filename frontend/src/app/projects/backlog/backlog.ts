@@ -247,7 +247,7 @@ export class PrjBacklog implements OnInit {
     const editing = this.editingId();
     return this.tasks()
       .filter((t) => allow.includes(t.type) && t.id !== editing)
-      .map((t) => ({ value: t.id, label: `[${t.code}] ${t.title}` }));
+      .map((t) => ({ value: t.id, label: `${this.typeLabel(t.type)} · [${t.code}] ${t.title}` }));
   }
   /** Khi đổi loại trong modal → tính lại cha hợp lệ; reset parentId nếu không còn hợp lệ. */
   onTypeChange(type: TaskType): void {

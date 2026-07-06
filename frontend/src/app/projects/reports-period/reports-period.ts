@@ -6,6 +6,13 @@ import { StatCard } from '../../shared/stat-card/stat-card';
 import {
   ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType
 } from '../../core/project.service';
+import { WORK_CATS, catOf, WorkCat } from '../work-stats';
+
+/** Một dòng thống kê theo loại (Task/Bug/Issue) cho kỳ báo cáo. */
+interface CatRow {
+  key: WorkCat; label: string; icon: string; color: string;
+  done: number; doing: number; upcoming: number; overdue: number; total: number;
+}
 
 /** Kỳ báo cáo đang xem. */
 type Period = 'daily' | 'weekly';
@@ -73,6 +80,24 @@ interface ReportBlock {
     .rpp__pct-val { font-size: var(--text-xs); color: var(--color-text-muted); min-width: 32px; text-align: right; }
 
     .rpp__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
+
+    /* Thống kê theo loại (Task/Bug/Issue) trong kỳ */
+    .rpp__cats { border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      background: var(--color-surface); padding: var(--space-4); }
+    .rpp__cats-title { margin: 0 0 var(--space-3); font-size: var(--text-sm);
+      font-weight: var(--weight-semibold); color: var(--color-text-muted); }
+    .rpp__cats-grid { display: grid; gap: 2px; overflow-x: auto; }
+    .rpp__cats-row { display: grid; grid-template-columns: minmax(150px, 1.6fr) repeat(5, minmax(64px, 1fr));
+      align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3);
+      border-radius: var(--radius-md); font-size: var(--text-sm); font-variant-numeric: tabular-nums; }
+    .rpp__cats-row > span:not(.rpp__cats-name) { text-align: center; }
+    .rpp__cats-row:not(.rpp__cats-row--head) { background: var(--color-surface-alt); }
+    .rpp__cats-row--head { color: var(--color-text-muted); font-size: var(--text-xs);
+      font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .03em; }
+    .rpp__cats-name { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); }
+    .rpp__cats-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--cat-color, var(--color-primary)); }
+    .rpp__cats-total { font-weight: var(--weight-semibold); }
+    .rpp__cats-over { color: var(--overdue, #e5484d); font-weight: var(--weight-semibold); }
   `]
 })
 export class PrjReportsPeriod {
@@ -99,6 +124,23 @@ export class PrjReportsPeriod {
       { key: 'upcoming', icon: '📋', title: 'Sắp làm', rows: r?.upcoming ?? [], emptyText: 'Không có công việc sắp tới.' },
       { key: 'overdue', icon: '⛔', title: 'Trễ hạn', rows: r?.overdue ?? [], emptyText: 'Không có công việc trễ hạn. 🎉' }
     ];
+  });
+
+  /** Thống kê RIÊNG Task / Bug / Issue theo kỳ — đếm trong từng nhóm bucket (đã xong/đang làm/sắp/trễ). */
+  readonly catRows = computed<CatRow[]>(() => {
+    const r = this.report();
+    const cnt = (items: ReportTaskItem[], key: WorkCat) => (items ?? []).filter((i) => catOf(i.type) === key).length;
+    return WORK_CATS.map((c) => {
+      const done = cnt(r?.done ?? [], c.key);
+      const doing = cnt(r?.inProgress ?? [], c.key);
+      const upcoming = cnt(r?.upcoming ?? [], c.key);
+      const overdue = cnt(r?.overdue ?? [], c.key);
+      const ids = new Set<string>();
+      for (const it of [...(r?.done ?? []), ...(r?.inProgress ?? []), ...(r?.upcoming ?? []), ...(r?.overdue ?? [])]) {
+        if (catOf(it.type) === c.key) ids.add(it.taskId);
+      }
+      return { key: c.key, label: c.label, icon: c.icon, color: c.color, done, doing, upcoming, overdue, total: ids.size };
+    });
   });
 
   /** Cột chung cho cả 4 lưới task. */

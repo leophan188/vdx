@@ -143,7 +143,7 @@ export class QuickCreate {
     if (!allow) return [];
     return this.tasks()
       .filter((t) => allow.includes(t.type))
-      .map((t) => ({ value: t.id, label: `[${t.code}] ${t.title}` }));
+      .map((t) => ({ value: t.id, label: `${this.typeLabel(t.type)} · [${t.code}] ${t.title}` }));
   });
 
   /** Loại đang chọn là SUB-TASK → chặn est > 4h (UX sớm; BE cũng chặn). */

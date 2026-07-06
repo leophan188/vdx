@@ -5,8 +5,9 @@ import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { BurndownChart } from './burndown-chart';
 import { formatThousands } from '../../shared/format';
+import { categoryStats, CatStat } from '../work-stats';
 import {
-  ProjectService, Project, ProjectReport, ProjectStatus, Burndown, TaskStatus, TaskType
+  ProjectService, Project, ProjectReport, ProjectStatus, Burndown, TaskStatus, TaskType, ProjectTask
 } from '../../core/project.service';
 
 interface StatusBar { status: TaskStatus; label: string; color: string; count: number; pct: number; }
@@ -94,6 +95,29 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
 
     .prj-ov__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
     .hint { color: var(--color-text-muted); }
+
+    /* Thống kê RIÊNG Task / Bug / Issue */
+    .prj-ov__cats { display: grid; gap: var(--space-4);
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+    .prj-ov__cat { padding: var(--space-4); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm);
+      border-top: 3px solid var(--cat-color, var(--color-primary)); display: grid; gap: var(--space-3); }
+    .prj-ov__cat-head { display: flex; align-items: baseline; gap: var(--space-2); }
+    .prj-ov__cat-ico { font-size: 1.1rem; }
+    .prj-ov__cat-name { font-weight: var(--weight-semibold); }
+    .prj-ov__cat-total { margin-left: auto; font-size: 1.75rem; font-weight: 700; line-height: 1;
+      color: var(--cat-color, var(--color-primary)); font-variant-numeric: tabular-nums; }
+    .prj-ov__cat-bar { height: 8px; border-radius: var(--radius-full); background: var(--color-surface-alt);
+      overflow: hidden; }
+    .prj-ov__cat-fill { height: 100%; border-radius: var(--radius-full); background: var(--cat-color, var(--status-done)); }
+    .prj-ov__cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
+    .prj-ov__cat-cell { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+      padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-alt);
+      font-size: var(--text-sm); }
+    .prj-ov__cat-cell b { font-variant-numeric: tabular-nums; }
+    .prj-ov__cat-cell--over { color: var(--overdue, #e5484d); }
+    .prj-ov__cat-cell--over b { color: var(--overdue, #e5484d); }
+    .prj-ov__cat-pct { font-size: var(--text-xs); color: var(--color-text-muted); }
   `]
 })
 export class PrjOverview {
@@ -104,7 +128,11 @@ export class PrjOverview {
   readonly project = signal<Project | null>(null);
   readonly report = signal<ProjectReport | null>(null);
   readonly burndown = signal<Burndown | null>(null);
+  readonly tasks = signal<ProjectTask[]>([]);
   readonly loading = signal(true);
+
+  /** Thống kê RIÊNG BIỆT Task / Bug / Issue (tổng, xong, đang làm, chưa làm, trễ hạn, %). */
+  readonly catStats = computed<CatStat[]>(() => categoryStats(this.tasks()));
 
   /** % hoàn thành ưu tiên report (chi tiết hơn), fallback Project.completionPct. */
   readonly pct = computed(() =>
@@ -194,6 +222,10 @@ export class PrjOverview {
     this.svc.burndown(id).subscribe({
       next: (b) => this.burndown.set(b),
       error: () => this.burndown.set(null)
+    });
+    this.svc.listTasks(id).subscribe({
+      next: (t) => this.tasks.set(t ?? []),
+      error: () => this.tasks.set([])
     });
   }
 

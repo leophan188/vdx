@@ -35,6 +35,26 @@
       <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
     </section>
 
+    <!-- Thống kê RIÊNG Task / Bug / Issue trong kỳ -->
+    <section class="rpp__cats">
+      <h3 class="rpp__cats-title">Theo loại công việc (trong kỳ)</h3>
+      <div class="rpp__cats-grid">
+        <div class="rpp__cats-row rpp__cats-row--head">
+          <span>Loại</span><span>Đã xong</span><span>Đang làm</span><span>Sắp làm</span><span>Trễ hạn</span><span>Tổng</span>
+        </div>
+        @for (c of catRows(); track c.key) {
+          <div class="rpp__cats-row" [style.--cat-color]="c.color">
+            <span class="rpp__cats-name"><i class="rpp__cats-dot"></i>{{ c.icon }} {{ c.label }}</span>
+            <span>{{ c.done }}</span>
+            <span>{{ c.doing }}</span>
+            <span>{{ c.upcoming }}</span>
+            <span [class.rpp__cats-over]="c.overdue > 0">{{ c.overdue }}</span>
+            <span class="rpp__cats-total">{{ c.total }}</span>
+          </div>
+        }
+      </div>
+    </section>
+
     <!-- 4 khối danh sách task -->
     <div class="rpp__blocks">
       @for (b of blocks(); track b.key) {
