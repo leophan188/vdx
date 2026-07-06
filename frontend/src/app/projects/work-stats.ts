@@ -9,6 +9,16 @@ export const WORK_CATS: { key: WorkCat; label: string; icon: string; color: stri
   { key: 'ISSUE', label: 'Issue', icon: '⚠️', color: 'var(--status-pending, #f5a623)' }
 ];
 
+/** Nhãn NGẮN + màu pill theo LOẠI công việc (dùng cho badge ở dropdown chọn cha). */
+export const TYPE_META: Record<TaskType, { short: string; color: string }> = {
+  EPIC:    { short: 'Epic',     color: 'var(--type-epic, #7c3aed)' },
+  STORY:   { short: 'Story',    color: 'var(--type-story, #2563eb)' },
+  TASK:    { short: 'Task',     color: 'var(--type-parent, #0f9488)' },
+  SUBTASK: { short: 'Sub-task', color: 'var(--color-text-muted, #64748b)' },
+  BUG:     { short: 'Bug',      color: 'var(--overdue, #e5484d)' },
+  ISSUE:   { short: 'Issue',    color: 'var(--status-pending, #d97706)' }
+};
+
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
 export function catOf(type: TaskType): WorkCat | null {
   if (type === 'TASK' || type === 'SUBTASK') return 'TASK';

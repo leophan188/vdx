@@ -19,11 +19,21 @@
   border-radius: var(--radius-md); box-shadow: var(--shadow-pop);
 }
 .ss__opt {
-  display: flex; flex-direction: column; gap: 1px;
+  display: flex; flex-direction: row; align-items: center; flex-wrap: wrap; column-gap: 6px; row-gap: 1px;
   padding: 7px 10px; border-radius: var(--radius-sm); cursor: pointer; white-space: nowrap;
 }
 .ss__opt:hover { background: var(--color-surface-alt); }
 .ss__opt.is-active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: 600; }
-.ss__opt-label { overflow: hidden; text-overflow: ellipsis; }
-.ss__opt-sub { color: var(--color-text-muted); font-size: var(--text-xs); }
+.ss__opt-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.ss__opt-sub { flex-basis: 100%; color: var(--color-text-muted); font-size: var(--text-xs); }
 .ss__empty { padding: 10px; color: var(--color-text-muted); font-size: var(--text-sm); }
+
+/* Pill LOẠI (Epic/Story/Task/Bug/Issue…) — màu theo --bc; nền/viền nhạt cùng tông. */
+.ss__badge {
+  flex: 0 0 auto; display: inline-flex; align-items: center;
+  padding: 1px 7px; border-radius: 999px; font-size: 10px; font-weight: 700;
+  letter-spacing: .03em; text-transform: uppercase; line-height: 1.6; white-space: nowrap;
+  color: var(--bc, var(--color-primary));
+  background: color-mix(in srgb, var(--bc, var(--color-primary)) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--bc, var(--color-primary)) 38%, transparent);
+}

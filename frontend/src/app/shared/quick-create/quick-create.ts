@@ -3,6 +3,7 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Modal } from '../modal/modal';
 import { SearchableSelect, SelectOption } from '../searchable-select/searchable-select';
+import { TYPE_META } from '../../projects/work-stats';
 import { memberPersonOptions } from '../person-options';
 import { ToastService } from '../toast/toast.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
@@ -143,7 +144,10 @@ export class QuickCreate {
     if (!allow) return [];
     return this.tasks()
       .filter((t) => allow.includes(t.type))
-      .map((t) => ({ value: t.id, label: `${this.typeLabel(t.type)} · [${t.code}] ${t.title}` }));
+      .map((t) => ({
+        value: t.id, label: `[${t.code}] ${t.title}`,
+        badge: TYPE_META[t.type]?.short ?? t.type, badgeColor: TYPE_META[t.type]?.color
+      }));
   });
 
   /** Loại đang chọn là SUB-TASK → chặn est > 4h (UX sớm; BE cũng chặn). */

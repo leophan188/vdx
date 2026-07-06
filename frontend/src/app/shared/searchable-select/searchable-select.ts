@@ -4,6 +4,8 @@ export interface SelectOption {
   value: string;
   label: string;
   sub?: string; // dòng phụ (vd mã, bộ phận)
+  badge?: string; // nhãn LOẠI hiển thị dạng pill màu (vd EPIC/STORY/BUG)
+  badgeColor?: string; // màu pill (css color/token); mặc định primary
 }
 
 /**
@@ -29,7 +31,8 @@ export class SearchableSelect {
   /** Đã gõ để lọc chưa (phân biệt với chuỗi đang hiển thị nhãn đã chọn). */
   private readonly typing = signal(false);
 
-  readonly selectedLabel = computed(() => this.options().find((o) => o.value === this.value())?.label ?? '');
+  readonly selectedOption = computed(() => this.options().find((o) => o.value === this.value()) ?? null);
+  readonly selectedLabel = computed(() => this.selectedOption()?.label ?? '');
 
   readonly filtered = computed<SelectOption[]>(() => {
     const q = noDiacritics(this.query().trim());
