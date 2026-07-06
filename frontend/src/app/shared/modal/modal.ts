@@ -39,10 +39,25 @@ export class Modal {
     }
   }
 
-  @HostListener('document:keydown.escape')
-  onEsc(): void {
-    if (this.open()) {
-      this.closed.emit();
+  @HostListener('document:keydown.escape', ['$event'])
+  onEsc(e: Event): void {
+    if (!this.open()) {
+      return;
     }
+    // Đang gõ trong ô nhập (input/textarea/select/contenteditable) → Esc CHỈ rời khỏi ô đó,
+    // KHÔNG đóng popup. Nhấn Esc lần nữa (khi không còn ở ô nhập) mới đóng.
+    const el = document.activeElement as HTMLElement | null;
+    if (el && this.isEditable(el)) {
+      el.blur();
+      e.preventDefault();
+      e.stopPropagation();
+      return;
+    }
+    this.closed.emit();
+  }
+
+  private isEditable(el: HTMLElement): boolean {
+    const tag = el.tagName;
+    return tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT' || el.isContentEditable;
   }
 }
