@@ -137,25 +137,26 @@
              placeholder="Trình duyệt / OS / phiên bản (vd: Chrome 120, Windows 11)" />
     </div>
 
-    <!-- Đính kèm ảnh NGAY khi báo lỗi (chỉ khi tạo mới) -->
-    @if (!editingId()) {
-      <div class="field">
-        <label>Ảnh đính kèm</label>
-        <div class="bug-att">
-          @for (q of queuedFiles(); track q.url; let i = $index) {
-            <div class="bug-att__item">
-              <img [src]="q.url" alt="ảnh đính kèm" />
-              <button type="button" class="bug-att__del" title="Bỏ ảnh" (click)="removeQueued(i)">✕</button>
-            </div>
-          }
-          <label class="bug-att__add" title="Chọn ảnh">
-            <span>＋ Ảnh</span>
-            <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
-          </label>
-        </div>
-        <span class="field-hint">Có thể chọn nhiều ảnh chụp màn hình lỗi — sẽ tải lên khi bấm "Báo lỗi".</span>
+    <!-- Đính kèm / thêm ảnh (cả khi tạo mới lẫn khi sửa) -->
+    <div class="field">
+      <label>Ảnh đính kèm {{ editingId() ? '(thêm ảnh mới)' : '' }}</label>
+      <div class="bug-att">
+        @for (q of queuedFiles(); track q.url; let i = $index) {
+          <div class="bug-att__item">
+            <img [src]="q.url" alt="ảnh đính kèm" />
+            <button type="button" class="bug-att__del" title="Bỏ ảnh" (click)="removeQueued(i)">✕</button>
+          </div>
+        }
+        <label class="bug-att__add" title="Chọn ảnh">
+          <span>＋ Ảnh</span>
+          <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
+        </label>
       </div>
-    }
+      <span class="field-hint">
+        @if (editingId()) { Ảnh chọn ở đây sẽ được TẢI THÊM khi bấm "Lưu thay đổi" (ảnh cũ xem/ xoá ở chi tiết). }
+        @else { Có thể chọn nhiều ảnh chụp màn hình lỗi — sẽ tải lên khi bấm "Báo lỗi". }
+      </span>
+    </div>
   </form>
   <div modalFooter>
     <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>

@@ -270,7 +270,7 @@ public class ProjectTaskService {
         // Trạng thái đổi qua PUT cũng ghi nhận + thông báo assignee.
         if (saved.getStatus() != oldStatus) {
             recordActivity(saved, actor, TaskActivity.STATUS,
-                    oldStatus.name() + " → " + saved.getStatus().name());
+                    statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()));
             notifyStatus(saved, p, code(p, saved), actor);
             rollupFromParent(projectId, saved.getParentId(), actor); // trạng thái đổi qua sửa → cập nhật cha
         }
@@ -301,7 +301,7 @@ public class ProjectTaskService {
                 "status=" + saved.getStatus());
         if (saved.getStatus() != oldStatus) {
             recordActivity(saved, actor, TaskActivity.STATUS,
-                    oldStatus.name() + " → " + saved.getStatus().name());
+                    statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()));
             notifyStatus(saved, p, code(p, saved), actor);
             rollupFromParent(projectId, saved.getParentId(), actor); // tự cập nhật trạng thái Epic/Story/cha
         }
@@ -340,7 +340,7 @@ public class ProjectTaskService {
                 parent.touch();
                 taskRepo.save(parent);
                 recordActivity(parent, actor, TaskActivity.STATUS,
-                        old.name() + " → " + derived.name() + " (tự tổng hợp từ task con)");
+                        statusLabel(old) + " → " + statusLabel(derived) + " (tự tổng hợp từ task con)");
                 auditPort.record("PROJECT_TASK_STATUS_ROLLUP", "ProjectTask", parent.getId(), actor,
                         "status=" + derived);
             }
@@ -594,6 +594,21 @@ public class ProjectTaskService {
 
     private String code(Project p, ProjectTask t) {
         return p.getCode() + "-" + t.getSeq();
+    }
+
+    /** Nhãn TRẠNG THÁI tiếng Việt để ghi Log (thay vì mã TODO/IN_REVIEW…). */
+    private static String statusLabel(TaskStatus s) {
+        if (s == null) {
+            return "";
+        }
+        switch (s) {
+            case BACKLOG: return "Backlog";
+            case TODO: return "Cần làm";
+            case IN_PROGRESS: return "Đang làm";
+            case IN_REVIEW: return "Kiểm thử";
+            case DONE: return "Hoàn thành";
+            default: return s.name();
+        }
     }
 
     /** Nhãn LOẠI công việc để ghi Log rõ ràng (Epic/Story/Task/Sub-task/Bug/Issue). */

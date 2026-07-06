@@ -229,13 +229,28 @@ export class PrjBugs implements OnInit {
     };
     const id = this.editingId();
     if (id) {
-      // ----- SỬA -----
+      // ----- SỬA (cho phép đính kèm THÊM ảnh) -----
       this.svc.updateTask(this.projectId(), id, body).subscribe({
         next: (t) => {
-          this.saving.set(false);
-          this.toast.success('Đã cập nhật lỗi', `${t.code} · ${t.title}`);
-          this.modalOpen.set(false);
-          this.reload();
+          const files = this.queuedFiles();
+          const uploads = files.length
+            ? forkJoin(files.map((q) => this.svc.uploadAttachment(this.projectId(), t.id, q.file)))
+            : of([]);
+          uploads.subscribe({
+            next: () => {
+              this.saving.set(false);
+              this.clearQueued();
+              this.toast.success('Đã cập nhật lỗi', `${t.code} · ${t.title}`
+                + (files.length ? ` · +${files.length} ảnh` : ''));
+              this.modalOpen.set(false);
+              this.reload();
+            },
+            error: () => {
+              this.saving.set(false); this.clearQueued();
+              this.toast.warning('Đã lưu lỗi nhưng tải ảnh thất bại — thử lại ở chi tiết.');
+              this.modalOpen.set(false); this.reload();
+            }
+          });
         },
         error: (e) => { this.saving.set(false); this.toast.error('Không cập nhật được', e?.error?.message ?? ''); }
       });
