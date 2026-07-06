@@ -6,9 +6,16 @@
       <button type="button" [class.is-active]="period() === 'daily'" (click)="setPeriod('daily')">Hàng ngày</button>
       <button type="button" [class.is-active]="period() === 'weekly'" (click)="setPeriod('weekly')">Hàng tuần</button>
     </div>
+    <label class="rpp__date">
+      <span>{{ period() === 'weekly' ? 'Tuần chứa ngày' : 'Ngày' }}:</span>
+      <input type="date" [value]="reportDate()" (change)="reportDate.set($any($event.target).value)" />
+    </label>
     @if (report(); as r) {
       <span class="rpp__period">{{ r.periodLabel }}</span>
     }
+    <span class="rpp__head-spacer"></span>
+    <button type="button" class="btn btn--ghost btn--sm" (click)="exportReport('xlsx')" title="Xuất Excel (.xlsx)">⬇ Excel</button>
+    <button type="button" class="btn btn--ghost btn--sm" (click)="exportReport('docx')" title="Xuất Word (.docx)">⬇ Word</button>
   </div>
 
   @if (loading()) {

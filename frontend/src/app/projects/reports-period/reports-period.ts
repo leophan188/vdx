@@ -72,6 +72,12 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__switch button + button { border-left: 1px solid var(--color-border); }
     .rpp__switch button.is-active { background: var(--color-primary); color: var(--color-text-invert); font-weight: var(--weight-medium); }
     .rpp__period { font-weight: var(--weight-semibold); color: var(--color-text); }
+    .rpp__date { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm);
+      color: var(--color-text-muted); }
+    .rpp__date input { height: var(--control-h-sm); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
+      padding: 0 var(--space-2); font: inherit; }
+    .rpp__head-spacer { flex: 1 1 auto; }
 
     .rpp__hero { display: grid; gap: var(--space-2); padding: var(--space-5);
       border: 1px solid var(--color-border); border-radius: var(--radius-lg);
@@ -176,6 +182,14 @@ export class PrjReportsPeriod {
   readonly period = signal<Period>('daily');
   readonly report = signal<PeriodReport | null>(null);
   readonly loading = signal(true);
+  /** Ngày báo cáo (yyyy-MM-dd) — daily: ngày đó; weekly: tuần chứa ngày đó. Mặc định hôm nay. */
+  readonly reportDate = signal<string>(this.todayIso());
+
+  private todayIso(): string {
+    const d = new Date();
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+  }
 
   readonly statusMeta = STATUS_META;
   readonly priorityMeta = PRIORITY_META;
@@ -310,9 +324,10 @@ export class PrjReportsPeriod {
     effect(() => {
       const pid = this.projectId();
       const p = this.period();
+      const d = this.reportDate();
       if (!pid) return;
       this.loading.set(true);
-      const src$ = p === 'weekly' ? this.svc.reportWeekly(pid) : this.svc.reportDaily(pid);
+      const src$ = p === 'weekly' ? this.svc.reportWeekly(pid, d) : this.svc.reportDaily(pid, d);
       src$.subscribe({
         next: (r) => { this.report.set(r); this.loading.set(false); },
         error: () => { this.report.set(null); this.loading.set(false); }
@@ -321,6 +336,17 @@ export class PrjReportsPeriod {
   }
 
   setPeriod(p: Period): void { this.period.set(p); }
+
+  /** Tải file báo cáo (xlsx/docx) cho kỳ + ngày đang chọn. */
+  exportReport(format: 'xlsx' | 'docx'): void {
+    const url = this.svc.reportExportUrl(this.projectId(), this.period(), format, this.reportDate());
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  }
   clampPct(v: number): number { return Math.max(0, Math.min(100, Math.round(v ?? 0))); }
 
   openPerson(p: PersonStat): void { this.detailModal.set({ title: 'Công việc của ' + p.name, items: p.items }); }

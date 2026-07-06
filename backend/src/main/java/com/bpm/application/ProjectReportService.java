@@ -53,18 +53,31 @@ public class ProjectReportService {
 
     @Transactional(readOnly = true)
     public ProjectDto.PeriodReportResponse daily(String projectId) {
-        LocalDate today = LocalDate.now();
-        String label = "Hôm nay " + today.format(DMY);
-        return build(projectId, today, today, today.plusDays(1), label);
+        return daily(projectId, LocalDate.now());
+    }
+
+    /** Báo cáo NGÀY cho ngày chỉ định (mặc định hôm nay). */
+    @Transactional(readOnly = true)
+    public ProjectDto.PeriodReportResponse daily(String projectId, LocalDate day) {
+        LocalDate d = day != null ? day : LocalDate.now();
+        boolean isToday = d.equals(LocalDate.now());
+        String label = (isToday ? "Hôm nay " : "Ngày ") + d.format(DMY);
+        return build(projectId, d, d, d.plusDays(1), label, d);
     }
 
     @Transactional(readOnly = true)
     public ProjectDto.PeriodReportResponse weekly(String projectId) {
-        LocalDate today = LocalDate.now();
-        LocalDate monday = today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
+        return weekly(projectId, LocalDate.now());
+    }
+
+    /** Báo cáo TUẦN chứa ngày chỉ định (mặc định tuần này). */
+    @Transactional(readOnly = true)
+    public ProjectDto.PeriodReportResponse weekly(String projectId, LocalDate anchor) {
+        LocalDate a = anchor != null ? anchor : LocalDate.now();
+        LocalDate monday = a.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
         String label = "Tuần " + monday.format(DMY) + "–" + sunday.format(DMY);
-        return build(projectId, monday, sunday, today.plusDays(7), label);
+        return build(projectId, monday, sunday, a.plusDays(7), label, a);
     }
 
     // ===================== BURNDOWN =====================
@@ -196,7 +209,7 @@ public class ProjectReportService {
      * @param upcomingTo   biên trên cửa sổ "sắp tới" (loại trừ): daily=+1 ngày, weekly=+7 ngày
      */
     private ProjectDto.PeriodReportResponse build(String projectId, LocalDate periodStart, LocalDate periodEnd,
-                                                  LocalDate upcomingTo, String label) {
+                                                  LocalDate upcomingTo, String label, LocalDate refToday) {
         Project p = projectRepo.findById(projectId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dự án"));
         List<ProjectTask> tasks = taskRepo.findByProjectIdOrderByOrderIndexAscSeqAsc(projectId);
@@ -214,7 +227,7 @@ public class ProjectReportService {
             taskById.put(t.getId(), t);
         }
 
-        LocalDate today = LocalDate.now();
+        LocalDate today = refToday != null ? refToday : LocalDate.now();
         Instant startOfPeriod = periodStart.atStartOfDay(ZONE).toInstant();
         Instant endOfPeriod = periodEnd.plusDays(1).atStartOfDay(ZONE).toInstant(); // [start, end+1)
 

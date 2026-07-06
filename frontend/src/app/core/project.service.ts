@@ -465,11 +465,18 @@ export class ProjectService {
   report(projectId: string): Observable<ProjectReport> {
     return this.http.get<ProjectReport>(`${this.base}/${projectId}/report`, this.opts);
   }
-  reportDaily(projectId: string): Observable<PeriodReport> {
-    return this.http.get<PeriodReport>(`${this.base}/${projectId}/report/daily`, this.opts);
+  reportDaily(projectId: string, date?: string): Observable<PeriodReport> {
+    const q = date ? `?date=${date}` : '';
+    return this.http.get<PeriodReport>(`${this.base}/${projectId}/report/daily${q}`, this.opts);
   }
-  reportWeekly(projectId: string): Observable<PeriodReport> {
-    return this.http.get<PeriodReport>(`${this.base}/${projectId}/report/weekly`, this.opts);
+  reportWeekly(projectId: string, date?: string): Observable<PeriodReport> {
+    const q = date ? `?date=${date}` : '';
+    return this.http.get<PeriodReport>(`${this.base}/${projectId}/report/weekly${q}`, this.opts);
+  }
+  /** URL tải file báo cáo (xlsx/docx) cho kỳ + ngày chọn — dùng anchor để trình duyệt tự tải (cookie phiên). */
+  reportExportUrl(projectId: string, period: 'daily' | 'weekly', format: 'xlsx' | 'docx', date?: string): string {
+    const q = `?format=${format}` + (date ? `&date=${date}` : '');
+    return `${this.base}/${projectId}/report/${period}/export${q}`;
   }
   /** Biểu đồ burndown: giờ ước lượng còn lại theo thời gian (ideal vs actual). */
   burndown(projectId: string): Observable<Burndown> {

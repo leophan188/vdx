@@ -3,6 +3,7 @@ package com.bpm.api;
 import com.bpm.api.dto.ProjectDto;
 import com.bpm.application.ProjectCollabService;
 import com.bpm.application.ProjectReportService;
+import com.bpm.application.ProjectReportExportService;
 import com.bpm.application.ProjectDiaryService;
 import com.bpm.application.ProjectService;
 import com.bpm.application.ProjectTaskService;
@@ -43,16 +44,19 @@ public class ProjectController {
     private final ProjectTaskService taskService;
     private final ProjectCollabService collabService;
     private final ProjectReportService reportService;
+    private final ProjectReportExportService reportExportService;
     private final ProjectDiaryService diaryService;
     private final MediaStorageService mediaStorage;
 
     public ProjectController(ProjectService projectService, ProjectTaskService taskService,
                              ProjectCollabService collabService, ProjectReportService reportService,
+                             ProjectReportExportService reportExportService,
                              ProjectDiaryService diaryService, MediaStorageService mediaStorage) {
         this.projectService = projectService;
         this.taskService = taskService;
         this.collabService = collabService;
         this.reportService = reportService;
+        this.reportExportService = reportExportService;
         this.diaryService = diaryService;
         this.mediaStorage = mediaStorage;
     }
@@ -314,15 +318,46 @@ public class ProjectController {
     }
 
     @GetMapping("/{id}/report/daily")
-    public ProjectDto.PeriodReportResponse reportDaily(@PathVariable String id, Authentication auth) {
+    public ProjectDto.PeriodReportResponse reportDaily(@PathVariable String id,
+                                                       @RequestParam(required = false) String date, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
-        return reportService.daily(id);
+        return reportService.daily(id, parseDate(date));
     }
 
     @GetMapping("/{id}/report/weekly")
-    public ProjectDto.PeriodReportResponse reportWeekly(@PathVariable String id, Authentication auth) {
+    public ProjectDto.PeriodReportResponse reportWeekly(@PathVariable String id,
+                                                        @RequestParam(required = false) String date, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
-        return reportService.weekly(id);
+        return reportService.weekly(id, parseDate(date));
+    }
+
+    /** Xuất báo cáo ngày/tuần ra Excel (.xlsx) hoặc Word (.docx). period=daily|weekly, format=xlsx|docx. */
+    @GetMapping("/{id}/report/{period}/export")
+    public ResponseEntity<byte[]> exportReport(@PathVariable String id, @PathVariable String period,
+                                               @RequestParam(defaultValue = "xlsx") String format,
+                                               @RequestParam(required = false) String date, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        java.time.LocalDate d = parseDate(date);
+        ProjectDto.PeriodReportResponse rep = "weekly".equalsIgnoreCase(period)
+                ? reportService.weekly(id, d) : reportService.daily(id, d);
+        ProjectDto.ProjectResponse p = projectService.detail(id);
+        String projectName = "[" + p.code() + "] " + p.name();
+        boolean docx = "docx".equalsIgnoreCase(format);
+        byte[] bytes = docx ? reportExportService.toDocx(rep, projectName) : reportExportService.toXlsx(rep, projectName);
+        String ext = docx ? "docx" : "xlsx";
+        String ct = docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+        String fname = "bao-cao-" + p.code() + "-" + ("weekly".equalsIgnoreCase(period) ? "tuan" : "ngay") + "." + ext;
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fname + "\"")
+                .contentType(MediaType.parseMediaType(ct))
+                .body(bytes);
+    }
+
+    /** yyyy-MM-dd → LocalDate; rỗng/không hợp lệ → null (service dùng hôm nay). */
+    private static java.time.LocalDate parseDate(String s) {
+        if (s == null || s.isBlank()) return null;
+        try { return java.time.LocalDate.parse(s.trim()); } catch (Exception e) { return null; }
     }
 
     /** Biểu đồ burndown (giờ ước lượng còn lại theo thời gian: ideal vs actual). */
