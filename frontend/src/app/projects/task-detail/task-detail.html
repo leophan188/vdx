@@ -73,9 +73,28 @@
 
           @if (t.status === 'IN_REVIEW') {
             <div class="td__life-acts">
-              <button type="button" class="btn btn--primary btn--sm"
-                      [disabled]="busyLifecycle()" (click)="completeTask()">🏁 Hoàn thành</button>
+              @if (!pickReopenOpen()) {
+                <button type="button" class="btn btn--primary btn--sm"
+                        [disabled]="busyLifecycle()" (click)="completeTask()">🏁 Hoàn thành</button>
+                <button type="button" class="btn btn--ghost btn--sm"
+                        [disabled]="busyLifecycle()" (click)="openReopen()">↩ Reopen (chưa đạt)</button>
+              }
             </div>
+            @if (pickReopenOpen()) {
+              <div class="td__life-pick">
+                <label class="td__life-hint">Kiểm thử chưa đạt → trả về Đang làm, giao cho người sửa</label>
+                <div class="td__life-pickrow">
+                  <searchable-select [options]="peopleSel()" [value]="reopenAssignee()"
+                                     (valueChange)="reopenAssignee.set($event)"
+                                     [allowEmpty]="true" emptyLabel="— Giữ người thực hiện —"
+                                     placeholder="Chọn người sửa…" />
+                  <button type="button" class="btn btn--primary btn--sm"
+                          [disabled]="busyLifecycle()" (click)="confirmReopen()">↩ Reopen</button>
+                  <button type="button" class="btn btn--ghost btn--sm"
+                          [disabled]="busyLifecycle()" (click)="cancelReopen()">Huỷ</button>
+                </div>
+              </div>
+            }
           }
         </div>
       }

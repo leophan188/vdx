@@ -198,6 +198,9 @@ export class PrjTaskDetail {
   readonly pickTesterOpen = signal(false);
   readonly testerUserId = signal<string>('');
   readonly busyLifecycle = signal(false);
+  // Reopen (Kiểm thử → Đang làm) + chọn lại người thực hiện (dev sửa).
+  readonly pickReopenOpen = signal(false);
+  readonly reopenAssignee = signal<string>('');
 
   // Sub-tab đang xem.
   readonly tab = signal<SubTab>('info');
@@ -462,6 +465,39 @@ export class PrjTaskDetail {
       },
       error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không hoàn thành được', e?.error?.message ?? ''); }
     });
+  }
+
+  // ===== Reopen: Kiểm thử CHƯA đạt → trả về Đang làm (giao lại người thực hiện) =====
+  openReopen(): void {
+    this.reopenAssignee.set(this.current()?.assigneeUserId || '');
+    this.pickReopenOpen.set(true);
+  }
+  cancelReopen(): void { this.pickReopenOpen.set(false); }
+  confirmReopen(): void {
+    const t = this.current();
+    if (!t || this.busyLifecycle()) return;
+    this.busyLifecycle.set(true);
+    const target = this.reopenAssignee() || null;
+    const toProgress = () => this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_PROGRESS').subscribe({
+      next: (u) => {
+        this.model.set(u);
+        this.busyLifecycle.set(false);
+        this.pickReopenOpen.set(false);
+        this.toast.success('Đã Reopen', `Trả về Đang làm${u.assigneeName ? ' · ' + u.assigneeName : ''}`);
+        this.changed.emit();
+        this.loadActivity(u.id);
+      },
+      error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không Reopen được', e?.error?.message ?? ''); }
+    });
+    // Giao lại người thực hiện nếu đổi, rồi mới chuyển trạng thái.
+    if (target !== (t.assigneeUserId || null)) {
+      this.svc.assignTask(this.projectId(), t.id, target).subscribe({
+        next: (u) => { this.model.set(u); toProgress(); },
+        error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không giao được người thực hiện', e?.error?.message ?? ''); }
+      });
+    } else {
+      toProgress();
+    }
   }
 
   // ===== Chi tiết lỗi (BUG/ISSUE) — sửa inline =====

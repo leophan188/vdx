@@ -230,6 +230,7 @@ public class ProjectTaskService {
         }
         ProjectTask t = new ProjectTask(projectId, p.nextSeq(), require(req.title(), "tiêu đề"), actor);
         applyFields(t, req, parentId);
+        requireValidParent(t.getType(), parentId, projectId); // ràng buộc: Story/Task/Sub-task/Bug/Issue phải có cha đúng loại
         t.setReporterUserId(userIdOf(actor)); // người LOG = actor (UserAccount id); dùng cho auto-reassign bug
         // Người kiểm thử MẶC ĐỊNH = người LOG khi tạo Bug/Issue chưa chọn — đồng bộ mọi màn (Tạo nhanh/Backlog/Bug/my-bugs).
         if ((t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE)
@@ -599,6 +600,34 @@ public class ProjectTaskService {
 
     private String code(Project p, ProjectTask t) {
         return p.getCode() + "-" + t.getSeq();
+    }
+
+    /** Ràng buộc phân cấp: loại KHÁC Epic BẮT BUỘC chọn cha ĐÚNG loại. */
+    private void requireValidParent(TaskType type, String parentId, String projectId) {
+        List<TaskType> allowed = allowedParentTypes(type);
+        if (allowed == null) {
+            return; // EPIC — là gốc, không cần cha
+        }
+        if (parentId == null) {
+            throw new IllegalArgumentException("Vui lòng chọn " + parentTypesText(allowed) + " cha cho " + typeLabel(type));
+        }
+        ProjectTask parent = requireSameProjectTask(projectId, parentId);
+        if (!allowed.contains(parent.getType())) {
+            throw new IllegalArgumentException(typeLabel(type) + " chỉ được thuộc " + parentTypesText(allowed));
+        }
+    }
+    private static List<TaskType> allowedParentTypes(TaskType type) {
+        switch (type) {
+            case STORY: return List.of(TaskType.EPIC);
+            case TASK: return List.of(TaskType.STORY, TaskType.EPIC);
+            case SUBTASK: return List.of(TaskType.TASK);
+            case BUG:
+            case ISSUE: return List.of(TaskType.TASK, TaskType.SUBTASK);
+            default: return null; // EPIC
+        }
+    }
+    private static String parentTypesText(List<TaskType> types) {
+        return types.stream().map(ProjectTaskService::typeLabel).collect(java.util.stream.Collectors.joining(" hoặc "));
     }
 
     /** Nhãn TRẠNG THÁI tiếng Việt để ghi Log (thay vì mã TODO/IN_REVIEW…). */
