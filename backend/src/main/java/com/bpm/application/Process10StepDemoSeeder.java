@@ -35,10 +35,10 @@ import java.util.concurrent.atomic.AtomicInteger;
  * Seed dữ liệu DEMO cho MỘT QUY TRÌNH 10 BƯỚC chạy thật qua BPM (Flowable) trên dữ liệu THẬT.
  * Quy trình mẫu: "Mua sắm – Thanh toán" (Purchase-to-Pay), 10 bước tuần tự, gán tới NHÂN SỰ THẬT.
  *
- * <p>MỖI BƯỚC được cấu hình ĐẦY ĐỦ: người thực hiện + SLA + hành động + BIỂU MẪU + QUYỀN TỪNG TRƯỜNG.
- * Dùng 1 biểu mẫu tổng hợp gồm mọi trường của cả 10 bước; ở mỗi bước, trường của bước đó là "Sửa được",
- * trường của bước TRƯỚC là "Chỉ xem" (ngữ cảnh), trường của bước SAU bị "Ẩn" — nên mỗi bước chỉ nhập
- * đúng thông tin của mình. Nhiều hồ sơ được rải ĐỦ 10 bước + hoàn thành + quá hạn (kèm dữ liệu thật).
+ * <p>MỖI BƯỚC được cấu hình ĐẦY ĐỦ và có BIỂU MẪU RIÊNG (chỉ chứa trường thông tin của đúng bước đó):
+ * người thực hiện + SLA + hành động + biểu mẫu bước. Cấu hình là DỮ LIỆU THẬT lưu DB
+ * (process_definition.steps_meta_json + form_definition.schema_json), không hard-code ở FE. Nhiều hồ sơ
+ * được rải ĐỦ 10 bước + hoàn thành + quá hạn, mỗi bước ghi dữ liệu thật của bước đó khi hoàn thành.
  *
  * <p>Kích hoạt: ADMIN bấm nút (POST /api/v1/system/seed-process-demo) — HOẶC tự chạy khi khởi động nếu
  * đặt cờ {@code bpm.seed.process10.onboot=true} (chỉ dùng khi seed thủ công qua BE local, mặc định TẮT);
@@ -51,7 +51,8 @@ public class Process10StepDemoSeeder {
 
     /** Khoá nhận diện đã-seed (idempotent). */
     private static final String GUARD_KEY = "mua-sam-p2p-10b";
-    private static final String FORM_KEY = "ho-so-mua-sam-p2p";
+    /** Mỗi bước MỘT biểu mẫu riêng (trường của đúng bước đó): ms-buoc-01 .. ms-buoc-10. */
+    private static final String FORM_PREFIX = "ms-buoc-";
 
     /** Tên 10 bước (tuần tự). */
     private static final String[] STEP_NAMES = {
@@ -224,9 +225,8 @@ public class Process10StepDemoSeeder {
                     log.info("[Process10StepDemoSeeder] Đã xoá demo cũ (key={}).", GUARD_KEY);
                 });
         formService.list().stream()
-                .filter(f -> FORM_KEY.equals(f.getFormKey()))
-                .findFirst()
-                .ifPresent(f -> {
+                .filter(f -> f.getFormKey() != null && f.getFormKey().startsWith(FORM_PREFIX))
+                .forEach(f -> {
                     try {
                         formService.delete(f.getId(), actor);
                     } catch (Exception ignore) {
@@ -257,10 +257,14 @@ public class Process10StepDemoSeeder {
         }
         Picker people = new Picker(active);
 
-        // Biểu mẫu tổng hợp gồm mọi trường của 10 bước.
-        String formId = form(FORM_KEY, "Hồ sơ mua sắm (đầy đủ 10 bước)", buildFormSchema());
+        // Mỗi bước MỘT biểu mẫu riêng (chỉ chứa trường thông tin của đúng bước đó) — cấu hình thật, lưu DB.
+        String[] formIds = new String[STEP_NAMES.length];
+        for (int i = 0; i < STEP_NAMES.length; i++) {
+            formIds[i] = form(FORM_PREFIX + String.format("%02d", i + 1),
+                    "Bước " + (i + 1) + " — " + STEP_NAMES[i], buildStepFormSchema(i));
+        }
 
-        // Quy trình 10 bước: mỗi bước gán 1 người thật + SLA + hành động + biểu mẫu + quyền từng trường.
+        // Quy trình 10 bước: mỗi bước gán 1 người thật + SLA + hành động + BIỂU MẪU RIÊNG của bước.
         String[] taskIds = new String[STEP_NAMES.length];
         String[] userIds = new String[STEP_NAMES.length];
         for (int i = 0; i < STEP_NAMES.length; i++) {
@@ -268,7 +272,7 @@ public class Process10StepDemoSeeder {
             userIds[i] = pick(people);
         }
         String bpmn = bpmnLinear("muasamp2p", "Quy trình Mua sắm – Thanh toán", taskIds, STEP_NAMES);
-        String meta = buildStepsMeta(taskIds, userIds, formId);
+        String meta = buildStepsMeta(taskIds, userIds, formIds);
         ProcessDefinition p = publish(GUARD_KEY, "Quy trình Mua sắm – Thanh toán (10 bước)", bpmn, meta);
 
         // Hồ sơ chạy: rải đủ 10 bước (3 hồ sơ/bước) + hoàn thành + quá hạn, kèm dữ liệu thật.
@@ -491,14 +495,18 @@ public class Process10StepDemoSeeder {
         return userRepo.findById(e.getUserAccountId()).map(UserAccount::getUsername).orElse("system");
     }
 
-    /** Schema biểu mẫu tổng hợp (JSON) từ FIELDS. */
-    private static String buildFormSchema() {
+    /** Schema biểu mẫu RIÊNG của một bước (JSON) — chỉ các trường thông tin của đúng bước đó. */
+    private static String buildStepFormSchema(int step) {
         StringBuilder sb = new StringBuilder("{\"fields\":[");
-        for (int i = 0; i < FIELDS.length; i++) {
-            F f = FIELDS[i];
-            if (i > 0) {
+        boolean first = true;
+        for (F f : FIELDS) {
+            if (f.owner() != step) {
+                continue;
+            }
+            if (!first) {
                 sb.append(',');
             }
+            first = false;
             sb.append("{\"key\":\"").append(f.key()).append("\",\"label\":\"").append(js(f.label()))
                     .append("\",\"type\":\"").append(f.type()).append('"');
             if (f.required()) {
@@ -513,7 +521,7 @@ public class Process10StepDemoSeeder {
     }
 
     /** stepsMeta JSON: mỗi bước gán USER + SLA + hành động + biểu mẫu + quyền TỪNG trường (theo bước sở hữu). */
-    private String buildStepsMeta(String[] taskIds, String[] userIds, String formId) {
+    private String buildStepsMeta(String[] taskIds, String[] userIds, String[] formIds) {
         StringBuilder sb = new StringBuilder("{");
         for (int i = 0; i < taskIds.length; i++) {
             if (i > 0) {
@@ -523,9 +531,8 @@ public class Process10StepDemoSeeder {
                     .append("\"assigneeType\":\"USER\",")
                     .append("\"assigneeId\":\"").append(userIds[i]).append("\",")
                     .append("\"slaHours\":").append(STEP_SLA[i]).append(',')
-                    .append("\"formId\":\"").append(formId).append("\",")
-                    .append("\"actions\":").append(jsonArray(STEP_ACTIONS[i])).append(',')
-                    .append("\"fieldPerms\":").append(fieldPerms(i))
+                    .append("\"formId\":\"").append(formIds[i]).append("\",")
+                    .append("\"actions\":").append(jsonArray(STEP_ACTIONS[i]))
                     .append('}');
         }
         return sb.append('}').toString();
@@ -540,21 +547,6 @@ public class Process10StepDemoSeeder {
             sb.append('"').append(items[i]).append('"');
         }
         return sb.append(']').toString();
-    }
-
-    /** Quyền trường ở bước {@code step}: trường bước trước = Chỉ xem, bước này = Sửa được, bước sau = Ẩn. */
-    private static String fieldPerms(int step) {
-        StringBuilder sb = new StringBuilder("{");
-        boolean first = true;
-        for (F f : FIELDS) {
-            String perm = f.owner() < step ? "READONLY" : (f.owner() == step ? "EDIT" : "HIDDEN");
-            if (!first) {
-                sb.append(',');
-            }
-            first = false;
-            sb.append('"').append(f.key()).append("\":\"").append(perm).append('"');
-        }
-        return sb.append('}').toString();
     }
 
     // ===================== BPMN (sinh tuyến tính N bước, kèm DI) =====================

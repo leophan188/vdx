@@ -112,9 +112,11 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.DELETE, "/api/v1/posts/*").hasRole("ADMIN")
                 .requestMatchers("/api/v1/posts/**").hasAuthority("FEAT_SOCIAL")
                 .requestMatchers("/api/v1/media/**").authenticated()
-                // Theo dõi & hủy phiên chạy = ADMIN; khởi tạo/danh sách khả dụng = mọi user đăng nhập.
-                .requestMatchers(HttpMethod.GET, "/api/v1/instances/all").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/v1/instances/*/cancel").hasRole("ADMIN")
+                // Theo dõi & hủy phiên chạy = quyền "Theo dõi tiến trình" (FEAT_TRACKING; ADMIN luôn có đủ)
+                // — khớp featureGuard('TRACKING') ở FE; khởi tạo/danh sách khả dụng = mọi user đăng nhập.
+                .requestMatchers(HttpMethod.GET, "/api/v1/instances/all").hasAuthority("FEAT_TRACKING")
+                .requestMatchers(HttpMethod.GET, "/api/v1/instances/*/overview").hasAuthority("FEAT_TRACKING")
+                .requestMatchers(HttpMethod.POST, "/api/v1/instances/*/cancel").hasAuthority("FEAT_TRACKING")
                 .requestMatchers("/api/v1/instances/**").authenticated()
                 .anyRequest().authenticated()
             )

@@ -9,6 +9,20 @@
     <button gridActions type="button" class="btn btn--primary" (click)="openPicker()">＋ Tạo yêu cầu</button>
     <button gridActions type="button" class="btn btn--ghost" (click)="reload()">↻ Làm mới</button>
 
+    <ng-template gridCell="stepName" let-t>
+      <strong>{{ t.stepName }}</strong>
+      @if (t.stepTotal) {
+        <span style="display:flex;align-items:center;gap:6px;margin-top:3px;"
+              [title]="'Bước ' + t.stepIndex + ' trên tổng ' + t.stepTotal + ' bước'">
+          <small class="badge badge--info">Bước {{ t.stepIndex }}/{{ t.stepTotal }}</small>
+          <span style="flex:1;max-width:90px;height:5px;border-radius:3px;background:var(--color-border,#e2e2e2);overflow:hidden;">
+            <span style="display:block;height:100%;background:var(--color-primary,#1e50a0);"
+                  [style.width.%]="t.stepIndex / t.stepTotal * 100"></span>
+          </span>
+        </span>
+      }
+    </ng-template>
+
     <ng-template gridCell="createdAt" let-t>{{ fmt(t.createdAt) }}</ng-template>
 
     <ng-template gridCell="sla" let-t>

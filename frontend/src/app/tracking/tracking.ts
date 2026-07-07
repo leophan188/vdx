@@ -6,7 +6,7 @@ import { GridCellDirective } from '../shared/data-grid/grid-cell.directive';
 import { Modal } from '../shared/modal/modal';
 import { ConfirmDialog } from '../shared/confirm-dialog/confirm-dialog';
 import { ToastService } from '../shared/toast/toast.service';
-import { WorkflowService, InstanceListItem, InstanceTimeline } from '../core/workflow.service';
+import { WorkflowService, InstanceListItem, InstanceOverview } from '../core/workflow.service';
 
 /** Theo dõi quy trình (Story 3.3) + tra cứu/tìm kiếm (Story 4.5) + dòng thời gian + hủy (Story 3.6). */
 @Component({
@@ -45,7 +45,9 @@ export class Tracking implements OnInit, OnDestroy {
   });
 
   readonly tlOpen = signal(false);
-  readonly timeline = signal<InstanceTimeline | null>(null);
+  readonly overview = signal<InstanceOverview | null>(null);
+  /** Các bước đang mở rộng (theo index). Bước đang xử lý mở sẵn, bước đã xong thu gọn. */
+  readonly expanded = signal<Set<number>>(new Set());
 
   readonly confirmOpen = signal(false);
   readonly cancelTarget = signal<InstanceListItem | null>(null);
@@ -79,12 +81,29 @@ export class Tracking implements OnInit, OnDestroy {
   }
 
   openTimeline(i: InstanceListItem): void {
-    this.timeline.set(null);
+    this.overview.set(null);
+    this.expanded.set(new Set());
     this.tlOpen.set(true);
-    this.wf.timeline(i.id).subscribe({
-      next: (t) => this.timeline.set(t),
-      error: () => { this.toast.error('Không tải được dòng thời gian'); this.tlOpen.set(false); }
+    this.wf.overview(i.id).subscribe({
+      next: (o) => {
+        this.overview.set(o);
+        // Mở sẵn các bước đang xử lý; các bước đã xong / chưa tới thu gọn.
+        this.expanded.set(new Set(o.steps.filter((s) => s.status === 'ACTIVE').map((s) => s.index)));
+      },
+      error: () => { this.toast.error('Không tải được tổng quan quy trình'); this.tlOpen.set(false); }
     });
+  }
+
+  isExpanded(index: number): boolean {
+    return this.expanded().has(index);
+  }
+  toggleStep(index: number): void {
+    const next = new Set(this.expanded());
+    next.has(index) ? next.delete(index) : next.add(index);
+    this.expanded.set(next);
+  }
+  stepStatusLabel(s: string): string {
+    return s === 'DONE' ? 'Đã xong' : s === 'ACTIVE' ? 'Đang xử lý' : 'Chưa tới';
   }
 
   askCancel(i: InstanceListItem): void {

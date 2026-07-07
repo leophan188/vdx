@@ -64,6 +64,12 @@ public class WorkflowController {
         return service.timeline(id);
     }
 
+    /** Tổng quan quy trình theo toàn bộ các bước (trạng thái + người + dữ liệu từng bước). */
+    @GetMapping("/{id}/overview")
+    public TaskDto.InstanceOverview overview(@PathVariable String id) {
+        return service.overview(id);
+    }
+
     /** Hủy phiên chạy đang chạy (Story 3.6). */
     @PostMapping("/{id}/cancel")
     public void cancel(@PathVariable String id, @RequestBody(required = false) TaskDto.CancelRequest req,

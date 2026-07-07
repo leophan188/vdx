@@ -13,6 +13,9 @@ export interface InboxItem {
   dueAt: string | null;
   overdue: boolean;
   claimable: boolean;
+  /** Vị trí bước hiện tại trong tổng thể quy trình (vd Bước 6/10). */
+  stepIndex: number;
+  stepTotal: number;
 }
 
 export interface TaskDetail {
@@ -71,6 +74,33 @@ export interface InstanceTimeline {
   steps: StepHistory[];
 }
 
+export interface FieldValue {
+  label: string;
+  value: string;
+}
+
+export interface StepView {
+  index: number;
+  stepKey: string;
+  stepName: string;
+  assignee: string | null;
+  startedAt: string | null;
+  endedAt: string | null;
+  status: 'DONE' | 'ACTIVE' | 'PENDING';
+  data: FieldValue[];
+}
+
+/** Tổng quan quy trình theo toàn bộ các bước (trạng thái + người + dữ liệu từng bước). */
+export interface InstanceOverview {
+  id: string;
+  processName: string;
+  title: string;
+  status: string;
+  total: number;
+  currentIndex: number;
+  steps: StepView[];
+}
+
 /** Vận hành nhiệm vụ runtime (Story 3.1/3.2/3.4): khởi tạo, hộp thư, chi tiết, hoàn thành. */
 @Injectable({ providedIn: 'root' })
 export class WorkflowService {
@@ -122,6 +152,11 @@ export class WorkflowService {
 
   timeline(id: string): Observable<InstanceTimeline> {
     return this.http.get<InstanceTimeline>(`${this.base}/instances/${id}/timeline`, { withCredentials: true });
+  }
+
+  /** Tổng quan quy trình theo toàn bộ các bước + dữ liệu từng bước. */
+  overview(id: string): Observable<InstanceOverview> {
+    return this.http.get<InstanceOverview>(`${this.base}/instances/${id}/overview`, { withCredentials: true });
   }
 
   /** Hủy phiên chạy (Story 3.6). */

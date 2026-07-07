@@ -71,6 +71,11 @@ public class WorkflowService {
     private final BpmnConditionInjector conditionInjector;
     private final AuditPort auditPort;
     private final ObjectMapper objectMapper;
+    private final FormService formService;
+
+    /** Cache thứ tự bước (userTask) theo processDefinitionId của Flowable + nhãn trường theo formId. */
+    private final Map<String, java.util.LinkedHashMap<String, String>> stepOrderCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, java.util.LinkedHashMap<String, String>> formLabelCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public WorkflowService(RepositoryService repositoryService, RuntimeService runtimeService,
                            TaskService taskService, HistoryService historyService, ProcessService processService,
@@ -79,7 +84,7 @@ public class WorkflowService {
                            PositionRepository positionRepo, TaskAssignmentRepository assignmentRepo,
                            RoleService roleService, NotificationService notificationService,
                            MailPort mailPort, BpmnConditionInjector conditionInjector,
-                           AuditPort auditPort, ObjectMapper objectMapper) {
+                           AuditPort auditPort, ObjectMapper objectMapper, FormService formService) {
         this.repositoryService = repositoryService;
         this.runtimeService = runtimeService;
         this.taskService = taskService;
@@ -97,6 +102,85 @@ public class WorkflowService {
         this.conditionInjector = conditionInjector;
         this.auditPort = auditPort;
         this.objectMapper = objectMapper;
+        this.formService = formService;
+    }
+
+    /**
+     * Thứ tự các bước (userTask) của một định nghĩa quy trình Flowable — đi từ Bắt đầu theo luồng.
+     * Trả LinkedHashMap key(userTask id) → tên bước. Cache theo processDefinitionId.
+     */
+    private java.util.LinkedHashMap<String, String> orderedUserTasks(String processDefinitionId) {
+        if (processDefinitionId == null) {
+            return new java.util.LinkedHashMap<>();
+        }
+        return stepOrderCache.computeIfAbsent(processDefinitionId, pdId -> {
+            java.util.LinkedHashMap<String, String> out = new java.util.LinkedHashMap<>();
+            try {
+                org.flowable.bpmn.model.BpmnModel model = repositoryService.getBpmnModel(pdId);
+                org.flowable.bpmn.model.Process proc = model.getMainProcess();
+                org.flowable.bpmn.model.FlowElement start = null;
+                for (org.flowable.bpmn.model.FlowElement fe : proc.getFlowElements()) {
+                    if (fe instanceof org.flowable.bpmn.model.StartEvent) {
+                        start = fe;
+                        break;
+                    }
+                }
+                if (start == null) { // fallback: mọi userTask theo thứ tự khai báo
+                    for (org.flowable.bpmn.model.FlowElement fe : proc.getFlowElements()) {
+                        if (fe instanceof org.flowable.bpmn.model.UserTask ut) {
+                            out.put(ut.getId(), ut.getName());
+                        }
+                    }
+                    return out;
+                }
+                java.util.Deque<String> queue = new java.util.ArrayDeque<>();
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                queue.add(start.getId());
+                seen.add(start.getId());
+                while (!queue.isEmpty()) {
+                    org.flowable.bpmn.model.FlowElement fe = proc.getFlowElement(queue.poll());
+                    if (fe instanceof org.flowable.bpmn.model.FlowNode fn) {
+                        for (org.flowable.bpmn.model.SequenceFlow sf : fn.getOutgoingFlows()) {
+                            String tgt = sf.getTargetRef();
+                            if (tgt != null && seen.add(tgt)) {
+                                org.flowable.bpmn.model.FlowElement te = proc.getFlowElement(tgt);
+                                if (te instanceof org.flowable.bpmn.model.UserTask ut) {
+                                    out.put(ut.getId(), ut.getName());
+                                }
+                                queue.add(tgt);
+                            }
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.debug("[order] không dựng được thứ tự bước cho {}: {}", pdId, e.getMessage());
+            }
+            return out;
+        });
+    }
+
+    /** Nhãn trường của một biểu mẫu: key → label (theo thứ tự schema). Cache theo formId. */
+    private java.util.LinkedHashMap<String, String> formFieldLabels(String formId) {
+        if (formId == null) {
+            return new java.util.LinkedHashMap<>();
+        }
+        return formLabelCache.computeIfAbsent(formId, fid -> {
+            java.util.LinkedHashMap<String, String> m = new java.util.LinkedHashMap<>();
+            try {
+                JsonNode fields = objectMapper.readTree(formService.get(fid).getSchemaJson()).path("fields");
+                if (fields.isArray()) {
+                    for (JsonNode f : fields) {
+                        String k = f.path("key").asText(null);
+                        if (k != null && !k.isBlank()) {
+                            m.put(k, f.path("label").asText(k));
+                        }
+                    }
+                }
+            } catch (Exception ignore) {
+                /* form lỗi/không có */
+            }
+            return m;
+        });
     }
 
     /** Khởi tạo nhiệm vụ từ quy trình đã publish + dữ liệu form bước đầu (FR-D01). */
@@ -217,6 +301,17 @@ public class WorkflowService {
         JsonNode step = wi != null ? stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey()) : null;
         Integer sla = slaHours(step);
         Instant due = effectiveDue(t, sla);
+        // Vị trí bước hiện tại trong tổng thể quy trình (vd "Bước 6/10").
+        java.util.LinkedHashMap<String, String> ordered = orderedUserTasks(t.getProcessDefinitionId());
+        int total = ordered.size();
+        int idx = 0, i = 1;
+        for (String k : ordered.keySet()) {
+            if (k.equals(t.getTaskDefinitionKey())) {
+                idx = i;
+                break;
+            }
+            i++;
+        }
         return new TaskDto.InboxItem(
                 t.getId(), t.getName(),
                 wi != null ? safeProcessName(wi.getProcessId()) : "—",
@@ -226,7 +321,7 @@ public class WorkflowService {
                 sla,
                 due != null ? due.toString() : null,
                 due != null && Instant.now().isAfter(due),
-                claimable);
+                claimable, idx, total);
     }
 
     /** Nhận một việc theo vai trò (claim) — Story 3.x. Guard: user phải là ứng viên (giữ vai trò). */
@@ -381,9 +476,16 @@ public class WorkflowService {
     /** Danh sách phiên chạy + bước hiện tại + người đang giữ (màn theo dõi). */
     @Transactional(readOnly = true)
     public List<TaskDto.InstanceListItem> instances() {
-        return instanceRepo.findAll().stream()
-                .sorted((a, b) -> b.getStartedAt().compareTo(a.getStartedAt()))
-                .map(this::toInstanceItem).toList();
+        List<TaskDto.InstanceListItem> out = new ArrayList<>();
+        for (WorkflowInstance wi : instanceRepo.findAll().stream()
+                .sorted((a, b) -> b.getStartedAt().compareTo(a.getStartedAt())).toList()) {
+            try {
+                out.add(toInstanceItem(wi));
+            } catch (Exception e) {
+                log.warn("[tracking] bỏ qua hồ sơ lỗi {}: {}", wi.getId(), e.toString());
+            }
+        }
+        return out;
     }
 
     /** Hồ sơ do tôi tạo (Story 4.4 — theo dõi nhiệm vụ cá nhân). */
@@ -468,6 +570,81 @@ public class WorkflowService {
                     done ? "DONE" : "ACTIVE"));
         }
         return new TaskDto.InstanceTimeline(wi.getId(), safeProcessName(wi.getProcessId()), wi.getStatus(), steps);
+    }
+
+    /**
+     * Tổng quan quy trình theo TOÀN BỘ các bước (kể cả chưa tới): mỗi bước có trạng thái
+     * DONE/ACTIVE/PENDING + người + thời gian + DỮ LIỆU đã nhập ở bước (đọc từ biến tiến trình + nhãn biểu mẫu bước).
+     */
+    @Transactional(readOnly = true)
+    public TaskDto.InstanceOverview overview(String instanceId) {
+        WorkflowInstance wi = get(instanceId);
+        String flowInst = wi.getFlowableInstanceId();
+
+        String pdId = null;
+        var hpi = historyService.createHistoricProcessInstanceQuery().processInstanceId(flowInst).singleResult();
+        if (hpi != null) {
+            pdId = hpi.getProcessDefinitionId();
+        }
+        java.util.LinkedHashMap<String, String> ordered = orderedUserTasks(pdId);
+
+        // Lịch sử hoạt động userTask theo activityId (giữ lần xuất hiện mới nhất).
+        Map<String, HistoricActivityInstance> actByKey = new HashMap<>();
+        for (HistoricActivityInstance a : historyService.createHistoricActivityInstanceQuery()
+                .processInstanceId(flowInst).activityType("userTask")
+                .orderByHistoricActivityInstanceStartTime().asc().list()) {
+            actByKey.put(a.getActivityId(), a);
+        }
+        // Việc đang mở (ACTIVE).
+        java.util.Set<String> activeKeys = new java.util.HashSet<>();
+        for (Task t : taskService.createTaskQuery().processInstanceId(flowInst).list()) {
+            activeKeys.add(t.getTaskDefinitionKey());
+        }
+        // Toàn bộ biến tiến trình (dữ liệu đã nhập).
+        Map<String, Object> vars = new java.util.LinkedHashMap<>();
+        historyService.createHistoricVariableInstanceQuery().processInstanceId(flowInst)
+                .list().forEach(v -> vars.put(v.getVariableName(), v.getValue()));
+
+        List<TaskDto.StepView> steps = new ArrayList<>();
+        int index = 0, currentIndex = 0;
+        for (Map.Entry<String, String> e : ordered.entrySet()) {
+            index++;
+            String key = e.getKey();
+            HistoricActivityInstance a = actByKey.get(key);
+            boolean done = a != null && a.getEndTime() != null;
+            boolean active = activeKeys.contains(key) || (a != null && a.getEndTime() == null);
+            String status = done ? "DONE" : (active ? "ACTIVE" : "PENDING");
+            if (active && currentIndex == 0) {
+                currentIndex = index;
+            }
+            String assignee = a != null ? userDisplay(a.getAssignee()) : null;
+            String startedAt = a != null && a.getStartTime() != null ? a.getStartTime().toInstant().toString() : null;
+            String endedAt = done ? a.getEndTime().toInstant().toString() : null;
+            steps.add(new TaskDto.StepView(index, key, e.getValue(), assignee, startedAt, endedAt, status,
+                    stepFieldValues(wi.getStepsMetaJson(), key, vars)));
+        }
+        if (currentIndex == 0 && !"RUNNING".equals(wi.getStatus())) {
+            currentIndex = ordered.size();
+        }
+        return new TaskDto.InstanceOverview(wi.getId(), safeProcessName(wi.getProcessId()),
+                titleAndSearch(wi)[0], wi.getStatus(), ordered.size(), currentIndex, steps);
+    }
+
+    /** Dữ liệu đã nhập ở một bước: các trường của biểu mẫu bước đó có giá trị (Nhãn → Giá trị). */
+    private List<TaskDto.FieldValue> stepFieldValues(String stepsMetaJson, String stepKey, Map<String, Object> vars) {
+        List<TaskDto.FieldValue> out = new ArrayList<>();
+        JsonNode step = stepMeta(stepsMetaJson, stepKey);
+        String formId = step != null ? blankToNull(step.path("formId").asText(null)) : null;
+        if (formId == null) {
+            return out;
+        }
+        for (Map.Entry<String, String> fe : formFieldLabels(formId).entrySet()) {
+            Object v = vars.get(fe.getKey());
+            if (v != null && !v.toString().isBlank()) {
+                out.add(new TaskDto.FieldValue(fe.getValue(), v.toString()));
+            }
+        }
+        return out;
     }
 
     /** Hủy một phiên chạy đang RUNNING (Story 3.6) — xóa instance Flowable + đánh dấu CANCELLED + audit. */

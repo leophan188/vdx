@@ -54,24 +54,64 @@
   </data-grid>
 </section>
 
-<!-- Dòng thời gian các bước -->
-<app-modal [open]="tlOpen()" [title]="'Tiến trình — ' + (timeline()?.processName || '')" (closed)="tlOpen.set(false)">
-  @if (timeline(); as t) {
-    <ol class="timeline">
-      @for (s of t.steps; track $index) {
-        <li class="timeline__item" [class.timeline__item--active]="s.status === 'ACTIVE'">
-          <span class="timeline__dot"></span>
-          <div class="timeline__body">
-            <strong>{{ s.stepName }}</strong>
-            <small>👤 {{ s.assignee }}</small>
-            <small>
-              {{ fmt(s.startedAt) }}
-              @if (s.status === 'DONE') { → {{ fmt(s.endedAt) }} } @else { · <em>đang xử lý</em> }
-            </small>
-          </div>
+<!-- Tổng quan quy trình theo TỪNG BƯỚC (mỗi bước 1 mục có thể thu gọn) -->
+<app-modal [open]="tlOpen()" [wide]="true"
+           [title]="'Tổng quan — ' + (overview()?.processName || '')" (closed)="tlOpen.set(false)">
+  @if (overview(); as o) {
+    <div class="ov-head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
+      <strong>{{ o.title }}</strong>
+      <span class="badge" [class]="statusClass(o.status)">{{ statusLabel(o.status) }}</span>
+      @if (o.total) {
+        <span class="hint">Bước {{ o.currentIndex || o.total }}/{{ o.total }}</span>
+        <span style="flex:1;min-width:120px;max-width:260px;height:6px;border-radius:3px;background:var(--color-border,#e2e2e2);overflow:hidden;">
+          <span style="display:block;height:100%;background:var(--color-primary,#1e50a0);"
+                [style.width.%]="(o.currentIndex || o.total) / o.total * 100"></span>
+        </span>
+      }
+    </div>
+
+    <ol style="list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:8px;">
+      @for (s of o.steps; track s.index) {
+        <li style="border:1px solid var(--color-border,#e2e2e2);border-radius:8px;overflow:hidden;"
+            [style.opacity]="s.status === 'PENDING' ? '0.7' : '1'">
+          <button type="button" (click)="toggleStep(s.index)"
+                  style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;background:transparent;border:0;cursor:pointer;text-align:left;color:inherit;">
+            <span style="flex:0 0 26px;height:26px;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:.8em;font-weight:700;"
+                  [style.background]="s.status === 'DONE' ? 'var(--status-done,#16a34a)' : s.status === 'ACTIVE' ? 'var(--color-primary,#1e50a0)' : 'var(--color-border,#94a3b8)'">
+              @if (s.status === 'DONE') { ✓ } @else { {{ s.index }} }
+            </span>
+            <span style="flex:1;min-width:0;">
+              <strong>{{ s.stepName }}</strong>
+              <small class="hint" style="display:block;">
+                {{ stepStatusLabel(s.status) }}
+                @if (s.assignee) { · 👤 {{ s.assignee }} }
+                @if (s.status === 'DONE') { · {{ fmt(s.startedAt) }} → {{ fmt(s.endedAt) }} }
+                @else if (s.status === 'ACTIVE') { · từ {{ fmt(s.startedAt) }} }
+              </small>
+            </span>
+            <span style="flex:0 0 auto;opacity:.6;">{{ isExpanded(s.index) ? '▾' : '▸' }}</span>
+          </button>
+          @if (isExpanded(s.index)) {
+            <div style="padding:2px 12px 12px 48px;">
+              @if (s.data.length) {
+                <table class="ov-data" style="width:100%;border-collapse:collapse;font-size:.92em;">
+                  @for (d of s.data; track d.label) {
+                    <tr>
+                      <th style="text-align:left;vertical-align:top;padding:4px 12px 4px 0;white-space:nowrap;opacity:.75;font-weight:600;">{{ d.label }}</th>
+                      <td style="padding:4px 0;">{{ d.value }}</td>
+                    </tr>
+                  }
+                </table>
+              } @else if (s.status === 'PENDING') {
+                <p class="hint">Chưa tới bước này.</p>
+              } @else {
+                <p class="hint">Chưa có dữ liệu nhập ở bước này.</p>
+              }
+            </div>
+          }
         </li>
       }
-      @if (!t.steps.length) { <p class="hint">Chưa có bước nào được ghi nhận.</p> }
+      @if (!o.steps.length) { <p class="hint">Quy trình chưa có bước nào.</p> }
     </ol>
   } @else {
     <p class="hint">Đang tải…</p>
