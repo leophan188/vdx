@@ -7,6 +7,7 @@ import { SearchableSelect, SelectOption } from '../../shared/searchable-select/s
 import { TypeFilter } from '../../shared/type-filter/type-filter';
 import { memberPersonOptions } from '../../shared/person-options';
 import { buildParentOptions } from '../work-stats';
+import { BUG_DESCRIPTION_TEMPLATE, mergeBugFieldsIntoDescription } from '../../shared/bug-template';
 import { forkJoin, of } from 'rxjs';
 import { ToastService } from '../../shared/toast/toast.service';
 import { AuthService } from '../../core/auth.service';
@@ -257,12 +258,13 @@ export class PrjBugs implements OnInit {
   openEdit(t: ProjectTask): void {
     this.editingId.set(t.id);
     this.f = {
-      parentId: t.parentId, title: t.title, description: t.description ?? '',
+      parentId: t.parentId, title: t.title,
+      // Gộp Bước/Kết quả cũ (nếu có) vào Mô tả để không mất dữ liệu.
+      description: mergeBugFieldsIntoDescription(t),
       type: t.type, status: t.status, priority: t.priority,
       assigneeUserId: t.assigneeUserId, testerUserId: t.testerUserId, estimateHours: t.estimateHours,
       startDate: t.startDate, dueDate: t.dueDate,
-      severity: t.severity, stepsToReproduce: t.stepsToReproduce ?? '',
-      expectedResult: t.expectedResult ?? '', actualResult: t.actualResult ?? '',
+      severity: t.severity, stepsToReproduce: '', expectedResult: '', actualResult: '',
       environment: t.environment ?? ''
     };
     this.modalOpen.set(true);
@@ -275,7 +277,9 @@ export class PrjBugs implements OnInit {
     const body: TaskRequest = {
       ...this.f,
       title: this.f.title.trim(),
-      parentId: this.f.parentId
+      parentId: this.f.parentId,
+      // Đã gộp vào Mô tả → không gửi 3 trường tách nữa.
+      stepsToReproduce: null, expectedResult: null, actualResult: null
     };
     const id = this.editingId();
     if (id) {
@@ -397,7 +401,7 @@ export class PrjBugs implements OnInit {
 
   private emptyForm(): TaskRequest {
     return {
-      parentId: null, title: '', description: '', type: 'BUG', status: 'BACKLOG',
+      parentId: null, title: '', description: BUG_DESCRIPTION_TEMPLATE, type: 'BUG', status: 'BACKLOG',
       priority: 'MEDIUM', assigneeUserId: null, estimateHours: 0,
       startDate: null, dueDate: null,
       // Người kiểm thử MẶC ĐỊNH = người log/tạo (chính mình) — vẫn cho chỉnh lại.

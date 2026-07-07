@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -13,6 +13,7 @@ import { memberPersonOptions } from '../../shared/person-options';
 import { buildTree, hasChildren, subtreeLeafEstimate } from '../../shared/task-tree';
 import { loadPref, savePref } from '../../shared/view-prefs';
 import { TypeFilter } from '../../shared/type-filter/type-filter';
+import { BUG_DESCRIPTION_TEMPLATE, mergeBugFieldsIntoDescription } from '../../shared/bug-template';
 
 /** Một dòng cây (task phẳng + cấp thụt lề, giữ thứ tự DFS). */
 interface TreeRow {
@@ -168,6 +169,29 @@ export class PrjBacklog implements OnInit {
     }
     input.value = '';
   }
+  /** Dán ảnh (Ctrl/Cmd+V) khi modal thêm/sửa đang mở → thêm vào hàng chờ ảnh. */
+  @HostListener('document:paste', ['$event'])
+  onPaste(ev: ClipboardEvent): void {
+    if (!this.modalOpen()) return;
+    const items = ev.clipboardData?.items;
+    if (!items) return;
+    const added: { file: File; url: string; name: string }[] = [];
+    for (const it of Array.from(items)) {
+      if (it.kind !== 'file' || !it.type.startsWith('image/')) continue;
+      const raw = it.getAsFile();
+      if (!raw) continue;
+      let file = raw;
+      if (!raw.name || raw.name === 'image.png') {
+        const ext = (raw.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        file = new File([raw], `screenshot-${Date.now()}.${ext}`, { type: raw.type });
+      }
+      added.push({ file, url: URL.createObjectURL(file), name: file.name });
+    }
+    if (!added.length) return;
+    this.previews.update((xs) => [...xs, ...added]);
+    ev.preventDefault();
+    this.toast.success('Đã dán ảnh', `${added.length} ảnh vào hàng chờ`);
+  }
   /** Bỏ 1 ảnh chờ. */
   removeFile(i: number): void {
     const p = this.previews()[i];
@@ -252,6 +276,10 @@ export class PrjBacklog implements OnInit {
   /** Khi đổi loại trong modal → tính lại cha hợp lệ; reset parentId nếu không còn hợp lệ. */
   onTypeChange(type: TaskType): void {
     this.f.type = type;
+    // Tạo mới + đổi sang BUG/ISSUE mà Mô tả còn trống → điền sẵn khung Mô tả lỗi.
+    if (!this.editingId() && this.isBugLike(type) && !(this.f.description || '').trim()) {
+      this.f.description = BUG_DESCRIPTION_TEMPLATE;
+    }
     const allow = this.parentTypeOf(type);
     if (!allow) { this.f.parentId = null; return; }        // EPIC → không cha
     const ok = this.tasks().some((t) => t.id === this.f.parentId && allow.includes(t.type));
@@ -555,6 +583,8 @@ export class PrjBacklog implements OnInit {
       // Nút "+ Thêm task" ở toolbar → mặc định EPIC (gốc, không cha).
       this.f.type = 'EPIC';
     }
+    // Tạo mới BUG/ISSUE → điền sẵn khung Mô tả lỗi (I. Các bước / II. Thực tế / III. Mong đợi).
+    if (this.isBugLike(this.f.type)) this.f.description = BUG_DESCRIPTION_TEMPLATE;
     // task con của BUG/ISSUE kế thừa screen từ cha (gợi ý) — để trống mặc định.
     // Mặc định Ngày bắt đầu = Ngày kết thúc = HÔM NAY (vẫn cho sửa).
     this.startIso = this.dueIso = this.todayIso();
@@ -567,7 +597,8 @@ export class PrjBacklog implements OnInit {
     this.f = {
       parentId: t.parentId,
       title: t.title,
-      description: t.description ?? '',
+      // Gộp 3 trường lỗi cũ (bước/thực tế/mong đợi) vào Mô tả — chỉ 1 lần, không mất dữ liệu.
+      description: mergeBugFieldsIntoDescription(t),
       type: t.type,
       status: t.status,
       priority: t.priority,
@@ -576,11 +607,11 @@ export class PrjBacklog implements OnInit {
       screen: t.screen ?? '',
       startDate: t.startDate,
       dueDate: t.dueDate,
-      // Chi tiết lỗi (BUG/ISSUE) — đổ sẵn để form Sửa hiển thị đúng.
+      // Chi tiết lỗi (BUG/ISSUE) — severity/environment/screen giữ; 3 trường mô tả đã gộp vào Mô tả.
       severity: t.severity ?? null,
-      stepsToReproduce: t.stepsToReproduce ?? '',
-      expectedResult: t.expectedResult ?? '',
-      actualResult: t.actualResult ?? '',
+      stepsToReproduce: '',
+      expectedResult: '',
+      actualResult: '',
       environment: t.environment ?? ''
     };
     this.startIso = this.toIso(t.startDate);
@@ -614,9 +645,10 @@ export class PrjBacklog implements OnInit {
       // Khối "Chi tiết lỗi" chỉ áp dụng cho BUG/ISSUE — loại khác gửi null (xoá dữ liệu cũ nếu đổi loại).
       screen: bug ? (this.f.screen || null) : null,
       severity: bug ? (this.f.severity || null) : null,
-      stepsToReproduce: bug ? (this.f.stepsToReproduce || null) : null,
-      expectedResult: bug ? (this.f.expectedResult || null) : null,
-      actualResult: bug ? (this.f.actualResult || null) : null,
+      // 3 trường lỗi đã gộp vào Mô tả → luôn gửi null (không dùng nữa).
+      stepsToReproduce: null,
+      expectedResult: null,
+      actualResult: null,
       environment: bug ? (this.f.environment || null) : null
     };
     const id = this.editingId();

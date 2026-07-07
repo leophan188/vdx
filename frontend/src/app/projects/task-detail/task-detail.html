@@ -183,8 +183,8 @@
             </div>
             <div class="td__sec">
               <h4>Mô tả</h4>
-              @if (t.description) {
-                <div class="td__desc">{{ t.description }}</div>
+              @if (bugDesc(t)) {
+                <div class="td__desc">{{ bugDesc(t) }}</div>
               } @else {
                 <div class="td__muted">Chưa có mô tả.</div>
               }
@@ -210,22 +210,6 @@
                                          [allowEmpty]="true" emptyLabel="— Chưa đánh giá —" placeholder="Mức độ…" />
                     </div>
                     <div class="bug__field">
-                      <label>Các bước tái hiện</label>
-                      <textarea rows="3" [value]="bugForm.stepsToReproduce"
-                                (input)="bugForm.stepsToReproduce = $any($event.target).value"
-                                placeholder="1. … &#10;2. …"></textarea>
-                    </div>
-                    <div class="bug__field">
-                      <label>Kết quả mong đợi</label>
-                      <textarea rows="2" [value]="bugForm.expectedResult"
-                                (input)="bugForm.expectedResult = $any($event.target).value"></textarea>
-                    </div>
-                    <div class="bug__field">
-                      <label>Kết quả thực tế</label>
-                      <textarea rows="2" [value]="bugForm.actualResult"
-                                (input)="bugForm.actualResult = $any($event.target).value"></textarea>
-                    </div>
-                    <div class="bug__field">
                       <label>Môi trường</label>
                       <input type="text" [value]="bugForm.environment"
                              (input)="bugForm.environment = $any($event.target).value"
@@ -244,18 +228,6 @@
                     @if (t.severity) {
                       <span [class]="severityBadge(t.severity)">{{ severityLabels[t.severity] }}</span>
                     } @else { <span class="bug__val is-empty">Chưa đánh giá</span> }
-                  </div>
-                  <div class="bug__field">
-                    <label>Các bước tái hiện</label>
-                    <div class="bug__val" [class.is-empty]="!t.stepsToReproduce">{{ t.stepsToReproduce || 'Chưa nhập' }}</div>
-                  </div>
-                  <div class="bug__field">
-                    <label>Kết quả mong đợi</label>
-                    <div class="bug__val" [class.is-empty]="!t.expectedResult">{{ t.expectedResult || 'Chưa nhập' }}</div>
-                  </div>
-                  <div class="bug__field">
-                    <label>Kết quả thực tế</label>
-                    <div class="bug__val" [class.is-empty]="!t.actualResult">{{ t.actualResult || 'Chưa nhập' }}</div>
                   </div>
                   <div class="bug__field">
                     <label>Môi trường</label>

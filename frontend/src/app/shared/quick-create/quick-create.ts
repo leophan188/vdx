@@ -1,7 +1,8 @@
-import { Component, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Modal } from '../modal/modal';
+import { BUG_DESCRIPTION_TEMPLATE } from '../bug-template';
 import { SearchableSelect, SelectOption } from '../searchable-select/searchable-select';
 import { buildParentOptions } from '../../projects/work-stats';
 import { memberPersonOptions } from '../person-options';
@@ -161,9 +162,34 @@ export class QuickCreate {
       untracked(() => {
         this.reset();
         this.type.set(preset);
+        if (preset === 'BUG' || preset === 'ISSUE') this.description.set(BUG_DESCRIPTION_TEMPLATE);
         this.loadProjects();
       });
     });
+  }
+
+  /** Dán ảnh (Ctrl/Cmd+V) khi form Tạo nhanh đang mở → tự thêm vào ảnh chờ, upload sau khi tạo. */
+  @HostListener('document:paste', ['$event'])
+  onPaste(ev: ClipboardEvent): void {
+    if (!this.open()) return;
+    const items = ev.clipboardData?.items;
+    if (!items) return;
+    const add: PendingImage[] = [];
+    for (const it of Array.from(items)) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const raw = it.getAsFile();
+        if (!raw) continue;
+        const ext = (it.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        const name = raw.name && raw.name !== 'image.png' ? raw.name : `screenshot-${Date.now()}.${ext}`;
+        const file = raw.name && raw.name !== 'image.png' ? raw : new File([raw], name, { type: it.type });
+        add.push({ file, url: URL.createObjectURL(file), name });
+      }
+    }
+    if (add.length) {
+      ev.preventDefault();
+      this.previews.update((xs) => [...xs, ...add]);
+      this.toast.success('Đã dán ảnh', `${add.length} ảnh`);
+    }
   }
 
   private reset(): void {
@@ -241,6 +267,10 @@ export class QuickCreate {
   /** Đổi loại → EPIC bỏ cha; loại khác → reset cha nếu không còn hợp lệ. */
   setType(t: QuickCreateType): void {
     this.type.set(t);
+    // Bug/Issue: điền sẵn khung Mô tả nếu đang trống; rời Bug mà Mô tả vẫn là khung mặc định → xoá.
+    const nowBug = t === 'BUG' || t === 'ISSUE';
+    if (nowBug && !this.description().trim()) this.description.set(BUG_DESCRIPTION_TEMPLATE);
+    if (!nowBug && this.description() === BUG_DESCRIPTION_TEMPLATE) this.description.set('');
     const allow = this.parentTypeOf(t);
     if (!allow) { this.parentId.set(''); return; }
     const ok = this.tasks().some((tk) => tk.id === this.parentId() && allow.includes(tk.type));
@@ -290,9 +320,10 @@ export class QuickCreate {
       severity: bug ? (this.severity() || null) : null,
       screen: bug ? (this.screen().trim() || null) : null,
       environment: bug ? (this.environment().trim() || null) : null,
-      stepsToReproduce: bug ? (this.stepsToReproduce().trim() || null) : null,
-      expectedResult: bug ? (this.expectedResult().trim() || null) : null,
-      actualResult: bug ? (this.actualResult().trim() || null) : null
+      // Gộp Bước/Kết quả vào Mô tả → 3 trường này không dùng nữa.
+      stepsToReproduce: null,
+      expectedResult: null,
+      actualResult: null
     };
     this.meBug.quickCreate(body).subscribe({
       next: (r) => {

@@ -275,26 +275,11 @@
                  placeholder="Trình duyệt / OS / phiên bản" />
         </div>
       </div>
-      <div class="field">
-        <label>Các bước tái hiện</label>
-        <textarea name="stepsToReproduce" rows="3" [(ngModel)]="f.stepsToReproduce"
-                  placeholder="1. …&#10;2. …"></textarea>
-      </div>
-      <div class="form-2col">
-        <div class="field">
-          <label>Kết quả mong đợi</label>
-          <textarea name="expectedResult" rows="2" [(ngModel)]="f.expectedResult"></textarea>
-        </div>
-        <div class="field">
-          <label>Kết quả thực tế</label>
-          <textarea name="actualResult" rows="2" [(ngModel)]="f.actualResult"></textarea>
-        </div>
-      </div>
     }
 
     <div class="field">
       <label>Mô tả</label>
-      <textarea name="description" rows="3" [(ngModel)]="f.description" placeholder="Mô tả chi tiết…"></textarea>
+      <textarea name="description" rows="12" [(ngModel)]="f.description" placeholder="Mô tả chi tiết…"></textarea>
     </div>
 
     <!-- Ảnh đính kèm (tuỳ chọn) — tải lên NGAY sau khi lưu task -->

@@ -3,6 +3,7 @@ import { Modal } from '../../shared/modal/modal';
 import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { memberPersonOptions } from '../../shared/person-options';
+import { mergeBugFieldsIntoDescription } from '../../shared/bug-template';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
   ProjectService, ProjectTask, TaskComment, TaskAttachment, TaskActivity, TaskActivityAction,
@@ -562,6 +563,9 @@ export class PrjTaskDetail {
   }
   cancelEditBug(): void { this.editingBug.set(false); }
 
+  /** Mô tả hiển thị: gộp Bước/Kết quả cũ (nếu bug cũ còn tách trường) để không mất dữ liệu. */
+  bugDesc(t: ProjectTask): string { return mergeBugFieldsIntoDescription(t); }
+
   saveBug(): void {
     const t = this.current();
     if (!t || this.busyBug()) return;
@@ -573,9 +577,10 @@ export class PrjTaskDetail {
       assigneeUserId: t.assigneeUserId, estimateHours: t.estimateHours,
       startDate: t.startDate, dueDate: t.dueDate, orderIndex: t.orderIndex, screen: t.screen,
       severity: this.bugForm.severity,
-      stepsToReproduce: this.bugForm.stepsToReproduce.trim() || null,
-      expectedResult: this.bugForm.expectedResult.trim() || null,
-      actualResult: this.bugForm.actualResult.trim() || null,
+      // Bước/Kết quả đã gộp vào Mô tả — giữ nguyên dữ liệu cũ (không sửa ở đây nữa) để không mất.
+      stepsToReproduce: t.stepsToReproduce,
+      expectedResult: t.expectedResult,
+      actualResult: t.actualResult,
       environment: this.bugForm.environment.trim() || null
     };
     this.svc.updateTask(this.projectId(), t.id, body).subscribe({
