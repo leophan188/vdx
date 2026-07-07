@@ -11,7 +11,7 @@
     <ng-template gridCell="version" let-d><span class="badge badge--neutral">v{{ d.version }}</span></ng-template>
     <ng-template gridCell="updatedAt" let-d>{{ fmt(d.updatedAt) }}</ng-template>
     <ng-template gridCell="actions" let-d>
-      <button type="button" class="btn btn--primary btn--sm" (click)="open(d)">✎ Soạn thảo</button>
+      <button type="button" class="btn btn--icon" title="Soạn thảo" (click)="open(d)">✎</button>
     </ng-template>
   </data-grid>
 </section>

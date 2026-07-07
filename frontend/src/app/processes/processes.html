@@ -21,12 +21,12 @@
 
     <ng-template gridCell="actions" let-p>
       <span class="cell-actions">
-        <button type="button" class="btn btn--secondary btn--sm" (click)="design(p)">✎ Thiết kế</button>
+        <button type="button" class="btn btn--icon" title="Thiết kế" (click)="design(p)">🎨</button>
         @if (p.status !== 'PUBLISHED') {
-          <button type="button" class="btn btn--primary btn--sm" (click)="askPublish(p)">🚀 Ban hành</button>
+          <button type="button" class="btn btn--icon" title="Ban hành" (click)="askPublish(p)">🚀</button>
         } @else {
-          <button type="button" class="btn btn--secondary btn--sm" (click)="startInstance(p)">▶ Khởi tạo</button>
-          <button type="button" class="btn btn--ghost btn--sm" (click)="askRetire(p)">⏸ Ngừng dùng</button>
+          <button type="button" class="btn btn--icon" title="Khởi tạo" (click)="startInstance(p)">▶</button>
+          <button type="button" class="btn btn--icon btn--icon-danger" title="Ngừng dùng" (click)="askRetire(p)">⏸</button>
         }
         <button type="button" class="btn btn--icon" title="Đổi tên" (click)="openEdit(p)">✎</button>
         <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(p)">🗑</button>

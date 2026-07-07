@@ -27,8 +27,8 @@
           @if (e.closed) {
             <span class="ot-locked-hint" title="Kỳ đã chốt, chỉ xem">Đã chốt</span>
           } @else {
-            <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(e)">✎</button>
-            <button type="button" class="btn btn--ghost btn--sm" title="Xoá" (click)="askDelete(e)">🗑</button>
+            <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(e)">✎</button>
+            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(e)">🗑</button>
           }
         </span>
       </ng-template>

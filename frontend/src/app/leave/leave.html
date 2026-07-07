@@ -23,8 +23,8 @@
       <ng-template gridCell="days" let-e><span class="badge badge--neutral">{{ e.days }}</span></ng-template>
       <ng-template gridCell="actions" let-e>
         <span class="cell-actions">
-          <button type="button" class="btn btn--ghost btn--sm" title="Sửa" (click)="openEdit(e)">✎</button>
-          <button type="button" class="btn btn--ghost btn--sm" title="Xoá" (click)="askDelete(e)">🗑</button>
+          <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(e)">✎</button>
+          <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá" (click)="askDelete(e)">🗑</button>
         </span>
       </ng-template>
     </data-grid>

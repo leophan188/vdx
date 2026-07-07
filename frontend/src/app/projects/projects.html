@@ -38,7 +38,7 @@
     <ng-template gridCell="counts" let-p>{{ p.taskCount }} task · {{ p.memberCount }} người</ng-template>
     <ng-template gridCell="actions" let-p>
       <button type="button" class="btn btn--icon" title="Sửa" (click)="openEdit(p)">✎</button>
-      <button type="button" class="btn btn--ghost btn--sm" (click)="open(p)">Mở →</button>
+      <button type="button" class="btn btn--icon" title="Mở" (click)="open(p)">↗</button>
     </ng-template>
   </data-grid>
   }

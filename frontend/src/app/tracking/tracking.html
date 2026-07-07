@@ -45,9 +45,9 @@
 
     <ng-template gridCell="actions" let-i>
       <span class="cell-actions">
-        <button type="button" class="btn btn--secondary btn--sm" (click)="openTimeline(i)">🕑 Tiến trình</button>
+        <button type="button" class="btn btn--icon" title="Tiến trình" (click)="openTimeline(i)">🕑</button>
         @if (i.status === 'RUNNING') {
-          <button type="button" class="btn btn--ghost btn--sm" (click)="askCancel(i)">✖ Hủy</button>
+          <button type="button" class="btn btn--icon btn--icon-danger" title="Hủy" (click)="askCancel(i)">✖</button>
         }
       </span>
     </ng-template>

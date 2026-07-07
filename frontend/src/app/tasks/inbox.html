@@ -36,11 +36,11 @@
     <ng-template gridCell="actions" let-t>
       <span class="cell-actions">
         @if (t.claimable) {
-          <button type="button" class="btn btn--primary btn--sm" (click)="claim(t)">✋ Nhận việc</button>
+          <button type="button" class="btn btn--icon" title="Nhận việc" (click)="claim(t)">✋</button>
         } @else {
-          <button type="button" class="btn btn--primary btn--sm" (click)="process(t)">Xử lý →</button>
+          <button type="button" class="btn btn--icon" title="Xử lý" (click)="process(t)">▶</button>
           @if (t.slaHours) {
-            <button type="button" class="btn btn--ghost btn--sm" title="Xin gia hạn" (click)="askExtend(t)">⏰</button>
+            <button type="button" class="btn btn--icon" title="Xin gia hạn" (click)="askExtend(t)">⏰</button>
           }
         }
       </span>

@@ -25,7 +25,7 @@
     <ng-template gridCell="startedAt" let-i>{{ fmt(i.startedAt) }}</ng-template>
 
     <ng-template gridCell="actions" let-i>
-      <button type="button" class="btn btn--secondary btn--sm" (click)="openTimeline(i)">🕑 Tiến trình</button>
+      <button type="button" class="btn btn--icon" title="Tiến trình" (click)="openTimeline(i)">🕑</button>
     </ng-template>
   </data-grid>
 </section>

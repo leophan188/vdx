@@ -76,7 +76,7 @@
     </ng-template>
     <ng-template gridCell="actions" let-r>
       @if (r.hasOutput) {
-        <button type="button" class="btn btn--secondary btn--sm" (click)="downloadRun(r)">⬇ Tải .xlsx</button>
+        <button type="button" class="btn btn--icon" title="Tải .xlsx" (click)="downloadRun(r)">⬇</button>
       } @else {
         <span class="hint">{{ r.message }}</span>
       }
