@@ -2,6 +2,7 @@ package com.bpm.api;
 
 import com.bpm.application.EmployeeService;
 import com.bpm.application.HrDemoSeeder;
+import com.bpm.application.Process10StepDemoSeeder;
 import com.bpm.application.ProjectDemoSeeder;
 import com.bpm.application.SocialDemoSeeder;
 import com.bpm.application.SystemDataService;
@@ -34,15 +35,18 @@ public class SystemController {
 
     private final SystemDataService service;
     private final HrDemoSeeder hrDemoSeeder;
+    private final Process10StepDemoSeeder process10StepDemoSeeder;
     private final ProjectDemoSeeder projectDemoSeeder;
     private final SocialDemoSeeder socialDemoSeeder;
     private final EmployeeService employeeService;
 
     public SystemController(SystemDataService service, HrDemoSeeder hrDemoSeeder,
+                            Process10StepDemoSeeder process10StepDemoSeeder,
                             ProjectDemoSeeder projectDemoSeeder, SocialDemoSeeder socialDemoSeeder,
                             EmployeeService employeeService) {
         this.service = service;
         this.hrDemoSeeder = hrDemoSeeder;
+        this.process10StepDemoSeeder = process10StepDemoSeeder;
         this.projectDemoSeeder = projectDemoSeeder;
         this.socialDemoSeeder = socialDemoSeeder;
         this.employeeService = employeeService;
@@ -91,6 +95,15 @@ public class SystemController {
     @PostMapping("/seed-project-demo")
     public ResponseEntity<ProjectDemoSeeder.SeedResult> seedProjectDemo(Authentication auth) {
         return ResponseEntity.ok(projectDemoSeeder.seed(actor(auth)));
+    }
+
+    /**
+     * Tạo dữ liệu DEMO 1 QUY TRÌNH 10 BƯỚC chạy thật qua BPM (Mua sắm – Thanh toán) trên nhân sự thật
+     * (CHỈ THÊM, idempotent). CHỈ ADMIN. Trả tóm tắt: số bước / hồ sơ đã tạo.
+     */
+    @PostMapping("/seed-process-demo")
+    public ResponseEntity<Process10StepDemoSeeder.SeedResult> seedProcessDemo(Authentication auth) {
+        return ResponseEntity.ok(process10StepDemoSeeder.seed(actor(auth)));
     }
 
     /**
