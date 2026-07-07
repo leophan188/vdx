@@ -4,6 +4,7 @@ import com.bpm.application.EmployeeService;
 import com.bpm.application.HrDemoSeeder;
 import com.bpm.application.HrEvalDemoSeeder;
 import com.bpm.application.Process10StepDemoSeeder;
+import com.bpm.application.Qt0101DemoSeeder;
 import com.bpm.application.ProjectDemoSeeder;
 import com.bpm.application.SocialDemoSeeder;
 import com.bpm.application.SystemDataService;
@@ -38,18 +39,21 @@ public class SystemController {
     private final HrDemoSeeder hrDemoSeeder;
     private final Process10StepDemoSeeder process10StepDemoSeeder;
     private final HrEvalDemoSeeder hrEvalDemoSeeder;
+    private final Qt0101DemoSeeder qt0101DemoSeeder;
     private final ProjectDemoSeeder projectDemoSeeder;
     private final SocialDemoSeeder socialDemoSeeder;
     private final EmployeeService employeeService;
 
     public SystemController(SystemDataService service, HrDemoSeeder hrDemoSeeder,
                             Process10StepDemoSeeder process10StepDemoSeeder, HrEvalDemoSeeder hrEvalDemoSeeder,
+                            Qt0101DemoSeeder qt0101DemoSeeder,
                             ProjectDemoSeeder projectDemoSeeder, SocialDemoSeeder socialDemoSeeder,
                             EmployeeService employeeService) {
         this.service = service;
         this.hrDemoSeeder = hrDemoSeeder;
         this.process10StepDemoSeeder = process10StepDemoSeeder;
         this.hrEvalDemoSeeder = hrEvalDemoSeeder;
+        this.qt0101DemoSeeder = qt0101DemoSeeder;
         this.projectDemoSeeder = projectDemoSeeder;
         this.socialDemoSeeder = socialDemoSeeder;
         this.employeeService = employeeService;
@@ -113,6 +117,12 @@ public class SystemController {
     @PostMapping("/seed-eval-demo")
     public ResponseEntity<HrEvalDemoSeeder.SeedResult> seedEvalDemo(Authentication auth) {
         return ResponseEntity.ok(hrEvalDemoSeeder.seed(actor(auth)));
+    }
+
+    /** Cấu hình quy trình nghiệp vụ QT01.01 – Tạo và xử lý nhiệm vụ (Tham gia ý kiến, góp ý). CHỈ ADMIN. */
+    @PostMapping("/seed-qt0101")
+    public ResponseEntity<Qt0101DemoSeeder.SeedResult> seedQt0101(Authentication auth) {
+        return ResponseEntity.ok(qt0101DemoSeeder.seed(actor(auth)));
     }
 
     /**
