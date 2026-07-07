@@ -26,7 +26,10 @@ interface RField {
     .tp-sechead--sep{margin-top:6px;padding-top:2px;}
     .tp-chip{display:inline-flex;align-items:center;gap:4px;background:var(--color-primary-soft,rgba(30,80,160,.12));color:var(--color-primary,#1e50a0);border-radius:999px;padding:2px 10px;font-size:.85em;font-weight:600;text-transform:none;letter-spacing:0;}
     .tp-badge-done{margin-left:auto;background:var(--status-done,#16a34a);color:#fff;border-radius:999px;padding:2px 10px;font-size:.82em;font-weight:600;text-transform:none;letter-spacing:0;}
-    .tp-reqfields{display:flex;flex-direction:column;gap:10px;}
+    /* Lưới nhiều cột — tự co theo bề rộng; ô dài (.tp-full) chiếm cả hàng. */
+    .tp-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:10px 22px;align-items:start;}
+    .tp-full{grid-column:1/-1;}
+    .tp-reqfields{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 22px;}
     .tp-fld > label{display:block;font-size:.74em;text-transform:uppercase;letter-spacing:.04em;opacity:.6;margin-bottom:3px;font-weight:700;}
     .tp-ro{border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-surface);color:var(--color-text);white-space:pre-wrap;}
     .tp-accordion{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
@@ -35,8 +38,10 @@ interface RField {
     .tp-num{flex:0 0 24px;height:24px;border-radius:50%;background:var(--status-done,#16a34a);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;}
     .tp-step-title{flex:1;min-width:0;font-weight:600;}
     .tp-step-meta{display:flex;gap:8px;align-items:center;font-size:.82em;opacity:.7;white-space:nowrap;}
-    .tp-step-body{padding:2px 14px 14px 46px;display:flex;flex-direction:column;gap:10px;}
+    .tp-step-body{padding:2px 14px 14px 46px;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:10px 22px;}
     .tp-caret{opacity:.5;}
+    /* Ô nhập của form bước hiện tại co giãn theo cột lưới. */
+    #task-proc-form .field > input, #task-proc-form .field > select, #task-proc-form .field > textarea{width:100%;box-sizing:border-box;}
   `]
 })
 export class TaskProcessor {

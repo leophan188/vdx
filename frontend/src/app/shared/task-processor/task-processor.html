@@ -1,5 +1,5 @@
 <!-- Modal xử lý việc dùng chung (Story 3.4): form theo quyền trường + hành động. -->
-<app-modal [open]="open()" [wide]="true" [title]="(detail()?.stepName || 'Xử lý việc')" (closed)="close()">
+<app-modal [open]="open()" [xwide]="true" [title]="(detail()?.stepName || 'Xử lý việc')" (closed)="close()">
   @if (detail(); as d) {
     <p class="hint" style="margin-top:0">
       Quy trình: <strong>{{ d.processName }}</strong>
@@ -16,7 +16,7 @@
         @if (r.data.length) {
           <div class="tp-reqfields">
             @for (d2 of r.data; track d2.label) {
-              <div class="tp-fld"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+              <div class="tp-fld" [class.tp-full]="d2.value.length > 60"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
             }
           </div>
         } @else {
@@ -48,7 +48,7 @@
               <div class="tp-step-body">
                 @if (s.data.length) {
                   @for (d2 of s.data; track d2.label) {
-                    <div class="tp-fld"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+                    <div class="tp-fld" [class.tp-full]="d2.value.length > 60"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
                   }
                 } @else {
                   <small class="hint">(không có dữ liệu nhập ở bước này)</small>
@@ -65,12 +65,12 @@
       <div class="tp-sechead"><span>📝 Nội dung cần điền</span></div>
     }
     @if (d.formId && fields().length) {
-      <form id="task-proc-form">
+      <form id="task-proc-form" class="tp-grid">
         @for (f of fields(); track f.key) {
           @if (f.type === 'section') {
-            <h4 class="form-section">{{ f.label }}</h4>
+            <h4 class="form-section tp-full">{{ f.label }}</h4>
           } @else if (visible(f.key)) {
-            <div class="field">
+            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect'">
               <label [attr.for]="'tpf_' + f.key">{{ f.label }}@if (f.required) { <span class="req">*</span> }</label>
 
               @switch (f.type) {
