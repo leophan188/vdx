@@ -383,8 +383,15 @@ public class WorkflowService {
         if (actions.isEmpty()) {
             actions.add("Hoàn thành"); // luôn có ít nhất 1 hành động
         }
+        // Dữ liệu các BƯỚC TRƯỚC đã hoàn thành (để người xử lý xem lại ngữ cảnh trước khi làm bước này).
+        List<TaskDto.StepView> priorSteps = List.of();
+        if (wi != null) {
+            priorSteps = buildStepViews(wi).stream()
+                    .filter(s -> "DONE".equals(s.status()))
+                    .toList();
+        }
         return new TaskDto.Detail(t.getId(), t.getName(), procName,
-                wi != null ? wi.getId() : null, formId, fieldPerms, actions, vars);
+                wi != null ? wi.getId() : null, formId, fieldPerms, actions, vars, priorSteps);
     }
 
     /** Hoàn thành việc (Story 3.4): ghi dữ liệu form + hành động → luồng tiến → gán việc bước kế (Story 3.5). */
@@ -579,8 +586,23 @@ public class WorkflowService {
     @Transactional(readOnly = true)
     public TaskDto.InstanceOverview overview(String instanceId) {
         WorkflowInstance wi = get(instanceId);
-        String flowInst = wi.getFlowableInstanceId();
+        List<TaskDto.StepView> steps = buildStepViews(wi);
+        int currentIndex = 0;
+        for (TaskDto.StepView s : steps) {
+            if ("ACTIVE".equals(s.status()) && currentIndex == 0) {
+                currentIndex = s.index();
+            }
+        }
+        if (currentIndex == 0 && !"RUNNING".equals(wi.getStatus())) {
+            currentIndex = steps.size();
+        }
+        return new TaskDto.InstanceOverview(wi.getId(), safeProcessName(wi.getProcessId()),
+                titleAndSearch(wi)[0], wi.getStatus(), steps.size(), currentIndex, steps);
+    }
 
+    /** Dựng danh sách bước (đủ, theo thứ tự) của một phiên chạy: trạng thái + người + thời gian + dữ liệu. */
+    private List<TaskDto.StepView> buildStepViews(WorkflowInstance wi) {
+        String flowInst = wi.getFlowableInstanceId();
         String pdId = null;
         var hpi = historyService.createHistoricProcessInstanceQuery().processInstanceId(flowInst).singleResult();
         if (hpi != null) {
@@ -588,25 +610,22 @@ public class WorkflowService {
         }
         java.util.LinkedHashMap<String, String> ordered = orderedUserTasks(pdId);
 
-        // Lịch sử hoạt động userTask theo activityId (giữ lần xuất hiện mới nhất).
         Map<String, HistoricActivityInstance> actByKey = new HashMap<>();
         for (HistoricActivityInstance a : historyService.createHistoricActivityInstanceQuery()
                 .processInstanceId(flowInst).activityType("userTask")
                 .orderByHistoricActivityInstanceStartTime().asc().list()) {
             actByKey.put(a.getActivityId(), a);
         }
-        // Việc đang mở (ACTIVE).
         java.util.Set<String> activeKeys = new java.util.HashSet<>();
         for (Task t : taskService.createTaskQuery().processInstanceId(flowInst).list()) {
             activeKeys.add(t.getTaskDefinitionKey());
         }
-        // Toàn bộ biến tiến trình (dữ liệu đã nhập).
         Map<String, Object> vars = new java.util.LinkedHashMap<>();
         historyService.createHistoricVariableInstanceQuery().processInstanceId(flowInst)
                 .list().forEach(v -> vars.put(v.getVariableName(), v.getValue()));
 
         List<TaskDto.StepView> steps = new ArrayList<>();
-        int index = 0, currentIndex = 0;
+        int index = 0;
         for (Map.Entry<String, String> e : ordered.entrySet()) {
             index++;
             String key = e.getKey();
@@ -614,20 +633,13 @@ public class WorkflowService {
             boolean done = a != null && a.getEndTime() != null;
             boolean active = activeKeys.contains(key) || (a != null && a.getEndTime() == null);
             String status = done ? "DONE" : (active ? "ACTIVE" : "PENDING");
-            if (active && currentIndex == 0) {
-                currentIndex = index;
-            }
             String assignee = a != null ? userDisplay(a.getAssignee()) : null;
             String startedAt = a != null && a.getStartTime() != null ? a.getStartTime().toInstant().toString() : null;
             String endedAt = done ? a.getEndTime().toInstant().toString() : null;
             steps.add(new TaskDto.StepView(index, key, e.getValue(), assignee, startedAt, endedAt, status,
                     stepFieldValues(wi.getStepsMetaJson(), key, vars)));
         }
-        if (currentIndex == 0 && !"RUNNING".equals(wi.getStatus())) {
-            currentIndex = ordered.size();
-        }
-        return new TaskDto.InstanceOverview(wi.getId(), safeProcessName(wi.getProcessId()),
-                titleAndSearch(wi)[0], wi.getStatus(), ordered.size(), currentIndex, steps);
+        return steps;
     }
 
     /** Dữ liệu đã nhập ở một bước: các trường của biểu mẫu bước đó có giá trị (Nhãn → Giá trị). */

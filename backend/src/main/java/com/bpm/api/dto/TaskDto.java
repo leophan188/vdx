@@ -16,9 +16,13 @@ public class TaskDto {
                             int stepIndex, int stepTotal) {
     }
 
-    /** Chi tiết việc để FE dựng màn xử lý (form + quyền trường + hành động + dữ liệu hiện có). */
+    /**
+     * Chi tiết việc để FE dựng màn xử lý (form + quyền trường + hành động + dữ liệu hiện có).
+     * priorSteps = dữ liệu các BƯỚC TRƯỚC đã hoàn thành (để người xử lý xem lại ngữ cảnh).
+     */
     public record Detail(String taskId, String stepName, String processName, String instanceId,
-                         String formId, Object fieldPerms, List<String> actions, Map<String, Object> formData) {
+                         String formId, Object fieldPerms, List<String> actions, Map<String, Object> formData,
+                         List<StepView> priorSteps) {
     }
 
     /** Yêu cầu hoàn thành việc: hành động đã chọn + dữ liệu form. */

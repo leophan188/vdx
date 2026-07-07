@@ -27,6 +27,8 @@ export interface TaskDetail {
   fieldPerms: Record<string, 'EDIT' | 'READONLY' | 'HIDDEN'> | null;
   actions: string[];
   formData: Record<string, unknown>;
+  /** Dữ liệu các bước TRƯỚC đã hoàn thành (xem lại ngữ cảnh). */
+  priorSteps: StepView[];
 }
 
 export interface StartableProcess {

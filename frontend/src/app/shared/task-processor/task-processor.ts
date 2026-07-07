@@ -33,6 +33,9 @@ export class TaskProcessor {
   readonly fields = signal<RField[]>([]);
   readonly values = signal<Record<string, unknown>>({});
   readonly busy = signal(false);
+  /** Mở/gập mục "Dữ liệu các bước trước". */
+  readonly priorOpen = signal(false);
+  togglePrior(): void { this.priorOpen.update((v) => !v); }
 
   /** Mở việc theo id: tải chi tiết + schema biểu mẫu. */
   openTask(taskId: string): void {
@@ -40,6 +43,7 @@ export class TaskProcessor {
     this.fields.set([]);
     this.values.set({});
     this.detail.set(null);
+    this.priorOpen.set(false);
     this.open.set(true);
     this.wf.detail(taskId).subscribe({
       next: (d) => {

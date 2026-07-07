@@ -3,6 +3,41 @@
   @if (detail(); as d) {
     <p class="hint" style="margin-top:0">Quy trình: <strong>{{ d.processName }}</strong></p>
 
+    <!-- Dữ liệu các bước TRƯỚC (xem lại ngữ cảnh) — thu gọn mặc định -->
+    @if (d.priorSteps.length) {
+      <div style="border:1px solid var(--color-border,#e2e2e2);border-radius:8px;margin-bottom:14px;overflow:hidden;">
+        <button type="button" (click)="togglePrior()"
+                style="width:100%;display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--color-surface-2,rgba(127,127,127,.06));border:0;cursor:pointer;text-align:left;color:inherit;font-weight:600;">
+          <span>🗂️ Dữ liệu các bước trước ({{ d.priorSteps.length }} bước)</span>
+          <span style="margin-left:auto;opacity:.6;">{{ priorOpen() ? '▾' : '▸' }}</span>
+        </button>
+        @if (priorOpen()) {
+          <div style="padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;">
+            @for (s of d.priorSteps; track s.index) {
+              <div>
+                <div style="font-weight:600;font-size:.92em;margin-bottom:2px;">
+                  <span style="color:var(--status-done,#16a34a);">✓</span> Bước {{ s.index }} — {{ s.stepName }}
+                  @if (s.assignee) { <small class="hint">· 👤 {{ s.assignee }}</small> }
+                </div>
+                @if (s.data.length) {
+                  <table style="width:100%;border-collapse:collapse;font-size:.9em;">
+                    @for (d2 of s.data; track d2.label) {
+                      <tr>
+                        <th style="text-align:left;vertical-align:top;padding:3px 12px 3px 16px;white-space:nowrap;opacity:.7;font-weight:600;">{{ d2.label }}</th>
+                        <td style="padding:3px 0;">{{ d2.value }}</td>
+                      </tr>
+                    }
+                  </table>
+                } @else {
+                  <small class="hint" style="padding-left:16px;">(không có dữ liệu)</small>
+                }
+              </div>
+            }
+          </div>
+        }
+      </div>
+    }
+
     @if (d.formId && fields().length) {
       <form id="task-proc-form">
         @for (f of fields(); track f.key) {
