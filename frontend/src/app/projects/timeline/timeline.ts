@@ -137,6 +137,7 @@ const DAY_MS = 86_400_000;
     .gantt__bar--IN_PROGRESS { background: var(--status-active); }
     .gantt__bar--IN_REVIEW { background: var(--color-primary); }
     .gantt__bar--DONE { background: var(--status-done); }
+    .gantt__bar--CANCELLED { background: var(--color-text-muted); opacity: 0.55; }
 
     /* Đường "hôm nay" */
     .gantt__today { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--overdue); z-index: 2; pointer-events: none; }
@@ -171,7 +172,8 @@ export class PrjTimeline implements OnInit {
     { status: 'TODO', label: 'Chờ làm' },
     { status: 'IN_PROGRESS', label: 'Đang làm' },
     { status: 'IN_REVIEW', label: 'Chờ duyệt' },
-    { status: 'DONE', label: 'Hoàn thành' }
+    { status: 'DONE', label: 'Hoàn thành' },
+    { status: 'CANCELLED', label: 'Huỷ' }
   ];
 
   // ----- Thanh tuỳ chỉnh -----

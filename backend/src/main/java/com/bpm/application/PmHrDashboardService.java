@@ -141,15 +141,16 @@ public class PmHrDashboardService {
             int pOverdue = 0, pBugOpen = 0;
             for (ProjectTask t : ptasks) {
                 boolean done = t.getStatus() == TaskStatus.DONE;
+                boolean cancelled = t.getStatus() == TaskStatus.CANCELLED; // Huỷ = ngoài phạm vi
                 totalTasks++;
                 if (done) {
                     doneTasks++;
                 }
-                if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !done) {
+                if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !done && !cancelled) {
                     overdueTasks++;
                     pOverdue++;
                 }
-                if ((t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE) && !done) {
+                if ((t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE) && !done && !cancelled) {
                     openBugs++;
                     pBugOpen++;
                 }

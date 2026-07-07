@@ -222,8 +222,11 @@ public class WorkReportService {
         double overEst; int overCount;
 
         void add(ProjectTask t, LocalDate snapshot) {
-            double est = t.getEstimateHours();
             TaskStatus s = t.getStatus();
+            if (s == TaskStatus.CANCELLED) {
+                return; // Huỷ = ngoài phạm vi, không tính vào báo cáo công việc
+            }
+            double est = t.getEstimateHours();
             totalEst += est;
             boolean isDone = s == TaskStatus.DONE;
             if (isDone) {

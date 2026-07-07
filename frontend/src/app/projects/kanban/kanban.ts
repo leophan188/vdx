@@ -169,7 +169,8 @@ export class PrjKanban {
     { status: 'TODO', label: 'Cần làm' },
     { status: 'IN_PROGRESS', label: 'Đang làm' },
     { status: 'IN_REVIEW', label: 'Kiểm thử' },
-    { status: 'DONE', label: 'Hoàn thành' }
+    { status: 'DONE', label: 'Hoàn thành' },
+    { status: 'CANCELLED', label: 'Huỷ' }
   ];
 
   /** Lọc ƯU TIÊN — chip dùng chung. Mặc định hiện hết. */
@@ -235,10 +236,14 @@ export class PrjKanban {
     if (!m) return null;
     return new Date(+m[3], +m[2] - 1, +m[1]).getTime();
   }
-  /** Quá hạn = có hạn, hạn < hôm nay, CHƯA hoàn thành. */
+  /** Quá hạn = có hạn, hạn < hôm nay, CHƯA hoàn thành (và chưa Huỷ). */
   isOverdue(t: ProjectTask): boolean {
     const d = this.dueMs(t);
-    return d != null && d < this.today0() && t.status !== 'DONE';
+    return d != null && d < this.today0() && !this.isClosed(t);
+  }
+  /** Trạng thái "đóng" (ngoài phạm vi hạn): Hoàn thành hoặc Huỷ. */
+  private isClosed(t: ProjectTask): boolean {
+    return t.status === 'DONE' || t.status === 'CANCELLED';
   }
   /** Khớp bộ lọc hạn. OVERDUE/TODAY chỉ tính task CHƯA xong (trễ hạn nằm trong "Hôm nay" đến khi xong). */
   private matchDate(t: ProjectTask, df: 'TODAY' | 'TOMORROW' | 'OVERDUE'): boolean {
@@ -247,9 +252,9 @@ export class PrjKanban {
     const today = this.today0();
     const day = 86400000;
     if (df === 'TOMORROW') return d === today + day;
-    if (df === 'OVERDUE') return d < today && t.status !== 'DONE';
+    if (df === 'OVERDUE') return d < today && !this.isClosed(t);
     // TODAY: đúng hôm nay HOẶC trễ hạn (chưa xong) → vẫn nằm trong hôm nay đến khi xong.
-    return t.status !== 'DONE' && d <= today;
+    return !this.isClosed(t) && d <= today;
   }
 
   typeLabel(t: TaskType): string {

@@ -406,6 +406,7 @@ public class ProjectService {
 
         for (ProjectTask t : tasks) {
             boolean done = t.getStatus() == TaskStatus.DONE;
+            boolean cancelled = t.getStatus() == TaskStatus.CANCELLED; // Huỷ = ngoài phạm vi
             boolean leaf = !parentIds.contains(t.getId());
 
             byStatus.merge(t.getStatus().name(), 1, Integer::sum);
@@ -419,10 +420,10 @@ public class ProjectService {
             if (t.getType() == TaskType.BUG) {
                 bugCount++;
             }
-            if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !done) {
+            if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !done && !cancelled) {
                 overdue++;
             }
-            if (leaf) {
+            if (leaf && !cancelled) { // task Huỷ không tính vào mẫu số % hoàn thành
                 leafTasks++;
                 leafEstimate += t.getEstimateHours();
                 if (done) {
@@ -431,7 +432,7 @@ public class ProjectService {
                 }
             }
             String uid = t.getAssigneeUserId();
-            if (uid != null) {
+            if (uid != null && !cancelled) { // không tính việc đã huỷ vào thống kê theo người
                 int[] agg = assigneeAgg.computeIfAbsent(uid, k -> new int[2]);
                 agg[0]++;
                 if (done) {
@@ -468,6 +469,9 @@ public class ProjectService {
         for (ProjectTask t : tasks) {
             if (parentIds.contains(t.getId())) {
                 continue; // không phải lá
+            }
+            if (t.getStatus() == TaskStatus.CANCELLED) {
+                continue; // Huỷ = ngoài phạm vi, không tính vào % hoàn thành
             }
             leaf++;
             double w = t.effectiveHours(); // ưu tiên est; không có est → duration ngày công × 8

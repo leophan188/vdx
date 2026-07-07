@@ -284,6 +284,7 @@ public class ProjectReportExportService {
             case "IN_PROGRESS": return "Đang làm";
             case "IN_REVIEW": return "Kiểm thử";
             case "DONE": return "Hoàn thành";
+            case "CANCELLED": return "Huỷ";
             default: return s;
         }
     }

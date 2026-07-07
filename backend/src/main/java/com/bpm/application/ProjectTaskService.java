@@ -191,6 +191,10 @@ public class ProjectTaskService {
     private double[] rollup(ProjectTask t, Map<String, List<ProjectTask>> children, Map<String, Double> pct) {
         List<ProjectTask> kids = children.get(t.getId());
         if (kids == null || kids.isEmpty()) {
+            if (t.getStatus() == TaskStatus.CANCELLED) {
+                pct.put(t.getId(), 0.0);
+                return new double[]{0, 0, 0, 0}; // Huỷ = ngoài phạm vi, không góp vào rollup cha
+            }
             // LÁ — trọng số = giờ HIỆU LỰC (ưu tiên est; không có est → duration ngày công × 8).
             boolean done = t.getStatus() == TaskStatus.DONE;
             double est = t.effectiveHours();
@@ -369,8 +373,18 @@ public class ProjectTaskService {
         if (kids.isEmpty()) {
             return null;
         }
-        boolean allDone = true, allBacklog = true, anyStartedOrDone = false, anyTodo = false;
+        // Con đã HUỶ nằm ngoài phạm vi → không tính vào tổng hợp trạng thái cha.
+        List<ProjectTask> active = new ArrayList<>();
         for (ProjectTask k : kids) {
+            if (k.getStatus() != TaskStatus.CANCELLED) {
+                active.add(k);
+            }
+        }
+        if (active.isEmpty()) {
+            return TaskStatus.CANCELLED; // tất cả con đã huỷ → cha cũng huỷ
+        }
+        boolean allDone = true, allBacklog = true, anyStartedOrDone = false, anyTodo = false;
+        for (ProjectTask k : active) {
             TaskStatus s = k.getStatus();
             if (s != TaskStatus.DONE) {
                 allDone = false;
@@ -651,6 +665,7 @@ public class ProjectTaskService {
             case IN_PROGRESS: return "Đang làm";
             case IN_REVIEW: return "Kiểm thử";
             case DONE: return "Hoàn thành";
+            case CANCELLED: return "Huỷ";
             default: return s.name();
         }
     }

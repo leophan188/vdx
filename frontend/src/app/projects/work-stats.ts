@@ -66,12 +66,12 @@ export interface WorkItem { type: TaskType; status: TaskStatus; dueDate: string 
 
 export interface CatStat {
   key: WorkCat; label: string; icon: string; color: string;
-  total: number; done: number; doing: number; review: number; todo: number; overdue: number; donePct: number;
+  total: number; done: number; doing: number; review: number; todo: number; cancel: number; overdue: number; donePct: number;
 }
 
 /** dueDate "dd/MM/yyyy" đã quá hôm nay (mốc 00:00) chưa? */
 function isOverdue(dueDate: string | null, status: TaskStatus): boolean {
-  if (!dueDate || status === 'DONE') return false;
+  if (!dueDate || status === 'DONE' || status === 'CANCELLED') return false;
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dueDate);
   if (!m) return false;
   const due = new Date(+m[3], +m[2] - 1, +m[1]).getTime();
@@ -87,12 +87,14 @@ export function categoryStats(items: WorkItem[]): CatStat[] {
     const doing = list.filter((it) => it.status === 'IN_PROGRESS').length;
     const review = list.filter((it) => it.status === 'IN_REVIEW').length;
     const todo = list.filter((it) => it.status === 'BACKLOG' || it.status === 'TODO').length;
+    const cancel = list.filter((it) => it.status === 'CANCELLED').length;
     const overdue = list.filter((it) => isOverdue(it.dueDate, it.status)).length;
     const total = list.length;
+    const scope = total - cancel; // Huỷ = ngoài phạm vi khi tính % hoàn thành
     return {
       key: c.key, label: c.label, icon: c.icon, color: c.color,
-      total, done, doing, review, todo, overdue,
-      donePct: total > 0 ? Math.round((done / total) * 100) : 0
+      total, done, doing, review, todo, cancel, overdue,
+      donePct: scope > 0 ? Math.round((done / scope) * 100) : 0
     };
   });
 }

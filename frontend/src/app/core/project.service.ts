@@ -11,7 +11,7 @@ import { Observable } from 'rxjs';
 export type ProjectStatus = 'PLANNING' | 'ACTIVE' | 'ON_HOLD' | 'DONE' | 'CANCELLED';
 export type ProjectRole = 'PM' | 'LEAD' | 'MEMBER';
 export type TaskType = 'EPIC' | 'STORY' | 'TASK' | 'SUBTASK' | 'BUG' | 'ISSUE';
-export type TaskStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE';
+export type TaskStatus = 'BACKLOG' | 'TODO' | 'IN_PROGRESS' | 'IN_REVIEW' | 'DONE' | 'CANCELLED';
 export type TaskPriority = 'LOW' | 'MEDIUM' | 'HIGH' | 'URGENT';
 /** Mức độ nghiêm trọng của lỗi (BUG/ISSUE) — kiểu Jira. */
 export type BugSeverity = 'BLOCKER' | 'CRITICAL' | 'MAJOR' | 'MINOR' | 'TRIVIAL';

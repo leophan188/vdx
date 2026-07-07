@@ -223,7 +223,7 @@ export class PrjTaskDetail {
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
     { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
     { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }
+    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
   ];
   readonly typeLabels: Record<TaskType, string> = {
     EPIC: 'Epic', STORY: 'Story', TASK: 'Task', SUBTASK: 'Subtask', BUG: 'Bug', ISSUE: 'Issue'

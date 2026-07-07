@@ -71,7 +71,7 @@ export class PrjBugs implements OnInit {
   readonly queuedFiles = signal<{ file: File; url: string }[]>([]);
 
   // ----- Bộ lọc (chip đa chọn — signal để computed lọc CHẠY LẠI khi đổi; đồng bộ với Kanban/Log) -----
-  readonly STATUS_KEYS = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+  readonly STATUS_KEYS = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'];
   readonly TYPE_KEYS = ['BUG', 'ISSUE'];
   readonly statusFilter = signal<Set<string>>(new Set(this.STATUS_KEYS));
   readonly typeFilter = signal<Set<string>>(new Set(this.TYPE_KEYS));
@@ -94,7 +94,7 @@ export class PrjBugs implements OnInit {
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
     { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
     { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }
+    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
     { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
@@ -374,6 +374,7 @@ export class PrjBugs implements OnInit {
       case 'DONE': return 'badge--active';
       case 'IN_PROGRESS': return 'badge--pending';
       case 'IN_REVIEW': return 'badge--pending';
+      case 'CANCELLED': return 'badge--cancel';
       default: return 'badge--neutral';
     }
   }

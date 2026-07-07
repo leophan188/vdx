@@ -124,6 +124,9 @@ public class ProjectReportService {
             if (!leaf) {
                 continue;
             }
+            if (t.getStatus() == TaskStatus.CANCELLED) {
+                continue; // Huỷ = ngoài phạm vi, không tính vào burndown
+            }
             totalEstimate += t.getEstimateHours();
             totalSpent += t.getSpentHours();
             if (t.getStatus() == TaskStatus.DONE) {
@@ -241,6 +244,7 @@ public class ProjectReportService {
 
         for (ProjectTask t : tasks) {
             boolean isDone = t.getStatus() == TaskStatus.DONE;
+            boolean isCancelled = t.getStatus() == TaskStatus.CANCELLED; // Huỷ = ngoài phạm vi
             totalEstimate += t.getEstimateHours();
             if (isDone) {
                 doneTasks++;
@@ -249,7 +253,7 @@ public class ProjectReportService {
             if (t.getType() == TaskType.BUG) {
                 bugCount++;
             }
-            boolean isOverdue = t.getDueDate() != null && t.getDueDate().isBefore(today) && !isDone;
+            boolean isOverdue = t.getDueDate() != null && t.getDueDate().isBefore(today) && !isDone && !isCancelled;
             if (isOverdue) {
                 overdueCount++;
             }
@@ -264,7 +268,7 @@ public class ProjectReportService {
                 }
             } else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) {
                 inProgress.add(item);
-            } else { // TODO / BACKLOG
+            } else if (!isCancelled) { // TODO / BACKLOG (bỏ qua việc đã Huỷ)
                 LocalDate start = t.getStartDate();
                 boolean within = start == null || (!start.isBefore(today) && start.isBefore(upcomingTo));
                 if (within) {
@@ -351,6 +355,10 @@ public class ProjectReportService {
     private double[] rollup(ProjectTask t, Map<String, List<ProjectTask>> children, Map<String, Double> pct) {
         List<ProjectTask> kids = children.get(t.getId());
         if (kids == null || kids.isEmpty()) {
+            if (t.getStatus() == TaskStatus.CANCELLED) {
+                pct.put(t.getId(), 0.0);
+                return new double[]{0, 0, 0, 0}; // Huỷ = ngoài phạm vi, không góp vào rollup cha
+            }
             boolean done = t.getStatus() == TaskStatus.DONE;
             double est = t.getEstimateHours();
             pct.put(t.getId(), done ? 100.0 : 0.0);
@@ -376,6 +384,9 @@ public class ProjectReportService {
         for (ProjectTask t : tasks) {
             if (parentIds.contains(t.getId())) {
                 continue;
+            }
+            if (t.getStatus() == TaskStatus.CANCELLED) {
+                continue; // Huỷ = ngoài phạm vi, không tính vào % hoàn thành
             }
             leaf++;
             leafEst += t.getEstimateHours();

@@ -86,7 +86,8 @@ export class PrjReport {
     { status: 'TODO', label: 'Cần làm', color: 'var(--status-pending)' },
     { status: 'IN_PROGRESS', label: 'Đang làm', color: 'var(--status-active)' },
     { status: 'IN_REVIEW', label: 'Kiểm thử', color: 'var(--color-info)' },
-    { status: 'DONE', label: 'Hoàn thành', color: 'var(--status-done)' }
+    { status: 'DONE', label: 'Hoàn thành', color: 'var(--status-done)' },
+    { status: 'CANCELLED', label: 'Huỷ', color: 'var(--status-cancel)' }
   ];
 
   readonly statusBars = computed(() => {

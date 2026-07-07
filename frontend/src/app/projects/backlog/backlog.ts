@@ -214,7 +214,7 @@ export class PrjBacklog implements OnInit {
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
     { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
     { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }
+    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
     { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
@@ -293,7 +293,7 @@ export class PrjBacklog implements OnInit {
   readonly allTypes: TaskType[] = ['EPIC', 'STORY', 'TASK', 'SUBTASK', 'BUG', 'ISSUE'];
   readonly typeFilter = signal<Set<TaskType>>(new Set(this.allTypes));
   /** Lọc theo TRẠNG THÁI — bật hết = không lọc. Giữ cả task cha của task khớp. */
-  readonly allStatuses: TaskStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE'];
+  readonly allStatuses: TaskStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'];
   readonly statusFilter = signal<Set<TaskStatus>>(new Set(this.allStatuses));
   /** Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả; '__UNASSIGNED__' = chưa gán) — lưu theo dự án. */
   readonly filterAssignee = signal('');
@@ -440,11 +440,11 @@ export class PrjBacklog implements OnInit {
   readonly summary = computed(() => {
     const ts = this.tasks();
     const tr = this.tree();
-    // Tổng est CHỈ tính task LÁ (tránh double-count cha + con).
+    // Tổng est CHỈ tính task LÁ (tránh double-count cha + con); bỏ task Huỷ (ngoài phạm vi).
     const totalEst = ts
-      .filter((t) => !hasChildren(t.id, tr))
+      .filter((t) => !hasChildren(t.id, tr) && t.status !== 'CANCELLED')
       .reduce((s, t) => s + (t.estimateHours || 0), 0);
-    const leaves = ts.filter((t) => t.leaf);
+    const leaves = ts.filter((t) => t.leaf && t.status !== 'CANCELLED');
     const leafDone = leaves.filter((t) => t.status === 'DONE').length;
 
     const roots = ts.filter((t) => !t.parentId);
@@ -856,6 +856,7 @@ export class PrjBacklog implements OnInit {
       case 'DONE': return 'badge--active';
       case 'IN_PROGRESS': return 'badge--pending';
       case 'IN_REVIEW': return 'badge--pending';
+      case 'CANCELLED': return 'badge--cancel';
       case 'TODO': return 'badge--neutral';
       default: return 'badge--neutral';
     }

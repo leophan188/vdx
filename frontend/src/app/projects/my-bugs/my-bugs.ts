@@ -64,7 +64,7 @@ export class MyBugs implements OnInit {
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
     { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
     { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }
+    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
     { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
@@ -196,6 +196,7 @@ export class MyBugs implements OnInit {
       case 'DONE': return 'badge--active';
       case 'IN_PROGRESS': return 'badge--pending';
       case 'IN_REVIEW': return 'badge--pending';
+      case 'CANCELLED': return 'badge--cancel';
       default: return 'badge--neutral';
     }
   }
