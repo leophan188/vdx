@@ -1,4 +1,4 @@
-import { Component, OnInit, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, input, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
@@ -181,6 +181,35 @@ export class PrjBugs implements OnInit {
       .map((file) => ({ file, url: URL.createObjectURL(file) }));
     this.queuedFiles.update((q) => [...q, ...add]);
     input.value = ''; // cho phép chọn lại cùng file
+  }
+
+  /**
+   * Dán ảnh từ clipboard (Ctrl/Cmd+V) khi form Báo lỗi/Sửa lỗi đang mở → tự thêm vào hàng chờ,
+   * upload cùng lúc lưu (không cần bấm đính kèm). Tester chỉ cần chụp màn hình rồi dán.
+   */
+  @HostListener('document:paste', ['$event'])
+  onPaste(ev: ClipboardEvent): void {
+    if (!this.modalOpen()) return; // chỉ khi form báo/sửa lỗi đang mở
+    const items = ev.clipboardData?.items;
+    if (!items) return;
+    const add: { file: File; url: string }[] = [];
+    for (const it of Array.from(items)) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const raw = it.getAsFile();
+        if (!raw) continue;
+        const ext = (it.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        // Ảnh clipboard thường không có tên → đặt tên gợi nhớ theo thời điểm.
+        const file = raw.name && raw.name !== 'image.png'
+          ? raw
+          : new File([raw], `screenshot-${Date.now()}.${ext}`, { type: it.type });
+        add.push({ file, url: URL.createObjectURL(file) });
+      }
+    }
+    if (add.length) {
+      ev.preventDefault();
+      this.queuedFiles.update((q) => [...q, ...add]);
+      this.toast.success('Đã dán ảnh', `${add.length} ảnh — sẽ tải lên khi lưu.`);
+    }
   }
   removeQueued(i: number): void {
     this.queuedFiles.update((q) => {

@@ -1,4 +1,4 @@
-import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, input, output, signal } from '@angular/core';
 import { Modal } from '../../shared/modal/modal';
 import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
@@ -651,6 +651,35 @@ export class PrjTaskDetail {
       error: (err) => { input.value = ''; this.toast.error('Không tải được ảnh', err?.error?.message ?? ''); }
     });
   }
+  /** Dán ảnh (Ctrl/Cmd+V) khi đang mở chi tiết task → TỰ UPLOAD ngay (không cần đính kèm). */
+  @HostListener('document:paste', ['$event'])
+  onPasteUpload(ev: ClipboardEvent): void {
+    if (!this.open()) return;
+    const t = this.current();
+    if (!t) return;
+    const items = ev.clipboardData?.items;
+    if (!items) return;
+    const files: File[] = [];
+    for (const it of Array.from(items)) {
+      if (it.kind === 'file' && it.type.startsWith('image/')) {
+        const raw = it.getAsFile();
+        if (!raw) continue;
+        const ext = (it.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
+        files.push(raw.name && raw.name !== 'image.png'
+          ? raw
+          : new File([raw], `screenshot-${Date.now()}.${ext}`, { type: it.type }));
+      }
+    }
+    if (!files.length) return;
+    ev.preventDefault();
+    for (const file of files) {
+      this.svc.uploadAttachment(this.projectId(), t.id, file).subscribe({
+        next: (a) => { this.attachments.update((xs) => [...xs, a]); this.toast.success('Đã dán & tải ảnh lên'); this.loadActivity(t.id); },
+        error: (err) => this.toast.error('Không tải được ảnh dán', err?.error?.message ?? '')
+      });
+    }
+  }
+
   deleteAttachment(a: TaskAttachment): void {
     const t = this.current();
     if (!t || !window.confirm('Xoá ảnh này?')) return;

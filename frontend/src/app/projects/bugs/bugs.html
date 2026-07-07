@@ -149,14 +149,15 @@
             <button type="button" class="bug-att__del" title="Bỏ ảnh" (click)="removeQueued(i)">✕</button>
           </div>
         }
-        <label class="bug-att__add" title="Chọn ảnh">
+        <label class="bug-att__add" title="Chọn ảnh hoặc dán (Ctrl/Cmd+V)">
           <span>＋ Ảnh</span>
           <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
         </label>
       </div>
       <span class="field-hint">
-        @if (editingId()) { Ảnh chọn ở đây sẽ được TẢI THÊM khi bấm "Lưu thay đổi" (ảnh cũ xem/ xoá ở chi tiết). }
-        @else { Có thể chọn nhiều ảnh chụp màn hình lỗi — sẽ tải lên khi bấm "Báo lỗi". }
+        💡 Chụp màn hình rồi <strong>dán (Ctrl/Cmd+V)</strong> để tự thêm ảnh — hoặc bấm ＋ Ảnh để chọn tệp.
+        @if (editingId()) { Ảnh sẽ được TẢI THÊM khi bấm "Lưu thay đổi" (ảnh cũ xem/xoá ở chi tiết). }
+        @else { Ảnh sẽ tải lên khi bấm "Báo lỗi". }
       </span>
     </div>
   </form>
