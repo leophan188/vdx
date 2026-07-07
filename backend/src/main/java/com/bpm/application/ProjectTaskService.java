@@ -297,6 +297,16 @@ public class ProjectTaskService {
         ProjectTask t = requireSameProjectTask(projectId, taskId);
         TaskStatus oldStatus = t.getStatus();
         TaskStatus newStatus = parseStatus(status);
+        // Chuyển sang ĐANG LÀM (task lá) BẮT BUỘC có Ước lượng (est) + Ngày hoàn thành (hạn).
+        // Rollup của task cha KHÔNG đi qua đây nên không bị ràng buộc.
+        if (newStatus == TaskStatus.IN_PROGRESS && oldStatus != TaskStatus.IN_PROGRESS && isLeaf(projectId, taskId)) {
+            if (t.getEstimateHours() <= 0) {
+                throw new IllegalArgumentException("Cần nhập Ước lượng (est) trước khi chuyển sang Đang làm");
+            }
+            if (t.getDueDate() == null) {
+                throw new IllegalArgumentException("Cần nhập Ngày hoàn thành trước khi chuyển sang Đang làm");
+            }
+        }
         t.setStatus(newStatus);
         t.touch();
         // KHÔNG đổi assignee: người thực hiện (lập trình) + người kiểm thử (tester) + người log (reporter)

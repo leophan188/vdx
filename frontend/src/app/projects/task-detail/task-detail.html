@@ -38,9 +38,27 @@
 
           @if (t.status === 'TODO') {
             <div class="td__life-acts">
-              <button type="button" class="btn btn--primary btn--sm"
-                      [disabled]="busyLifecycle()" (click)="startProgress()">▶ Bắt đầu (Đang làm)</button>
+              @if (!pickStartOpen()) {
+                <button type="button" class="btn btn--primary btn--sm"
+                        [disabled]="busyLifecycle()" (click)="startProgress()">▶ Bắt đầu (Đang làm)</button>
+              }
             </div>
+            @if (pickStartOpen()) {
+              <div class="td__life-pick">
+                <label class="td__life-hint">Bắt buộc nhập Ước lượng &amp; Ngày hoàn thành trước khi Đang làm</label>
+                <div class="td__life-pickrow">
+                  <input type="number" min="0.5" step="0.5" class="td__life-input"
+                         [value]="startEst()" (input)="startEst.set($any($event.target).value)"
+                         placeholder="Est (giờ)" />
+                  <input type="date" class="td__life-input"
+                         [value]="startDueIso()" (change)="startDueIso.set($any($event.target).value)" />
+                  <button type="button" class="btn btn--primary btn--sm"
+                          [disabled]="busyLifecycle()" (click)="confirmStart()">▶ Bắt đầu</button>
+                  <button type="button" class="btn btn--ghost btn--sm"
+                          [disabled]="busyLifecycle()" (click)="cancelStart()">Huỷ</button>
+                </div>
+              </div>
+            }
           }
 
           @if (t.status === 'IN_PROGRESS') {

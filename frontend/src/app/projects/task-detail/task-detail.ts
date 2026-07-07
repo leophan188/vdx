@@ -55,6 +55,9 @@ type SubTab = 'info' | 'comments' | 'activity';
       border-top: 1px dashed var(--color-border); }
     .td__life-pick searchable-select { min-width: 260px; }
     .td__life-pickrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .td__life-input { height: var(--control-h-sm); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
+      padding: 0 var(--space-2); font: inherit; width: 130px; }
     .td__life-note { font-size: .78rem; color: var(--color-text-muted); }
 
     .td__seg { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -201,6 +204,10 @@ export class PrjTaskDetail {
   // Reopen (Kiểm thử → Đang làm) + chọn lại người thực hiện (dev sửa).
   readonly pickReopenOpen = signal(false);
   readonly reopenAssignee = signal<string>('');
+  // Bắt đầu Đang làm: bắt buộc nhập est + ngày hoàn thành nếu còn thiếu.
+  readonly pickStartOpen = signal(false);
+  readonly startEst = signal<string>('');
+  readonly startDueIso = signal<string>('');
 
   // Sub-tab đang xem.
   readonly tab = signal<SubTab>('info');
@@ -309,6 +316,8 @@ export class PrjTaskDetail {
   setStatus(s: TaskStatus): void {
     const t = this.current();
     if (!t || t.status === s || this.busyStatus()) return;
+    // Chuyển ĐANG LÀM mà thiếu est/hạn → mở form nhập (thay vì để BE báo lỗi).
+    if (s === 'IN_PROGRESS' && !(t.estimateHours > 0 && t.dueDate) && t.leaf) { this.openStart(t); return; }
     this.busyStatus.set(true);
     this.svc.updateTaskStatus(this.projectId(), t.id, s).subscribe({
       next: (u) => {
@@ -358,21 +367,59 @@ export class PrjTaskDetail {
   }
 
   // ===== Vòng đời (thao tác nhanh theo status) =====
-  /** TODO → IN_PROGRESS: bắt đầu làm. */
+  /** TODO → IN_PROGRESS: bắt đầu làm. THIẾU est/hạn → mở form nhập bắt buộc. */
   startProgress(): void {
     const t = this.current();
     if (!t || this.busyLifecycle()) return;
+    if (t.estimateHours > 0 && t.dueDate) { this.doStart(t); return; }
+    this.openStart(t);
+  }
+  /** Thực hiện chuyển IN_PROGRESS (đã đủ điều kiện). */
+  private doStart(t: ProjectTask): void {
     this.busyLifecycle.set(true);
     this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_PROGRESS').subscribe({
       next: (u) => {
         this.model.set(u);
         this.busyLifecycle.set(false);
+        this.pickStartOpen.set(false);
         this.toast.success('Đã bắt đầu', 'Trạng thái: Đang làm');
         this.changed.emit();
         this.loadActivity(u.id);
       },
       error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không đổi được trạng thái', e?.error?.message ?? ''); }
     });
+  }
+  openStart(t: ProjectTask): void {
+    this.startEst.set(t.estimateHours ? String(t.estimateHours) : '');
+    this.startDueIso.set(this.isoFromDmy(t.dueDate));
+    this.pickStartOpen.set(true);
+  }
+  cancelStart(): void { this.pickStartOpen.set(false); }
+  /** Lưu est + ngày hoàn thành rồi chuyển Đang làm. */
+  confirmStart(): void {
+    const t = this.current();
+    if (!t || this.busyLifecycle()) return;
+    const est = Number(this.startEst());
+    if (!(est > 0)) { this.toast.warning('Nhập Ước lượng (est) lớn hơn 0'); return; }
+    if (!this.startDueIso()) { this.toast.warning('Chọn Ngày hoàn thành'); return; }
+    this.busyLifecycle.set(true);
+    const body = this.buildRequest(t, { estimateHours: est, dueDate: this.dmyFromIso(this.startDueIso()) });
+    this.svc.updateTask(this.projectId(), t.id, body).subscribe({
+      next: (u) => { this.model.set(u); this.doStart(u); },
+      error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không lưu được est/hạn', e?.error?.message ?? ''); }
+    });
+  }
+  /** dd/MM/yyyy → yyyy-MM-dd (đổ vào input date). */
+  private isoFromDmy(d: string | null): string {
+    if (!d) return '';
+    const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(d);
+    return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
+  }
+  /** yyyy-MM-dd → dd/MM/yyyy (gửi lên TaskRequest). */
+  private dmyFromIso(d: string): string | null {
+    if (!d) return null;
+    const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(d);
+    return m ? `${m[3]}/${m[2]}/${m[1]}` : d;
   }
 
   /**
