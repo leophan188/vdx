@@ -75,7 +75,7 @@ public class WorkflowService {
 
     /** Cache thứ tự bước (userTask) theo processDefinitionId của Flowable + nhãn trường theo formId. */
     private final Map<String, java.util.LinkedHashMap<String, String>> stepOrderCache = new java.util.concurrent.ConcurrentHashMap<>();
-    private final Map<String, java.util.LinkedHashMap<String, String>> formLabelCache = new java.util.concurrent.ConcurrentHashMap<>();
+    private final Map<String, JsonNode> formFieldsCache = new java.util.concurrent.ConcurrentHashMap<>();
 
     public WorkflowService(RepositoryService repositoryService, RuntimeService runtimeService,
                            TaskService taskService, HistoryService historyService, ProcessService processService,
@@ -159,27 +159,17 @@ public class WorkflowService {
         });
     }
 
-    /** Nhãn trường của một biểu mẫu: key → label (theo thứ tự schema). Cache theo formId. */
-    private java.util.LinkedHashMap<String, String> formFieldLabels(String formId) {
+    /** Các trường (JsonNode) của một biểu mẫu theo thứ tự schema — để đọc key/label/type/criteria. Cache theo formId. */
+    private JsonNode formFieldsNode(String formId) {
         if (formId == null) {
-            return new java.util.LinkedHashMap<>();
+            return objectMapper.createArrayNode();
         }
-        return formLabelCache.computeIfAbsent(formId, fid -> {
-            java.util.LinkedHashMap<String, String> m = new java.util.LinkedHashMap<>();
+        return formFieldsCache.computeIfAbsent(formId, fid -> {
             try {
-                JsonNode fields = objectMapper.readTree(formService.get(fid).getSchemaJson()).path("fields");
-                if (fields.isArray()) {
-                    for (JsonNode f : fields) {
-                        String k = f.path("key").asText(null);
-                        if (k != null && !k.isBlank()) {
-                            m.put(k, f.path("label").asText(k));
-                        }
-                    }
-                }
-            } catch (Exception ignore) {
-                /* form lỗi/không có */
+                return objectMapper.readTree(formService.get(fid).getSchemaJson()).path("fields");
+            } catch (Exception e) {
+                return objectMapper.createArrayNode();
             }
-            return m;
         });
     }
 
@@ -650,13 +640,62 @@ public class WorkflowService {
         if (formId == null) {
             return out;
         }
-        for (Map.Entry<String, String> fe : formFieldLabels(formId).entrySet()) {
-            Object v = vars.get(fe.getKey());
-            if (v != null && !v.toString().isBlank()) {
-                out.add(new TaskDto.FieldValue(fe.getValue(), v.toString()));
+        JsonNode fields = formFieldsNode(formId);
+        if (!fields.isArray()) {
+            return out;
+        }
+        for (JsonNode f : fields) {
+            String key = f.path("key").asText(null);
+            if (key == null || key.isBlank()) {
+                continue;
+            }
+            String label = f.path("label").asText(key);
+            Object v = vars.get(key);
+            if ("scoretable".equals(f.path("type").asText(""))) {
+                appendScoreTable(out, label, f.path("criteria"), v);
+            } else if (v != null && !v.toString().isBlank()) {
+                out.add(new TaskDto.FieldValue(label, v.toString()));
             }
         }
         return out;
+    }
+
+    /** Bung 1 bảng chấm điểm thành các dòng đọc được: mỗi tiêu chí (điểm → quy đổi) + điểm trung bình. */
+    private void appendScoreTable(List<TaskDto.FieldValue> out, String label, JsonNode criteria, Object value) {
+        if (value == null || !criteria.isArray() || criteria.size() == 0) {
+            return;
+        }
+        JsonNode scores;
+        try {
+            scores = objectMapper.readTree(value.toString());
+        } catch (Exception e) {
+            return;
+        }
+        double total = 0;
+        boolean any = false;
+        for (JsonNode c : criteria) {
+            String ck = c.path("key").asText(null);
+            if (ck == null) {
+                continue;
+            }
+            String cl = c.path("label").asText(ck);
+            int w = c.path("weight").asInt(0);
+            JsonNode s = scores.get(ck);
+            if (s != null && s.isNumber()) {
+                double conv = s.asDouble() * w / 100.0;
+                total += conv;
+                any = true;
+                out.add(new TaskDto.FieldValue(label + " · " + cl + " (" + w + "%)",
+                        fmtNum(s.asDouble()) + " → " + String.format(java.util.Locale.US, "%.2f", conv)));
+            }
+        }
+        if (any) {
+            out.add(new TaskDto.FieldValue(label + " · Điểm trung bình", String.format(java.util.Locale.US, "%.2f", total)));
+        }
+    }
+
+    private static String fmtNum(double d) {
+        return d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d);
     }
 
     /** Hủy một phiên chạy đang RUNNING (Story 3.6) — xóa instance Flowable + đánh dấu CANCELLED + audit. */

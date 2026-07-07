@@ -2,6 +2,7 @@ package com.bpm.api;
 
 import com.bpm.application.EmployeeService;
 import com.bpm.application.HrDemoSeeder;
+import com.bpm.application.HrEvalDemoSeeder;
 import com.bpm.application.Process10StepDemoSeeder;
 import com.bpm.application.ProjectDemoSeeder;
 import com.bpm.application.SocialDemoSeeder;
@@ -36,17 +37,19 @@ public class SystemController {
     private final SystemDataService service;
     private final HrDemoSeeder hrDemoSeeder;
     private final Process10StepDemoSeeder process10StepDemoSeeder;
+    private final HrEvalDemoSeeder hrEvalDemoSeeder;
     private final ProjectDemoSeeder projectDemoSeeder;
     private final SocialDemoSeeder socialDemoSeeder;
     private final EmployeeService employeeService;
 
     public SystemController(SystemDataService service, HrDemoSeeder hrDemoSeeder,
-                            Process10StepDemoSeeder process10StepDemoSeeder,
+                            Process10StepDemoSeeder process10StepDemoSeeder, HrEvalDemoSeeder hrEvalDemoSeeder,
                             ProjectDemoSeeder projectDemoSeeder, SocialDemoSeeder socialDemoSeeder,
                             EmployeeService employeeService) {
         this.service = service;
         this.hrDemoSeeder = hrDemoSeeder;
         this.process10StepDemoSeeder = process10StepDemoSeeder;
+        this.hrEvalDemoSeeder = hrEvalDemoSeeder;
         this.projectDemoSeeder = projectDemoSeeder;
         this.socialDemoSeeder = socialDemoSeeder;
         this.employeeService = employeeService;
@@ -104,6 +107,12 @@ public class SystemController {
     @PostMapping("/seed-process-demo")
     public ResponseEntity<Process10StepDemoSeeder.SeedResult> seedProcessDemo(Authentication auth) {
         return ResponseEntity.ok(process10StepDemoSeeder.seed(actor(auth)));
+    }
+
+    /** Tạo dữ liệu DEMO quy trình "Đánh giá năng lực nhân sự" (trường BẢNG CHẤM ĐIỂM). CHỈ ADMIN. */
+    @PostMapping("/seed-eval-demo")
+    public ResponseEntity<HrEvalDemoSeeder.SeedResult> seedEvalDemo(Authentication auth) {
+        return ResponseEntity.ok(hrEvalDemoSeeder.seed(actor(auth)));
     }
 
     /**

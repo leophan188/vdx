@@ -8,9 +8,11 @@ import { Modal } from '../../shared/modal/modal';
 import { OrgTreePicker } from '../../shared/org-tree-picker/org-tree-picker';
 
 type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean'
-  | 'dropdown' | 'radio' | 'multiselect' | 'file' | 'richtext' | 'table' | 'orgtree' | 'section';
+  | 'dropdown' | 'radio' | 'multiselect' | 'file' | 'richtext' | 'table' | 'scoretable' | 'orgtree' | 'section';
 
 interface FormColumn { key: string; label: string; }
+/** Một tiêu chí của bảng chấm điểm: nhãn + trọng số (%). */
+interface FormCriterion { key: string; label: string; weight: number; }
 type CondOp = 'eq' | 'ne' | 'truthy';
 type FormatRule = 'none' | 'email' | 'phone';
 interface VisibleWhen { field: string; op: CondOp; value?: string; }
@@ -26,6 +28,8 @@ interface FormField {
   options?: string;
   catalog?: string;
   columns?: FormColumn[];
+  criteria?: FormCriterion[];
+  scoreMax?: number;
   visibleWhen?: VisibleWhen;
   validation?: Validation;
   pickMode?: 'user' | 'position' | 'unit'; // cho type orgtree
@@ -70,6 +74,7 @@ export class Builder implements OnInit {
     { t: 'file', l: 'Tải file', i: '📎' },
     { t: 'richtext', l: 'Rich text', i: '📝' },
     { t: 'table', l: 'Bảng nhiều dòng', i: '▦' },
+    { t: 'scoretable', l: 'Bảng chấm điểm', i: '🧮' },
     { t: 'orgtree', l: 'Chọn theo cây tổ chức', i: '🌳' },
     { t: 'section', l: 'Tiêu đề mục', i: '§' }
   ];
@@ -117,6 +122,7 @@ export class Builder implements OnInit {
   }
   isChoice(t?: FieldType): boolean { return t === 'dropdown' || t === 'radio' || t === 'multiselect'; }
   isTable(t?: FieldType): boolean { return t === 'table'; }
+  isScoreTable(t?: FieldType): boolean { return t === 'scoretable'; }
   isSection(t?: FieldType): boolean { return t === 'section'; }
 
   addField(type: FieldType): void {
@@ -128,10 +134,26 @@ export class Builder implements OnInit {
       type,
       optionSource: 'STATIC',
       options: '',
-      columns: type === 'table' ? [{ key: 'cot1', label: 'Cột 1' }] : undefined
+      columns: type === 'table' ? [{ key: 'cot1', label: 'Cột 1' }] : undefined,
+      criteria: type === 'scoretable' ? [{ key: 'tc1', label: 'Tiêu chí 1', weight: 100 }] : undefined,
+      scoreMax: type === 'scoretable' ? 10 : undefined
     };
     this.fields.update((arr) => [...arr, f]);
     this.selectedIdx.set(this.fields().length - 1);
+  }
+
+  // ---- Bảng chấm điểm: tiêu chí + trọng số ----
+  addCriterion(f: FormField): void {
+    const n = (f.criteria?.length ?? 0) + 1;
+    f.criteria = [...(f.criteria ?? []), { key: 'tc' + n, label: 'Tiêu chí ' + n, weight: 0 }];
+    this.touch();
+  }
+  removeCriterion(f: FormField, i: number): void {
+    f.criteria = (f.criteria ?? []).filter((_, idx) => idx !== i);
+    this.touch();
+  }
+  totalWeight(f: FormField): number {
+    return (f.criteria ?? []).reduce((s, c) => s + (Number(c.weight) || 0), 0);
   }
 
   selectField(i: number): void { this.selectedIdx.set(i); }

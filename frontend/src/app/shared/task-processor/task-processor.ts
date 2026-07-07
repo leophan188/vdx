@@ -6,9 +6,11 @@ import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.servi
 import { FormService } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
+interface RCriterion { key: string; label: string; weight: number; }
 interface RField {
   key: string; label: string; type: string; required?: boolean;
   placeholder?: string; options?: string;
+  criteria?: RCriterion[]; scoreMax?: number;
 }
 
 /**
@@ -42,6 +44,15 @@ interface RField {
     .tp-caret{opacity:.5;}
     /* Ô nhập của form bước hiện tại co giãn theo cột lưới. */
     #task-proc-form .field > input, #task-proc-form .field > select, #task-proc-form .field > textarea{width:100%;box-sizing:border-box;}
+    /* Bảng chấm điểm */
+    .tp-scoretable{width:100%;border-collapse:collapse;font-size:.94em;}
+    .tp-scoretable th,.tp-scoretable td{border:1px solid var(--color-border);padding:6px 10px;text-align:left;}
+    .tp-scoretable thead th{background:var(--color-surface-2,rgba(127,127,127,.06));font-size:.86em;text-transform:uppercase;letter-spacing:.02em;}
+    .tp-scoretable .tp-st-c{text-align:center;}
+    .tp-scoretable .tp-st-c > input{width:72px;text-align:center;box-sizing:border-box;}
+    .tp-scoretable .tp-st-conv{font-weight:600;color:var(--color-primary,#1e50a0);}
+    .tp-scoretable tfoot th{background:var(--color-surface-2,rgba(127,127,127,.06));}
+    .tp-scoretable .tp-st-total{text-align:center;font-weight:700;color:var(--status-done,#16a34a);font-size:1.05em;}
   `]
 })
 export class TaskProcessor {
@@ -113,7 +124,13 @@ export class TaskProcessor {
       return arr.map((f: Record<string, unknown>) => ({
         key: String(f['key'] ?? ''), label: String(f['label'] ?? f['key'] ?? ''),
         type: String(f['type'] ?? 'text'), required: !!f['required'],
-        placeholder: f['placeholder'] as string, options: f['options'] as string
+        placeholder: f['placeholder'] as string, options: f['options'] as string,
+        criteria: Array.isArray(f['criteria'])
+          ? (f['criteria'] as Record<string, unknown>[]).map((c) => ({
+              key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? ''), weight: Number(c['weight']) || 0
+            }))
+          : undefined,
+        scoreMax: f['scoreMax'] != null ? Number(f['scoreMax']) : undefined
       })).filter((f: RField) => f.key);
     } catch { return []; }
   }
@@ -142,13 +159,58 @@ export class TaskProcessor {
     this.setVal(key, cur.join(', '));
   }
 
+  // ----- Bảng chấm điểm (scoretable): lưu điểm dạng JSON {tiêuChíKey: điểm}, tự tính quy đổi + trung bình -----
+  private tableScores(fieldKey: string): Record<string, number> {
+    const raw = this.val(fieldKey);
+    if (typeof raw === 'string' && raw.trim()) { try { return JSON.parse(raw); } catch { return {}; } }
+    if (raw && typeof raw === 'object') return raw as Record<string, number>;
+    return {};
+  }
+  scoreOf(fieldKey: string, critKey: string): number | '' {
+    const s = this.tableScores(fieldKey)[critKey];
+    return typeof s === 'number' ? s : '';
+  }
+  setScore(fieldKey: string, critKey: string, v: unknown): void {
+    const cur = this.tableScores(fieldKey);
+    const n = v === '' || v === null || v === undefined ? NaN : Number(v);
+    if (isNaN(n)) delete cur[critKey]; else cur[critKey] = n;
+    this.setVal(fieldKey, JSON.stringify(cur));
+  }
+  /** Điểm quy đổi của 1 tiêu chí = điểm × trọng số%. */
+  convertedOf(score: number | '', weight: number): string {
+    if (score === '' || isNaN(Number(score))) return '—';
+    return (Number(score) * weight / 100).toFixed(2);
+  }
+  /** Điểm trung bình có trọng số (tổng quy đổi). */
+  tableTotal(f: RField): string {
+    const sc = this.tableScores(f.key);
+    let sum = 0; let any = false;
+    for (const c of f.criteria ?? []) {
+      const s = sc[c.key];
+      if (typeof s === 'number' && !isNaN(s)) { sum += s * c.weight / 100; any = true; }
+    }
+    return any ? sum.toFixed(2) : '—';
+  }
+  totalWeight(f: RField): number {
+    return (f.criteria ?? []).reduce((a, c) => a + (Number(c.weight) || 0), 0);
+  }
+
+  /** Một trường đã có dữ liệu (dùng cho kiểm tra bắt buộc). Bảng chấm điểm: mọi tiêu chí phải có điểm. */
+  private isFilled(f: RField): boolean {
+    if (f.type === 'scoretable') {
+      const sc = this.tableScores(f.key);
+      return (f.criteria ?? []).length > 0 && (f.criteria ?? []).every((c) => typeof sc[c.key] === 'number' && !isNaN(sc[c.key]));
+    }
+    const v = this.val(f.key);
+    return !(v === undefined || v === null || v === '');
+  }
+
   /** Hoàn thành việc với hành động đã chọn. */
   act(action: string): void {
     const d = this.detail();
     if (!d) return;
     const missing = this.fields().filter((f) =>
-      f.required && this.visible(f.key) && !this.readonly_(f.key) &&
-      (this.val(f.key) === undefined || this.val(f.key) === null || this.val(f.key) === ''));
+      f.required && this.visible(f.key) && !this.readonly_(f.key) && !this.isFilled(f));
     if (missing.length) {
       this.toast.error('Thiếu thông tin bắt buộc', missing.map((f) => f.label).join(', '));
       return;

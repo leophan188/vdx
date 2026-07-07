@@ -70,7 +70,7 @@
           @if (f.type === 'section') {
             <h4 class="form-section tp-full">{{ f.label }}</h4>
           } @else if (visible(f.key)) {
-            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect'">
+            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable'">
               <label [attr.for]="'tpf_' + f.key">{{ f.label }}@if (f.required) { <span class="req">*</span> }</label>
 
               @switch (f.type) {
@@ -124,6 +124,34 @@
                 @case ('richtext') {
                   <textarea [id]="'tpf_' + f.key" rows="4" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
                             [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)"></textarea>
+                }
+                @case ('scoretable') {
+                  <table class="tp-scoretable">
+                    <thead>
+                      <tr><th>Tiêu chí</th><th>Trọng số</th><th>Điểm (1–{{ f.scoreMax || 10 }})</th><th>Quy đổi</th></tr>
+                    </thead>
+                    <tbody>
+                      @for (c of f.criteria; track c.key) {
+                        <tr>
+                          <td>{{ c.label }}</td>
+                          <td class="tp-st-c">{{ c.weight }}%</td>
+                          <td class="tp-st-c">
+                            <input type="number" min="1" [max]="f.scoreMax || 10" [readOnly]="readonly_(f.key)"
+                                   [ngModel]="scoreOf(f.key, c.key)" [ngModelOptions]="{ standalone: true }"
+                                   (ngModelChange)="setScore(f.key, c.key, $event)" />
+                          </td>
+                          <td class="tp-st-c tp-st-conv">{{ convertedOf(scoreOf(f.key, c.key), c.weight) }}</td>
+                        </tr>
+                      }
+                    </tbody>
+                    <tfoot>
+                      <tr><th colspan="3" style="text-align:right">Điểm trung bình (thang {{ f.scoreMax || 10 }})</th>
+                          <th class="tp-st-total">{{ tableTotal(f) }}</th></tr>
+                    </tfoot>
+                  </table>
+                  @if (totalWeight(f) !== 100) {
+                    <small class="hint">Tổng trọng số = {{ totalWeight(f) }}% (nên = 100% để điểm trung bình đúng thang).</small>
+                  }
                 }
                 @default {
                   <input type="text" [id]="'tpf_' + f.key" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
