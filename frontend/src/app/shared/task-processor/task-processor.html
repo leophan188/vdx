@@ -70,7 +70,7 @@
           @if (f.type === 'section') {
             <h4 class="form-section tp-full">{{ f.label }}</h4>
           } @else if (visible(f.key)) {
-            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable'">
+            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable' || f.type==='table' || f.type==='orgtree'">
               <label [attr.for]="'tpf_' + f.key">{{ f.label }}@if (f.required) { <span class="req">*</span> }</label>
 
               @switch (f.type) {
@@ -124,6 +124,38 @@
                 @case ('richtext') {
                   <textarea [id]="'tpf_' + f.key" rows="4" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
                             [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)"></textarea>
+                }
+                @case ('orgtree') {
+                  <org-tree-picker [mode]="f.pickMode || 'user'" [value]="$any(val(f.key)) || ''"
+                                   (valueChange)="setVal(f.key, $event)" />
+                }
+                @case ('table') {
+                  <table class="tp-mtable">
+                    <thead><tr>
+                      @for (c of f.columns; track c.key) { <th>{{ c.label }}</th> }
+                      <th style="width:36px"></th>
+                    </tr></thead>
+                    <tbody>
+                      @for (row of tableData(f.key); track $index) {
+                        <tr>
+                          @for (c of f.columns; track c.key) {
+                            <td><input type="text" [readOnly]="readonly_(f.key)"
+                                       [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
+                                       (ngModelChange)="setCell(f.key, $index, c.key, $event)" /></td>
+                          }
+                          <td>@if (!readonly_(f.key)) {
+                            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá dòng" (click)="removeRow(f.key, $index)">🗑</button>
+                          }</td>
+                        </tr>
+                      }
+                      @if (!tableData(f.key).length) {
+                        <tr><td [attr.colspan]="(f.columns?.length || 1) + 1" class="tp-mtable-empty">Chưa có dòng nào.</td></tr>
+                      }
+                    </tbody>
+                  </table>
+                  @if (!readonly_(f.key)) {
+                    <button type="button" class="btn btn--secondary btn--sm" (click)="addRow(f)">＋ Thêm dòng</button>
+                  }
                 }
                 @case ('scoretable') {
                   <table class="tp-scoretable">

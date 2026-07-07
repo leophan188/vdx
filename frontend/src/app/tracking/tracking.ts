@@ -22,7 +22,7 @@ export class Tracking implements OnInit, OnDestroy {
     { key: 'title', header: 'Hồ sơ', sortable: true },
     { key: 'processName', header: 'Quy trình', sortable: true, width: '210px' },
     { key: 'status', header: 'Trạng thái', width: '130px' },
-    { key: 'currentStep', header: 'Bước hiện tại' },
+    { key: 'currentStep', header: 'Trạng thái / Bước hiện tại' },
     { key: 'startedAt', header: 'Khởi tạo', width: '130px' },
     { key: 'actions', header: '', width: '160px' }
   ];

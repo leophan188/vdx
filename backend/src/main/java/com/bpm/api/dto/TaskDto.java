@@ -29,10 +29,13 @@ public class TaskDto {
     public record CompleteRequest(String action, Map<String, Object> formData) {
     }
 
-    /** Một dòng theo dõi phiên chạy. title = tiêu đề từ form (4.5); searchText = mọi giá trị field (4.1). */
+    /**
+     * Một dòng theo dõi phiên chạy. title = tiêu đề từ form (4.5); searchText = mọi giá trị field (4.1).
+     * currentStatus = trạng thái nghiệp vụ của bước đang mở (statusLabel cấu hình), null nếu không có.
+     */
     public record InstanceListItem(String id, String processName, String title, int processVersion, String status,
-                                   String startedBy, String startedAt, String currentStep, String currentAssignee,
-                                   boolean currentOverdue, String searchText) {
+                                   String startedBy, String startedAt, String currentStep, String currentStatus,
+                                   String currentAssignee, boolean currentOverdue, String searchText) {
     }
 
     /** Một bước trong dòng thời gian (Story 3.3). status: DONE | ACTIVE. */

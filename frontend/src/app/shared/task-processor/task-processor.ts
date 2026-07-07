@@ -1,16 +1,19 @@
 import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Modal } from '../modal/modal';
+import { OrgTreePicker } from '../org-tree-picker/org-tree-picker';
 import { ToastService } from '../toast/toast.service';
 import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.service';
 import { FormService } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
 interface RCriterion { key: string; label: string; weight: number; }
+interface RColumn { key: string; label: string; }
 interface RField {
   key: string; label: string; type: string; required?: boolean;
   placeholder?: string; options?: string;
   criteria?: RCriterion[]; scoreMax?: number;
+  pickMode?: 'user' | 'position' | 'unit'; columns?: RColumn[];
 }
 
 /**
@@ -20,7 +23,7 @@ interface RField {
  */
 @Component({
   selector: 'app-task-processor',
-  imports: [FormsModule, Modal],
+  imports: [FormsModule, Modal, OrgTreePicker],
   templateUrl: './task-processor.html',
   styles: [`
     .tp-card{border:1px solid var(--color-border);border-radius:10px;padding:12px 14px;margin-bottom:14px;background:var(--color-surface-2,rgba(127,127,127,.05));}
@@ -53,6 +56,12 @@ interface RField {
     .tp-scoretable .tp-st-conv{font-weight:600;color:var(--color-primary,#1e50a0);}
     .tp-scoretable tfoot th{background:var(--color-surface-2,rgba(127,127,127,.06));}
     .tp-scoretable .tp-st-total{text-align:center;font-weight:700;color:var(--status-done,#16a34a);font-size:1.05em;}
+    /* Bảng nhiều dòng */
+    .tp-mtable{width:100%;border-collapse:collapse;font-size:.92em;margin-bottom:6px;}
+    .tp-mtable th,.tp-mtable td{border:1px solid var(--color-border);padding:4px 8px;text-align:left;}
+    .tp-mtable thead th{background:var(--color-surface-2,rgba(127,127,127,.06));font-size:.86em;}
+    .tp-mtable td > input{width:100%;box-sizing:border-box;border:0;background:transparent;color:inherit;font:inherit;padding:2px 0;}
+    .tp-mtable-empty{text-align:center;opacity:.6;}
   `]
 })
 export class TaskProcessor {
@@ -130,7 +139,11 @@ export class TaskProcessor {
               key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? ''), weight: Number(c['weight']) || 0
             }))
           : undefined,
-        scoreMax: f['scoreMax'] != null ? Number(f['scoreMax']) : undefined
+        scoreMax: f['scoreMax'] != null ? Number(f['scoreMax']) : undefined,
+        pickMode: (f['pickMode'] as RField['pickMode']) ?? undefined,
+        columns: Array.isArray(f['columns'])
+          ? (f['columns'] as Record<string, unknown>[]).map((c) => ({ key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? '') }))
+          : undefined
       })).filter((f: RField) => f.key);
     } catch { return []; }
   }
@@ -195,12 +208,40 @@ export class TaskProcessor {
     return (f.criteria ?? []).reduce((a, c) => a + (Number(c.weight) || 0), 0);
   }
 
+  // ----- Bảng nhiều dòng (table): lưu JSON [{col: value}]; thêm/xoá dòng, sửa ô -----
+  tableData(fieldKey: string): Record<string, string>[] {
+    const raw = this.val(fieldKey);
+    if (typeof raw === 'string' && raw.trim()) { try { const a = JSON.parse(raw); return Array.isArray(a) ? a : []; } catch { return []; } }
+    if (Array.isArray(raw)) return raw as Record<string, string>[];
+    return [];
+  }
+  addRow(f: RField): void {
+    const rows = this.tableData(f.key);
+    const empty: Record<string, string> = {};
+    for (const c of f.columns ?? []) empty[c.key] = '';
+    this.setVal(f.key, JSON.stringify([...rows, empty]));
+  }
+  removeRow(fieldKey: string, i: number): void {
+    const rows = this.tableData(fieldKey).filter((_, idx) => idx !== i);
+    this.setVal(fieldKey, JSON.stringify(rows));
+  }
+  cellVal(fieldKey: string, i: number, col: string): string {
+    return this.tableData(fieldKey)[i]?.[col] ?? '';
+  }
+  setCell(fieldKey: string, i: number, col: string, v: unknown): void {
+    const rows = this.tableData(fieldKey);
+    if (!rows[i]) return;
+    rows[i] = { ...rows[i], [col]: String(v ?? '') };
+    this.setVal(fieldKey, JSON.stringify(rows));
+  }
+
   /** Một trường đã có dữ liệu (dùng cho kiểm tra bắt buộc). Bảng chấm điểm: mọi tiêu chí phải có điểm. */
   private isFilled(f: RField): boolean {
     if (f.type === 'scoretable') {
       const sc = this.tableScores(f.key);
       return (f.criteria ?? []).length > 0 && (f.criteria ?? []).every((c) => typeof sc[c.key] === 'number' && !isNaN(sc[c.key]));
     }
+    if (f.type === 'table') return this.tableData(f.key).length > 0;
     const v = this.val(f.key);
     return !(v === undefined || v === null || v === '');
   }

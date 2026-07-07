@@ -35,7 +35,12 @@
 
     <ng-template gridCell="currentStep" let-i>
       @if (i.status === 'RUNNING') {
-        <strong>{{ i.currentStep }}</strong>
+        @if (i.currentStatus) {
+          <span class="badge badge--info">{{ i.currentStatus }}</span>
+          <small class="hint" style="display:block">🔹 {{ i.currentStep }}</small>
+        } @else {
+          <strong>{{ i.currentStep }}</strong>
+        }
         @if (i.currentOverdue) { <span class="badge badge--cancel" style="margin-left:6px">⚠ Quá hạn</span> }
         <small class="hint" style="display:block">👤 {{ i.currentAssignee }}</small>
       } @else { — }

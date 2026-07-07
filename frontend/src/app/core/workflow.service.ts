@@ -57,6 +57,8 @@ export interface InstanceListItem {
   startedBy: string;
   startedAt: string;
   currentStep: string;
+  /** Trạng thái nghiệp vụ của bước đang mở (nếu quy trình có cấu hình). */
+  currentStatus: string | null;
   currentAssignee: string;
   currentOverdue: boolean;
   searchText: string;

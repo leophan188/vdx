@@ -72,6 +72,7 @@ public class WorkflowService {
     private final AuditPort auditPort;
     private final ObjectMapper objectMapper;
     private final FormService formService;
+    private final com.bpm.infrastructure.OrgUnitRepository orgUnitRepo;
 
     /** Cache thứ tự bước (userTask) theo processDefinitionId của Flowable + nhãn trường theo formId. */
     private final Map<String, java.util.LinkedHashMap<String, String>> stepOrderCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -84,7 +85,8 @@ public class WorkflowService {
                            PositionRepository positionRepo, TaskAssignmentRepository assignmentRepo,
                            RoleService roleService, NotificationService notificationService,
                            MailPort mailPort, BpmnConditionInjector conditionInjector,
-                           AuditPort auditPort, ObjectMapper objectMapper, FormService formService) {
+                           AuditPort auditPort, ObjectMapper objectMapper, FormService formService,
+                           com.bpm.infrastructure.OrgUnitRepository orgUnitRepo) {
         this.repositoryService = repositoryService;
         this.runtimeService = runtimeService;
         this.taskService = taskService;
@@ -103,6 +105,7 @@ public class WorkflowService {
         this.auditPort = auditPort;
         this.objectMapper = objectMapper;
         this.formService = formService;
+        this.orgUnitRepo = orgUnitRepo;
     }
 
     /**
@@ -497,12 +500,20 @@ public class WorkflowService {
     private TaskDto.InstanceListItem toInstanceItem(WorkflowInstance wi) {
         String currentStep = "—";
         String currentWho = "—";
+        String currentStatus = null;
         boolean overdue = false;
         if ("RUNNING".equals(wi.getStatus())) {
             List<Task> ts = taskService.createTaskQuery().processInstanceId(wi.getFlowableInstanceId()).list();
             if (!ts.isEmpty()) {
                 currentStep = ts.stream().map(Task::getName).distinct().collect(java.util.stream.Collectors.joining(", "));
                 currentWho = ts.stream().map(t -> userDisplay(t.getAssignee())).distinct().collect(java.util.stream.Collectors.joining(", "));
+                // Trạng thái nghiệp vụ = statusLabel của bước đang mở (nếu cấu hình).
+                currentStatus = ts.stream()
+                        .map(t -> stepStatusLabel(wi.getStepsMetaJson(), t.getTaskDefinitionKey()))
+                        .filter(s -> s != null).distinct().collect(java.util.stream.Collectors.joining(", "));
+                if (currentStatus.isBlank()) {
+                    currentStatus = null;
+                }
                 Instant now = Instant.now();
                 for (Task t : ts) {
                     Instant due = effectiveDue(t, slaHours(stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey())));
@@ -512,11 +523,25 @@ public class WorkflowService {
                     }
                 }
             }
+        } else if ("COMPLETED".equals(wi.getStatus())) {
+            currentStatus = "Đã hoàn thành";
+        } else if ("CANCELLED".equals(wi.getStatus())) {
+            currentStatus = "Hủy nhiệm vụ";
         }
         String[] ts = titleAndSearch(wi);
         return new TaskDto.InstanceListItem(wi.getId(), safeProcessName(wi.getProcessId()), ts[0],
                 wi.getProcessVersion(), wi.getStatus(), userDisplay(wi.getStartedBy()),
-                wi.getStartedAt().toString(), currentStep, currentWho, overdue, ts[1]);
+                wi.getStartedAt().toString(), currentStep, currentStatus, currentWho, overdue, ts[1]);
+    }
+
+    /** statusLabel (trạng thái nghiệp vụ) cấu hình cho một bước, null nếu không có. */
+    private String stepStatusLabel(String stepsMetaJson, String stepKey) {
+        JsonNode step = stepMeta(stepsMetaJson, stepKey);
+        if (step != null && step.has("statusLabel")) {
+            String s = step.get("statusLabel").asText(null);
+            return (s != null && !s.isBlank()) ? s : null;
+        }
+        return null;
     }
 
     /**
@@ -650,14 +675,81 @@ public class WorkflowService {
                 continue;
             }
             String label = f.path("label").asText(key);
+            String type = f.path("type").asText("");
             Object v = vars.get(key);
-            if ("scoretable".equals(f.path("type").asText(""))) {
-                appendScoreTable(out, label, f.path("criteria"), v);
-            } else if (v != null && !v.toString().isBlank()) {
-                out.add(new TaskDto.FieldValue(label, v.toString()));
+            switch (type) {
+                case "scoretable" -> appendScoreTable(out, label, f.path("criteria"), v);
+                case "table" -> appendTable(out, label, f.path("columns"), v);
+                case "orgtree" -> {
+                    String txt = resolveOrgValue(f.path("pickMode").asText("user"), v);
+                    if (txt != null) {
+                        out.add(new TaskDto.FieldValue(label, txt));
+                    }
+                }
+                default -> {
+                    if (v != null && !v.toString().isBlank()) {
+                        out.add(new TaskDto.FieldValue(label, v.toString()));
+                    }
+                }
             }
         }
         return out;
+    }
+
+    /** Giá trị orgtree (id) → tên đọc được theo loại chọn (người/chức danh/đơn vị). */
+    private String resolveOrgValue(String pickMode, Object value) {
+        if (value == null || value.toString().isBlank()) {
+            return null;
+        }
+        String id = value.toString();
+        return switch (pickMode) {
+            case "unit" -> orgUnitRepo.findById(id).map(com.bpm.domain.org.OrgUnit::getName).orElse(id);
+            case "position" -> positionRepo.findById(id).map(com.bpm.domain.position.Position::getTitle).orElse(id);
+            default -> {
+                String u = userDisplay(id);
+                yield "(chưa gán)".equals(u) ? id : u;
+            }
+        };
+    }
+
+    /** Bung bảng nhiều dòng thành text đọc được (mỗi dòng: "cột: giá trị · …"). */
+    private void appendTable(List<TaskDto.FieldValue> out, String label, JsonNode columns, Object value) {
+        if (value == null) {
+            return;
+        }
+        JsonNode rows;
+        try {
+            rows = objectMapper.readTree(value.toString());
+        } catch (Exception e) {
+            return;
+        }
+        if (!rows.isArray() || rows.size() == 0) {
+            return;
+        }
+        int i = 0;
+        for (JsonNode row : rows) {
+            i++;
+            StringBuilder sb = new StringBuilder();
+            if (columns.isArray()) {
+                for (JsonNode c : columns) {
+                    String ck = c.path("key").asText(null);
+                    if (ck == null) {
+                        continue;
+                    }
+                    String cl = c.path("label").asText(ck);
+                    String cv = row.path(ck).asText("");
+                    if (!cv.isBlank()) {
+                        if (sb.length() > 0) {
+                            sb.append(" · ");
+                        }
+                        sb.append(cl).append(": ").append(cv);
+                    }
+                }
+            }
+            if (sb.length() > 0) {
+                out.add(new TaskDto.FieldValue(label + " #" + i, sb.toString()));
+            }
+        }
     }
 
     /** Bung 1 bảng chấm điểm thành các dòng đọc được: mỗi tiêu chí (điểm → quy đổi) + điểm trung bình. */
