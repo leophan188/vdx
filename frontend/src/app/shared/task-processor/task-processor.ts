@@ -1,8 +1,8 @@
-import { Component, inject, output, signal } from '@angular/core';
+import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Modal } from '../modal/modal';
 import { ToastService } from '../toast/toast.service';
-import { WorkflowService, TaskDetail } from '../../core/workflow.service';
+import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.service';
 import { FormService } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
@@ -13,12 +13,31 @@ interface RField {
 
 /**
  * Modal xử lý một việc (Story 3.4) dùng chung: render biểu mẫu gắn bước theo quyền trường + nút hành động.
+ * Hiển thị NỘI DUNG YÊU CẦU (bước đầu) + DỮ LIỆU TỪ BƯỚC TRƯỚC (accordion từng bước, gập mặc định).
  * Mở bằng openTask(taskId); phát (completed) khi hoàn thành để màn cha tải lại.
  */
 @Component({
   selector: 'app-task-processor',
   imports: [FormsModule, Modal],
-  templateUrl: './task-processor.html'
+  templateUrl: './task-processor.html',
+  styles: [`
+    .tp-card{border:1px solid var(--color-border);border-radius:10px;padding:12px 14px;margin-bottom:14px;background:var(--color-surface-2,rgba(127,127,127,.05));}
+    .tp-sechead{display:flex;align-items:center;gap:8px;font-weight:700;font-size:.8em;letter-spacing:.04em;text-transform:uppercase;margin:0 0 10px;}
+    .tp-sechead--sep{margin-top:6px;padding-top:2px;}
+    .tp-chip{display:inline-flex;align-items:center;gap:4px;background:var(--color-primary-soft,rgba(30,80,160,.12));color:var(--color-primary,#1e50a0);border-radius:999px;padding:2px 10px;font-size:.85em;font-weight:600;text-transform:none;letter-spacing:0;}
+    .tp-badge-done{margin-left:auto;background:var(--status-done,#16a34a);color:#fff;border-radius:999px;padding:2px 10px;font-size:.82em;font-weight:600;text-transform:none;letter-spacing:0;}
+    .tp-reqfields{display:flex;flex-direction:column;gap:10px;}
+    .tp-fld > label{display:block;font-size:.74em;text-transform:uppercase;letter-spacing:.04em;opacity:.6;margin-bottom:3px;font-weight:700;}
+    .tp-ro{border:1px solid var(--color-border);border-radius:8px;padding:8px 10px;background:var(--color-surface);color:var(--color-text);white-space:pre-wrap;}
+    .tp-accordion{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+    .tp-step{border:1px solid var(--color-border);border-radius:10px;overflow:hidden;}
+    .tp-step-head{width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;background:transparent;border:0;cursor:pointer;color:inherit;text-align:left;font:inherit;}
+    .tp-num{flex:0 0 24px;height:24px;border-radius:50%;background:var(--status-done,#16a34a);color:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.8em;font-weight:700;}
+    .tp-step-title{flex:1;min-width:0;font-weight:600;}
+    .tp-step-meta{display:flex;gap:8px;align-items:center;font-size:.82em;opacity:.7;white-space:nowrap;}
+    .tp-step-body{padding:2px 14px 14px 46px;display:flex;flex-direction:column;gap:10px;}
+    .tp-caret{opacity:.5;}
+  `]
 })
 export class TaskProcessor {
   private wf = inject(WorkflowService);
@@ -33,9 +52,26 @@ export class TaskProcessor {
   readonly fields = signal<RField[]>([]);
   readonly values = signal<Record<string, unknown>>({});
   readonly busy = signal(false);
-  /** Mở/gập mục "Dữ liệu các bước trước". */
-  readonly priorOpen = signal(false);
-  togglePrior(): void { this.priorOpen.update((v) => !v); }
+
+  /** Bước đầu (đề nghị) = "Nội dung yêu cầu"; các bước còn lại = accordion "Dữ liệu từ bước trước". */
+  readonly requestStep = computed<StepView | null>(() => {
+    const p = this.detail()?.priorSteps ?? [];
+    return p.length ? p[0] : null;
+  });
+  readonly priorSteps = computed<StepView[]>(() => (this.detail()?.priorSteps ?? []).slice(1));
+
+  /** Các bước trước đang mở (theo index). Mặc định gập hết — bấm mới mở. */
+  readonly expandedPrior = signal<Set<number>>(new Set());
+  isPriorOpen(index: number): boolean { return this.expandedPrior().has(index); }
+  togglePrior(index: number): void {
+    const next = new Set(this.expandedPrior());
+    next.has(index) ? next.delete(index) : next.add(index);
+    this.expandedPrior.set(next);
+  }
+  fmtDate(iso: string | null): string {
+    if (!iso) return '';
+    return new Date(iso).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+  }
 
   /** Mở việc theo id: tải chi tiết + schema biểu mẫu. */
   openTask(taskId: string): void {
@@ -43,7 +79,7 @@ export class TaskProcessor {
     this.fields.set([]);
     this.values.set({});
     this.detail.set(null);
-    this.priorOpen.set(false);
+    this.expandedPrior.set(new Set());
     this.open.set(true);
     this.wf.detail(taskId).subscribe({
       next: (d) => {

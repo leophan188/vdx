@@ -21,6 +21,7 @@ export interface InboxItem {
 export interface TaskDetail {
   taskId: string;
   stepName: string;
+  stepKey: string;
   processName: string;
   instanceId: string | null;
   formId: string | null;

@@ -1,35 +1,57 @@
 <!-- Modal xử lý việc dùng chung (Story 3.4): form theo quyền trường + hành động. -->
 <app-modal [open]="open()" [wide]="true" [title]="(detail()?.stepName || 'Xử lý việc')" (closed)="close()">
   @if (detail(); as d) {
-    <p class="hint" style="margin-top:0">Quy trình: <strong>{{ d.processName }}</strong></p>
+    <p class="hint" style="margin-top:0">
+      Quy trình: <strong>{{ d.processName }}</strong>
+      @if (d.stepKey) { <span class="badge badge--info" style="margin-left:6px">{{ d.stepKey }}</span> }
+    </p>
 
-    <!-- Dữ liệu các bước TRƯỚC (xem lại ngữ cảnh) — thu gọn mặc định -->
-    @if (d.priorSteps.length) {
-      <div style="border:1px solid var(--color-border,#e2e2e2);border-radius:8px;margin-bottom:14px;overflow:hidden;">
-        <button type="button" (click)="togglePrior()"
-                style="width:100%;display:flex;align-items:center;gap:8px;padding:9px 12px;background:var(--color-surface-2,rgba(127,127,127,.06));border:0;cursor:pointer;text-align:left;color:inherit;font-weight:600;">
-          <span>🗂️ Dữ liệu các bước trước ({{ d.priorSteps.length }} bước)</span>
-          <span style="margin-left:auto;opacity:.6;">{{ priorOpen() ? '▾' : '▸' }}</span>
-        </button>
-        @if (priorOpen()) {
-          <div style="padding:6px 12px 12px;display:flex;flex-direction:column;gap:10px;">
-            @for (s of d.priorSteps; track s.index) {
-              <div>
-                <div style="font-weight:600;font-size:.92em;margin-bottom:2px;">
-                  <span style="color:var(--status-done,#16a34a);">✓</span> Bước {{ s.index }} — {{ s.stepName }}
-                  @if (s.assignee) { <small class="hint">· 👤 {{ s.assignee }}</small> }
-                </div>
+    <!-- NỘI DUNG YÊU CẦU: dữ liệu bước đầu (đề nghị), luôn hiển thị -->
+    @if (requestStep(); as r) {
+      <div class="tp-card">
+        <div class="tp-sechead">
+          <span>📄 Nội dung yêu cầu</span>
+          @if (r.assignee) { <span class="tp-chip" style="margin-left:auto;">👤 {{ r.assignee }}</span> }
+        </div>
+        @if (r.data.length) {
+          <div class="tp-reqfields">
+            @for (d2 of r.data; track d2.label) {
+              <div class="tp-fld"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+            }
+          </div>
+        } @else {
+          <small class="hint">(không có dữ liệu)</small>
+        }
+      </div>
+    }
+
+    <!-- DỮ LIỆU TỪ BƯỚC TRƯỚC: accordion từng bước, gập mặc định -->
+    @if (priorSteps().length) {
+      <div class="tp-sechead tp-sechead--sep">
+        <span style="color:var(--status-done,#16a34a);">✓</span>
+        <span>Dữ liệu từ bước trước</span>
+        <span class="tp-badge-done">{{ priorSteps().length }} bước đã hoàn thành</span>
+      </div>
+      <div class="tp-accordion">
+        @for (s of priorSteps(); track s.index) {
+          <div class="tp-step">
+            <button type="button" class="tp-step-head" (click)="togglePrior(s.index)">
+              <span class="tp-num">{{ s.index }}</span>
+              <span class="tp-step-title">{{ s.stepName }}</span>
+              <span class="tp-step-meta">
+                @if (s.assignee) { <span>👤 {{ s.assignee }}</span> }
+                @if (s.endedAt) { <span>📅 {{ fmtDate(s.endedAt) }}</span> }
+              </span>
+              <span class="tp-caret">{{ isPriorOpen(s.index) ? '▾' : '▸' }}</span>
+            </button>
+            @if (isPriorOpen(s.index)) {
+              <div class="tp-step-body">
                 @if (s.data.length) {
-                  <table style="width:100%;border-collapse:collapse;font-size:.9em;">
-                    @for (d2 of s.data; track d2.label) {
-                      <tr>
-                        <th style="text-align:left;vertical-align:top;padding:3px 12px 3px 16px;white-space:nowrap;opacity:.7;font-weight:600;">{{ d2.label }}</th>
-                        <td style="padding:3px 0;">{{ d2.value }}</td>
-                      </tr>
-                    }
-                  </table>
+                  @for (d2 of s.data; track d2.label) {
+                    <div class="tp-fld"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+                  }
                 } @else {
-                  <small class="hint" style="padding-left:16px;">(không có dữ liệu)</small>
+                  <small class="hint">(không có dữ liệu nhập ở bước này)</small>
                 }
               </div>
             }
@@ -38,6 +60,10 @@
       </div>
     }
 
+    <!-- NỘI DUNG CẦN ĐIỀN: biểu mẫu của bước hiện tại -->
+    @if (d.formId && fields().length) {
+      <div class="tp-sechead"><span>📝 Nội dung cần điền</span></div>
+    }
     @if (d.formId && fields().length) {
       <form id="task-proc-form">
         @for (f of fields(); track f.key) {

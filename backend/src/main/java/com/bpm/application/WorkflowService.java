@@ -390,7 +390,7 @@ public class WorkflowService {
                     .filter(s -> "DONE".equals(s.status()))
                     .toList();
         }
-        return new TaskDto.Detail(t.getId(), t.getName(), procName,
+        return new TaskDto.Detail(t.getId(), t.getName(), t.getTaskDefinitionKey(), procName,
                 wi != null ? wi.getId() : null, formId, fieldPerms, actions, vars, priorSteps);
     }
 
