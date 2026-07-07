@@ -182,7 +182,7 @@ export class PrjOverview {
     { status: 'TODO', label: 'Cần làm', color: 'var(--status-pending)' },
     { status: 'IN_PROGRESS', label: 'Đang làm', color: 'var(--status-active)' },
     { status: 'IN_REVIEW', label: 'Kiểm thử', color: 'var(--color-info)' },
-    { status: 'DONE', label: 'Hoàn thành', color: 'var(--status-done)' }
+    { status: 'DONE', label: 'Đã xong', color: 'var(--status-done)' }
   ];
 
   readonly statusBars = computed<StatusBar[]>(() => {
@@ -226,7 +226,7 @@ export class PrjOverview {
   readonly assigneeCols: GridColumn[] = [
     { key: 'name', header: 'Người phụ trách' },
     { key: 'total', header: 'Tổng task', align: 'center', width: '110px', sortable: true },
-    { key: 'done', header: 'Hoàn thành', align: 'center', width: '120px', sortable: true },
+    { key: 'done', header: 'Đã xong', align: 'center', width: '120px', sortable: true },
     { key: 'estimate', header: 'Est (h)', align: 'center', width: '100px', sortable: true },
     { key: 'donePct', header: '% hoàn thành', width: '200px', sortable: true }
   ];

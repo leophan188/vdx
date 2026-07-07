@@ -66,7 +66,7 @@ export interface WorkItem { type: TaskType; status: TaskStatus; dueDate: string 
 
 export interface CatStat {
   key: WorkCat; label: string; icon: string; color: string;
-  total: number; done: number; doing: number; todo: number; overdue: number; donePct: number;
+  total: number; done: number; doing: number; review: number; todo: number; overdue: number; donePct: number;
 }
 
 /** dueDate "dd/MM/yyyy" đã quá hôm nay (mốc 00:00) chưa? */
@@ -84,13 +84,14 @@ export function categoryStats(items: WorkItem[]): CatStat[] {
   return WORK_CATS.map((c) => {
     const list = items.filter((it) => catOf(it.type) === c.key);
     const done = list.filter((it) => it.status === 'DONE').length;
-    const doing = list.filter((it) => it.status === 'IN_PROGRESS' || it.status === 'IN_REVIEW').length;
+    const doing = list.filter((it) => it.status === 'IN_PROGRESS').length;
+    const review = list.filter((it) => it.status === 'IN_REVIEW').length;
     const todo = list.filter((it) => it.status === 'BACKLOG' || it.status === 'TODO').length;
     const overdue = list.filter((it) => isOverdue(it.dueDate, it.status)).length;
     const total = list.length;
     return {
       key: c.key, label: c.label, icon: c.icon, color: c.color,
-      total, done, doing, todo, overdue,
+      total, done, doing, review, todo, overdue,
       donePct: total > 0 ? Math.round((done / total) * 100) : 0
     };
   });

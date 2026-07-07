@@ -77,11 +77,12 @@
             <div class="prj-ov__cat-bar">
               <div class="prj-ov__cat-fill" [style.width.%]="c.donePct"></div>
             </div>
-            <div class="prj-ov__cat-pct">{{ c.done }}/{{ c.total }} hoàn thành · {{ c.donePct }}%</div>
+            <div class="prj-ov__cat-pct">{{ c.done }}/{{ c.total }} đã xong · {{ c.donePct }}%</div>
           </div>
           <div class="prj-ov__cat-grid">
             <span class="prj-ov__cat-cell">✅ Đã xong <b>{{ c.done }}</b></span>
             <span class="prj-ov__cat-cell">🔄 Đang làm <b>{{ c.doing }}</b></span>
+            <span class="prj-ov__cat-cell">🔍 Kiểm thử <b>{{ c.review }}</b></span>
             <span class="prj-ov__cat-cell">🗒️ Chưa làm <b>{{ c.todo }}</b></span>
             <span class="prj-ov__cat-cell prj-ov__cat-cell--over">⏰ Trễ hạn <b>{{ c.overdue }}</b></span>
           </div>
