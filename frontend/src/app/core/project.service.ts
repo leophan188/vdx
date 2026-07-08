@@ -398,6 +398,25 @@ export class ProjectService {
   listTasks(projectId: string): Observable<ProjectTask[]> {
     return this.http.get<ProjectTask[]>(`${this.base}/${projectId}/tasks`, this.opts);
   }
+
+  /** Xuất Excel backlog / timeline (định dạng đẹp) — trả Blob để tải về. */
+  exportBacklog(projectId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/${projectId}/backlog/export`, { responseType: 'blob', withCredentials: true });
+  }
+  exportTimeline(projectId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/${projectId}/timeline/export`, { responseType: 'blob', withCredentials: true });
+  }
+  /** Kích hoạt tải Blob về máy với tên file cho trước. */
+  static downloadBlob(blob: Blob, filename: string): void {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   createTask(projectId: string, body: TaskRequest): Observable<ProjectTask> {
     return this.http.post<ProjectTask>(`${this.base}/${projectId}/tasks`, body, this.opts);
   }

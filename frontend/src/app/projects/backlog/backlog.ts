@@ -297,6 +297,16 @@ export class PrjBacklog implements OnInit {
   readonly statusFilter = signal<Set<TaskStatus>>(new Set(this.allStatuses));
   /** Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả; '__UNASSIGNED__' = chưa gán) — lưu theo dự án. */
   readonly filterAssignee = signal('');
+  /** Đang xuất Excel backlog. */
+  readonly exporting = signal(false);
+  exportExcel(): void {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.svc.exportBacklog(this.projectId()).subscribe({
+      next: (b) => { ProjectService.downloadBlob(b, 'backlog.xlsx'); this.exporting.set(false); },
+      error: () => { this.exporting.set(false); this.toast.error('Không xuất được Excel backlog'); }
+    });
+  }
   /** Tìm theo từ khoá (tên/mã task) — không lưu, giữ cả cấp cha khi khớp. */
   readonly search = signal('');
   /** Giá trị đặc biệt cho lọc "Chưa gán". */

@@ -47,6 +47,10 @@
                        [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
   </div>
   <span class="filter-bar__spacer"></span>
+  <button type="button" class="btn btn--secondary btn--sm" (click)="exportExcel()" [disabled]="exporting()"
+          title="Xuất backlog ra Excel định dạng đẹp">
+    {{ exporting() ? 'Đang xuất…' : '⬇ Xuất Excel' }}
+  </button>
   <button type="button" class="btn btn--primary btn--sm" (click)="openCreate(null)">＋ Thêm task</button>
 </div>
 

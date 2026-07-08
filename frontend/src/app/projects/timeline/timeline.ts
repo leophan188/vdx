@@ -1,5 +1,6 @@
 import { Component, OnInit, computed, effect, inject, input, signal } from '@angular/core';
 import { ProjectService, ProjectTask, TaskStatus, TaskType, Project } from '../../core/project.service';
+import { ToastService } from '../../shared/toast/toast.service';
 import { loadPref, savePref } from '../../shared/view-prefs';
 import { TypeFilter, TypeChip } from '../../shared/type-filter/type-filter';
 
@@ -153,6 +154,18 @@ export class PrjTimeline implements OnInit {
   readonly projectId = input.required<string>();
 
   private svc = inject(ProjectService);
+  private toast = inject(ToastService);
+
+  /** Đang xuất Excel timeline. */
+  readonly exporting = signal(false);
+  exportExcel(): void {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.svc.exportTimeline(this.projectId()).subscribe({
+      next: (b) => { ProjectService.downloadBlob(b, 'timeline.xlsx'); this.exporting.set(false); },
+      error: () => { this.exporting.set(false); this.toast.error('Không xuất được Excel timeline'); }
+    });
+  }
 
   // ----- Trạng thái -----
   readonly tasks = signal<ProjectTask[]>([]);

@@ -178,6 +178,216 @@ public class ProjectReportExportService {
         }
     }
 
+    // ===================== BACKLOG (cây công việc) =====================
+    private record Node(ProjectDto.TaskResponse t, int level) {}
+
+    /** Sắp xếp task thành CÂY (cha → con), giữ thứ tự orderIndex/seq. */
+    private static List<Node> tree(List<ProjectDto.TaskResponse> tasks) {
+        java.util.Map<String, List<ProjectDto.TaskResponse>> byParent = new java.util.LinkedHashMap<>();
+        for (ProjectDto.TaskResponse t : tasks) {
+            byParent.computeIfAbsent(t.parentId() == null ? "" : t.parentId(), k -> new java.util.ArrayList<>()).add(t);
+        }
+        for (List<ProjectDto.TaskResponse> l : byParent.values()) {
+            l.sort(java.util.Comparator.comparingInt(ProjectDto.TaskResponse::orderIndex)
+                    .thenComparingInt(ProjectDto.TaskResponse::seq));
+        }
+        List<Node> out = new java.util.ArrayList<>();
+        java.util.Set<String> ids = new java.util.HashSet<>();
+        for (ProjectDto.TaskResponse t : tasks) ids.add(t.id());
+        // gốc = không có cha HOẶC cha không nằm trong tập (mồ côi)
+        List<ProjectDto.TaskResponse> roots = new java.util.ArrayList<>();
+        for (ProjectDto.TaskResponse t : tasks) {
+            if (t.parentId() == null || !ids.contains(t.parentId())) roots.add(t);
+        }
+        roots.sort(java.util.Comparator.comparingInt(ProjectDto.TaskResponse::orderIndex)
+                .thenComparingInt(ProjectDto.TaskResponse::seq));
+        java.util.Deque<Node> stack = new java.util.ArrayDeque<>();
+        for (int i = roots.size() - 1; i >= 0; i--) stack.push(new Node(roots.get(i), 0));
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        while (!stack.isEmpty()) {
+            Node n = stack.pop();
+            if (!seen.add(n.t().id())) continue;
+            out.add(n);
+            List<ProjectDto.TaskResponse> kids = byParent.getOrDefault(n.t().id(), List.of());
+            for (int i = kids.size() - 1; i >= 0; i--) stack.push(new Node(kids.get(i), n.level() + 1));
+        }
+        return out;
+    }
+
+    private static final String[] BL_COLS =
+            {"Mã", "Loại", "Công việc", "Trạng thái", "Người thực hiện", "Est (h)", "% HT", "Bắt đầu", "Kết thúc", "Ưu tiên"};
+
+    /** Xuất BACKLOG (cây công việc) ra Excel định dạng đẹp. */
+    public byte[] backlogXlsx(String projectName, List<ProjectDto.TaskResponse> tasks) {
+        try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
+            XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
+            XSSFCellStyle header = style(wb, true, 10, null, HEADER_BG, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle cell = style(wb, false, 10, null, null, true, HorizontalAlignment.LEFT);
+            XSSFCellStyle center = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle epic = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.LEFT);
+            XSSFCellStyle epicC = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.CENTER);
+
+            XSSFSheet sh = wb.createSheet("Backlog");
+            int last = BL_COLS.length - 1;
+            int rr = 0;
+            merged(sh, rr++, last, "DANH SÁCH CÔNG VIỆC (BACKLOG)", title, 28);
+            merged(sh, rr++, last, projectName, subtitle, 18);
+            List<Node> nodes = tree(tasks);
+            long doneLeaf = tasks.stream().filter(t -> t.leaf() && "DONE".equals(t.status())).count();
+            long leaf = tasks.stream().filter(ProjectDto.TaskResponse::leaf).count();
+            double est = tasks.stream().filter(ProjectDto.TaskResponse::leaf).mapToDouble(ProjectDto.TaskResponse::estimateHours).sum();
+            merged(sh, rr++, last, "Tổng: " + tasks.size() + " công việc · " + leaf + " task lá (" + doneLeaf + " đã xong) · Est "
+                    + trimNum(est) + " giờ", subtitle, 16);
+            rr++;
+
+            Row h = sh.createRow(rr++);
+            for (int c = 0; c < BL_COLS.length; c++) put(h, c, BL_COLS[c], header);
+            for (Node n : nodes) {
+                ProjectDto.TaskResponse t = n.t();
+                boolean grp = !t.leaf();
+                Row row = sh.createRow(rr++);
+                String indent = "    ".repeat(Math.min(n.level(), 6));
+                put(row, 0, t.code(), grp ? epicC : center);
+                put(row, 1, typeLabel(t.type()), grp ? epicC : center);
+                put(row, 2, indent + nz(t.title()), grp ? epic : cell);
+                put(row, 3, statusVi(t.status()), grp ? epicC : center);
+                put(row, 4, nz(t.assigneeName()), grp ? epic : cell);
+                put(row, 5, t.estimateHours() > 0 ? trimNum(t.estimateHours()) : "", grp ? epicC : center);
+                put(row, 6, Math.round(t.progressPct()) + "%", grp ? epicC : center);
+                put(row, 7, nz(t.startDate()), grp ? epicC : center);
+                put(row, 8, nz(t.dueDate()), grp ? epicC : center);
+                put(row, 9, priorityVi(t.priority()), grp ? epicC : center);
+            }
+            int[] w = {3000, 2600, 17000, 3800, 4800, 2200, 2200, 3000, 3000, 3000};
+            for (int c = 0; c < BL_COLS.length; c++) sh.setColumnWidth(c, w[c]);
+            sh.createFreezePane(0, 4);
+            wb.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Không xuất được Excel backlog", e);
+        }
+    }
+
+    // ===================== TIMELINE (lịch trình + Gantt theo tuần) =====================
+    private static final String[] TL_COLS =
+            {"Mã", "Công việc", "Người thực hiện", "Bắt đầu", "Kết thúc", "Số ngày", "Trạng thái", "% HT"};
+
+    /** Xuất TIMELINE ra Excel: bảng lịch trình + biểu đồ Gantt theo tuần. */
+    public byte[] timelineXlsx(String projectName, List<ProjectDto.TaskResponse> tasks) {
+        try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
+            XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
+            XSSFCellStyle section = style(wb, true, 12, WHITE, BRAND, false, HorizontalAlignment.LEFT);
+            XSSFCellStyle header = style(wb, true, 10, null, HEADER_BG, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle cell = style(wb, false, 10, null, null, true, HorizontalAlignment.LEFT);
+            XSSFCellStyle center = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle bar = style(wb, false, 10, null, BRAND, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle barDone = style(wb, false, 10, null, new byte[]{(byte) 0x16, (byte) 0xA3, (byte) 0x4A}, true, HorizontalAlignment.CENTER);
+
+            // Chỉ task có lịch (bắt đầu + kết thúc), sắp theo ngày bắt đầu.
+            List<ProjectDto.TaskResponse> sched = new java.util.ArrayList<>();
+            for (ProjectDto.TaskResponse t : tasks) {
+                if (parse(t.startDate()) != null && parse(t.dueDate()) != null) sched.add(t);
+            }
+            sched.sort(java.util.Comparator.comparing((ProjectDto.TaskResponse t) -> parse(t.startDate()))
+                    .thenComparing(t -> parse(t.dueDate())));
+
+            XSSFSheet sh = wb.createSheet("Timeline");
+            int last = TL_COLS.length - 1;
+            int rr = 0;
+            merged(sh, rr++, last, "TIMELINE — LỊCH TRÌNH DỰ ÁN", title, 28);
+            merged(sh, rr++, last, projectName, subtitle, 18);
+            rr++;
+            merged(sh, rr++, last, "LỊCH TRÌNH CÔNG VIỆC (" + sched.size() + " mục)", section, 20);
+            Row h = sh.createRow(rr++);
+            for (int c = 0; c < TL_COLS.length; c++) put(h, c, TL_COLS[c], header);
+            for (ProjectDto.TaskResponse t : sched) {
+                java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
+                long days = java.time.temporal.ChronoUnit.DAYS.between(s, d) + 1;
+                Row row = sh.createRow(rr++);
+                put(row, 0, t.code(), center);
+                put(row, 1, nz(t.title()), cell);
+                put(row, 2, nz(t.assigneeName()), cell);
+                put(row, 3, nz(t.startDate()), center);
+                put(row, 4, nz(t.dueDate()), center);
+                put(row, 5, String.valueOf(days), center);
+                put(row, 6, statusVi(t.status()), center);
+                put(row, 7, Math.round(t.progressPct()) + "%", center);
+            }
+            int[] w = {2800, 15000, 4600, 3000, 3000, 2400, 3600, 2400};
+            for (int c = 0; c < TL_COLS.length; c++) sh.setColumnWidth(c, w[c]);
+
+            // Biểu đồ Gantt theo TUẦN (nếu có dữ liệu ngày).
+            if (!sched.isEmpty()) {
+                java.time.LocalDate min = sched.stream().map(t -> parse(t.startDate())).min(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate max = sched.stream().map(t -> parse(t.dueDate())).max(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate w0 = min.with(java.time.DayOfWeek.MONDAY);
+                int weeks = (int) (java.time.temporal.ChronoUnit.WEEKS.between(w0, max.with(java.time.DayOfWeek.MONDAY)) + 1);
+                weeks = Math.min(weeks, 60);
+                rr += 2;
+                merged(sh, rr++, Math.max(last, weeks + 1), "BIỂU ĐỒ GANTT (theo tuần)", section, 20);
+                Row gh = sh.createRow(rr++);
+                put(gh, 0, "Công việc", header);
+                for (int wk = 0; wk < weeks; wk++) {
+                    put(gh, wk + 1, w0.plusWeeks(wk).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM")), header);
+                    sh.setColumnWidth(wk + 1, 1400);
+                }
+                for (ProjectDto.TaskResponse t : sched) {
+                    if (!t.leaf()) continue; // Gantt chỉ vẽ task lá cho gọn
+                    java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
+                    Row row = sh.createRow(rr++);
+                    put(row, 0, t.code() + " " + nz(t.title()), cell);
+                    boolean done = "DONE".equals(t.status());
+                    for (int wk = 0; wk < weeks; wk++) {
+                        java.time.LocalDate ws = w0.plusWeeks(wk), we = ws.plusDays(6);
+                        boolean overlap = !s.isAfter(we) && !d.isBefore(ws);
+                        put(row, wk + 1, "", overlap ? (done ? barDone : bar) : center);
+                    }
+                }
+                sh.setColumnWidth(0, 18000);
+            }
+            wb.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Không xuất được Excel timeline", e);
+        }
+    }
+
+    private static java.time.LocalDate parse(String ddMMyyyy) {
+        if (ddMMyyyy == null || ddMMyyyy.isBlank()) return null;
+        try {
+            return java.time.LocalDate.parse(ddMMyyyy.trim(), java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"));
+        } catch (Exception e) {
+            return null;
+        }
+    }
+    private static String trimNum(double d) {
+        return d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d);
+    }
+    private static String statusVi(String s) {
+        if (s == null) return "";
+        switch (s) {
+            case "BACKLOG": return "Backlog";
+            case "TODO": return "Cần làm";
+            case "IN_PROGRESS": return "Đang làm";
+            case "IN_REVIEW": return "Kiểm thử";
+            case "DONE": return "Hoàn thành";
+            case "CANCELLED": return "Huỷ";
+            default: return s;
+        }
+    }
+    private static String priorityVi(String p) {
+        if (p == null) return "";
+        switch (p) {
+            case "LOW": return "Thấp";
+            case "MEDIUM": return "Trung bình";
+            case "HIGH": return "Cao";
+            case "URGENT": return "Khẩn cấp";
+            default: return p;
+        }
+    }
+
     // ===================== Helpers XLSX =====================
     private static XSSFCellStyle style(XSSFWorkbook wb, boolean bold, int size, byte[] fontColor, byte[] fill,
                                        boolean border, HorizontalAlignment align) {

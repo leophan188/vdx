@@ -20,6 +20,10 @@
       <span><i class="gantt__swatch gantt__swatch--story"></i>Story</span>
       <span><i class="gantt__swatch gantt__swatch--parent"></i>Task cha</span>
     </div>
+    <button type="button" class="btn btn--secondary btn--sm" style="margin-left:auto"
+            (click)="exportExcel()" [disabled]="exporting()" title="Xuất timeline (lịch trình + Gantt) ra Excel">
+      {{ exporting() ? 'Đang xuất…' : '⬇ Xuất Excel' }}
+    </button>
   </div>
 
   <!-- Thanh tuỳ chỉnh: khung thời gian + lọc theo level/loại — dùng class chuẩn .filter-bar -->

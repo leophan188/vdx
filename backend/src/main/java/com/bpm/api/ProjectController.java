@@ -174,6 +174,31 @@ public class ProjectController {
         return taskService.list(id);
     }
 
+    /** Xuất BACKLOG (cây công việc) ra Excel định dạng đẹp để gửi khách. */
+    @GetMapping("/{id}/backlog/export")
+    public ResponseEntity<byte[]> exportBacklog(@PathVariable String id, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        ProjectDto.ProjectResponse p = projectService.detail(id);
+        byte[] bytes = reportExportService.backlogXlsx("[" + p.code() + "] " + p.name(), taskService.list(id));
+        return xlsxResponse(bytes, "backlog-" + p.code() + ".xlsx");
+    }
+
+    /** Xuất TIMELINE (lịch trình + Gantt theo tuần) ra Excel định dạng đẹp để gửi khách. */
+    @GetMapping("/{id}/timeline/export")
+    public ResponseEntity<byte[]> exportTimeline(@PathVariable String id, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        ProjectDto.ProjectResponse p = projectService.detail(id);
+        byte[] bytes = reportExportService.timelineXlsx("[" + p.code() + "] " + p.name(), taskService.list(id));
+        return xlsxResponse(bytes, "timeline-" + p.code() + ".xlsx");
+    }
+
+    private static ResponseEntity<byte[]> xlsxResponse(byte[] bytes, String fname) {
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fname + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(bytes);
+    }
+
     @PostMapping("/{id}/tasks")
     public ProjectDto.TaskResponse createTask(@PathVariable String id,
                                               @RequestBody ProjectDto.TaskRequest req, Authentication auth) {
