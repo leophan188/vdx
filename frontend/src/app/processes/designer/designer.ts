@@ -139,6 +139,8 @@ export class Designer implements AfterViewInit, OnDestroy {
   flowCond: FlowCondition = { field: '', op: 'truthy' };
   /** Các trường dữ liệu có thể dùng làm điều kiện (gom từ trường thêm + biểu mẫu gắn bước). */
   readonly dataFields = signal<{ key: string; label: string }[]>([]);
+  /** Trường gom THEO TỪNG BƯỚC (để cấu hình cho phép sửa trường bước trước). */
+  readonly stepGroups = signal<{ stepKey: string; stepName: string; fields: { key: string; label: string }[] }[]>([]);
   readonly COND_OPS: { v: FlowCondOp; l: string }[] = [
     { v: 'truthy', l: 'có giá trị' },
     { v: 'eq', l: 'bằng' },
@@ -369,11 +371,31 @@ export class Designer implements AfterViewInit, OnDestroy {
   }
 
   // ---- Cho phép SỬA trường của bước trước ở bước này ----
-  /** Trường của các bước KHÁC (không thuộc form/trường của chính bước này). */
-  priorFieldOptions(): { key: string; label: string }[] {
-    const own = new Set<string>(this.formFields().map((f) => f.key));
-    for (const f of this.meta.fields ?? []) if (f.key) own.add(f.key);
-    return this.dataFields().filter((d) => !own.has(d.key));
+  /** Gom trường THEO TỪNG BƯỚC (mọi bước khác bước hiện tại) để cấu hình cho phép sửa. */
+  private collectStepGroups(): void {
+    const groups: { stepKey: string; stepName: string; fields: { key: string; label: string }[] }[] = [];
+    let tasks: any[] = [];
+    try { tasks = this.modeler.get('elementRegistry').filter((e: any) => this.isTask(e)); } catch { tasks = []; }
+    for (const el of tasks) {
+      if (el.id === this.selectedId()) continue; // bỏ chính bước đang cấu hình
+      const m: any = this.stepsMeta[el.id] ?? {};
+      const g = { stepKey: el.id, stepName: el.businessObject?.name || el.id, fields: [] as { key: string; label: string }[] };
+      for (const f of m.fields ?? []) if (f.key) g.fields.push({ key: f.key, label: f.label || f.key });
+      groups.push(g);
+      if (m.formId) {
+        this.formSvc.get(m.formId).subscribe({
+          next: (form) => {
+            try {
+              const parsed = form.schemaJson ? JSON.parse(form.schemaJson) : { fields: [] };
+              for (const x of parsed.fields ?? []) if (x.key && x.type !== 'section') g.fields.push({ key: x.key, label: x.label || x.key });
+              this.stepGroups.set([...this.stepGroups()]); // phát lại để cập nhật view
+            } catch { /* schema lỗi */ }
+          },
+          error: () => {}
+        });
+      }
+    }
+    this.stepGroups.set(groups);
   }
   isPriorEditable(key: string): boolean {
     return (this.meta.editPriorKeys ?? []).includes(key);
@@ -384,10 +406,22 @@ export class Designer implements AfterViewInit, OnDestroy {
     this.meta.editPriorKeys = [...cur];
     this.writeMeta();
   }
+  /** Trạng thái tích tất cả trường của một bước. */
+  allChecked(g: { fields: { key: string }[] }): boolean {
+    return g.fields.length > 0 && g.fields.every((f) => this.isPriorEditable(f.key));
+  }
+  toggleStepAll(g: { fields: { key: string }[] }): void {
+    const cur = new Set(this.meta.editPriorKeys ?? []);
+    const all = this.allChecked(g);
+    for (const f of g.fields) { all ? cur.delete(f.key) : cur.add(f.key); }
+    this.meta.editPriorKeys = [...cur];
+    this.writeMeta();
+  }
 
   openConfig(): void {
     if (this.selectedId()) {
-      this.collectDataFields(); // làm mới danh sách trường toàn quy trình
+      this.collectDataFields(); // trường toàn quy trình (điều kiện nhánh)
+      this.collectStepGroups(); // trường gom theo bước (cho phép sửa bước trước)
       this.configTab.set('assignee');
       this.configOpen.set(true);
     }

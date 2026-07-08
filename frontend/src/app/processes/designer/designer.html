@@ -96,20 +96,32 @@
       <p class="hint">Chọn một biểu mẫu để gắn vào bước và cấu hình quyền trường (Sửa được / Chỉ xem / Ẩn).</p>
     }
 
-    <!-- Cho phép SỬA trường của bước trước ở bước này -->
+    <!-- Cho phép SỬA trường của bước trước ở bước này — gom THEO TỪNG BƯỚC -->
     <h4 class="form-section" style="margin-top:18px;">✏️ Cho phép sửa trường của bước trước</h4>
-    @if (priorFieldOptions().length) {
-      <p class="hint" style="margin-top:0;">Tích các trường (do bước trước nhập) mà người ở bước này được phép chỉnh sửa. Giá trị sửa sẽ cập nhật xuyên suốt hồ sơ.</p>
-      <div style="display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto;">
-        @for (o of priorFieldOptions(); track o.key) {
-          <label class="radio-row" style="margin:0;">
-            <input type="checkbox" [checked]="isPriorEditable(o.key)" (change)="togglePriorEditable(o.key)" />
-            {{ o.label }} <span class="hint" style="margin:0;">· {{ o.key }}</span>
-          </label>
+    <p class="hint" style="margin-top:0;">Theo từng bước bên dưới, tích các trường mà người ở bước này được phép chỉnh sửa. Có thể chọn từ NHIỀU bước. Giá trị sửa cập nhật xuyên suốt hồ sơ.</p>
+    @if (stepGroups().length) {
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;">
+        @for (g of stepGroups(); track g.stepKey) {
+          @if (g.fields.length) {
+            <div style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden;">
+              <label class="radio-row" style="margin:0;padding:7px 10px;background:var(--color-surface-2,rgba(127,127,127,.08));font-weight:600;">
+                <input type="checkbox" [checked]="allChecked(g)" (change)="toggleStepAll(g)" />
+                📋 {{ g.stepName }} <span class="hint" style="margin:0;font-weight:400;">· {{ g.fields.length }} trường</span>
+              </label>
+              <div style="padding:6px 10px 8px 26px;display:flex;flex-direction:column;gap:4px;">
+                @for (o of g.fields; track o.key) {
+                  <label class="radio-row" style="margin:0;">
+                    <input type="checkbox" [checked]="isPriorEditable(o.key)" (change)="togglePriorEditable(o.key)" />
+                    {{ o.label }} <span class="hint" style="margin:0;">· {{ o.key }}</span>
+                  </label>
+                }
+              </div>
+            </div>
+          }
         }
       </div>
     } @else {
-      <p class="hint">Chưa có trường nào từ bước khác. Hãy gắn biểu mẫu có trường cho các bước trước.</p>
+      <p class="hint">Chưa có bước nào khác có trường. Hãy gắn biểu mẫu có trường cho các bước.</p>
     }
   }
 
