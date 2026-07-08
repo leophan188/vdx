@@ -239,10 +239,9 @@ export class PrjTimeline implements OnInit {
     return m ? `${m[3]}-${m[2]}-${m[1]}` : '';
   }
   resetCustom(): void {
-    // "Đặt lại" → quay về ngày KHAI BÁO của dự án (không phải trống), khớp mặc định.
-    const p = this.project();
-    this.fromDate.set(p?.startDate ? this.vnToIso(p.startDate) : '');
-    this.toDate.set(p?.dueDate ? this.vnToIso(p.dueDate) : '');
+    // "Đặt lại" → BỎ khung thủ công để trục TỰ VỪA theo công việc (thấy ngay thanh Gantt).
+    this.fromDate.set('');
+    this.toDate.set('');
     this.typeFilter.set({ EPIC: true, STORY: true, TASK: true, SUBTASK: true, BUG: true, ISSUE: true });
     savePref(this.fromKey(), '');
     savePref(this.toKey(), '');
@@ -281,8 +280,8 @@ export class PrjTimeline implements OnInit {
       this.svc.get(pid).subscribe({
         next: (p) => {
           this.project.set(p);
-          if (!this.fromDate() && p.startDate) this.fromDate.set(this.vnToIso(p.startDate));
-          if (!this.toDate() && p.dueDate) this.toDate.set(this.vnToIso(p.dueDate));
+          // KHÔNG tự điền khung theo ngày dự án — để trục TỰ VỪA theo công việc, tránh thanh Gantt
+          // bị đẩy ra xa (khi ngày dự án rộng hơn nhiều so với ngày các task).
         },
         error: () => this.project.set(null)
       });
@@ -314,24 +313,20 @@ export class PrjTimeline implements OnInit {
     const projStart = parseVnDate(proj?.startDate);
     const projDue = parseVnDate(proj?.dueDate);
 
-    // Khung auto (nền) — ưu tiên ngày dự án; thiếu thì lấy theo dữ liệu task; cuối cùng quanh hôm nay.
+    // Khung auto (nền) — ƯU TIÊN vừa khít NGÀY CÁC TASK (để luôn thấy thanh Gantt); thiếu ngày task
+    // mới dùng ngày dự án; cuối cùng quanh hôm nay.
     let autoMin: Date, autoMax: Date;
-    if (projStart || projDue) {
-      // Có ít nhất 1 mốc dự án → vẽ theo dự án (đệm nhẹ 2 ngày). Đầu thiếu thì suy từ task/hôm nay.
-      let taskMin: Date | null = null, taskMax: Date | null = null;
-      for (const d of dates) { if (!taskMin || d < taskMin) taskMin = d; if (!taskMax || d > taskMax) taskMax = d; }
-      autoMin = addDays(startOfDay(projStart ?? taskMin ?? today), -2);
-      autoMax = addDays(startOfDay(projDue ?? taskMax ?? addDays(today, 30)), 2);
-    } else if (dates.length === 0) {
-      autoMin = addDays(today, -7);
-      autoMax = addDays(today, 30);
-    } else {
+    if (dates.length > 0) {
       let min = dates[0], max = dates[0];
       for (const d of dates) { if (d < min) min = d; if (d > max) max = d; }
-      if (today < min) min = today;
-      if (today > max) max = today;
       autoMin = addDays(startOfDay(min), -2);
       autoMax = addDays(startOfDay(max), 2);
+    } else if (projStart || projDue) {
+      autoMin = addDays(startOfDay(projStart ?? today), -2);
+      autoMax = addDays(startOfDay(projDue ?? addDays(today, 30)), 2);
+    } else {
+      autoMin = addDays(today, -7);
+      autoMax = addDays(today, 30);
     }
 
     // (2) Khung thủ công ghi đè từng đầu nếu có nhập; ô để trống → giữ auto.

@@ -80,10 +80,13 @@ interface TreeRow {
     .bl-row--dragover { box-shadow: inset 0 2px 0 0 var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
     .bl-drag { cursor: grab; color: var(--color-text-muted); font-size: .8rem; padding: 0 2px; user-select: none; flex: none; }
     .bl-drag:active { cursor: grabbing; }
-    .bl-title { display: flex; align-items: center; gap: 2px; min-width: 0; }
-    .bl-toggle { background: none; border: 0; cursor: pointer; width: 18px; font-size: var(--font-size-sm);
-      color: var(--color-text-muted); padding: 0; flex: 0 0 auto; }
-    .bl-leaf { display: inline-block; width: 18px; text-align: center; color: var(--color-border); flex: 0 0 auto; }
+    .bl-title { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    /* Nút thu gọn/mở to & dễ bấm hơn (vùng chạm 28px, có nền hover). */
+    .bl-toggle { background: none; border: 0; cursor: pointer; width: 28px; height: 28px; font-size: 1.05rem;
+      line-height: 1; color: var(--color-text-muted); padding: 0; flex: 0 0 auto; border-radius: var(--radius-sm, 6px);
+      display: inline-flex; align-items: center; justify-content: center; }
+    .bl-toggle:hover { background: var(--color-surface-alt, rgba(127,127,127,.12)); color: var(--color-primary); }
+    .bl-leaf { display: inline-block; width: 28px; text-align: center; color: var(--color-border); flex: 0 0 auto; }
     .bl-code { font-family: var(--font-mono, monospace); font-size: var(--font-size-xs); color: var(--color-text-muted);
       flex: 0 0 auto; margin-right: 2px; }
     .bl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
