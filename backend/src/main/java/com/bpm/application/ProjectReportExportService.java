@@ -227,6 +227,7 @@ public class ProjectReportExportService {
             XSSFCellStyle center = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
             XSSFCellStyle epic = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.LEFT);
             XSSFCellStyle epicC = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.CENTER);
+            java.util.Map<String, XSSFCellStyle> sst = statusStyles(wb);
 
             XSSFSheet sh = wb.createSheet("Backlog");
             int last = BL_COLS.length - 1;
@@ -251,7 +252,7 @@ public class ProjectReportExportService {
                 put(row, 0, t.code(), grp ? epicC : center);
                 put(row, 1, typeLabel(t.type()), grp ? epicC : center);
                 put(row, 2, indent + nz(t.title()), grp ? epic : cell);
-                put(row, 3, statusVi(t.status()), grp ? epicC : center);
+                put(row, 3, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
                 put(row, 4, nz(t.assigneeName()), grp ? epic : cell);
                 put(row, 5, t.estimateHours() > 0 ? trimNum(t.estimateHours()) : "", grp ? epicC : center);
                 put(row, 6, Math.round(t.progressPct()) + "%", grp ? epicC : center);
@@ -284,6 +285,7 @@ public class ProjectReportExportService {
             XSSFCellStyle center = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
             XSSFCellStyle bar = style(wb, false, 10, null, BRAND, true, HorizontalAlignment.CENTER);
             XSSFCellStyle barDone = style(wb, false, 10, null, new byte[]{(byte) 0x16, (byte) 0xA3, (byte) 0x4A}, true, HorizontalAlignment.CENTER);
+            java.util.Map<String, XSSFCellStyle> sst = statusStyles(wb);
 
             // Chỉ task có lịch (bắt đầu + kết thúc), sắp theo ngày bắt đầu.
             List<ProjectDto.TaskResponse> sched = new java.util.ArrayList<>();
@@ -312,7 +314,7 @@ public class ProjectReportExportService {
                 put(row, 3, nz(t.startDate()), center);
                 put(row, 4, nz(t.dueDate()), center);
                 put(row, 5, String.valueOf(days), center);
-                put(row, 6, statusVi(t.status()), center);
+                put(row, 6, statusVi(t.status()), sst.getOrDefault(t.status(), center));
                 put(row, 7, Math.round(t.progressPct()) + "%", center);
             }
             int[] w = {2800, 15000, 4600, 3000, 3000, 2400, 3600, 2400};
@@ -352,6 +354,16 @@ public class ProjectReportExportService {
         } catch (Exception e) {
             throw new RuntimeException("Không xuất được Excel timeline", e);
         }
+    }
+
+    /** Style ô trạng thái theo màu (Hoàn thành xanh lá · Đang làm xanh dương · Kiểm thử cam · Huỷ đỏ). */
+    private static java.util.Map<String, XSSFCellStyle> statusStyles(XSSFWorkbook wb) {
+        java.util.Map<String, XSSFCellStyle> m = new java.util.HashMap<>();
+        m.put("DONE", style(wb, true, 10, null, new byte[]{(byte) 0xD5, (byte) 0xF5, (byte) 0xE3}, true, HorizontalAlignment.CENTER));
+        m.put("IN_PROGRESS", style(wb, true, 10, null, new byte[]{(byte) 0xD6, (byte) 0xEA, (byte) 0xF8}, true, HorizontalAlignment.CENTER));
+        m.put("IN_REVIEW", style(wb, true, 10, null, new byte[]{(byte) 0xFD, (byte) 0xEB, (byte) 0xD0}, true, HorizontalAlignment.CENTER));
+        m.put("CANCELLED", style(wb, false, 10, null, new byte[]{(byte) 0xFA, (byte) 0xDB, (byte) 0xD8}, true, HorizontalAlignment.CENTER));
+        return m;
     }
 
     private static java.time.LocalDate parse(String ddMMyyyy) {

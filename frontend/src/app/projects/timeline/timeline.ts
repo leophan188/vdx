@@ -338,6 +338,9 @@ export class PrjTimeline implements OnInit {
     let min = manualFrom ? startOfDay(manualFrom) : autoMin;
     let max = manualTo ? startOfDay(manualTo) : autoMax;
     if (max < min) { const tmp = min; min = max; max = tmp; }
+    // An toàn: giới hạn bề rộng khung ~12 năm để không dựng hàng trăm nghìn ô (treo).
+    const MAX_SPAN = 366 * 12;
+    if (diffDays(min, max) > MAX_SPAN) max = addDays(min, MAX_SPAN);
     return { min, max };
   });
 
@@ -362,12 +365,13 @@ export class PrjTimeline implements OnInit {
     const ppd = this.pxPerDay();
     const z = this.zoom();
     const out: AxisTick[] = [];
+    const MAX_TICKS = 1200; // an toàn: không dựng quá nhiều ô trục (tránh treo)
     const leftOf = (d: Date) => diffDays(min, d) * ppd;
 
     if (z === 'year') {
       let y = min.getFullYear();
       const endY = max.getFullYear();
-      for (; y <= endY; y++) {
+      for (; y <= endY && out.length < MAX_TICKS; y++) {
         const start = new Date(y, 0, 1);
         const next = new Date(y + 1, 0, 1);
         const segStart = start < min ? min : start;
@@ -376,7 +380,7 @@ export class PrjTimeline implements OnInit {
       }
     } else if (z === 'month') {
       let cur = new Date(min.getFullYear(), min.getMonth(), 1);
-      while (cur <= max) {
+      while (cur <= max && out.length < MAX_TICKS) {
         const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
         const segStart = cur < min ? min : cur;
         const segEnd = next > addDays(max, 1) ? addDays(max, 1) : next;
@@ -387,7 +391,7 @@ export class PrjTimeline implements OnInit {
       // Tuần bắt đầu Thứ Hai.
       let cur = startOfWeek(min);
       let n = 1;
-      while (cur <= max) {
+      while (cur <= max && out.length < MAX_TICKS) {
         const next = addDays(cur, 7);
         const segStart = cur < min ? min : cur;
         const segEnd = next > addDays(max, 1) ? addDays(max, 1) : next;
@@ -401,7 +405,7 @@ export class PrjTimeline implements OnInit {
     } else {
       // day
       let cur = startOfDay(min);
-      while (cur <= max) {
+      while (cur <= max && out.length < MAX_TICKS) {
         out.push({ label: fmtShort(cur), left: leftOf(cur), width: ppd });
         cur = addDays(cur, 1);
       }
@@ -510,7 +514,8 @@ function parseIsoDate(s: string | null | undefined): Date | null {
   const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s.trim());
   if (!m) return null;
   const y = +m[1], mo = +m[2], d = +m[3];
-  if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+  // Chặn năm phi lý (vd gõ dở "0002-...") gây phạm vi khổng lồ → treo trình duyệt.
+  if (y < 1970 || y > 2100 || mo < 1 || mo > 12 || d < 1 || d > 31) return null;
   const dt = new Date(y, mo - 1, d);
   return isNaN(dt.getTime()) ? null : dt;
 }
