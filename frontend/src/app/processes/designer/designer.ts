@@ -205,6 +205,15 @@ export class Designer implements AfterViewInit, OnDestroy {
     { k: 'REJECT', l: 'Từ chối' }, { k: 'DELEGATE', l: 'Uỷ quyền' }
   ];
 
+  /** Biến tiến trình lưu nút hành động đã bấm ở bước trước (backend đặt khi hoàn thành việc). */
+  static readonly ACTION_VAR = 'lastAction';
+  /** Nhãn hành động theo mã (dùng cho tóm tắt điều kiện nhánh). */
+  actionLabelOf(code: string | undefined): string {
+    return this.ALL_ACTIONS.find((a) => a.k === code)?.l ?? (code ?? '');
+  }
+  /** Nhánh này đang rẽ theo NÚT HÀNH ĐỘNG (không phải trường form). */
+  isActionCond(): boolean { return this.flowCond.field === Designer.ACTION_VAR; }
+
   ngAfterViewInit(): void {
     this.modeler = new BpmnModeler({ container: this.canvasRef().nativeElement });
     this.modeler.on('selection.changed', (e: any) =>
@@ -315,7 +324,18 @@ export class Designer implements AfterViewInit, OnDestroy {
   openFlowConfig(): void {
     if (this.selectedFlowId()) this.flowConfigOpen.set(true);
   }
+  /** Khi đổi trường điều kiện: nếu chọn "Hành động (nút)" → ép op = bằng + chọn hành động mặc định. */
+  onCondFieldChange(): void {
+    if (this.isActionCond()) {
+      this.flowCond.op = 'eq';
+      if (!this.flowCond.value) this.flowCond.value = 'APPROVE';
+    }
+  }
   condLabel(c: FlowCondition): string {
+    // Nhánh rẽ theo nút hành động đã bấm — hiển thị tên hành động tiếng Việt.
+    if (c.field === Designer.ACTION_VAR) {
+      return `Hành động = "${this.actionLabelOf(c.value)}"`;
+    }
     const fl = this.dataFields().find((d) => d.key === c.field)?.label ?? c.field;
     const op = this.COND_OPS.find((o) => o.v === c.op)?.l ?? c.op;
     return c.op === 'truthy' ? `${fl} ${op}` : `${fl} ${op} "${c.value ?? ''}"`;

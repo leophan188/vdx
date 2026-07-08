@@ -70,6 +70,16 @@ export class TaskProcessor {
   private formSvc = inject(FormService);
   private toast = inject(ToastService);
 
+  /** Nhãn tiếng Việt của mã hành động (đồng bộ với ALL_ACTIONS bên designer). */
+  private static readonly ACTION_LABELS: Record<string, string> = {
+    RECORD: 'Ghi lại', EDIT: 'Sửa', CANCEL: 'Hủy', SUBMIT: 'Trình duyệt',
+    APPROVE: 'Phê duyệt', RETURN: 'Trả lại', REJECT: 'Từ chối', DELEGATE: 'Uỷ quyền'
+  };
+  /** Nhãn hiển thị của nút hành động: đổi mã (APPROVE…) sang tiếng Việt, giữ nguyên nếu đã là chữ thường. */
+  actionLabel(code: string): string {
+    return TaskProcessor.ACTION_LABELS[code] ?? code;
+  }
+
   /** Phát khi việc đã hoàn thành (màn cha tải lại danh sách). */
   readonly completed = output<void>();
 

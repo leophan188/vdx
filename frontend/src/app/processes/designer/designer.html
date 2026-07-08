@@ -206,23 +206,33 @@
 
 <!-- ===== Modal điều kiện chuyển bước trên nhánh (Story 2.2) ===== -->
 <app-modal [open]="flowConfigOpen()" title="Điều kiện chuyển bước" (closed)="flowConfigOpen.set(false)">
-  <p class="hint" style="margin-top:0;">Nhánh này chỉ được đi khi điều kiện đúng (dựa trên dữ liệu form). Để trống = nhánh mặc định (luôn đi).</p>
+  <p class="hint" style="margin-top:0;">Nhánh này chỉ được đi khi điều kiện đúng — theo <strong>nút hành động đã bấm</strong> ở bước trước, hoặc theo <strong>dữ liệu form</strong>. Để trống = nhánh mặc định (luôn đi).</p>
   <div class="cfg-2col">
     <div class="field">
-      <label>Trường dữ liệu</label>
-      <select [(ngModel)]="flowCond.field">
+      <label>Điều kiện theo</label>
+      <select [(ngModel)]="flowCond.field" (ngModelChange)="onCondFieldChange()">
         <option value="">— Nhánh mặc định —</option>
+        <option [value]="'lastAction'">🔘 Nút hành động (Phê duyệt / Từ chối…)</option>
         @for (d of dataFields(); track d.key) { <option [value]="d.key">{{ d.label }} ({{ d.key }})</option> }
       </select>
     </div>
+    @if (!isActionCond()) {
+      <div class="field">
+        <label>Điều kiện</label>
+        <select [(ngModel)]="flowCond.op">
+          @for (op of COND_OPS; track op.v) { <option [ngValue]="op.v">{{ op.l }}</option> }
+        </select>
+      </div>
+    }
+  </div>
+  @if (isActionCond()) {
     <div class="field">
-      <label>Điều kiện</label>
-      <select [(ngModel)]="flowCond.op">
-        @for (op of COND_OPS; track op.v) { <option [ngValue]="op.v">{{ op.l }}</option> }
+      <label>Đi nhánh này khi bấm nút</label>
+      <select [(ngModel)]="flowCond.value">
+        @for (a of ALL_ACTIONS; track a.k) { <option [value]="a.k">{{ a.l }}</option> }
       </select>
     </div>
-  </div>
-  @if (flowCond.field && flowCond.op !== 'truthy') {
+  } @else if (flowCond.field && flowCond.op !== 'truthy') {
     <div class="field"><label>Giá trị so sánh</label><input [(ngModel)]="flowCond.value" placeholder="VD: Cao" /></div>
   }
   @if (flowCond.field) {

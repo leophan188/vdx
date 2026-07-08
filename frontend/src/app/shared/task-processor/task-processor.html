@@ -268,7 +268,7 @@
   <ng-container modalFooter>
     <button type="button" class="btn btn--ghost" (click)="close()">Đóng</button>
     @for (a of detail()?.actions || []; track a) {
-      <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="act(a)">{{ a }}</button>
+      <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="act(a)">{{ actionLabel(a) }}</button>
     }
   </ng-container>
 </app-modal>
