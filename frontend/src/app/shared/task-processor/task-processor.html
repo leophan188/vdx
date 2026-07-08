@@ -141,40 +141,40 @@
                       <th style="width:36px"></th>
                     </tr></thead>
                     <tbody>
-                      @for (row of tableData(f.key); track $index) {
+                      @for (row of tableData(f.key); track $index; let ri = $index) {
                         <tr>
                           @for (c of f.columns; track c.key) {
                             <td>
                               @switch (c.type) {
                                 @case ('number') {
                                   <input type="number" [readOnly]="readonly_(f.key)"
-                                         [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
-                                         (ngModelChange)="setCell(f.key, $index, c.key, $event)" />
+                                         [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
+                                         (ngModelChange)="setCell(f.key, ri, c.key, $event)" />
                                 }
                                 @case ('date') {
                                   <input type="date" [readOnly]="readonly_(f.key)"
-                                         [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
-                                         (ngModelChange)="setCell(f.key, $index, c.key, $event)" />
+                                         [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
+                                         (ngModelChange)="setCell(f.key, ri, c.key, $event)" />
                                 }
                                 @case ('datetime') {
                                   <input type="datetime-local" [readOnly]="readonly_(f.key)"
-                                         [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
-                                         (ngModelChange)="setCell(f.key, $index, c.key, $event)" />
+                                         [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
+                                         (ngModelChange)="setCell(f.key, ri, c.key, $event)" />
                                 }
                                 @case ('textarea') {
                                   <textarea rows="2" [readOnly]="readonly_(f.key)"
-                                            [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
-                                            (ngModelChange)="setCell(f.key, $index, c.key, $event)"></textarea>
+                                            [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
+                                            (ngModelChange)="setCell(f.key, ri, c.key, $event)"></textarea>
                                 }
                                 @case ('boolean') {
                                   <input type="checkbox" [disabled]="readonly_(f.key)"
-                                         [checked]="cellVal(f.key, $index, c.key) === 'true'"
-                                         (change)="setCell(f.key, $index, c.key, $any($event.target).checked ? 'true' : '')" />
+                                         [checked]="cellVal(f.key, ri, c.key) === 'true'"
+                                         (change)="setCell(f.key, ri, c.key, $any($event.target).checked ? 'true' : '')" />
                                 }
                                 @case ('dropdown') {
                                   <select [disabled]="readonly_(f.key)"
-                                          [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
-                                          (ngModelChange)="setCell(f.key, $index, c.key, $event)">
+                                          [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
+                                          (ngModelChange)="setCell(f.key, ri, c.key, $event)">
                                     <option value="">—</option>
                                     @for (o of colOpts(c); track o) { <option [value]="o">{{ o }}</option> }
                                   </select>
@@ -184,8 +184,8 @@
                                     @for (o of colOpts(c); track o) {
                                       <label class="radio-opt">
                                         <input type="checkbox" [disabled]="readonly_(f.key)"
-                                               [checked]="cellHasMulti(f.key, $index, c.key, o)"
-                                               (change)="cellToggleMulti(f.key, $index, c.key, o)" /> {{ o }}
+                                               [checked]="cellHasMulti(f.key, ri, c.key, o)"
+                                               (change)="cellToggleMulti(f.key, ri, c.key, o)" /> {{ o }}
                                       </label>
                                     }
                                   </div>
@@ -193,23 +193,23 @@
                                 @case ('orgtree') {
                                   <org-tree-picker [popup]="true" [mode]="$any(c.pickMode) || 'user'"
                                                    [disabled]="readonly_(f.key)"
-                                                   [value]="$any(cellVal(f.key, $index, c.key))"
-                                                   (valueChange)="setCell(f.key, $index, c.key, $event)" />
+                                                   [value]="$any(cellVal(f.key, ri, c.key))"
+                                                   (valueChange)="setCell(f.key, ri, c.key, $event)" />
                                 }
                                 @case ('unitstaff') {
-                                  <unit-staff-picker [value]="$any(cellVal(f.key, $index, c.key))" [disabled]="readonly_(f.key)"
-                                                     (valueChange)="setCell(f.key, $index, c.key, $event)" />
+                                  <unit-staff-picker [value]="$any(cellVal(f.key, ri, c.key))" [disabled]="readonly_(f.key)"
+                                                     (valueChange)="setCell(f.key, ri, c.key, $event)" />
                                 }
                                 @default {
                                   <input type="text" [readOnly]="readonly_(f.key)"
-                                         [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
-                                         (ngModelChange)="setCell(f.key, $index, c.key, $event)" />
+                                         [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
+                                         (ngModelChange)="setCell(f.key, ri, c.key, $event)" />
                                 }
                               }
                             </td>
                           }
                           <td>@if (!readonly_(f.key)) {
-                            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá dòng" (click)="removeRow(f.key, $index)">🗑</button>
+                            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá dòng" (click)="removeRow(f.key, ri)">🗑</button>
                           }</td>
                         </tr>
                       }
