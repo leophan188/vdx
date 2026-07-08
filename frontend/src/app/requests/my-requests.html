@@ -23,6 +23,9 @@
     </ng-template>
 
     <ng-template gridCell="startedAt" let-i>{{ fmt(i.startedAt) }}</ng-template>
+    <ng-template gridCell="processVersion" let-i>
+      <span class="badge" style="background:var(--color-surface-2,rgba(127,127,127,.14));" title="Phiên bản quy trình đơn này đang chạy">v{{ i.processVersion }}</span>
+    </ng-template>
 
     <ng-template gridCell="actions" let-i>
       <button type="button" class="btn btn--icon" title="Tiến trình" (click)="openTimeline(i)">🕑</button>

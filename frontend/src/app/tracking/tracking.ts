@@ -21,6 +21,7 @@ export class Tracking implements OnInit, OnDestroy {
   readonly cols: GridColumn[] = [
     { key: 'title', header: 'Hồ sơ', sortable: true },
     { key: 'processName', header: 'Quy trình', sortable: true, width: '210px' },
+    { key: 'processVersion', header: 'PB', align: 'center', width: '64px', sortable: true },
     { key: 'status', header: 'Trạng thái', width: '130px' },
     { key: 'currentStep', header: 'Trạng thái / Bước hiện tại' },
     { key: 'startedAt', header: 'Khởi tạo', width: '130px' },

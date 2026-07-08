@@ -47,6 +47,9 @@
     </ng-template>
 
     <ng-template gridCell="startedAt" let-i>{{ fmt(i.startedAt) }}</ng-template>
+    <ng-template gridCell="processVersion" let-i>
+      <span class="badge" style="background:var(--color-surface-2,rgba(127,127,127,.14));" title="Phiên bản quy trình đơn này đang chạy">v{{ i.processVersion }}</span>
+    </ng-template>
 
     <ng-template gridCell="actions" let-i>
       <span class="cell-actions">
@@ -66,6 +69,10 @@
     <div class="ov-head" style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px;">
       <strong>{{ o.title }}</strong>
       <span class="badge" [class]="statusClass(o.status)">{{ statusLabel(o.status) }}</span>
+      @if (o.version) {
+        <span class="badge" style="background:var(--color-surface-2,rgba(127,127,127,.14));"
+              title="Đơn này chạy theo phiên bản quy trình đã ban hành lúc khởi tạo — không đổi dù cấu hình sửa sau này">Phiên bản v{{ o.version }}</span>
+      }
       @if (o.total) {
         <span class="hint">Bước {{ o.currentIndex || o.total }}/{{ o.total }}</span>
         <span style="flex:1;min-width:120px;max-width:260px;height:6px;border-radius:3px;background:var(--color-border,#e2e2e2);overflow:hidden;">
