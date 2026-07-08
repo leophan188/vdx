@@ -135,11 +135,15 @@ public class BpmnConditionInjector {
         String op = cond.path("op").asText("truthy");
         String value = cond.path("value").asText("");
         String v = "'" + value.replace("'", "\\'") + "'";
+        // Truy biến qua execution.getVariable(...) thay vì tham chiếu trực tiếp: khi TRƯỜNG ĐIỀU KIỆN
+        // CHƯA ĐƯỢC NHẬP thì biến chưa tồn tại — tham chiếu trực tiếp làm JUEL ném
+        // PropertyNotFoundException khiến hoàn thành việc lỗi. getVariable trả null → nhánh coi như KHÔNG thoả.
+        String var = "execution.getVariable('" + field.replace("\\", "\\\\").replace("'", "\\'") + "')";
         return switch (op) {
-            case "eq" -> "${" + field + " == " + v + "}";
-            case "ne" -> "${" + field + " != " + v + "}";
-            // "có giá trị": đúng cho boolean true + chuỗi không rỗng; sai cho false/rỗng/null
-            default -> "${" + field + " == true || (" + field + " != null && " + field + " != '')}";
+            case "eq" -> "${" + var + " == " + v + "}";
+            case "ne" -> "${" + var + " != " + v + "}";
+            // "có giá trị": đúng cho boolean true + chuỗi không rỗng; sai cho false/rỗng/null (kể cả khi biến chưa tồn tại)
+            default -> "${" + var + " == true || (" + var + " != null && " + var + " != '')}";
         };
     }
 
