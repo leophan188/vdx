@@ -66,6 +66,10 @@
 
   <!-- TAB: Biểu mẫu gắn vào bước + quyền trường (Story 2.9) -->
   @else if (configTab() === 'form') {
+    <label class="radio-row" style="margin-bottom:12px;">
+      <input type="checkbox" [(ngModel)]="meta.officeDoc" (ngModelChange)="writeMeta()" />
+      📝 Bước này có soạn thảo tài liệu OnlyOffice (mỗi bước 1 tài liệu riêng, gắn theo hồ sơ)
+    </label>
     <div class="field">
       <label>Biểu mẫu của bước</label>
       <select [(ngModel)]="meta.formId" (ngModelChange)="onFormChange()">

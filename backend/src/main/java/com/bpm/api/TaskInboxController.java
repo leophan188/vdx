@@ -8,6 +8,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -56,6 +57,12 @@ public class TaskInboxController {
     @PostMapping("/tasks/{id}/complete")
     public void complete(@PathVariable String id, @RequestBody TaskDto.CompleteRequest req, Authentication auth) {
         workflow.complete(id, req.action(), req.formData(), actor(auth));
+    }
+
+    /** Lấy/tạo tài liệu OnlyOffice của bước hiện tại (bước bật "soạn thảo tài liệu"). */
+    @PostMapping("/tasks/{id}/office-doc")
+    public Map<String, String> officeDoc(@PathVariable String id, Authentication auth) {
+        return Map.of("id", workflow.officeDocForTask(id, actor(auth)));
     }
 
     /** Nhận một việc theo vai trò (claim). */

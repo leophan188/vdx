@@ -65,6 +65,8 @@ interface StepMeta {
   fieldPerms?: Record<string, FieldPerm>;
   /** Key các trường của BƯỚC TRƯỚC được phép SỬA ở bước này. */
   editPriorKeys?: string[];
+  /** Bước này có bật soạn thảo tài liệu OnlyOffice (mỗi bước 1 tài liệu riêng gắn hồ sơ). */
+  officeDoc?: boolean;
   /** Điều kiện chuyển bước (Story 2.2) — chỉ áp cho phần tử SequenceFlow. */
   condition?: FlowCondition;
 }

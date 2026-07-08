@@ -3,6 +3,7 @@ import { FormsModule } from '@angular/forms';
 import { Modal } from '../modal/modal';
 import { OrgTreePicker } from '../org-tree-picker/org-tree-picker';
 import { UnitStaffPicker } from '../unit-staff-picker/unit-staff-picker';
+import { OfficeEmbed } from '../../documents/office-embed';
 import { ToastService } from '../toast/toast.service';
 import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.service';
 import { FormService, AttachmentRef } from '../../core/form.service';
@@ -24,7 +25,7 @@ interface RField {
  */
 @Component({
   selector: 'app-task-processor',
-  imports: [FormsModule, Modal, OrgTreePicker, UnitStaffPicker],
+  imports: [FormsModule, Modal, OrgTreePicker, UnitStaffPicker, OfficeEmbed],
   templateUrl: './task-processor.html',
   styles: [`
     .tp-card{border:1px solid var(--color-border);border-radius:10px;padding:12px 14px;margin-bottom:14px;background:var(--color-surface-2,rgba(127,127,127,.05));}
@@ -96,6 +97,8 @@ export class TaskProcessor {
   readonly priorFields = signal<RField[]>([]);
   readonly values = signal<Record<string, unknown>>({});
   readonly busy = signal(false);
+  /** Id tài liệu OnlyOffice của bước (nếu bước bật soạn thảo) — để nhúng editor. */
+  readonly officeDocId = signal<string | null>(null);
 
   /** Danh sách render: [mục "Sửa bước trước" + trường bước trước] rồi [mục bước hiện tại + trường bước này]. */
   readonly renderFields = computed<RField[]>(() => {
@@ -136,12 +139,20 @@ export class TaskProcessor {
     this.priorFields.set([]);
     this.values.set({});
     this.detail.set(null);
+    this.officeDocId.set(null);
     this.expandedPrior.set(new Set());
     this.open.set(true);
     this.wf.detail(taskId).subscribe({
       next: (d) => {
         this.detail.set(d);
         this.values.set({ ...d.formData });
+        // Bước bật soạn thảo tài liệu → lấy/tạo tài liệu OnlyOffice của bước rồi nhúng editor.
+        if (d.officeDoc) {
+          this.wf.officeDoc(taskId).subscribe({
+            next: (r) => this.officeDocId.set(r.id),
+            error: () => this.toast.error('Không mở được tài liệu soạn thảo')
+          });
+        }
         this.priorFields.set(d.priorEditFieldsJson ? this.parseFields(d.priorEditFieldsJson) : []);
         if (d.formSchemaJson) {
           // Ưu tiên schema ĐÓNG BĂNG theo phiên bản của phiên chạy → form không đổi dù cấu hình sửa sau này.

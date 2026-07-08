@@ -61,6 +61,16 @@
       </div>
     }
 
+    <!-- SOẠN THẢO TÀI LIỆU: bước bật OnlyOffice → nhúng editor (mỗi bước 1 tài liệu riêng) -->
+    @if (d.officeDoc) {
+      <div class="tp-sechead tp-sechead--sep"><span>📝 Soạn thảo tài liệu</span></div>
+      @if (officeDocId(); as docId) {
+        <app-office-embed [docId]="docId" />
+      } @else {
+        <p class="hint">Đang mở tài liệu…</p>
+      }
+    }
+
     <!-- NỘI DUNG CẦN ĐIỀN: biểu mẫu bước hiện tại (+ trường bước trước được phép sửa) -->
     @if (renderFields().length && !priorFields().length) {
       <div class="tp-sechead"><span>📝 Nội dung cần điền</span></div>

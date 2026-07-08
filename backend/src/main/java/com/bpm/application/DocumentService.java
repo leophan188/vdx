@@ -60,6 +60,21 @@ public class DocumentService {
         return d;
     }
 
+    /** Lấy (hoặc tạo mới từ template) tài liệu OnlyOffice gắn với 1 BƯỚC của phiên chạy — mỗi bước 1 file riêng. */
+    @Transactional
+    public Document getOrCreateForStep(String instanceId, String stepKey, String name, String actor) {
+        return repo.findFirstByInstanceIdAndStepKey(instanceId, stepKey).orElseGet(() -> {
+            byte[] blank = readTemplate();
+            Document d = new Document(name, instanceId, blank, actor);
+            d.setStepKey(stepKey);
+            d = repo.save(d);
+            versionRepo.save(new DocumentVersion(d.getId(), d.getVersion(), blank, actor));
+            auditPort.record("DOCUMENT_CREATED", "Document", d.getId(), actor,
+                    "step=" + stepKey + " instance=" + instanceId);
+            return d;
+        });
+    }
+
     @Transactional(readOnly = true)
     public List<Document> list() {
         return repo.findAllByOrderByUpdatedAtDesc();

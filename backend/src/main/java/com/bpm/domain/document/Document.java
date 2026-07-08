@@ -25,6 +25,10 @@ public class Document {
     @Column(name = "instance_id", length = 36)
     private String instanceId;
 
+    /** Bước (taskDefinitionKey) mà tài liệu thuộc về — mỗi bước bật OnlyOffice có 1 tài liệu riêng. */
+    @Column(name = "step_key", length = 64)
+    private String stepKey;
+
     @Column(name = "version", nullable = false)
     private int version;
 
@@ -129,6 +133,8 @@ public class Document {
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public String getInstanceId() { return instanceId; }
+    public String getStepKey() { return stepKey; }
+    public void setStepKey(String stepKey) { this.stepKey = stepKey; }
     public int getVersion() { return version; }
     public byte[] getContent() { return content; }
     public String getContentType() { return contentType; }

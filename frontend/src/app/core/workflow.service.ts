@@ -36,6 +36,8 @@ export interface TaskDetail {
   priorSteps: StepView[];
   /** JSON các trường của bước TRƯỚC được phép SỬA ở bước này (cấu hình editPriorKeys). */
   priorEditFieldsJson: string | null;
+  /** Bước này có bật soạn thảo tài liệu OnlyOffice không. */
+  officeDoc: boolean;
 }
 
 export interface StartableProcess {
@@ -141,6 +143,11 @@ export class WorkflowService {
 
   complete(taskId: string, action: string, formData: Record<string, unknown>): Observable<void> {
     return this.http.post<void>(`${this.base}/tasks/${taskId}/complete`, { action, formData }, { withCredentials: true });
+  }
+
+  /** Lấy/tạo tài liệu OnlyOffice của bước hiện tại (bước bật soạn thảo). Trả id tài liệu. */
+  officeDoc(taskId: string): Observable<{ id: string }> {
+    return this.http.post<{ id: string }>(`${this.base}/tasks/${taskId}/office-doc`, {}, { withCredentials: true });
   }
 
   /** Nhận việc theo vai trò (Story 3.x). */

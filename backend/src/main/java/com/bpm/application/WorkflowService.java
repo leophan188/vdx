@@ -73,6 +73,7 @@ public class WorkflowService {
     private final ObjectMapper objectMapper;
     private final FormService formService;
     private final com.bpm.infrastructure.OrgUnitRepository orgUnitRepo;
+    private final DocumentService documentService;
 
     /** Cache thứ tự bước (userTask) theo processDefinitionId của Flowable + nhãn trường theo formId. */
     private final Map<String, java.util.LinkedHashMap<String, String>> stepOrderCache = new java.util.concurrent.ConcurrentHashMap<>();
@@ -86,7 +87,7 @@ public class WorkflowService {
                            RoleService roleService, NotificationService notificationService,
                            MailPort mailPort, BpmnConditionInjector conditionInjector,
                            AuditPort auditPort, ObjectMapper objectMapper, FormService formService,
-                           com.bpm.infrastructure.OrgUnitRepository orgUnitRepo) {
+                           com.bpm.infrastructure.OrgUnitRepository orgUnitRepo, DocumentService documentService) {
         this.repositoryService = repositoryService;
         this.runtimeService = runtimeService;
         this.taskService = taskService;
@@ -106,6 +107,7 @@ public class WorkflowService {
         this.objectMapper = objectMapper;
         this.formService = formService;
         this.orgUnitRepo = orgUnitRepo;
+        this.documentService = documentService;
     }
 
     /**
@@ -411,6 +413,7 @@ public class WorkflowService {
         int procVersion = 0;
         Object fieldPerms = null;
         List<String> actions = new ArrayList<>();
+        boolean officeDoc = false;
         String procName = "—";
         if (wi != null) {
             procName = safeProcessName(wi.getProcessId());
@@ -443,6 +446,7 @@ public class WorkflowService {
                 if (step.has("actions") && step.get("actions").isArray()) {
                     step.get("actions").forEach(a -> actions.add(a.asText()));
                 }
+                officeDoc = step.path("officeDoc").asBoolean(false);
             }
         }
         if (actions.isEmpty()) {
@@ -457,7 +461,23 @@ public class WorkflowService {
         }
         return new TaskDto.Detail(t.getId(), t.getName(), t.getTaskDefinitionKey(), procName,
                 wi != null ? wi.getId() : null, formId, formSchemaJson, procVersion, fieldPerms, actions, vars,
-                priorSteps, priorEditFieldsJson);
+                priorSteps, priorEditFieldsJson, officeDoc);
+    }
+
+    /** Lấy/tạo tài liệu OnlyOffice của BƯỚC hiện tại (bước bật officeDoc). Trả documentId để FE nhúng editor. */
+    @Transactional
+    public String officeDocForTask(String taskId, String actor) {
+        Task t = requireTask(taskId);
+        WorkflowInstance wi = instanceRepo.findByFlowableInstanceId(t.getProcessInstanceId()).orElse(null);
+        if (wi == null) {
+            throw new IllegalStateException("Việc không thuộc phiên chạy nào");
+        }
+        JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
+        if (step == null || !step.path("officeDoc").asBoolean(false)) {
+            throw new IllegalStateException("Bước này không bật soạn thảo tài liệu");
+        }
+        String docName = safeProcessName(wi.getProcessId()) + " — " + t.getName();
+        return documentService.getOrCreateForStep(wi.getId(), t.getTaskDefinitionKey(), docName, actor).getId();
     }
 
     /** Bản đồ key trường → định nghĩa (JsonNode) gộp từ mọi biểu mẫu của instance (snapshot ưu tiên, fallback form hiện hành). */
