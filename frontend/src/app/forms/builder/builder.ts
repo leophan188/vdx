@@ -12,9 +12,10 @@ type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean
   | 'dropdown' | 'radio' | 'multiselect' | 'file' | 'richtext' | 'table' | 'scoretable'
   | 'orgtree' | 'unitstaff' | 'section';
 
-/** Kiểu dữ liệu của một cột trong bảng nhiều dòng. */
-type ColumnType = 'text' | 'number' | 'date' | 'dropdown' | 'boolean';
-interface FormColumn { key: string; label: string; type?: ColumnType; options?: string; }
+/** Kiểu dữ liệu của một cột trong bảng nhiều dòng — đầy đủ như trường thường (trừ loại bố cục). */
+type ColumnType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean'
+  | 'dropdown' | 'multiselect' | 'orgtree' | 'unitstaff';
+interface FormColumn { key: string; label: string; type?: ColumnType; options?: string; pickMode?: 'user' | 'position' | 'unit'; }
 /** Một tiêu chí của bảng chấm điểm: nhãn + trọng số (%). */
 interface FormCriterion { key: string; label: string; weight: number; }
 type CondOp = 'eq' | 'ne' | 'truthy';
@@ -90,10 +91,15 @@ export class Builder implements OnInit {
   /** Kiểu dữ liệu chọn được cho từng cột của bảng nhiều dòng. */
   readonly COLUMN_TYPES: { v: ColumnType; l: string }[] = [
     { v: 'text', l: 'Văn bản' },
+    { v: 'textarea', l: 'Văn bản nhiều dòng' },
     { v: 'number', l: 'Số' },
     { v: 'date', l: 'Ngày' },
+    { v: 'datetime', l: 'Ngày - giờ' },
+    { v: 'boolean', l: 'Có / Không' },
     { v: 'dropdown', l: 'Danh sách chọn' },
-    { v: 'boolean', l: 'Có / Không' }
+    { v: 'multiselect', l: 'Chọn nhiều' },
+    { v: 'orgtree', l: 'Chọn theo cây tổ chức' },
+    { v: 'unitstaff', l: 'Cây đơn vị → chọn nhân sự' }
   ];
   readonly COND_OPS: { v: CondOp; l: string }[] = [
     { v: 'truthy', l: 'có giá trị' },

@@ -156,6 +156,16 @@
                                          [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
                                          (ngModelChange)="setCell(f.key, $index, c.key, $event)" />
                                 }
+                                @case ('datetime') {
+                                  <input type="datetime-local" [readOnly]="readonly_(f.key)"
+                                         [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
+                                         (ngModelChange)="setCell(f.key, $index, c.key, $event)" />
+                                }
+                                @case ('textarea') {
+                                  <textarea rows="2" [readOnly]="readonly_(f.key)"
+                                            [ngModel]="cellVal(f.key, $index, c.key)" [ngModelOptions]="{ standalone: true }"
+                                            (ngModelChange)="setCell(f.key, $index, c.key, $event)"></textarea>
+                                }
                                 @case ('boolean') {
                                   <input type="checkbox" [disabled]="readonly_(f.key)"
                                          [checked]="cellVal(f.key, $index, c.key) === 'true'"
@@ -168,6 +178,26 @@
                                     <option value="">—</option>
                                     @for (o of colOpts(c); track o) { <option [value]="o">{{ o }}</option> }
                                   </select>
+                                }
+                                @case ('multiselect') {
+                                  <div class="radio-row">
+                                    @for (o of colOpts(c); track o) {
+                                      <label class="radio-opt">
+                                        <input type="checkbox" [disabled]="readonly_(f.key)"
+                                               [checked]="cellHasMulti(f.key, $index, c.key, o)"
+                                               (change)="cellToggleMulti(f.key, $index, c.key, o)" /> {{ o }}
+                                      </label>
+                                    }
+                                  </div>
+                                }
+                                @case ('orgtree') {
+                                  <org-tree-picker [mode]="$any(c.pickMode) || 'user'"
+                                                   [value]="$any(cellVal(f.key, $index, c.key))"
+                                                   (valueChange)="setCell(f.key, $index, c.key, $event)" />
+                                }
+                                @case ('unitstaff') {
+                                  <unit-staff-picker [value]="$any(cellVal(f.key, $index, c.key))" [disabled]="readonly_(f.key)"
+                                                     (valueChange)="setCell(f.key, $index, c.key, $event)" />
                                 }
                                 @default {
                                   <input type="text" [readOnly]="readonly_(f.key)"

@@ -101,8 +101,15 @@
                   </select>
                   <button type="button" class="btn btn--ghost btn--sm" (click)="removeColumn(f, $index)">✕</button>
                 </div>
-                @if (c.type === 'dropdown') {
+                @if (c.type === 'dropdown' || c.type === 'multiselect') {
                   <input [(ngModel)]="c.options" (ngModelChange)="touch()" placeholder="Lựa chọn: Thấp, Trung bình, Cao" style="width:100%;margin-top:6px" />
+                }
+                @if (c.type === 'orgtree') {
+                  <select [(ngModel)]="c.pickMode" (ngModelChange)="touch()" style="width:100%;margin-top:6px">
+                    <option ngValue="user">Nhân sự</option>
+                    <option ngValue="position">Chức danh</option>
+                    <option ngValue="unit">Đơn vị</option>
+                  </select>
                 }
               </div>
             }
@@ -221,8 +228,13 @@
                 @switch (c.type) {
                   @case ('number') { <input type="number" disabled placeholder="số" /> }
                   @case ('date') { <input type="date" disabled /> }
+                  @case ('datetime') { <input type="datetime-local" disabled /> }
                   @case ('boolean') { <input type="checkbox" disabled /> }
+                  @case ('textarea') { <input disabled placeholder="văn bản dài" /> }
                   @case ('dropdown') { <select disabled><option>—</option>@for (o of colOptions(c); track o) { <option>{{ o }}</option> }</select> }
+                  @case ('multiselect') { <input disabled placeholder="chọn nhiều" /> }
+                  @case ('orgtree') { <input disabled placeholder="🌳 chọn từ cây tổ chức" /> }
+                  @case ('unitstaff') { <input disabled placeholder="👥 cây đơn vị → nhân sự" /> }
                   @default { <input disabled placeholder="văn bản" /> }
                 }
               </td> }</tr></tbody>

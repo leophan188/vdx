@@ -801,10 +801,21 @@ public class WorkflowService {
                     String cl = c.path("label").asText(ck);
                     String cv = row.path(ck).asText("");
                     if (!cv.isBlank()) {
+                        // Cột chọn cây → hiển thị TÊN; cột Có/Không → nhãn dễ đọc.
+                        String ctype = c.path("type").asText("");
+                        String disp = switch (ctype) {
+                            case "orgtree" -> resolveOrgValue(c.path("pickMode").asText("user"), cv);
+                            case "unitstaff" -> resolveOrgValue("user", cv);
+                            case "boolean" -> "true".equals(cv) ? "Có" : "Không";
+                            default -> cv;
+                        };
+                        if (disp == null || disp.isBlank()) {
+                            disp = cv;
+                        }
                         if (sb.length() > 0) {
                             sb.append(" · ");
                         }
-                        sb.append(cl).append(": ").append(cv);
+                        sb.append(cl).append(": ").append(disp);
                     }
                 }
             }

@@ -9,7 +9,7 @@ import { FormService } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
 interface RCriterion { key: string; label: string; weight: number; }
-interface RColumn { key: string; label: string; type?: string; options?: string; }
+interface RColumn { key: string; label: string; type?: string; options?: string; pickMode?: 'user' | 'position' | 'unit'; }
 interface RField {
   key: string; label: string; type: string; required?: boolean;
   placeholder?: string; options?: string; defaultValue?: string;
@@ -144,9 +144,19 @@ export class TaskProcessor {
     if (Object.keys(patch).length) this.values.update((o) => ({ ...o, ...patch }));
   }
 
-  /** Lựa chọn của cột kiểu dropdown trong bảng nhiều dòng. */
+  /** Lựa chọn của cột kiểu dropdown/multiselect trong bảng nhiều dòng. */
   colOpts(c: RColumn): string[] {
     return (c.options ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  /** Ô multiselect trong bảng: lưu chuỗi ngăn cách dấu phẩy ở cấp ô. */
+  cellHasMulti(fieldKey: string, i: number, col: string, opt: string): boolean {
+    return String(this.cellVal(fieldKey, i, col) ?? '').split(',').map((s) => s.trim()).includes(opt);
+  }
+  cellToggleMulti(fieldKey: string, i: number, col: string, opt: string): void {
+    const cur = String(this.cellVal(fieldKey, i, col) ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+    const idx = cur.indexOf(opt);
+    if (idx >= 0) cur.splice(idx, 1); else cur.push(opt);
+    this.setCell(fieldKey, i, col, cur.join(', '));
   }
 
   private parseFields(schemaJson: string | null): RField[] {
@@ -170,7 +180,8 @@ export class TaskProcessor {
           ? (f['columns'] as Record<string, unknown>[]).map((c) => ({
               key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? ''),
               type: c['type'] != null ? String(c['type']) : undefined,
-              options: c['options'] != null ? String(c['options']) : undefined
+              options: c['options'] != null ? String(c['options']) : undefined,
+              pickMode: (c['pickMode'] as RColumn['pickMode']) ?? undefined
             }))
           : undefined
       })).filter((f: RField) => f.key);
