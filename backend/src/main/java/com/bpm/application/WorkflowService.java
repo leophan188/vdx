@@ -176,6 +176,33 @@ public class WorkflowService {
         });
     }
 
+    /**
+     * Trường của biểu mẫu ƯU TIÊN theo snapshot của instance (đóng băng lúc khởi tạo). Nếu snapshot không có
+     * (instance cũ trước khi có tính năng) mới fallback về form hiện hành. Nhờ vậy dữ liệu cũ không đứt đoạn.
+     */
+    private JsonNode formFieldsNode(String formId, JsonNode formsSnapshot) {
+        if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
+            try {
+                return objectMapper.readTree(formsSnapshot.get(formId).asText()).path("fields");
+            } catch (Exception ignore) {
+                // schema snapshot hỏng — fallback form hiện hành
+            }
+        }
+        return formFieldsNode(formId);
+    }
+
+    /** Parse snapshot biểu mẫu {formId: schemaJson} của instance thành node (null nếu trống). */
+    private JsonNode parseFormsSnapshot(String formsJson) {
+        if (formsJson == null || formsJson.isBlank()) {
+            return null;
+        }
+        try {
+            return objectMapper.readTree(formsJson);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     /** Khởi tạo nhiệm vụ từ quy trình đã publish + dữ liệu form bước đầu (FR-D01). */
     @Transactional
     public WorkflowInstance start(String processId, Map<String, Object> formData, String actor) {
@@ -198,8 +225,11 @@ public class WorkflowService {
         ProcessInstance inst = runtimeService.startProcessInstanceById(
                 pd.getId(), formData != null ? formData : Map.of());
 
+        // Đóng băng schema biểu mẫu vào instance: version mới đã có sẵn (publish); version cũ thì dựng tại đây.
+        String formsSnapshot = v.getFormsJson() != null ? v.getFormsJson()
+                : processService.buildFormsSnapshot(v.getStepsMetaJson());
         WorkflowInstance wi = instanceRepo.save(
-                new WorkflowInstance(processId, v.getVersion(), inst.getId(), v.getStepsMetaJson(), actor));
+                new WorkflowInstance(processId, v.getVersion(), inst.getId(), v.getStepsMetaJson(), formsSnapshot, actor));
         auditPort.record("INSTANCE_STARTED", "WorkflowInstance", wi.getId(), actor,
                 "process=" + p.getProcessKey() + " v" + v.getVersion() + ", flowableInstance=" + inst.getId());
 
@@ -373,14 +403,22 @@ public class WorkflowService {
         WorkflowInstance wi = instanceRepo.findByFlowableInstanceId(t.getProcessInstanceId()).orElse(null);
         Map<String, Object> vars = taskService.getVariables(taskId);
         String formId = null;
+        String formSchemaJson = null;
+        int procVersion = 0;
         Object fieldPerms = null;
         List<String> actions = new ArrayList<>();
         String procName = "—";
         if (wi != null) {
             procName = safeProcessName(wi.getProcessId());
+            procVersion = wi.getProcessVersion();
             JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
             if (step != null) {
                 formId = blankToNull(step.path("formId").asText(null));
+                // Đóng băng schema theo phiên bản instance: form của bước hiện tại lấy từ snapshot (nếu có).
+                JsonNode formsSnapshot = parseFormsSnapshot(wi.getFormsJson());
+                if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
+                    formSchemaJson = formsSnapshot.get(formId).asText();
+                }
                 if (step.has("fieldPerms") && step.get("fieldPerms").isObject()) {
                     fieldPerms = objectMapper.convertValue(step.get("fieldPerms"), Map.class);
                 }
@@ -400,7 +438,7 @@ public class WorkflowService {
                     .toList();
         }
         return new TaskDto.Detail(t.getId(), t.getName(), t.getTaskDefinitionKey(), procName,
-                wi != null ? wi.getId() : null, formId, fieldPerms, actions, vars, priorSteps);
+                wi != null ? wi.getId() : null, formId, formSchemaJson, procVersion, fieldPerms, actions, vars, priorSteps);
     }
 
     /** Hoàn thành việc (Story 3.4): ghi dữ liệu form + hành động → luồng tiến → gán việc bước kế (Story 3.5). */
@@ -628,7 +666,7 @@ public class WorkflowService {
             currentIndex = steps.size();
         }
         return new TaskDto.InstanceOverview(wi.getId(), safeProcessName(wi.getProcessId()),
-                titleAndSearch(wi)[0], wi.getStatus(), steps.size(), currentIndex, steps);
+                titleAndSearch(wi)[0], wi.getStatus(), steps.size(), currentIndex, wi.getProcessVersion(), steps);
     }
 
     /** Dựng danh sách bước (đủ, theo thứ tự) của một phiên chạy: trạng thái + người + thời gian + dữ liệu. */
@@ -655,6 +693,7 @@ public class WorkflowService {
         historyService.createHistoricVariableInstanceQuery().processInstanceId(flowInst)
                 .list().forEach(v -> vars.put(v.getVariableName(), v.getValue()));
 
+        JsonNode formsSnapshot = parseFormsSnapshot(wi.getFormsJson());
         List<TaskDto.StepView> steps = new ArrayList<>();
         int index = 0;
         for (Map.Entry<String, String> e : ordered.entrySet()) {
@@ -668,20 +707,21 @@ public class WorkflowService {
             String startedAt = a != null && a.getStartTime() != null ? a.getStartTime().toInstant().toString() : null;
             String endedAt = done ? a.getEndTime().toInstant().toString() : null;
             steps.add(new TaskDto.StepView(index, key, e.getValue(), assignee, startedAt, endedAt, status,
-                    stepFieldValues(wi.getStepsMetaJson(), key, vars)));
+                    stepFieldValues(wi.getStepsMetaJson(), formsSnapshot, key, vars)));
         }
         return steps;
     }
 
     /** Dữ liệu đã nhập ở một bước: các trường của biểu mẫu bước đó có giá trị (Nhãn → Giá trị). */
-    private List<TaskDto.FieldValue> stepFieldValues(String stepsMetaJson, String stepKey, Map<String, Object> vars) {
+    private List<TaskDto.FieldValue> stepFieldValues(String stepsMetaJson, JsonNode formsSnapshot,
+                                                     String stepKey, Map<String, Object> vars) {
         List<TaskDto.FieldValue> out = new ArrayList<>();
         JsonNode step = stepMeta(stepsMetaJson, stepKey);
         String formId = step != null ? blankToNull(step.path("formId").asText(null)) : null;
         if (formId == null) {
             return out;
         }
-        JsonNode fields = formFieldsNode(formId);
+        JsonNode fields = formFieldsNode(formId, formsSnapshot);
         if (!fields.isArray()) {
             return out;
         }

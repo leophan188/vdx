@@ -39,6 +39,12 @@ public class WorkflowInstance {
     @Column(name = "steps_meta_json", columnDefinition = "TEXT")
     private String stepsMetaJson;
 
+    /** Snapshot schema biểu mẫu lúc khởi tạo: JSON {formId: schemaJson} — hiển thị dữ liệu cũ đúng phiên bản
+     * dù form/quy trình bị đổi số bước hay sửa trường về sau. */
+    @Lob
+    @Column(name = "forms_json", columnDefinition = "TEXT")
+    private String formsJson;
+
     @Column(name = "status", length = 16, nullable = false)
     private String status = "RUNNING";
 
@@ -53,11 +59,17 @@ public class WorkflowInstance {
 
     public WorkflowInstance(String processId, int processVersion, String flowableInstanceId,
                             String stepsMetaJson, String startedBy) {
+        this(processId, processVersion, flowableInstanceId, stepsMetaJson, null, startedBy);
+    }
+
+    public WorkflowInstance(String processId, int processVersion, String flowableInstanceId,
+                            String stepsMetaJson, String formsJson, String startedBy) {
         this.id = UUID.randomUUID().toString();
         this.processId = processId;
         this.processVersion = processVersion;
         this.flowableInstanceId = flowableInstanceId;
         this.stepsMetaJson = stepsMetaJson;
+        this.formsJson = formsJson;
         this.status = "RUNNING";
         this.startedBy = startedBy;
         this.startedAt = Instant.now();
@@ -68,6 +80,7 @@ public class WorkflowInstance {
     public int getProcessVersion() { return processVersion; }
     public String getFlowableInstanceId() { return flowableInstanceId; }
     public String getStepsMetaJson() { return stepsMetaJson; }
+    public String getFormsJson() { return formsJson; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getStartedBy() { return startedBy; }

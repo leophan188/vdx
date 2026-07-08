@@ -21,8 +21,8 @@ public class TaskDto {
      * priorSteps = dữ liệu các BƯỚC TRƯỚC đã hoàn thành (để người xử lý xem lại ngữ cảnh).
      */
     public record Detail(String taskId, String stepName, String stepKey, String processName, String instanceId,
-                         String formId, Object fieldPerms, List<String> actions, Map<String, Object> formData,
-                         List<StepView> priorSteps) {
+                         String formId, String formSchemaJson, int processVersion, Object fieldPerms,
+                         List<String> actions, Map<String, Object> formData, List<StepView> priorSteps) {
     }
 
     /** Yêu cầu hoàn thành việc: hành động đã chọn + dữ liệu form. */
@@ -60,7 +60,7 @@ public class TaskDto {
 
     /** Tổng quan một phiên chạy: đủ các bước theo thứ tự + trạng thái + dữ liệu từng bước (để xem theo bước). */
     public record InstanceOverview(String id, String processName, String title, String status,
-                                   int total, int currentIndex, List<StepView> steps) {
+                                   int total, int currentIndex, int version, List<StepView> steps) {
     }
 
     /** Yêu cầu hủy phiên chạy (Story 3.6). */

@@ -3,6 +3,7 @@
   @if (detail(); as d) {
     <p class="hint" style="margin-top:0">
       Quy trình: <strong>{{ d.processName }}</strong>
+      @if (d.processVersion) { <span class="badge" style="margin-left:6px;background:var(--color-surface-2,rgba(127,127,127,.14));" title="Phiên chạy này giữ nguyên phiên bản quy trình lúc khởi tạo — không đổi dù cấu hình sửa sau này">v{{ d.processVersion }}</span> }
       @if (d.stepKey) { <span class="badge badge--info" style="margin-left:6px">{{ d.stepKey }}</span> }
     </p>
 

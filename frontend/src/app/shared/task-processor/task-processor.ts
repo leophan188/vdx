@@ -111,7 +111,10 @@ export class TaskProcessor {
       next: (d) => {
         this.detail.set(d);
         this.values.set({ ...d.formData });
-        if (d.formId) {
+        if (d.formSchemaJson) {
+          // Ưu tiên schema ĐÓNG BĂNG theo phiên bản của phiên chạy → form không đổi dù cấu hình sửa sau này.
+          this.fields.set(this.parseFields(d.formSchemaJson));
+        } else if (d.formId) {
           this.formSvc.get(d.formId).subscribe({
             next: (f) => this.fields.set(this.parseFields(f.schemaJson)),
             error: () => this.fields.set([])

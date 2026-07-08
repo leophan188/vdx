@@ -25,6 +25,10 @@ export interface TaskDetail {
   processName: string;
   instanceId: string | null;
   formId: string | null;
+  /** Schema biểu mẫu ĐÓNG BĂNG theo phiên bản instance (ưu tiên hơn form hiện hành để dữ liệu không đứt đoạn). */
+  formSchemaJson: string | null;
+  /** Phiên bản quy trình mà phiên chạy này đang chạy. */
+  processVersion: number;
   fieldPerms: Record<string, 'EDIT' | 'READONLY' | 'HIDDEN'> | null;
   actions: string[];
   formData: Record<string, unknown>;
@@ -103,6 +107,8 @@ export interface InstanceOverview {
   status: string;
   total: number;
   currentIndex: number;
+  /** Phiên bản quy trình đang chạy của phiên này. */
+  version: number;
   steps: StepView[];
 }
 

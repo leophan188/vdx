@@ -38,6 +38,12 @@ public class ProcessVersion {
     @Column(name = "steps_meta_json", columnDefinition = "TEXT", updatable = false)
     private String stepsMetaJson;
 
+    /** Snapshot schema các biểu mẫu dùng ở phiên bản này: JSON {formId: schemaJson}. Đóng băng để dữ liệu cũ
+     * không "đứt đoạn" khi form bị sửa/xoá sau này (AD-3). */
+    @Lob
+    @Column(name = "forms_json", columnDefinition = "TEXT", updatable = false)
+    private String formsJson;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "status", length = 16, nullable = false)
     private ProcessStatus status; // PUBLISHED | RETIRED
@@ -52,11 +58,17 @@ public class ProcessVersion {
     }
 
     public ProcessVersion(String processId, int version, String bpmnXml, String stepsMetaJson, String publishedBy) {
+        this(processId, version, bpmnXml, stepsMetaJson, null, publishedBy);
+    }
+
+    public ProcessVersion(String processId, int version, String bpmnXml, String stepsMetaJson,
+                          String formsJson, String publishedBy) {
         this.id = UUID.randomUUID().toString();
         this.processId = processId;
         this.version = version;
         this.bpmnXml = bpmnXml;
         this.stepsMetaJson = stepsMetaJson;
+        this.formsJson = formsJson;
         this.status = ProcessStatus.PUBLISHED;
         this.publishedAt = Instant.now();
         this.publishedBy = publishedBy;
@@ -67,6 +79,7 @@ public class ProcessVersion {
     public int getVersion() { return version; }
     public String getBpmnXml() { return bpmnXml; }
     public String getStepsMetaJson() { return stepsMetaJson; }
+    public String getFormsJson() { return formsJson; }
     public ProcessStatus getStatus() { return status; }
     public void setStatus(ProcessStatus status) { this.status = status; }
     public Instant getPublishedAt() { return publishedAt; }

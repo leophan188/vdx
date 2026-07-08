@@ -6,10 +6,15 @@ import com.bpm.domain.process.ProcessStatus;
 import com.bpm.domain.process.ProcessVersion;
 import com.bpm.infrastructure.ProcessDefinitionRepository;
 import com.bpm.infrastructure.ProcessVersionRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * Quản trị định nghĩa quy trình (Story 2.1). Lưu định nghĩa BPMN + metadata bước, cấu hình động
@@ -21,11 +26,53 @@ public class ProcessService {
     private final ProcessDefinitionRepository repo;
     private final ProcessVersionRepository versionRepo;
     private final AuditPort auditPort;
+    private final FormService formService;
+    private final ObjectMapper objectMapper;
 
-    public ProcessService(ProcessDefinitionRepository repo, ProcessVersionRepository versionRepo, AuditPort auditPort) {
+    public ProcessService(ProcessDefinitionRepository repo, ProcessVersionRepository versionRepo, AuditPort auditPort,
+                          FormService formService, ObjectMapper objectMapper) {
         this.repo = repo;
         this.versionRepo = versionRepo;
         this.auditPort = auditPort;
+        this.formService = formService;
+        this.objectMapper = objectMapper;
+    }
+
+    /**
+     * Snapshot schema mọi biểu mẫu được tham chiếu trong stepsMeta → JSON {formId: schemaJson}.
+     * Đóng băng cùng phiên bản để dữ liệu đã nhập luôn hiển thị đúng định nghĩa dù form bị sửa/xoá về sau.
+     */
+    String buildFormsSnapshot(String stepsMetaJson) {
+        if (stepsMetaJson == null || stepsMetaJson.isBlank()) {
+            return null;
+        }
+        Set<String> formIds = new LinkedHashSet<>();
+        try {
+            JsonNode meta = objectMapper.readTree(stepsMetaJson);
+            for (JsonNode step : meta) {
+                String fid = step.path("formId").asText(null);
+                if (fid != null && !fid.isBlank()) {
+                    formIds.add(fid);
+                }
+            }
+        } catch (Exception e) {
+            return null;
+        }
+        if (formIds.isEmpty()) {
+            return null;
+        }
+        ObjectNode out = objectMapper.createObjectNode();
+        for (String fid : formIds) {
+            try {
+                String schema = formService.get(fid).getSchemaJson();
+                if (schema != null && !schema.isBlank()) {
+                    out.put(fid, schema);
+                }
+            } catch (Exception ignore) {
+                // form không còn — bỏ qua, hiển thị sẽ fallback
+            }
+        }
+        return out.isEmpty() ? null : out.toString();
     }
 
     @Transactional
@@ -82,7 +129,9 @@ public class ProcessService {
             throw new IllegalStateException("Chưa có sơ đồ để ban hành");
         }
         int newVer = p.getPublishedVersion() + 1;
-        ProcessVersion v = versionRepo.save(new ProcessVersion(p.getId(), newVer, p.getBpmnXml(), p.getStepsMetaJson(), actor));
+        String formsSnapshot = buildFormsSnapshot(p.getStepsMetaJson());
+        ProcessVersion v = versionRepo.save(new ProcessVersion(
+                p.getId(), newVer, p.getBpmnXml(), p.getStepsMetaJson(), formsSnapshot, actor));
         p.setPublishedVersion(newVer);
         p.setStatus(ProcessStatus.PUBLISHED);
         p.touch();
