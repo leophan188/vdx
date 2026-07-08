@@ -141,6 +141,9 @@ export class Designer implements AfterViewInit, OnDestroy {
   readonly dataFields = signal<{ key: string; label: string }[]>([]);
   /** Trường gom THEO TỪNG BƯỚC (để cấu hình cho phép sửa trường bước trước). */
   readonly stepGroups = signal<{ stepKey: string; stepName: string; fields: { key: string; label: string }[] }[]>([]);
+  /** Bước đang chọn để xem/tích trường (cấu hình "sửa trường bước trước"). */
+  readonly selectedPriorStep = signal<string>('');
+  readonly currentPriorGroup = computed(() => this.stepGroups().find((g) => g.stepKey === this.selectedPriorStep()) ?? null);
   readonly COND_OPS: { v: FlowCondOp; l: string }[] = [
     { v: 'truthy', l: 'có giá trị' },
     { v: 'eq', l: 'bằng' },
@@ -417,11 +420,16 @@ export class Designer implements AfterViewInit, OnDestroy {
     this.meta.editPriorKeys = [...cur];
     this.writeMeta();
   }
+  /** Số trường đã tích của một bước (để nhắc trong dropdown). */
+  countChecked(g: { fields: { key: string }[] }): number {
+    return g.fields.filter((f) => this.isPriorEditable(f.key)).length;
+  }
 
   openConfig(): void {
     if (this.selectedId()) {
       this.collectDataFields(); // trường toàn quy trình (điều kiện nhánh)
       this.collectStepGroups(); // trường gom theo bước (cho phép sửa bước trước)
+      this.selectedPriorStep.set('');
       this.configTab.set('assignee');
       this.configOpen.set(true);
     }

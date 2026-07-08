@@ -96,30 +96,38 @@
       <p class="hint">Chọn một biểu mẫu để gắn vào bước và cấu hình quyền trường (Sửa được / Chỉ xem / Ẩn).</p>
     }
 
-    <!-- Cho phép SỬA trường của bước trước ở bước này — gom THEO TỪNG BƯỚC -->
+    <!-- Cho phép SỬA trường của bước trước: CHỌN BƯỚC → tích trường của bước đó -->
     <h4 class="form-section" style="margin-top:18px;">✏️ Cho phép sửa trường của bước trước</h4>
-    <p class="hint" style="margin-top:0;">Theo từng bước bên dưới, tích các trường mà người ở bước này được phép chỉnh sửa. Có thể chọn từ NHIỀU bước. Giá trị sửa cập nhật xuyên suốt hồ sơ.</p>
+    <p class="hint" style="margin-top:0;">Chọn một bước, rồi tích các trường của bước đó mà người ở bước này được phép chỉnh sửa. Chọn được từ NHIỀU bước — lựa chọn ở bước khác vẫn được giữ. Giá trị sửa cập nhật xuyên suốt hồ sơ.</p>
     @if (stepGroups().length) {
-      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow:auto;">
-        @for (g of stepGroups(); track g.stepKey) {
-          @if (g.fields.length) {
-            <div style="border:1px solid var(--color-border);border-radius:8px;overflow:hidden;">
-              <label class="radio-row" style="margin:0;padding:7px 10px;background:var(--color-surface-2,rgba(127,127,127,.08));font-weight:600;">
-                <input type="checkbox" [checked]="allChecked(g)" (change)="toggleStepAll(g)" />
-                📋 {{ g.stepName }} <span class="hint" style="margin:0;font-weight:400;">· {{ g.fields.length }} trường</span>
-              </label>
-              <div style="padding:6px 10px 8px 26px;display:flex;flex-direction:column;gap:4px;">
-                @for (o of g.fields; track o.key) {
-                  <label class="radio-row" style="margin:0;">
-                    <input type="checkbox" [checked]="isPriorEditable(o.key)" (change)="togglePriorEditable(o.key)" />
-                    {{ o.label }} <span class="hint" style="margin:0;">· {{ o.key }}</span>
-                  </label>
-                }
-              </div>
-            </div>
+      <div class="field">
+        <label>Chọn bước để xem trường</label>
+        <select [ngModel]="selectedPriorStep()" (ngModelChange)="selectedPriorStep.set($event)">
+          <option value="">— Chọn bước —</option>
+          @for (g of stepGroups(); track g.stepKey) {
+            <option [value]="g.stepKey">{{ g.stepName }} · {{ g.fields.length }} trường@if (countChecked(g)) { — đã chọn {{ countChecked(g) }} }</option>
           }
-        }
+        </select>
       </div>
+      @if (currentPriorGroup(); as g) {
+        @if (g.fields.length) {
+          <label class="radio-row" style="font-weight:600;">
+            <input type="checkbox" [checked]="allChecked(g)" (change)="toggleStepAll(g)" /> Chọn tất cả trường của bước này
+          </label>
+          <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;padding-left:6px;">
+            @for (o of g.fields; track o.key) {
+              <label class="radio-row" style="margin:0;">
+                <input type="checkbox" [checked]="isPriorEditable(o.key)" (change)="togglePriorEditable(o.key)" />
+                {{ o.label }} <span class="hint" style="margin:0;">· {{ o.key }}</span>
+              </label>
+            }
+          </div>
+        } @else {
+          <p class="hint">Bước này chưa có trường (biểu mẫu trống).</p>
+        }
+      } @else {
+        <p class="hint">← Chọn một bước ở trên để xem và tích từng trường.</p>
+      }
     } @else {
       <p class="hint">Chưa có bước nào khác có trường. Hãy gắn biểu mẫu có trường cho các bước.</p>
     }
