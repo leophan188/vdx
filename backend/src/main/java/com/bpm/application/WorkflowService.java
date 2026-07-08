@@ -268,6 +268,22 @@ public class WorkflowService {
     /** Việc giao trực tiếp (assignee) + việc theo vai trò đang chờ nhận (candidate-group, Story 3.x). */
     @Transactional(readOnly = true)
     public List<TaskDto.InboxItem> inbox(String username) {
+        return inbox(username, false);
+    }
+
+    /**
+     * Hộp thư việc. Người thường: chỉ việc của mình + việc vai trò chờ nhận.
+     * ADMIN ({@code seeAll}=true): xem HẾT việc đang mở của mọi người (không phân quyền theo người giao).
+     */
+    @Transactional(readOnly = true)
+    public List<TaskDto.InboxItem> inbox(String username, boolean seeAll) {
+        if (seeAll) {
+            List<TaskDto.InboxItem> all = new ArrayList<>();
+            for (Task t : taskService.createTaskQuery().orderByTaskCreateTime().desc().list()) {
+                all.add(toInboxItem(t, false));
+            }
+            return all;
+        }
         String userId = userRepo.findByUsername(username).map(UserAccount::getId).orElse(null);
         if (userId == null) {
             return List.of();

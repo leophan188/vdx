@@ -2,10 +2,14 @@ package com.bpm.api;
 
 import com.bpm.api.dto.TaskDto;
 import com.bpm.application.WorkflowService;
+import com.bpm.domain.permission.Feature;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Hộp thư việc & xử lý việc (Story 3.2/3.4/3.5) — mọi user đăng nhập (không giới hạn ADMIN).
@@ -27,7 +31,19 @@ public class TaskInboxController {
     /** Việc của tôi. */
     @GetMapping("/inbox")
     public List<TaskDto.InboxItem> inbox(Authentication auth) {
-        return workflow.inbox(actor(auth));
+        // Cấp ADMIN xem HẾT việc của mọi người: tài khoản ROLE_ADMIN HOẶC nhóm phân quyền toàn quyền
+        // (QUANTRI — có đủ mọi chức năng FEAT_*).
+        return workflow.inbox(actor(auth), isFullAdmin(auth));
+    }
+
+    /** ADMIN tuyệt đối: role ADMIN hoặc có đủ toàn bộ quyền chức năng (nhóm "Toàn quyền"). */
+    private static boolean isFullAdmin(Authentication auth) {
+        if (auth == null) {
+            return false;
+        }
+        Set<String> auths = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
+        return auths.contains("ROLE_ADMIN") || auths.containsAll(Feature.allAuthorities());
     }
 
     /** Chi tiết một việc. */
