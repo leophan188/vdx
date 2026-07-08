@@ -55,6 +55,25 @@
         <div class="field"><label>Gợi ý nhập (placeholder)</label><input [(ngModel)]="f.placeholder" (ngModelChange)="touch()" /></div>
         <label class="radio-row"><input type="checkbox" [(ngModel)]="f.required" (ngModelChange)="touch()" /> Bắt buộc</label>
 
+        @if (supportsDefault(f.type)) {
+          <div class="field"><label>Giá trị mặc định (điền sẵn khi mở)</label>
+            @if (f.type === 'boolean') {
+              <select [(ngModel)]="f.defaultValue" (ngModelChange)="touch()">
+                <option [ngValue]="undefined">— Không đặt —</option>
+                <option value="true">Có (đã tích)</option>
+                <option value="false">Không</option>
+              </select>
+            } @else if (isSingleChoice(f.type)) {
+              <select [(ngModel)]="f.defaultValue" (ngModelChange)="touch()">
+                <option [ngValue]="undefined">— Không đặt —</option>
+                @for (o of optionList(f); track o) { <option [value]="o">{{ o }}</option> }
+              </select>
+            } @else {
+              <input [type]="defaultInputType(f.type)" [(ngModel)]="f.defaultValue" (ngModelChange)="touch()" placeholder="Giá trị điền sẵn" />
+            }
+          </div>
+        }
+
         @if (isChoice(f.type)) {
           <div class="field"><label>Nguồn lựa chọn</label>
             <select [(ngModel)]="f.optionSource" (ngModelChange)="touch()">
@@ -71,12 +90,20 @@
 
         @if (isTable(f.type)) {
           <div class="field">
-            <label>Cột của bảng</label>
+            <label>Cột của bảng (nhãn · mã · kiểu dữ liệu)</label>
             @for (c of f.columns; track $index) {
-              <div class="recip-row">
-                <input [(ngModel)]="c.label" (ngModelChange)="touch()" placeholder="Tên cột" />
-                <input [(ngModel)]="c.key" (ngModelChange)="touch()" placeholder="mã cột" />
-                <button type="button" class="btn btn--ghost btn--sm" (click)="removeColumn(f, $index)">✕</button>
+              <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-2);margin-bottom:6px;">
+                <div class="recip-row">
+                  <input [(ngModel)]="c.label" (ngModelChange)="touch()" placeholder="Tên cột" />
+                  <input [(ngModel)]="c.key" (ngModelChange)="touch()" placeholder="mã cột" style="width:90px" />
+                  <select [(ngModel)]="c.type" (ngModelChange)="touch()" style="width:130px">
+                    @for (t of COLUMN_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
+                  </select>
+                  <button type="button" class="btn btn--ghost btn--sm" (click)="removeColumn(f, $index)">✕</button>
+                </div>
+                @if (c.type === 'dropdown') {
+                  <input [(ngModel)]="c.options" (ngModelChange)="touch()" placeholder="Lựa chọn: Thấp, Trung bình, Cao" style="width:100%;margin-top:6px" />
+                }
               </div>
             }
             <button type="button" class="btn btn--secondary btn--sm" (click)="addColumn(f)">＋ Thêm cột</button>
@@ -190,7 +217,15 @@
           @case ('table') {
             <table class="data-table">
               <thead><tr>@for (c of f.columns; track c.key) { <th>{{ c.label }}</th> }</tr></thead>
-              <tbody><tr>@for (c of f.columns; track c.key) { <td><input /></td> }</tr></tbody>
+              <tbody><tr>@for (c of f.columns; track c.key) { <td>
+                @switch (c.type) {
+                  @case ('number') { <input type="number" disabled placeholder="số" /> }
+                  @case ('date') { <input type="date" disabled /> }
+                  @case ('boolean') { <input type="checkbox" disabled /> }
+                  @case ('dropdown') { <select disabled><option>—</option>@for (o of colOptions(c); track o) { <option>{{ o }}</option> }</select> }
+                  @default { <input disabled placeholder="văn bản" /> }
+                }
+              </td> }</tr></tbody>
             </table>
           }
           @case ('scoretable') {

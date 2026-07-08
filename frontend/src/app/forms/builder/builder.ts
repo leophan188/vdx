@@ -12,7 +12,9 @@ type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean
   | 'dropdown' | 'radio' | 'multiselect' | 'file' | 'richtext' | 'table' | 'scoretable'
   | 'orgtree' | 'unitstaff' | 'section';
 
-interface FormColumn { key: string; label: string; }
+/** Kiểu dữ liệu của một cột trong bảng nhiều dòng. */
+type ColumnType = 'text' | 'number' | 'date' | 'dropdown' | 'boolean';
+interface FormColumn { key: string; label: string; type?: ColumnType; options?: string; }
 /** Một tiêu chí của bảng chấm điểm: nhãn + trọng số (%). */
 interface FormCriterion { key: string; label: string; weight: number; }
 type CondOp = 'eq' | 'ne' | 'truthy';
@@ -26,6 +28,8 @@ interface FormField {
   type: FieldType;
   required?: boolean;
   placeholder?: string;
+  /** Giá trị điền sẵn khi mở biểu mẫu (nếu người dùng chưa nhập). */
+  defaultValue?: string;
   optionSource?: 'STATIC' | 'CATALOG';
   options?: string;
   catalog?: string;
@@ -83,6 +87,14 @@ export class Builder implements OnInit {
   ];
 
   readonly FIELD_TYPES = this.PALETTE.map((p) => ({ v: p.t, l: p.l }));
+  /** Kiểu dữ liệu chọn được cho từng cột của bảng nhiều dòng. */
+  readonly COLUMN_TYPES: { v: ColumnType; l: string }[] = [
+    { v: 'text', l: 'Văn bản' },
+    { v: 'number', l: 'Số' },
+    { v: 'date', l: 'Ngày' },
+    { v: 'dropdown', l: 'Danh sách chọn' },
+    { v: 'boolean', l: 'Có / Không' }
+  ];
   readonly COND_OPS: { v: CondOp; l: string }[] = [
     { v: 'truthy', l: 'có giá trị' },
     { v: 'eq', l: 'bằng' },
@@ -137,7 +149,7 @@ export class Builder implements OnInit {
       type,
       optionSource: 'STATIC',
       options: '',
-      columns: type === 'table' ? [{ key: 'cot1', label: 'Cột 1' }] : undefined,
+      columns: type === 'table' ? [{ key: 'cot1', label: 'Cột 1', type: 'text' as ColumnType }] : undefined,
       criteria: type === 'scoretable' ? [{ key: 'tc1', label: 'Tiêu chí 1', weight: 100 }] : undefined,
       scoreMax: type === 'scoretable' ? 10 : undefined
     };
@@ -175,8 +187,21 @@ export class Builder implements OnInit {
 
   // table columns
   addColumn(f: FormField): void {
-    f.columns = [...(f.columns ?? []), { key: 'cot' + ((f.columns?.length ?? 0) + 1), label: 'Cột mới' }];
+    f.columns = [...(f.columns ?? []), { key: 'cot' + ((f.columns?.length ?? 0) + 1), label: 'Cột mới', type: 'text' }];
     this.touch();
+  }
+  /** Lựa chọn của cột kiểu dropdown (chuỗi ngăn cách dấu phẩy). */
+  colOptions(c: FormColumn): string[] {
+    return (c.options ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  }
+  /** Loại trường có hỗ trợ đặt "giá trị mặc định". */
+  supportsDefault(t?: FieldType): boolean {
+    return ['text', 'textarea', 'number', 'date', 'datetime', 'boolean', 'dropdown', 'radio', 'multiselect'].includes(t ?? '');
+  }
+  isSingleChoice(t?: FieldType): boolean { return t === 'dropdown' || t === 'radio'; }
+  /** Input type HTML cho ô nhập giá trị mặc định theo loại trường. */
+  defaultInputType(t?: FieldType): string {
+    return t === 'number' ? 'number' : t === 'date' ? 'date' : t === 'datetime' ? 'datetime-local' : 'text';
   }
   removeColumn(f: FormField, i: number): void {
     f.columns = (f.columns ?? []).filter((_, idx) => idx !== i);
@@ -249,9 +274,19 @@ export class Builder implements OnInit {
     return this.submitted() ? this.errorFor(f) : null;
   }
   openPreview(): void {
-    this.values.set({});
+    this.values.set(this.initialDefaults());
     this.submitted.set(false);
     this.previewOpen.set(true);
+  }
+  /** Giá trị điền sẵn từ "defaultValue" của các trường (dùng khi mở xem trước / mở việc). */
+  private initialDefaults(): Record<string, unknown> {
+    const vals: Record<string, unknown> = {};
+    for (const f of this.fields()) {
+      if (this.supportsDefault(f.type) && f.defaultValue != null && f.defaultValue !== '') {
+        vals[f.key] = f.type === 'boolean' ? (f.defaultValue === 'true' || f.defaultValue === '1') : f.defaultValue;
+      }
+    }
+    return vals;
   }
   validateAll(): void {
     this.submitted.set(true);

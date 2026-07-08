@@ -9,10 +9,10 @@ import { FormService } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
 interface RCriterion { key: string; label: string; weight: number; }
-interface RColumn { key: string; label: string; }
+interface RColumn { key: string; label: string; type?: string; options?: string; }
 interface RField {
   key: string; label: string; type: string; required?: boolean;
-  placeholder?: string; options?: string;
+  placeholder?: string; options?: string; defaultValue?: string;
   criteria?: RCriterion[]; scoreMax?: number;
   pickMode?: 'user' | 'position' | 'unit'; columns?: RColumn[];
 }
@@ -113,10 +113,10 @@ export class TaskProcessor {
         this.values.set({ ...d.formData });
         if (d.formSchemaJson) {
           // Ưu tiên schema ĐÓNG BĂNG theo phiên bản của phiên chạy → form không đổi dù cấu hình sửa sau này.
-          this.fields.set(this.parseFields(d.formSchemaJson));
+          this.setFieldsAndDefaults(d.formSchemaJson);
         } else if (d.formId) {
           this.formSvc.get(d.formId).subscribe({
-            next: (f) => this.fields.set(this.parseFields(f.schemaJson)),
+            next: (f) => this.setFieldsAndDefaults(f.schemaJson),
             error: () => this.fields.set([])
           });
         } else {
@@ -129,6 +129,26 @@ export class TaskProcessor {
 
   close(): void { this.open.set(false); }
 
+  /** Đặt danh sách trường + điền GIÁ TRỊ MẶC ĐỊNH cho ô còn trống (không đè dữ liệu đã có). */
+  private setFieldsAndDefaults(schemaJson: string | null): void {
+    const fs = this.parseFields(schemaJson);
+    this.fields.set(fs);
+    const cur = this.values();
+    const patch: Record<string, unknown> = {};
+    for (const f of fs) {
+      const has = cur[f.key] !== undefined && cur[f.key] !== null && cur[f.key] !== '';
+      if (!has && f.defaultValue != null && f.defaultValue !== '') {
+        patch[f.key] = f.type === 'boolean' ? (f.defaultValue === 'true' || f.defaultValue === '1') : f.defaultValue;
+      }
+    }
+    if (Object.keys(patch).length) this.values.update((o) => ({ ...o, ...patch }));
+  }
+
+  /** Lựa chọn của cột kiểu dropdown trong bảng nhiều dòng. */
+  colOpts(c: RColumn): string[] {
+    return (c.options ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  }
+
   private parseFields(schemaJson: string | null): RField[] {
     if (!schemaJson) return [];
     try {
@@ -138,6 +158,7 @@ export class TaskProcessor {
         key: String(f['key'] ?? ''), label: String(f['label'] ?? f['key'] ?? ''),
         type: String(f['type'] ?? 'text'), required: !!f['required'],
         placeholder: f['placeholder'] as string, options: f['options'] as string,
+        defaultValue: f['defaultValue'] != null ? String(f['defaultValue']) : undefined,
         criteria: Array.isArray(f['criteria'])
           ? (f['criteria'] as Record<string, unknown>[]).map((c) => ({
               key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? ''), weight: Number(c['weight']) || 0
@@ -146,7 +167,11 @@ export class TaskProcessor {
         scoreMax: f['scoreMax'] != null ? Number(f['scoreMax']) : undefined,
         pickMode: (f['pickMode'] as RField['pickMode']) ?? undefined,
         columns: Array.isArray(f['columns'])
-          ? (f['columns'] as Record<string, unknown>[]).map((c) => ({ key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? '') }))
+          ? (f['columns'] as Record<string, unknown>[]).map((c) => ({
+              key: String(c['key'] ?? ''), label: String(c['label'] ?? c['key'] ?? ''),
+              type: c['type'] != null ? String(c['type']) : undefined,
+              options: c['options'] != null ? String(c['options']) : undefined
+            }))
           : undefined
       })).filter((f: RField) => f.key);
     } catch { return []; }
