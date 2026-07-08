@@ -6,6 +6,8 @@ import { PositionService, Position } from '../../core/position.service';
 import { AuthService, UserAccount } from '../../core/auth.service';
 
 interface UnitNode { id: string; name: string; parentId: string | null; level: number; hasChildren: boolean; }
+/** Một dòng nhân sự đầy đủ thông tin để chọn: mã NV · tên · chức vụ · bộ phận. */
+interface StaffRow { userId: string; code: string; fullName: string; title: string; unitName: string; }
 
 /**
  * Chọn NHÂN SỰ theo CÂY ĐƠN VỊ (popup 2 cột): chọn đơn vị ở cây → nạp nhân sự của đơn vị
@@ -49,7 +51,10 @@ interface UnitNode { id: string; name: string; parentId: string | null; level: n
     .usp-person__ava { flex: 0 0 26px; height: 26px; border-radius: 50%; background: var(--color-primary, #1e50a0); color: #fff;
       display: inline-flex; align-items: center; justify-content: center; font-size: .78em; font-weight: 700; }
     .usp-person__name { flex: 1; min-width: 0; }
-    .usp-person__name small { display: block; opacity: .65; font-size: .82em; }
+    .usp-person__top { display: block; font-weight: 600; }
+    .usp-person__code { display: inline-block; margin-left: 6px; font-weight: 500; font-size: .78em; opacity: .7;
+      background: var(--color-surface-2, rgba(127,127,127,.14)); border-radius: 4px; padding: 0 6px; vertical-align: middle; }
+    .usp-person__name small { display: flex; flex-wrap: wrap; gap: 4px 12px; opacity: .7; font-size: .82em; margin-top: 2px; }
     .usp-empty { padding: 16px; text-align: center; color: var(--color-text-muted); font-size: .9em; }
   `]
 })
@@ -79,11 +84,32 @@ export class UnitStaffPicker implements OnInit {
   }
 
   private readonly userById = computed(() => new Map(this.users().map((u) => [u.id, u])));
+  private readonly unitNameById = computed(() => new Map(this.units().map((u) => [u.id, u.name])));
 
-  /** Nhãn người đã chọn (hiển thị ở ô trigger). */
+  /** Chức vụ + bộ phận (gộp mọi vị trí đang giữ) theo userId — dùng cho nhãn + dòng chọn. */
+  private readonly infoByUser = computed(() => {
+    const un = this.unitNameById();
+    const map = new Map<string, { title: string; unitName: string }>();
+    for (const p of this.positions()) {
+      if (!p.currentHolderUserId) continue;
+      const cur = map.get(p.currentHolderUserId) ?? { title: '', unitName: '' };
+      const u = un.get(p.orgUnitId) ?? '';
+      if (p.title && !cur.title.split(', ').includes(p.title)) cur.title = cur.title ? cur.title + ', ' + p.title : p.title;
+      if (u && !cur.unitName.split(', ').includes(u)) cur.unitName = cur.unitName ? cur.unitName + ', ' + u : u;
+      map.set(p.currentHolderUserId, cur);
+    }
+    return map;
+  });
+
+  /** Nhãn người đã chọn (hiển thị ở ô trigger): Tên (mã) — chức vụ · bộ phận. */
   readonly selectedLabel = computed<string>(() => {
     const u = this.userById().get(this.value());
-    return u ? `${u.fullName} (${u.username})` : '';
+    if (!u) return '';
+    const info = this.infoByUser().get(u.id);
+    let s = `${u.fullName} (${u.username})`;
+    const tail = [info?.title, info?.unitName].filter(Boolean).join(' · ');
+    if (tail) s += ` — ${tail}`;
+    return s;
   });
 
   // ----- Cây đơn vị (phẳng + cấp, lọc theo expanded) -----
@@ -125,19 +151,30 @@ export class UnitStaffPicker implements OnInit {
     return set;
   }
 
-  /** Nhân sự của đơn vị đang chọn (giữ vị trí trong đơn vị + đơn vị con), lọc theo ô tìm. */
-  readonly staff = computed<UserAccount[]>(() => {
+  /** Nhân sự của đơn vị đang chọn (giữ vị trí trong đơn vị + đơn vị con) — đủ mã/tên/chức vụ/bộ phận, lọc theo ô tìm. */
+  readonly staff = computed<StaffRow[]>(() => {
     const unit = this.selectedUnit();
     if (!unit) return [];
     const scope = this.descendantUnitIds(unit);
-    const ids = new Set<string>();
-    for (const p of this.positions()) {
-      if (p.orgUnitId && scope.has(p.orgUnitId) && p.currentHolderUserId) ids.add(p.currentHolderUserId);
-    }
     const byId = this.userById();
-    let list = [...ids].map((id) => byId.get(id)).filter((u): u is UserAccount => !!u);
+    const un = this.unitNameById();
+    const byUser = new Map<string, StaffRow>();
+    for (const p of this.positions()) {
+      if (!p.orgUnitId || !scope.has(p.orgUnitId) || !p.currentHolderUserId) continue;
+      const u = byId.get(p.currentHolderUserId);
+      if (!u) continue;
+      const unitName = un.get(p.orgUnitId) ?? '';
+      const row = byUser.get(u.id);
+      if (row) {
+        if (p.title && !row.title.split(', ').includes(p.title)) row.title = row.title ? row.title + ', ' + p.title : p.title;
+        if (unitName && !row.unitName.split(', ').includes(unitName)) row.unitName = row.unitName ? row.unitName + ', ' + unitName : unitName;
+      } else {
+        byUser.set(u.id, { userId: u.id, code: u.username, fullName: u.fullName, title: p.title ?? '', unitName });
+      }
+    }
+    let list = [...byUser.values()];
     const q = this.search().trim().toLowerCase();
-    if (q) list = list.filter((u) => (`${u.fullName} ${u.username}`).toLowerCase().includes(q));
+    if (q) list = list.filter((s) => (`${s.fullName} ${s.code} ${s.title} ${s.unitName}`).toLowerCase().includes(q));
     return list.sort((a, b) => a.fullName.localeCompare(b.fullName, 'vi'));
   });
 

@@ -69,6 +69,7 @@ export class OrgTreePicker implements OnInit {
     const posByUnit = new Map<string, Position[]>();
     for (const p of this.positions()) (posByUnit.get(p.orgUnitId) ?? posByUnit.set(p.orgUnitId, []).get(p.orgUnitId)!).push(p);
     const userById = new Map(this.users().map((u) => [u.id, u]));
+    const unitNameById = new Map(this.units().map((u) => [u.id, u.name]));
     const out: PickNode[] = [];
     const walk = (u: OrgUnit, level: number, parentKey: string | null) => {
       const uk = 'u:' + u.id;
@@ -79,7 +80,12 @@ export class OrgTreePicker implements OnInit {
         out.push({ key: pk, parentKey: uk, id: p.id, label: p.title, type: 'position', level: level + 1, selectable: mode === 'position' });
         if (mode === 'user' && p.currentHolderUserId) {
           const usr = userById.get(p.currentHolderUserId);
-          if (usr) out.push({ key: 'usr:' + p.id, parentKey: pk, id: usr.id, label: usr.fullName + ' (' + usr.username + ')', type: 'user', level: level + 2, selectable: true });
+          if (usr) {
+            // Nhãn đủ thông tin: Tên (mã NV) — chức vụ · bộ phận.
+            const tail = [p.title, unitNameById.get(p.orgUnitId)].filter(Boolean).join(' · ');
+            const label = usr.fullName + ' (' + usr.username + ')' + (tail ? ' — ' + tail : '');
+            out.push({ key: 'usr:' + p.id, parentKey: pk, id: usr.id, label, type: 'user', level: level + 2, selectable: true });
+          }
         }
       }
     };

@@ -40,11 +40,18 @@
         @if (!selectedUnit()) {
           <div class="usp-empty">← Chọn một đơn vị ở cây bên trái để xem nhân sự.</div>
         } @else {
-          @for (u of staff(); track u.id) {
-            <button type="button" class="usp-person" [class.is-active]="isCurrent(u.id)" (click)="pickUser(u.id)">
+          @for (u of staff(); track u.userId) {
+            <button type="button" class="usp-person" [class.is-active]="isCurrent(u.userId)" (click)="pickUser(u.userId)">
               <span class="usp-person__ava">{{ initials(u.fullName) }}</span>
-              <span class="usp-person__name">{{ u.fullName }} <small>{{ u.username }}</small></span>
-              @if (isCurrent(u.id)) { <span style="color:var(--status-done,#16a34a)">✓</span> }
+              <span class="usp-person__name">
+                <span class="usp-person__top">{{ u.fullName }} <span class="usp-person__code">{{ u.code }}</span></span>
+                <small>
+                  @if (u.title) { <span>💼 {{ u.title }}</span> }
+                  @if (u.unitName) { <span>🏛️ {{ u.unitName }}</span> }
+                  @if (!u.title && !u.unitName) { <span>—</span> }
+                </small>
+              </span>
+              @if (isCurrent(u.userId)) { <span style="color:var(--status-done,#16a34a)">✓</span> }
             </button>
           } @empty {
             <div class="usp-empty">Đơn vị này chưa có nhân sự (giữ vị trí).</div>

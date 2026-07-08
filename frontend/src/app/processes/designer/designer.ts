@@ -6,6 +6,8 @@ import { ProcessService } from '../../core/process.service';
 import { PositionService, Position } from '../../core/position.service';
 import { RoleService, Role } from '../../core/role.service';
 import { AuthService, UserAccount } from '../../core/auth.service';
+import { OrgService, OrgUnit } from '../../core/org.service';
+import { computed } from '@angular/core';
 import { FormService, FormSummary } from '../../core/form.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Modal } from '../../shared/modal/modal';
@@ -92,6 +94,7 @@ export class Designer implements AfterViewInit, OnDestroy {
   private positionSvc = inject(PositionService);
   private roleSvc = inject(RoleService);
   private authSvc = inject(AuthService);
+  private orgSvc = inject(OrgService);
   private formSvc = inject(FormService);
   private toast = inject(ToastService);
   private zone = inject(NgZone);
@@ -106,7 +109,20 @@ export class Designer implements AfterViewInit, OnDestroy {
   readonly positions = signal<Position[]>([]);
   readonly roles = signal<Role[]>([]);
   readonly users = signal<UserAccount[]>([]);
+  readonly units = signal<OrgUnit[]>([]);
   readonly forms = signal<FormSummary[]>([]);
+  /** userId → "chức vụ · bộ phận" (gộp mọi vị trí đang giữ) — hiển thị kèm khi chọn nhân sự. */
+  private readonly userInfoById = computed(() => {
+    const un = new Map(this.units().map((u) => [u.id, u.name]));
+    const map = new Map<string, string>();
+    for (const p of this.positions()) {
+      if (!p.currentHolderUserId) continue;
+      const bits = [p.title, un.get(p.orgUnitId)].filter(Boolean).join(' · ');
+      const cur = map.get(p.currentHolderUserId);
+      map.set(p.currentHolderUserId, cur ? (bits && !cur.includes(bits) ? cur + '; ' + bits : cur) : bits);
+    }
+    return map;
+  });
   /** Trường của biểu mẫu đang gắn (để cấu hình quyền trường). */
   readonly formFields = signal<{ key: string; label: string }[]>([]);
 
@@ -206,6 +222,7 @@ export class Designer implements AfterViewInit, OnDestroy {
     this.positionSvc.all().subscribe({ next: (p) => this.positions.set(p), error: () => {} });
     this.roleSvc.list().subscribe({ next: (r) => this.roles.set(r), error: () => {} });
     this.authSvc.listUsers().subscribe({ next: (u) => this.users.set(u), error: () => {} });
+    this.orgSvc.all().subscribe({ next: (u) => this.units.set(u), error: () => {} });
     this.formSvc.list().subscribe({ next: (f) => this.forms.set(f), error: () => {} });
     this.svc.get(this.id).subscribe({
       next: (p) => {
@@ -367,9 +384,17 @@ export class Designer implements AfterViewInit, OnDestroy {
     this.meta.assigneeId = undefined;
     this.writeMeta();
   }
-  /** Options cho ô tìm-kiếm-chọn người thực hiện (typeahead). */
+  /** Options cho ô tìm-kiếm-chọn người thực hiện (typeahead) — kèm chức vụ · bộ phận khi là nhân sự. */
   assigneeSelOptions(): SelectOption[] {
-    return this.assigneeOptions().map((o) => ({ value: o.id, label: o.label }));
+    return this.withInfo(this.meta.assigneeType ?? 'POSITION', this.assigneeOptions());
+  }
+  /** Gắn dòng phụ "chức vụ · bộ phận" cho loại USER (không dấu tìm được cả dòng phụ). */
+  private withInfo(type: RecipientType | AssigneeType, opts: { id: string; label: string }[]): SelectOption[] {
+    if (type !== 'USER') {
+      return opts.map((o) => ({ value: o.id, label: o.label }));
+    }
+    const info = this.userInfoById();
+    return opts.map((o) => ({ value: o.id, label: o.label, sub: info.get(o.id) || undefined }));
   }
   onAssigneePick(v: string): void {
     this.meta.assigneeId = v || undefined;
@@ -377,7 +402,7 @@ export class Designer implements AfterViewInit, OnDestroy {
   }
   /** Options cho ô tìm-kiếm-chọn người nhận thông báo theo loại. */
   recipientSelOptions(type: RecipientType): SelectOption[] {
-    return this.targetOptions(type).map((o) => ({ value: o.id, label: o.label }));
+    return this.withInfo(type, this.targetOptions(type));
   }
   onRecipientPick(r: Recipient, v: string): void {
     r.id = v || undefined;
