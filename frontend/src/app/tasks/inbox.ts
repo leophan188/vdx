@@ -84,9 +84,14 @@ export class Inbox implements OnInit, OnDestroy {
   reload(silent = false): void {
     if (!silent) this.loading.set(true);
     this.wf.inbox().subscribe({
-      next: (r) => { this.items.set(r); this.loading.set(false); },
+      next: (r) => { this.items.set(this.newestFirst(r)); this.loading.set(false); },
       error: () => { if (!silent) this.toast.error('Không tải được hộp thư việc'); this.loading.set(false); }
     });
+  }
+
+  /** Sắp xếp việc mới nhận nhất lên đầu (theo thời điểm nhận, giảm dần). */
+  private newestFirst(r: InboxItem[]): InboxItem[] {
+    return [...r].sort((a, b) => (b.createdAt ?? '').localeCompare(a.createdAt ?? ''));
   }
 
   fmt(iso: string | null): string {
