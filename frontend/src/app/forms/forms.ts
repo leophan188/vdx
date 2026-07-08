@@ -34,6 +34,7 @@ export class Forms implements OnInit {
   readonly createOpen = signal(false);
   newKey = '';
   newName = '';
+  newCopyFrom = '';
 
   readonly editOpen = signal(false);
   readonly editTarget = signal<FormSummary | null>(null);
@@ -84,12 +85,12 @@ export class Forms implements OnInit {
     });
   }
 
-  openCreate(): void { this.newKey = this.newName = ''; this.createOpen.set(true); }
+  openCreate(): void { this.newKey = this.newName = this.newCopyFrom = ''; this.createOpen.set(true); }
   create(): void {
     if (!this.newKey || !this.newName) return;
-    this.svc.create(this.newKey, this.newName).subscribe({
+    this.svc.create(this.newKey, this.newName, this.newCopyFrom).subscribe({
       next: (f) => {
-        this.toast.success('Đã tạo biểu mẫu', this.newName);
+        this.toast.success('Đã tạo biểu mẫu', this.newCopyFrom ? this.newName + ' (đã sao chép)' : this.newName);
         this.createOpen.set(false);
         this.router.navigate(['/forms', f.id]);
       },

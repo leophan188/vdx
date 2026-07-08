@@ -8,7 +8,7 @@ import java.time.Instant;
 
 public class ProcessDto {
 
-    public record CreateRequest(@NotBlank String processKey, @NotBlank String name) {
+    public record CreateRequest(@NotBlank String processKey, @NotBlank String name, String copyFromId) {
     }
 
     public record RenameRequest(@NotBlank String name) {

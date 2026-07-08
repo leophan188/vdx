@@ -38,8 +38,8 @@ export class ProcessService {
     return this.http.get<ProcessDetail>(`${this.base}/${id}`, { withCredentials: true });
   }
 
-  create(processKey: string, name: string): Observable<ProcessSummary> {
-    return this.http.post<ProcessSummary>(this.base, { processKey, name }, { withCredentials: true });
+  create(processKey: string, name: string, copyFromId?: string): Observable<ProcessSummary> {
+    return this.http.post<ProcessSummary>(this.base, { processKey, name, copyFromId: copyFromId || null }, { withCredentials: true });
   }
 
   rename(id: string, name: string): Observable<ProcessSummary> {

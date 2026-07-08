@@ -77,12 +77,25 @@ public class ProcessService {
 
     @Transactional
     public ProcessDefinition create(String processKey, String name, String actor) {
+        return create(processKey, name, null, actor);
+    }
+
+    /** Tạo quy trình mới; nếu copyFromId có giá trị → sao chép sơ đồ BPMN + cấu hình bước từ quy trình nguồn. */
+    @Transactional
+    public ProcessDefinition create(String processKey, String name, String copyFromId, String actor) {
         if (repo.existsByProcessKey(processKey)) {
             throw new IllegalArgumentException("Mã quy trình đã tồn tại");
         }
-        ProcessDefinition p = repo.save(new ProcessDefinition(processKey, name));
-        auditPort.record("PROCESS_CREATED", "ProcessDefinition", p.getId(), actor,
-                "key=" + processKey + ", name=" + name);
+        ProcessDefinition p = new ProcessDefinition(processKey, name);
+        String extra = "key=" + processKey + ", name=" + name;
+        if (copyFromId != null && !copyFromId.isBlank()) {
+            ProcessDefinition src = get(copyFromId);
+            p.setBpmnXml(src.getBpmnXml());
+            p.setStepsMetaJson(src.getStepsMetaJson());
+            extra += ", copyFrom=" + src.getProcessKey();
+        }
+        p = repo.save(p);
+        auditPort.record("PROCESS_CREATED", "ProcessDefinition", p.getId(), actor, extra);
         return p;
     }
 

@@ -28,7 +28,7 @@ public class ProcessController {
 
     @PostMapping
     public ResponseEntity<ProcessDto.Summary> create(@Valid @RequestBody ProcessDto.CreateRequest req, Authentication auth) {
-        ProcessDefinition p = service.create(req.processKey(), req.name(), actor(auth));
+        ProcessDefinition p = service.create(req.processKey(), req.name(), req.copyFromId(), actor(auth));
         return ResponseEntity.status(HttpStatus.CREATED).body(ProcessDto.Summary.from(p));
     }
 

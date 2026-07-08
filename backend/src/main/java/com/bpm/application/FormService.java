@@ -30,11 +30,24 @@ public class FormService {
 
     @Transactional
     public FormDefinition create(String formKey, String name, String actor) {
+        return create(formKey, name, null, actor);
+    }
+
+    /** Tạo biểu mẫu mới; nếu copyFromId có giá trị → sao chép schema trường từ biểu mẫu nguồn. */
+    @Transactional
+    public FormDefinition create(String formKey, String name, String copyFromId, String actor) {
         if (repo.existsByFormKey(formKey)) {
             throw new IllegalArgumentException("Mã biểu mẫu đã tồn tại");
         }
-        FormDefinition f = repo.save(new FormDefinition(formKey, name));
-        auditPort.record("FORM_CREATED", "FormDefinition", f.getId(), actor, "key=" + formKey + ", name=" + name);
+        FormDefinition f = new FormDefinition(formKey, name);
+        String extra = "key=" + formKey + ", name=" + name;
+        if (copyFromId != null && !copyFromId.isBlank()) {
+            FormDefinition src = get(copyFromId);
+            f.setSchemaJson(src.getSchemaJson());
+            extra += ", copyFrom=" + src.getFormKey();
+        }
+        f = repo.save(f);
+        auditPort.record("FORM_CREATED", "FormDefinition", f.getId(), actor, extra);
         return f;
     }
 

@@ -28,7 +28,7 @@ public class FormController {
 
     @PostMapping
     public ResponseEntity<FormDto.Summary> create(@Valid @RequestBody FormDto.CreateRequest req, Authentication auth) {
-        FormDefinition f = service.create(req.formKey(), req.name(), actor(auth));
+        FormDefinition f = service.create(req.formKey(), req.name(), req.copyFromId(), actor(auth));
         return ResponseEntity.status(HttpStatus.CREATED).body(FormDto.Summary.from(f));
     }
 

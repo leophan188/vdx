@@ -36,6 +36,7 @@ export class Processes implements OnInit {
   readonly createOpen = signal(false);
   newKey = '';
   newName = '';
+  newCopyFrom = '';
 
   readonly editOpen = signal(false);
   readonly editTarget = signal<ProcessSummary | null>(null);
@@ -68,14 +69,14 @@ export class Processes implements OnInit {
   }
 
   openCreate(): void {
-    this.newKey = this.newName = '';
+    this.newKey = this.newName = this.newCopyFrom = '';
     this.createOpen.set(true);
   }
   create(): void {
     if (!this.newKey || !this.newName) return;
-    this.svc.create(this.newKey, this.newName).subscribe({
+    this.svc.create(this.newKey, this.newName, this.newCopyFrom).subscribe({
       next: (p) => {
-        this.toast.success('Đã tạo quy trình', this.newName);
+        this.toast.success('Đã tạo quy trình', this.newCopyFrom ? this.newName + ' (đã sao chép)' : this.newName);
         this.createOpen.set(false);
         this.reload();
         this.router.navigate(['/processes', p.id]);

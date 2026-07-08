@@ -35,8 +35,8 @@ export class FormService {
   get(id: string): Observable<FormDetail> {
     return this.http.get<FormDetail>(`${this.base}/${id}`, { withCredentials: true });
   }
-  create(formKey: string, name: string): Observable<FormSummary> {
-    return this.http.post<FormSummary>(this.base, { formKey, name }, { withCredentials: true });
+  create(formKey: string, name: string, copyFromId?: string): Observable<FormSummary> {
+    return this.http.post<FormSummary>(this.base, { formKey, name, copyFromId: copyFromId || null }, { withCredentials: true });
   }
   rename(id: string, name: string): Observable<FormSummary> {
     return this.http.patch<FormSummary>(`${this.base}/${id}`, { name }, { withCredentials: true });

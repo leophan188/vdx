@@ -46,6 +46,14 @@
       <label for="pname">Tên quy trình</label>
       <input id="pname" name="pname" [(ngModel)]="newName" required placeholder="VD: Phối hợp nghiên cứu, tham mưu" />
     </div>
+    <div class="field">
+      <label for="pcopy">Sao chép từ quy trình (tuỳ chọn)</label>
+      <select id="pcopy" name="pcopy" [(ngModel)]="newCopyFrom">
+        <option value="">— Tạo mới trống —</option>
+        @for (r of rows(); track r.id) { <option [value]="r.id">{{ r.name }} ({{ r.processKey }})</option> }
+      </select>
+      <small class="hint">Chọn để bê nguyên sơ đồ BPMN + cấu hình các bước của quy trình cũ sang bản mới.</small>
+    </div>
   </form>
   <ng-container modalFooter>
     <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>

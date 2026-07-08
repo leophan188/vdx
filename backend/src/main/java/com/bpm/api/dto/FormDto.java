@@ -8,7 +8,7 @@ import java.time.Instant;
 
 public class FormDto {
 
-    public record CreateRequest(@NotBlank String formKey, @NotBlank String name) {
+    public record CreateRequest(@NotBlank String formKey, @NotBlank String name, String copyFromId) {
     }
 
     public record RenameRequest(@NotBlank String name) {
