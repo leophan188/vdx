@@ -348,7 +348,8 @@ public class Qt0101DemoSeeder {
 
     private void seedInstances(ProcessDefinition p, String submitter, String[] users, String unitId, AtomicInteger created) {
         // depth = số bước đã hoàn thành (theo thứ tự Task_01..Task_08). Các hồ sơ này CÓ phối hợp.
-        int[] depths = {0, 1, 2, 4, 6, 8};
+        // Phủ ĐỦ cả 8 bước (mỗi bước ≥1 hồ sơ đang dừng) + nhiều hồ sơ đi TRỌN quy trình (hoàn thành).
+        int[] depths = {0, 1, 2, 3, 4, 5, 6, 7, 8, 8, 8, 8, 2, 4, 6};
         for (int seq = 0; seq < depths.length; seq++) {
             WorkflowInstance wi = workflowService.start(p.getId(), stepData(0, seq, users, unitId, true), submitter);
             created.incrementAndGet();
