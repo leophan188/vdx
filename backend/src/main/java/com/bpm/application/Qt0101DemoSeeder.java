@@ -167,6 +167,9 @@ public class Qt0101DemoSeeder {
     private boolean seedOnBoot;
     @Value("${bpm.seed.qt0101.reset:false}")
     private boolean resetFirst;
+    /** Cờ chạy 1 lần: xoá HẾT hồ sơ QT01.01 lúc boot (GIỮ quy trình + biểu mẫu) — dùng để làm sạch rồi tạo lại. */
+    @Value("${bpm.wipe.qt0101.instances.onboot:false}")
+    private boolean wipeInstancesOnBoot;
 
     public Qt0101DemoSeeder(ProcessService processService, FormService formService, WorkflowService workflowService,
                             TaskService taskService, RuntimeService runtimeService, HistoryService historyService,
@@ -203,6 +206,19 @@ public class Qt0101DemoSeeder {
         }
     }
 
+    @EventListener(ApplicationReadyEvent.class)
+    void maybeWipeInstancesOnBoot() {
+        if (!wipeInstancesOnBoot) {
+            return;
+        }
+        try {
+            int n = resetInstancesOnly("system");
+            log.info("[Qt0101DemoSeeder] onboot wipe-instances: đã xoá {} hồ sơ QT01.01 (giữ quy trình + biểu mẫu).", n);
+        } catch (Exception e) {
+            log.warn("[Qt0101DemoSeeder] onboot wipe-instances lỗi: {}", e.toString());
+        }
+    }
+
     public record SeedResult(boolean seeded, int steps, int instances, String message) {
     }
 
@@ -229,6 +245,33 @@ public class Qt0101DemoSeeder {
                         formService.delete(f.getId(), actor);
                     } catch (Exception ignore) { /* */ }
                 });
+    }
+
+    /**
+     * Xoá HẾT hồ sơ của QT01.01 (WorkflowInstance + tiến trình runtime + history Flowable) để làm sạch
+     * "Việc của tôi" / màn theo dõi, NHƯNG GIỮ NGUYÊN cấu hình quy trình + biểu mẫu (khác {@link #reset}).
+     * Sau khi gọi, người dùng tự bấm "Tạo yêu cầu" để tạo hồ sơ mới. Trả về số hồ sơ đã xoá.
+     */
+    public int resetInstancesOnly(String actor) {
+        int[] removed = {0};
+        processRepo.findAll().stream().filter(p -> GUARD_KEY.equals(p.getProcessKey())).findFirst().ifPresent(p -> {
+            for (WorkflowInstance wi : instanceRepo.findByProcessId(p.getId())) {
+                try {
+                    if ("RUNNING".equals(wi.getStatus())) {
+                        runtimeService.deleteProcessInstance(wi.getFlowableInstanceId(), "wipe QT01.01 instances");
+                    }
+                } catch (Exception ignore) { /* */ }
+                try {
+                    historyService.deleteHistoricProcessInstance(wi.getFlowableInstanceId());
+                } catch (Exception ignore) { /* */ }
+                instanceRepo.delete(wi);
+                removed[0]++;
+            }
+        });
+        auditPort.record("QT0101_INSTANCES_WIPED", "System", null, actor,
+                "process=" + GUARD_KEY + ", removed=" + removed[0]);
+        log.info("[Qt0101DemoSeeder] Đã xoá {} hồ sơ QT01.01 (giữ nguyên quy trình + biểu mẫu).", removed[0]);
+        return removed[0];
     }
 
     public SeedResult seed(String actor) {

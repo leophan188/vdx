@@ -126,6 +126,18 @@ public class SystemController {
     }
 
     /**
+     * Xoá HẾT hồ sơ của QT01.01 (làm sạch "Việc của tôi" / màn theo dõi) NHƯNG GIỮ nguyên cấu hình
+     * quy trình + biểu mẫu — để tạo lại hồ sơ từ đầu. CHỈ ADMIN.
+     */
+    @PostMapping("/wipe-qt0101-instances")
+    public ResponseEntity<Map<String, Object>> wipeQt0101Instances(Authentication auth) {
+        int removed = qt0101DemoSeeder.resetInstancesOnly(actor(auth));
+        return ResponseEntity.ok(Map.of(
+                "removed", removed,
+                "message", "Đã xoá " + removed + " hồ sơ QT01.01 (giữ nguyên quy trình + biểu mẫu)."));
+    }
+
+    /**
      * Tạo dữ liệu DEMO bảng tin MẠNG XÃ HỘI trên nhân sự thật (CHỈ THÊM, idempotent). CHỈ ADMIN.
      * Trả tóm tắt: số bài / bình luận / lượt thích đã tạo.
      */
