@@ -2,6 +2,8 @@ import { Component, computed, inject, input, model, signal, OnInit } from '@angu
 import { OrgService, OrgUnit } from '../../core/org.service';
 import { PositionService, Position } from '../../core/position.service';
 import { AuthService, UserAccount } from '../../core/auth.service';
+import { Modal } from '../modal/modal';
+import { NgTemplateOutlet } from '@angular/common';
 
 type PickMode = 'unit' | 'position' | 'user';
 interface PickNode {
@@ -20,7 +22,17 @@ interface PickNode {
  */
 @Component({
   selector: 'org-tree-picker',
-  templateUrl: './org-tree-picker.html'
+  imports: [Modal, NgTemplateOutlet],
+  templateUrl: './org-tree-picker.html',
+  styles: [`
+    .otp-trigger{display:inline-flex;align-items:center;gap:8px;width:100%;min-height:var(--control-h-sm,34px);
+      border:1px solid var(--color-border);border-radius:var(--radius-md,8px);background:var(--color-surface);
+      color:var(--color-text);padding:4px 10px;cursor:pointer;font:inherit;box-sizing:border-box;}
+    .otp-trigger:hover{border-color:var(--color-primary);}
+    .otp-trigger:disabled{opacity:.6;cursor:not-allowed;}
+    .otp-trigger__val{flex:1;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .otp-trigger__val--empty{color:var(--color-text-muted);}
+  `]
 })
 export class OrgTreePicker implements OnInit {
   private orgSvc = inject(OrgService);
@@ -28,6 +40,10 @@ export class OrgTreePicker implements OnInit {
   private authSvc = inject(AuthService);
 
   readonly mode = input<PickMode>('user');
+  /** Hiển thị dạng nút bấm mở popup (dùng trong ô hẹp như cột bảng) thay vì cây inline. */
+  readonly popup = input(false);
+  readonly disabled = input(false);
+  readonly open = signal(false);
   readonly value = model<string>('');
 
   private readonly units = signal<OrgUnit[]>([]);
@@ -102,7 +118,18 @@ export class OrgTreePicker implements OnInit {
     this.expanded.set(s);
   }
   select(n: PickNode): void {
-    if (n.selectable) this.value.set(n.id);
+    if (n.selectable) {
+      this.value.set(n.id);
+      if (this.popup()) this.open.set(false); // chọn xong tự đóng popup
+    }
+  }
+  openPopup(): void {
+    if (this.disabled()) return;
+    this.expandAll(); // mở sẵn để dễ chọn trong popup
+    this.open.set(true);
+  }
+  placeholderText(): string {
+    return 'Chọn ' + (this.mode() === 'unit' ? 'đơn vị' : this.mode() === 'position' ? 'chức danh' : 'nhân sự') + '…';
   }
   icon(t: PickMode): string {
     return t === 'unit' ? '🏛️' : t === 'position' ? '🪪' : '👤';

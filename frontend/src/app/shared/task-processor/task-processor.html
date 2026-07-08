@@ -191,7 +191,8 @@
                                   </div>
                                 }
                                 @case ('orgtree') {
-                                  <org-tree-picker [mode]="$any(c.pickMode) || 'user'"
+                                  <org-tree-picker [popup]="true" [mode]="$any(c.pickMode) || 'user'"
+                                                   [disabled]="readonly_(f.key)"
                                                    [value]="$any(cellVal(f.key, $index, c.key))"
                                                    (valueChange)="setCell(f.key, $index, c.key, $event)" />
                                 }

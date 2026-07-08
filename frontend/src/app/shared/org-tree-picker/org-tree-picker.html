@@ -1,11 +1,5 @@
-<div class="org-picker">
-  <div class="org-picker__head">
-    <span class="hint" style="margin:0;">
-      @if (selectedLabel()) { Đã chọn: <strong>{{ selectedLabel() }}</strong> }
-      @else { Chọn {{ mode() === 'unit' ? 'đơn vị' : mode() === 'position' ? 'chức danh' : 'nhân sự' }} theo cây tổ chức }
-    </span>
-    <button type="button" class="btn btn--ghost btn--sm" (click)="expandAll()">Mở rộng tất cả</button>
-  </div>
+<!-- Cây tổ chức dùng chung: inline (mặc định) hoặc popup (dùng trong ô hẹp như cột bảng). -->
+<ng-template #tree>
   <div class="org-picker__tree">
     @for (n of visible(); track n.key) {
       <div class="org-node" [class.is-selected]="n.selectable && value() === n.id"
@@ -20,4 +14,37 @@
       </div>
     } @empty { <p class="hint">Chưa có dữ liệu tổ chức.</p> }
   </div>
-</div>
+</ng-template>
+
+@if (popup()) {
+  <!-- Dạng nút mở popup (cho ô hẹp) -->
+  <button type="button" class="otp-trigger" [disabled]="disabled()" (click)="openPopup()">
+    <span>{{ icon(mode()) }}</span>
+    @if (selectedLabel()) {
+      <span class="otp-trigger__val">{{ selectedLabel() }}</span>
+    } @else {
+      <span class="otp-trigger__val otp-trigger__val--empty">{{ placeholderText() }}</span>
+    }
+    <span style="opacity:.5">▾</span>
+  </button>
+  <app-modal [open]="open()" [wide]="true"
+             [title]="'Chọn ' + (mode() === 'unit' ? 'đơn vị' : mode() === 'position' ? 'chức danh' : 'nhân sự') + ' theo cây tổ chức'"
+             (closed)="open.set(false)">
+    <ng-container [ngTemplateOutlet]="tree"></ng-container>
+    <ng-container modalFooter>
+      <button type="button" class="btn btn--ghost" (click)="open.set(false)">Đóng</button>
+    </ng-container>
+  </app-modal>
+} @else {
+  <!-- Dạng cây inline (mặc định) -->
+  <div class="org-picker">
+    <div class="org-picker__head">
+      <span class="hint" style="margin:0;">
+        @if (selectedLabel()) { Đã chọn: <strong>{{ selectedLabel() }}</strong> }
+        @else { Chọn {{ mode() === 'unit' ? 'đơn vị' : mode() === 'position' ? 'chức danh' : 'nhân sự' }} theo cây tổ chức }
+      </span>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="expandAll()">Mở rộng tất cả</button>
+    </div>
+    <ng-container [ngTemplateOutlet]="tree"></ng-container>
+  </div>
+}
