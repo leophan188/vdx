@@ -931,6 +931,32 @@ public class WorkflowService {
                 "reason=" + reason + ", cascadeAssignments=" + cascaded + ", flowableInstance=" + wi.getFlowableInstanceId());
     }
 
+    /** Xoá HẲN một hồ sơ (mọi trạng thái): huỷ Flowable runtime nếu đang chạy + xoá history + xoá bản ghi. Chỉ admin. */
+    @Transactional
+    public void deleteInstance(String instanceId, String actor) {
+        WorkflowInstance wi = get(instanceId);
+        // Huỷ snapshot phân công của các việc đang mở trước khi xoá.
+        for (Task t : taskService.createTaskQuery().processInstanceId(wi.getFlowableInstanceId()).list()) {
+            assignmentRepo.findByTaskId(t.getId()).ifPresent(ta -> {
+                if (ta.getStatus() != com.bpm.domain.assignment.AssignmentStatus.CANCELLED) {
+                    ta.cancel();
+                    assignmentRepo.save(ta);
+                }
+            });
+        }
+        try {
+            if ("RUNNING".equals(wi.getStatus())) {
+                runtimeService.deleteProcessInstance(wi.getFlowableInstanceId(), "Xoá bởi " + actor);
+            }
+        } catch (Exception ignore) { /* có thể đã kết thúc */ }
+        try {
+            historyService.deleteHistoricProcessInstance(wi.getFlowableInstanceId());
+        } catch (Exception ignore) { /* */ }
+        instanceRepo.delete(wi);
+        auditPort.record("INSTANCE_DELETED", "WorkflowInstance", wi.getId(), actor,
+                "status=" + wi.getStatus() + ", flowableInstance=" + wi.getFlowableInstanceId());
+    }
+
     /** userId → "Họ tên (username)"; rỗng → (chưa gán). */
     private String userDisplay(String userId) {
         if (userId == null || userId.isBlank()) {

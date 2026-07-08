@@ -174,4 +174,8 @@ export class WorkflowService {
   cancel(id: string, reason: string): Observable<void> {
     return this.http.post<void>(`${this.base}/instances/${id}/cancel`, { reason }, { withCredentials: true });
   }
+  /** Xoá hẳn một hồ sơ (chỉ admin). */
+  deleteInstance(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/instances/${id}`, { withCredentials: true });
+  }
 }

@@ -57,6 +57,9 @@
         @if (i.status === 'RUNNING') {
           <button type="button" class="btn btn--icon btn--icon-danger" title="Hủy" (click)="askCancel(i)">✖</button>
         }
+        @if (canDelete()) {
+          <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá hồ sơ" (click)="askDelete(i)">🗑</button>
+        }
       </span>
     </ng-template>
   </data-grid>
@@ -140,3 +143,11 @@
   confirmLabel="Hủy phiên"
   [danger]="true"
   (confirm)="doCancel()" (cancel)="confirmOpen.set(false)" />
+
+<app-confirm-dialog
+  [open]="delOpen()"
+  title="Xoá hồ sơ"
+  [message]="'Xoá hẳn hồ sơ &quot;' + (delTarget()?.title || delTarget()?.processName || '') + '&quot;? Toàn bộ dữ liệu & lịch sử của hồ sơ sẽ bị xoá vĩnh viễn, không thể hoàn tác.'"
+  confirmLabel="Xoá hồ sơ"
+  [danger]="true"
+  (confirm)="doDelete()" (cancel)="delOpen.set(false)" />

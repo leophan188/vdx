@@ -3,14 +3,19 @@ package com.bpm.api;
 import com.bpm.api.dto.TaskDto;
 import com.bpm.api.dto.WorkflowDto;
 import com.bpm.application.WorkflowService;
+import com.bpm.domain.permission.Feature;
 import com.bpm.domain.workflow.WorkflowInstance;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** Khởi tạo, theo dõi & hủy phiên chạy quy trình (Story 3.1/3.3/3.6) — ROLE_ADMIN GĐ1. */
 @RestController
@@ -75,5 +80,24 @@ public class WorkflowController {
     public void cancel(@PathVariable String id, @RequestBody(required = false) TaskDto.CancelRequest req,
                        Authentication auth) {
         service.cancel(id, req != null ? req.reason() : null, actor(auth));
+    }
+
+    /** Xoá HẲN một hồ sơ — CHỈ admin (ROLE_ADMIN hoặc nhóm "Toàn quyền"). */
+    @DeleteMapping("/{id}")
+    public void delete(@PathVariable String id, Authentication auth) {
+        if (!isFullAdmin(auth)) {
+            throw new AccessDeniedException("Chỉ admin mới được xoá hồ sơ");
+        }
+        service.deleteInstance(id, actor(auth));
+    }
+
+    /** ADMIN tuyệt đối: role ADMIN hoặc có đủ toàn bộ quyền chức năng (nhóm "Toàn quyền"). */
+    private static boolean isFullAdmin(Authentication auth) {
+        if (auth == null) {
+            return false;
+        }
+        Set<String> auths = auth.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
+        return auths.contains("ROLE_ADMIN") || auths.containsAll(Feature.allAuthorities());
     }
 }

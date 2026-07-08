@@ -52,6 +52,12 @@ export class AuthService {
     return this.authoritySet().has('ROLE_ADMIN');
   }
 
+  /** Admin toàn quyền (ROLE_ADMIN hoặc nhóm "Toàn quyền" — có quyền phân quyền). Dùng cho thao tác nhạy cảm như xoá hồ sơ. */
+  isFullAdmin(): boolean {
+    const s = this.authoritySet();
+    return s.has('ROLE_ADMIN') || s.has('FEAT_PERMISSION');
+  }
+
   /** Có quyền truy cập một CHỨC NĂNG (FEAT_*)? ADMIN luôn đủ. key vd "PROJECT", "HR". */
   hasFeature(key: string): boolean {
     const s = this.authoritySet();

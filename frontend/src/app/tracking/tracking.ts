@@ -7,6 +7,7 @@ import { Modal } from '../shared/modal/modal';
 import { ConfirmDialog } from '../shared/confirm-dialog/confirm-dialog';
 import { ToastService } from '../shared/toast/toast.service';
 import { WorkflowService, InstanceListItem, InstanceOverview } from '../core/workflow.service';
+import { AuthService } from '../core/auth.service';
 
 /** Theo dõi quy trình (Story 3.3) + tra cứu/tìm kiếm (Story 4.5) + dòng thời gian + hủy (Story 3.6). */
 @Component({
@@ -17,6 +18,9 @@ import { WorkflowService, InstanceListItem, InstanceOverview } from '../core/wor
 export class Tracking implements OnInit, OnDestroy {
   private wf = inject(WorkflowService);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
+  /** Chỉ admin toàn quyền mới thấy nút Xoá hồ sơ. */
+  readonly canDelete = computed(() => this.auth.isFullAdmin());
 
   readonly cols: GridColumn[] = [
     { key: 'title', header: 'Hồ sơ', sortable: true },
@@ -52,6 +56,9 @@ export class Tracking implements OnInit, OnDestroy {
 
   readonly confirmOpen = signal(false);
   readonly cancelTarget = signal<InstanceListItem | null>(null);
+
+  readonly delOpen = signal(false);
+  readonly delTarget = signal<InstanceListItem | null>(null);
 
   private timer?: ReturnType<typeof setInterval>;
 
@@ -119,6 +126,20 @@ export class Tracking implements OnInit, OnDestroy {
     this.wf.cancel(i.id, 'Hủy từ màn theo dõi').subscribe({
       next: () => { this.toast.success('Đã hủy phiên chạy', i.processName); this.reload(); },
       error: (e) => this.toast.error('Không hủy được', e?.error?.message || 'Phiên có thể đã kết thúc.')
+    });
+  }
+
+  askDelete(i: InstanceListItem): void {
+    this.delTarget.set(i);
+    this.delOpen.set(true);
+  }
+  doDelete(): void {
+    const i = this.delTarget();
+    this.delOpen.set(false);
+    if (!i) return;
+    this.wf.deleteInstance(i.id).subscribe({
+      next: () => { this.toast.success('Đã xoá hồ sơ', i.title || i.processName); this.reload(); },
+      error: (e) => this.toast.error('Không xoá được hồ sơ', e?.error?.message || 'Cần quyền admin.')
     });
   }
 }
