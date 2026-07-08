@@ -41,4 +41,8 @@ public class ProcessDto {
             return new Version(v.getId(), v.getVersion(), v.getStatus().name(), v.getPublishedAt(), v.getPublishedBy());
         }
     }
+
+    /** Cấu hình một bước trong MỘT phiên bản đã ban hành (để xem lại bản cũ). */
+    public record VersionStep(String stepKey, String stepName, String assigneeType, String assignee) {
+    }
 }

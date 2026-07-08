@@ -542,6 +542,46 @@ public class WorkflowService {
         return out;
     }
 
+    /** Cấu hình các bước của MỘT phiên bản đã ban hành (để xem lại bản cũ) — assignee đã resolve ra tên. */
+    @Transactional(readOnly = true)
+    public List<com.bpm.api.dto.ProcessDto.VersionStep> versionSteps(String processId, int version) {
+        List<com.bpm.api.dto.ProcessDto.VersionStep> out = new ArrayList<>();
+        ProcessVersion v = versionRepo.findByProcessIdOrderByVersionDesc(processId).stream()
+                .filter(pv -> pv.getVersion() == version).findFirst().orElse(null);
+        if (v == null || v.getStepsMetaJson() == null || v.getStepsMetaJson().isBlank()) {
+            return out;
+        }
+        JsonNode meta;
+        try {
+            meta = objectMapper.readTree(v.getStepsMetaJson());
+        } catch (Exception e) {
+            return out;
+        }
+        Map<String, String> roleNames = new HashMap<>();
+        roleService.listRoles().forEach(r -> roleNames.put(r.getCode(), r.getName()));
+        List<String> keys = new ArrayList<>();
+        meta.fieldNames().forEachRemaining(keys::add);
+        keys.sort(java.util.Comparator.naturalOrder());
+        for (String k : keys) {
+            JsonNode s = meta.get(k);
+            if (s == null || !s.has("assigneeType")) {
+                continue; // bỏ qua flow/gateway (không có người thực hiện)
+            }
+            String type = s.path("assigneeType").asText("");
+            String aid = blankToNull(s.path("assigneeId").asText(null));
+            String assignee = switch (type) {
+                case "USER" -> aid != null ? userDisplay(aid) : "—";
+                case "POSITION" -> aid != null ? positionRepo.findById(aid)
+                        .map(com.bpm.domain.position.Position::getTitle).orElse(aid) : "—";
+                case "ROLE" -> aid != null ? "Vai trò: " + roleNames.getOrDefault(aid, aid) : "—";
+                default -> "—";
+            };
+            String label = s.path("statusLabel").asText(s.path("name").asText(k));
+            out.add(new com.bpm.api.dto.ProcessDto.VersionStep(k, label, type, assignee));
+        }
+        return out;
+    }
+
     /** Hồ sơ do tôi tạo (Story 4.4 — theo dõi nhiệm vụ cá nhân). */
     @Transactional(readOnly = true)
     public List<TaskDto.InstanceListItem> myInstances(String username) {

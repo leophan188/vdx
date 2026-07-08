@@ -22,6 +22,7 @@
     <ng-template gridCell="actions" let-p>
       <span class="cell-actions">
         <button type="button" class="btn btn--icon" title="Thiết kế" (click)="design(p)">🎨</button>
+        <button type="button" class="btn btn--icon" title="Lịch sử phiên bản" (click)="openVersions(p)">🕐</button>
         @if (p.status !== 'PUBLISHED') {
           <button type="button" class="btn btn--icon" title="Ban hành" (click)="askPublish(p)">🚀</button>
         } @else {
@@ -58,6 +59,57 @@
   <ng-container modalFooter>
     <button type="button" class="btn btn--ghost" (click)="createOpen.set(false)">Hủy</button>
     <button type="submit" form="create-process" class="btn btn--primary">Tạo &amp; thiết kế</button>
+  </ng-container>
+</app-modal>
+
+<!-- Lịch sử phiên bản -->
+<app-modal [open]="versionsOpen()" [wide]="true"
+           [title]="'Lịch sử phiên bản — ' + (versionsTarget()?.name || '')" (closed)="versionsOpen.set(false)">
+  @if (versionsLoading()) {
+    <p class="hint">Đang tải…</p>
+  } @else if (!versionList().length) {
+    <p class="hint">Quy trình chưa được ban hành phiên bản nào. Vào Thiết kế → Ban hành để tạo phiên bản đầu tiên.</p>
+  } @else {
+    <p class="hint" style="margin-top:0">Đơn đang chạy giữ nguyên phiên bản lúc khởi tạo. Đơn mới dùng phiên bản mới nhất. Bấm một phiên bản để xem cấu hình các bước.</p>
+    <div class="ver-list" style="display:flex;flex-direction:column;gap:8px;">
+      @for (v of versionList(); track v.id) {
+        <div style="border:1px solid var(--color-border);border-radius:10px;overflow:hidden;">
+          <button type="button" style="width:100%;display:flex;align-items:center;gap:10px;padding:10px 12px;background:transparent;border:0;cursor:pointer;color:inherit;text-align:left;font:inherit;"
+                  (click)="toggleVersion(v)">
+            <span class="badge" style="background:var(--color-primary-soft,rgba(30,80,160,.14));color:var(--color-primary,#1e50a0);font-weight:700;">v{{ v.version }}</span>
+            @if (isCurrentVersion(v)) { <span class="badge badge--success">Đang áp dụng cho đơn mới</span> }
+            @else if (v.status === 'RETIRED') { <span class="badge badge--cancel">Ngừng dùng</span> }
+            @else { <span class="badge" style="background:var(--color-surface-2,rgba(127,127,127,.14));">Bản cũ</span> }
+            <span style="flex:1;min-width:0;opacity:.7;font-size:.9em;">Ban hành {{ fmtDate(v.publishedAt) }} · bởi {{ v.publishedBy }}</span>
+            <span style="opacity:.5">{{ expandedVersion() === v.version ? '▾' : '▸' }}</span>
+          </button>
+          @if (expandedVersion() === v.version) {
+            <div style="border-top:1px solid var(--color-border);padding:6px 12px 12px;">
+              @if (versionSteps(v.version).length) {
+                <table class="data-table" style="width:100%;">
+                  <thead><tr><th style="width:70px">Bước</th><th>Tên bước</th><th style="width:130px">Loại</th><th>Người phụ trách</th></tr></thead>
+                  <tbody>
+                    @for (s of versionSteps(v.version); track s.stepKey) {
+                      <tr>
+                        <td>{{ s.stepKey }}</td>
+                        <td>{{ s.stepName }}</td>
+                        <td>{{ assigneeTypeLabel(s.assigneeType) }}</td>
+                        <td><strong>{{ s.assignee }}</strong></td>
+                      </tr>
+                    }
+                  </tbody>
+                </table>
+              } @else {
+                <p class="hint" style="margin:6px 0 0">Đang tải cấu hình…</p>
+              }
+            </div>
+          }
+        </div>
+      }
+    </div>
+  }
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="versionsOpen.set(false)">Đóng</button>
   </ng-container>
 </app-modal>
 

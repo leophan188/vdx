@@ -1,7 +1,7 @@
 import { Component, inject, signal, OnInit } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { ProcessService, ProcessSummary } from '../core/process.service';
+import { ProcessService, ProcessSummary, ProcessVersion, ProcessVersionStep } from '../core/process.service';
 import { WorkflowService } from '../core/workflow.service';
 import { DataGrid, GridColumn } from '../shared/data-grid/data-grid';
 import { GridCellDirective } from '../shared/data-grid/grid-cell.directive';
@@ -50,6 +50,15 @@ export class Processes implements OnInit {
   readonly retireOpen = signal(false);
   readonly retireTarget = signal<ProcessSummary | null>(null);
 
+  // ----- Lịch sử phiên bản -----
+  readonly versionsOpen = signal(false);
+  readonly versionsTarget = signal<ProcessSummary | null>(null);
+  readonly versionList = signal<ProcessVersion[]>([]);
+  readonly versionsLoading = signal(false);
+  /** version → danh sách bước (lazy-load khi mở rộng). */
+  readonly stepsByVersion = signal<Record<number, ProcessVersionStep[]>>({});
+  readonly expandedVersion = signal<number | null>(null);
+
   ngOnInit(): void {
     this.reload();
   }
@@ -87,6 +96,43 @@ export class Processes implements OnInit {
 
   design(p: ProcessSummary): void {
     this.router.navigate(['/processes', p.id]);
+  }
+
+  // ----- Lịch sử phiên bản -----
+  openVersions(p: ProcessSummary): void {
+    this.versionsTarget.set(p);
+    this.versionList.set([]);
+    this.stepsByVersion.set({});
+    this.expandedVersion.set(null);
+    this.versionsLoading.set(true);
+    this.versionsOpen.set(true);
+    this.svc.versions(p.id).subscribe({
+      next: (v) => { this.versionList.set(v); this.versionsLoading.set(false); },
+      error: () => { this.toast.error('Không tải được lịch sử phiên bản'); this.versionsLoading.set(false); }
+    });
+  }
+  toggleVersion(v: ProcessVersion): void {
+    if (this.expandedVersion() === v.version) { this.expandedVersion.set(null); return; }
+    this.expandedVersion.set(v.version);
+    const p = this.versionsTarget();
+    if (!p || this.stepsByVersion()[v.version]) return; // đã có cache
+    this.svc.versionSteps(p.id, v.version).subscribe({
+      next: (s) => this.stepsByVersion.update((m) => ({ ...m, [v.version]: s })),
+      error: () => this.toast.error('Không tải được cấu hình phiên bản')
+    });
+  }
+  versionSteps(version: number): ProcessVersionStep[] { return this.stepsByVersion()[version] ?? []; }
+  /** Phiên bản đang áp dụng cho đơn mới = bản PUBLISHED có số lớn nhất. */
+  isCurrentVersion(v: ProcessVersion): boolean {
+    const maxPub = Math.max(...this.versionList().filter((x) => x.status === 'PUBLISHED').map((x) => x.version), -1);
+    return v.status === 'PUBLISHED' && v.version === maxPub;
+  }
+  assigneeTypeLabel(t: string): string {
+    return t === 'USER' ? '👤 Nhân sự' : t === 'POSITION' ? '🪪 Chức danh' : t === 'ROLE' ? '👥 Vai trò' : t;
+  }
+  fmtDate(iso: string | null): string {
+    if (!iso) return '—';
+    return new Date(iso).toLocaleString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
 
   /** Khởi tạo một phiên chạy từ quy trình đã ban hành (Story 3.1) → việc về "Việc của tôi". */

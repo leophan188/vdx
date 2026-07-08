@@ -24,6 +24,13 @@ export interface ProcessVersion {
   publishedBy: string;
 }
 
+export interface ProcessVersionStep {
+  stepKey: string;
+  stepName: string;
+  assigneeType: string;
+  assignee: string;
+}
+
 /** Dịch vụ định nghĩa quy trình (Story 2.1). */
 @Injectable({ providedIn: 'root' })
 export class ProcessService {
@@ -64,5 +71,8 @@ export class ProcessService {
 
   versions(id: string): Observable<ProcessVersion[]> {
     return this.http.get<ProcessVersion[]>(`${this.base}/${id}/versions`, { withCredentials: true });
+  }
+  versionSteps(id: string, version: number): Observable<ProcessVersionStep[]> {
+    return this.http.get<ProcessVersionStep[]>(`${this.base}/${id}/versions/${version}/steps`, { withCredentials: true });
   }
 }

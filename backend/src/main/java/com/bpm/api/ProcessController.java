@@ -2,6 +2,7 @@ package com.bpm.api;
 
 import com.bpm.api.dto.ProcessDto;
 import com.bpm.application.ProcessService;
+import com.bpm.application.WorkflowService;
 import com.bpm.domain.process.ProcessDefinition;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -17,9 +18,11 @@ import java.util.List;
 public class ProcessController {
 
     private final ProcessService service;
+    private final WorkflowService workflow;
 
-    public ProcessController(ProcessService service) {
+    public ProcessController(ProcessService service, WorkflowService workflow) {
         this.service = service;
+        this.workflow = workflow;
     }
 
     private static String actor(Authentication auth) {
@@ -66,6 +69,12 @@ public class ProcessController {
     @GetMapping("/{id}/versions")
     public List<ProcessDto.Version> versions(@PathVariable String id) {
         return service.listVersions(id).stream().map(ProcessDto.Version::from).toList();
+    }
+
+    /** Cấu hình các bước của một phiên bản đã ban hành (để xem lại bản cũ). */
+    @GetMapping("/{id}/versions/{version}/steps")
+    public List<ProcessDto.VersionStep> versionSteps(@PathVariable String id, @PathVariable int version) {
+        return workflow.versionSteps(id, version);
     }
 
     @DeleteMapping("/{id}")
