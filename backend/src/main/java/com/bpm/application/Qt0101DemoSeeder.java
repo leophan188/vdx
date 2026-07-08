@@ -88,13 +88,13 @@ public class Qt0101DemoSeeder {
               {"key":"van_ban_can_cu","label":"Văn bản căn cứ","type":"text","required":true},
               {"key":"loai_nhiem_vu","label":"Loại nhiệm vụ","type":"text"},
               {"key":"don_vi_chu_tri","label":"Đơn vị chủ trì","type":"orgtree","pickMode":"unit"},
-              {"key":"lanh_dao_phe_duyet","label":"Lãnh đạo phê duyệt (chọn từ danh mục hệ thống)","type":"orgtree","pickMode":"user"},
+              {"key":"lanh_dao_phe_duyet","label":"Lãnh đạo phê duyệt (chọn theo cây đơn vị)","type":"unitstaff"},
               {"key":"sec_ph","label":"Đơn vị / cá nhân phối hợp (nếu có)","type":"section"},
               {"key":"co_phoi_hop","label":"Có phối hợp","type":"boolean"},
               {"key":"don_vi_phoi_hop","label":"Đơn vị phối hợp","type":"orgtree","pickMode":"unit"},
               {"key":"noi_dung_phoi_hop","label":"Nội dung đề nghị phối hợp","type":"textarea"},
               {"key":"han_phoi_hop","label":"Hạn xử lý phối hợp","type":"date"},
-              {"key":"ca_nhan_phoi_hop","label":"Cá nhân phối hợp","type":"orgtree","pickMode":"user"}
+              {"key":"ca_nhan_phoi_hop","label":"Cá nhân phối hợp (chọn theo cây đơn vị)","type":"unitstaff"}
             ]}""",
             // BƯỚC 2 — Phê duyệt nhiệm vụ (Người duyệt)
             """
@@ -104,7 +104,7 @@ public class Qt0101DemoSeeder {
             // BƯỚC 3a — Phân công phối hợp
             """
             {"fields":[
-              {"key":"cb_thuc_hien","label":"Cán bộ thực hiện (chọn từ danh mục)","type":"orgtree","pickMode":"user","required":true},
+              {"key":"cb_thuc_hien","label":"Cán bộ thực hiện (chọn theo cây đơn vị)","type":"unitstaff","required":true},
               {"key":"chuc_vu_cb","label":"Chức vụ","type":"text"},
               {"key":"noi_dung_phan_cong","label":"Nội dung phân công","type":"textarea"},
               {"key":"thoi_han_phan_cong","label":"Thời hạn","type":"date"}
@@ -139,7 +139,7 @@ public class Qt0101DemoSeeder {
               {"key":"the_loai_vb","label":"Thể loại văn bản","type":"dropdown","optionSource":"STATIC","options":"Công văn, Báo cáo, Tờ trình, Phiếu trình","required":true},
               {"key":"tao_phieu_trinh","label":"Tạo phiếu trình ký","type":"boolean"},
               {"key":"trich_yeu_noi_dung","label":"Trích yếu nội dung văn bản","type":"textarea","required":true},
-              {"key":"nguoi_xu_ly_tiep","label":"Người xử lý tiếp theo","type":"orgtree","pickMode":"user"}
+              {"key":"nguoi_xu_ly_tiep","label":"Người xử lý tiếp theo (chọn theo cây đơn vị)","type":"unitstaff"}
             ]}""",
             // BƯỚC 7 — Ký, ban hành
             """
