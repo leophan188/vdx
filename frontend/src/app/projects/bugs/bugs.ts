@@ -403,7 +403,8 @@ export class PrjBugs implements OnInit {
   private emptyForm(): TaskRequest {
     return {
       parentId: null, title: '', description: BUG_DESCRIPTION_TEMPLATE, type: 'BUG', status: 'BACKLOG',
-      priority: 'MEDIUM', assigneeUserId: null, estimateHours: 0,
+      // Log nhanh: est mặc định 4 giờ (vẫn cho sửa). Bug/Issue không có ô ngày → để trống.
+      priority: 'MEDIUM', assigneeUserId: null, estimateHours: 4,
       startDate: null, dueDate: null,
       // Người kiểm thử MẶC ĐỊNH = người log/tạo (chính mình) — vẫn cho chỉnh lại.
       testerUserId: this.auth.currentUser()?.userId ?? null,

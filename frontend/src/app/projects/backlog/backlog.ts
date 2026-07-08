@@ -893,7 +893,8 @@ export class PrjBacklog implements OnInit {
   private emptyForm(): TaskRequest {
     return {
       parentId: null, title: '', description: '', type: 'TASK', status: 'BACKLOG',
-      priority: 'MEDIUM', assigneeUserId: null, estimateHours: 0, screen: '',
+      // Est mặc định 4 giờ (log nhanh); vẫn cho sửa.
+      priority: 'MEDIUM', assigneeUserId: null, estimateHours: 4, screen: '',
       startDate: null, dueDate: null,
       // Chi tiết lỗi (BUG/ISSUE) — mặc định rỗng, chỉ dùng khi loại là BUG/ISSUE.
       severity: null, stepsToReproduce: '', expectedResult: '', actualResult: '', environment: ''

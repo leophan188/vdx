@@ -192,6 +192,12 @@ export class QuickCreate {
     }
   }
 
+  /** Hôm nay dạng yyyy-MM-dd (local) cho <input type=date>. */
+  private todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
   private reset(): void {
     this.projectId.set('');
     this.parentId.set('');
@@ -202,8 +208,9 @@ export class QuickCreate {
     this.priority.set('MEDIUM');
     this.assigneeUserId.set('');
     this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
-    this.estimateHours.set('');
-    this.dueIso.set('');
+    // Log nhanh: mặc định est = 4 giờ, hạn (deadline) = hôm nay (vẫn cho sửa).
+    this.estimateHours.set('4');
+    this.dueIso.set(this.todayIso());
     this.severity.set('');
     this.screen.set('');
     this.environment.set('');
