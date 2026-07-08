@@ -702,6 +702,12 @@ public class WorkflowService {
                         out.add(new TaskDto.FieldValue(label, txt));
                     }
                 }
+                case "unitstaff" -> {
+                    String txt = resolveOrgValue("user", v);
+                    if (txt != null) {
+                        out.add(new TaskDto.FieldValue(label, txt));
+                    }
+                }
                 default -> {
                     if (v != null && !v.toString().isBlank()) {
                         out.add(new TaskDto.FieldValue(label, v.toString()));

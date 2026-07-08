@@ -1,0 +1,60 @@
+<!-- Ô kích hoạt: hiển thị người đã chọn, bấm để mở popup -->
+<button type="button" class="usp-trigger" [disabled]="disabled()" (click)="openPicker()">
+  <span>👥</span>
+  @if (selectedLabel()) {
+    <span class="usp-trigger__val">{{ selectedLabel() }}</span>
+    <span class="usp-clear" title="Bỏ chọn" (click)="clear($event)">✕</span>
+  } @else {
+    <span class="usp-trigger__val usp-trigger__val--empty">{{ placeholder() }}</span>
+    <span style="opacity:.5">▾</span>
+  }
+</button>
+
+<!-- Popup: cây đơn vị (trái) → nhân sự đơn vị (phải) -->
+<app-modal [open]="open()" [wide]="true" title="Chọn nhân sự theo đơn vị" (closed)="open.set(false)">
+  <div class="usp-body">
+    <!-- Cột cây đơn vị -->
+    <div class="usp-col">
+      <div class="usp-col__head">🏛️ Cây đơn vị</div>
+      <div class="usp-col__scroll">
+        @for (n of unitNodes(); track n.id) {
+          <button type="button" class="usp-unit" [class.is-active]="selectedUnit() === n.id"
+                  [style.padding-left.px]="8 + n.level * 16" (click)="pickUnit(n.id)">
+            <span class="usp-unit__caret" (click)="$event.stopPropagation(); n.hasChildren && toggleUnit(n.id)">
+              @if (n.hasChildren) { {{ expanded().has(n.id) ? '▾' : '▸' }} } @else { · }
+            </span>
+            <span class="usp-unit__name">{{ n.name }}</span>
+          </button>
+        } @empty {
+          <div class="usp-empty">Chưa có dữ liệu đơn vị.</div>
+        }
+      </div>
+    </div>
+
+    <!-- Cột nhân sự của đơn vị đã chọn -->
+    <div class="usp-col">
+      <div class="usp-col__head">👤 Nhân sự {{ selectedUnit() ? '(gồm đơn vị con)' : '' }}</div>
+      <input class="usp-search" type="search" placeholder="🔍 Tìm nhân sự…"
+             [ngModel]="search()" (ngModelChange)="search.set($event)" />
+      <div class="usp-col__scroll">
+        @if (!selectedUnit()) {
+          <div class="usp-empty">← Chọn một đơn vị ở cây bên trái để xem nhân sự.</div>
+        } @else {
+          @for (u of staff(); track u.id) {
+            <button type="button" class="usp-person" [class.is-active]="isCurrent(u.id)" (click)="pickUser(u.id)">
+              <span class="usp-person__ava">{{ initials(u.fullName) }}</span>
+              <span class="usp-person__name">{{ u.fullName }} <small>{{ u.username }}</small></span>
+              @if (isCurrent(u.id)) { <span style="color:var(--status-done,#16a34a)">✓</span> }
+            </button>
+          } @empty {
+            <div class="usp-empty">Đơn vị này chưa có nhân sự (giữ vị trí).</div>
+          }
+        }
+      </div>
+    </div>
+  </div>
+
+  <ng-container modalFooter>
+    <button type="button" class="btn btn--ghost" (click)="open.set(false)">Đóng</button>
+  </ng-container>
+</app-modal>

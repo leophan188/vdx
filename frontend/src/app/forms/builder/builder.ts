@@ -6,9 +6,11 @@ import { FormService } from '../../core/form.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Modal } from '../../shared/modal/modal';
 import { OrgTreePicker } from '../../shared/org-tree-picker/org-tree-picker';
+import { UnitStaffPicker } from '../../shared/unit-staff-picker/unit-staff-picker';
 
 type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean'
-  | 'dropdown' | 'radio' | 'multiselect' | 'file' | 'richtext' | 'table' | 'scoretable' | 'orgtree' | 'section';
+  | 'dropdown' | 'radio' | 'multiselect' | 'file' | 'richtext' | 'table' | 'scoretable'
+  | 'orgtree' | 'unitstaff' | 'section';
 
 interface FormColumn { key: string; label: string; }
 /** Một tiêu chí của bảng chấm điểm: nhãn + trọng số (%). */
@@ -38,7 +40,7 @@ interface FormField {
 /** Form builder kéo-thả (Story 2.6): palette loại trường + canvas reorder + thuộc tính + xem trước. */
 @Component({
   selector: 'app-builder',
-  imports: [FormsModule, CdkDropList, CdkDrag, Modal, OrgTreePicker],
+  imports: [FormsModule, CdkDropList, CdkDrag, Modal, OrgTreePicker, UnitStaffPicker],
   templateUrl: './builder.html'
 })
 export class Builder implements OnInit {
@@ -76,6 +78,7 @@ export class Builder implements OnInit {
     { t: 'table', l: 'Bảng nhiều dòng', i: '▦' },
     { t: 'scoretable', l: 'Bảng chấm điểm', i: '🧮' },
     { t: 'orgtree', l: 'Chọn theo cây tổ chức', i: '🌳' },
+    { t: 'unitstaff', l: 'Cây đơn vị → chọn nhân sự', i: '👥' },
     { t: 'section', l: 'Tiêu đề mục', i: '§' }
   ];
 

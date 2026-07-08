@@ -70,7 +70,7 @@
           @if (f.type === 'section') {
             <h4 class="form-section tp-full">{{ f.label }}</h4>
           } @else if (visible(f.key)) {
-            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable' || f.type==='table' || f.type==='orgtree'">
+            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable' || f.type==='table' || f.type==='orgtree' || f.type==='unitstaff'">
               <label [attr.for]="'tpf_' + f.key">{{ f.label }}@if (f.required) { <span class="req">*</span> }</label>
 
               @switch (f.type) {
@@ -128,6 +128,10 @@
                 @case ('orgtree') {
                   <org-tree-picker [mode]="f.pickMode || 'user'" [value]="$any(val(f.key)) || ''"
                                    (valueChange)="setVal(f.key, $event)" />
+                }
+                @case ('unitstaff') {
+                  <unit-staff-picker [value]="$any(val(f.key)) || ''" [disabled]="readonly_(f.key)"
+                                     (valueChange)="setVal(f.key, $event)" />
                 }
                 @case ('table') {
                   <table class="tp-mtable">

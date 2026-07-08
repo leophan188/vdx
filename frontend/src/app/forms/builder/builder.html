@@ -212,6 +212,9 @@
           @case ('orgtree') {
             <org-tree-picker [mode]="f.pickMode || 'user'" [value]="$any(values()[f.key]) || ''" (valueChange)="setVal(f.key, $event)" />
           }
+          @case ('unitstaff') {
+            <unit-staff-picker [value]="$any(values()[f.key]) || ''" (valueChange)="setVal(f.key, $event)" />
+          }
           @default { <input type="text" [placeholder]="f.placeholder || ''" [ngModel]="values()[f.key]" (ngModelChange)="setVal(f.key, $event)" /> }
         }
         @if (shownError(f); as err) { <span class="field__error">{{ err }}</span> }

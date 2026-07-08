@@ -2,6 +2,7 @@ import { Component, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Modal } from '../modal/modal';
 import { OrgTreePicker } from '../org-tree-picker/org-tree-picker';
+import { UnitStaffPicker } from '../unit-staff-picker/unit-staff-picker';
 import { ToastService } from '../toast/toast.service';
 import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.service';
 import { FormService } from '../../core/form.service';
@@ -23,7 +24,7 @@ interface RField {
  */
 @Component({
   selector: 'app-task-processor',
-  imports: [FormsModule, Modal, OrgTreePicker],
+  imports: [FormsModule, Modal, OrgTreePicker, UnitStaffPicker],
   templateUrl: './task-processor.html',
   styles: [`
     .tp-card{border:1px solid var(--color-border);border-radius:10px;padding:12px 14px;margin-bottom:14px;background:var(--color-surface-2,rgba(127,127,127,.05));}
