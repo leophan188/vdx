@@ -207,6 +207,9 @@ public class WorkflowService {
     @Transactional
     public WorkflowInstance start(String processId, Map<String, Object> formData, String actor) {
         ProcessDefinition p = processService.get(processId);
+        if (p.getStatus() == ProcessStatus.RETIRED) {
+            throw new IllegalStateException("Quy trình đã ngừng dùng — không thể khởi tạo đơn mới (Ban hành lại để tiếp tục)");
+        }
         ProcessVersion v = versionRepo.findFirstByProcessIdAndStatusOrderByVersionDesc(processId, ProcessStatus.PUBLISHED)
                 .orElseThrow(() -> new IllegalStateException("Quy trình chưa được ban hành (publish) — không thể khởi tạo"));
 
