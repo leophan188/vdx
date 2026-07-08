@@ -76,6 +76,11 @@ public class SecurityConfig {
                 .requestMatchers("/api/v1/me/**").authenticated()
                 .requestMatchers("/api/v1/hr/**").authenticated()
                 .requestMatchers("/api/v1/search/**").authenticated()
+                // ===== Danh mục tổ chức ĐỌC-CHỈ cho picker chọn người/đơn vị (mọi user đã đăng nhập đọc được;
+                //       thao tác GHI vẫn rơi xuống FEAT_CATALOG/FEAT_ACCOUNTS bên dưới) =====
+                .requestMatchers(HttpMethod.GET, "/api/v1/org-units/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/positions/**").authenticated()
+                .requestMatchers(HttpMethod.GET, "/api/v1/users").authenticated()
                 // ===== Phân quyền CHỨC NĂNG (ma trận) — kiểm authority FEAT_* (ADMIN luôn có đủ) =====
                 .requestMatchers("/api/v1/permissions/**").hasAuthority("FEAT_PERMISSION")
                 .requestMatchers("/api/v1/users/**").hasAuthority("FEAT_ACCOUNTS")
