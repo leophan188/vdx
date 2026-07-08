@@ -44,10 +44,10 @@
       </div>
       <div class="field">
         <label>Chọn {{ assigneeTypeLabel() }} (theo danh mục)</label>
-        <select [(ngModel)]="meta.assigneeId" (ngModelChange)="writeMeta()">
-          <option [ngValue]="undefined">— chọn {{ assigneeTypeLabel() }} —</option>
-          @for (o of assigneeOptions(); track o.id) { <option [ngValue]="o.id">{{ o.label }}</option> }
-        </select>
+        <searchable-select [options]="assigneeSelOptions()" [value]="meta.assigneeId || ''"
+                           (valueChange)="onAssigneePick($event)" [allowEmpty]="true"
+                           [emptyLabel]="'— chọn ' + assigneeTypeLabel() + ' —'"
+                           [placeholder]="'Gõ tìm ' + assigneeTypeLabel() + '…'" />
       </div>
     </div>
     <div class="field" style="max-width: 220px;">
@@ -147,10 +147,9 @@
               @for (t of RECIPIENT_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
             </select>
             @if (r.type !== 'ASSIGNEE') {
-              <select [(ngModel)]="r.id" (ngModelChange)="writeMeta()">
-                <option [ngValue]="undefined">— chọn —</option>
-                @for (o of targetOptions(r.type); track o.id) { <option [ngValue]="o.id">{{ o.label }}</option> }
-              </select>
+              <searchable-select style="flex:1;min-width:0;" [options]="recipientSelOptions(r.type)"
+                                 [value]="r.id || ''" (valueChange)="onRecipientPick(r, $event)"
+                                 [allowEmpty]="true" emptyLabel="— chọn —" placeholder="Gõ tìm…" />
             } @else {
               <span class="recip-note">người đang thực hiện bước này</span>
             }

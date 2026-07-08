@@ -10,6 +10,7 @@ import { FormService, FormSummary } from '../../core/form.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Modal } from '../../shared/modal/modal';
 import { Tabs, TabItem } from '../../shared/tabs/tabs';
+import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 
 type AssigneeType = 'ROLE' | 'POSITION' | 'USER';
 type FieldType = 'text' | 'number' | 'date' | 'dropdown' | 'radio' | 'checkbox' | 'richtext';
@@ -81,7 +82,7 @@ const EMPTY_BPMN = `<?xml version="1.0" encoding="UTF-8"?>
 /** Designer quy trình bpmn-js (Story 2.1): canvas kéo-thả + modal cấu hình bước nhiều tab. */
 @Component({
   selector: 'app-designer',
-  imports: [FormsModule, Modal, Tabs],
+  imports: [FormsModule, Modal, Tabs, SearchableSelect],
   templateUrl: './designer.html'
 })
 export class Designer implements AfterViewInit, OnDestroy {
@@ -364,6 +365,22 @@ export class Designer implements AfterViewInit, OnDestroy {
   }
   onAssigneeTypeChange(): void {
     this.meta.assigneeId = undefined;
+    this.writeMeta();
+  }
+  /** Options cho ô tìm-kiếm-chọn người thực hiện (typeahead). */
+  assigneeSelOptions(): SelectOption[] {
+    return this.assigneeOptions().map((o) => ({ value: o.id, label: o.label }));
+  }
+  onAssigneePick(v: string): void {
+    this.meta.assigneeId = v || undefined;
+    this.writeMeta();
+  }
+  /** Options cho ô tìm-kiếm-chọn người nhận thông báo theo loại. */
+  recipientSelOptions(type: RecipientType): SelectOption[] {
+    return this.targetOptions(type).map((o) => ({ value: o.id, label: o.label }));
+  }
+  onRecipientPick(r: Recipient, v: string): void {
+    r.id = v || undefined;
     this.writeMeta();
   }
 
