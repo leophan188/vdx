@@ -63,6 +63,8 @@ interface StepMeta {
   /** Biểu mẫu gắn vào bước (Story 2.9) + quyền trường theo bước. */
   formId?: string;
   fieldPerms?: Record<string, FieldPerm>;
+  /** Key các trường của BƯỚC TRƯỚC được phép SỬA ở bước này. */
+  editPriorKeys?: string[];
   /** Điều kiện chuyển bước (Story 2.2) — chỉ áp cho phần tử SequenceFlow. */
   condition?: FlowCondition;
 }
@@ -275,6 +277,7 @@ export class Designer implements AfterViewInit, OnDestroy {
     }
     if (!m.fields) m.fields = [];
     if (!m.fieldPerms) m.fieldPerms = {};
+    if (!m.editPriorKeys) m.editPriorKeys = [];
     m.notify = { emailTo: [], appTo: [], cc: [], subject: '', content: '', ...(raw.notify ?? {}) };
     this.meta = m;
     this.loadFormFields(m.formId);
@@ -365,8 +368,26 @@ export class Designer implements AfterViewInit, OnDestroy {
     this.writeMeta();
   }
 
+  // ---- Cho phép SỬA trường của bước trước ở bước này ----
+  /** Trường của các bước KHÁC (không thuộc form/trường của chính bước này). */
+  priorFieldOptions(): { key: string; label: string }[] {
+    const own = new Set<string>(this.formFields().map((f) => f.key));
+    for (const f of this.meta.fields ?? []) if (f.key) own.add(f.key);
+    return this.dataFields().filter((d) => !own.has(d.key));
+  }
+  isPriorEditable(key: string): boolean {
+    return (this.meta.editPriorKeys ?? []).includes(key);
+  }
+  togglePriorEditable(key: string): void {
+    const cur = new Set(this.meta.editPriorKeys ?? []);
+    cur.has(key) ? cur.delete(key) : cur.add(key);
+    this.meta.editPriorKeys = [...cur];
+    this.writeMeta();
+  }
+
   openConfig(): void {
     if (this.selectedId()) {
+      this.collectDataFields(); // làm mới danh sách trường toàn quy trình
       this.configTab.set('assignee');
       this.configOpen.set(true);
     }

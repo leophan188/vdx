@@ -22,7 +22,8 @@ public class TaskDto {
      */
     public record Detail(String taskId, String stepName, String stepKey, String processName, String instanceId,
                          String formId, String formSchemaJson, int processVersion, Object fieldPerms,
-                         List<String> actions, Map<String, Object> formData, List<StepView> priorSteps) {
+                         List<String> actions, Map<String, Object> formData, List<StepView> priorSteps,
+                         String priorEditFieldsJson) {
     }
 
     /** Yêu cầu hoàn thành việc: hành động đã chọn + dữ liệu form. */

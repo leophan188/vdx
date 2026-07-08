@@ -95,6 +95,22 @@
     } @else {
       <p class="hint">Chọn một biểu mẫu để gắn vào bước và cấu hình quyền trường (Sửa được / Chỉ xem / Ẩn).</p>
     }
+
+    <!-- Cho phép SỬA trường của bước trước ở bước này -->
+    <h4 class="form-section" style="margin-top:18px;">✏️ Cho phép sửa trường của bước trước</h4>
+    @if (priorFieldOptions().length) {
+      <p class="hint" style="margin-top:0;">Tích các trường (do bước trước nhập) mà người ở bước này được phép chỉnh sửa. Giá trị sửa sẽ cập nhật xuyên suốt hồ sơ.</p>
+      <div style="display:flex;flex-direction:column;gap:4px;max-height:240px;overflow:auto;">
+        @for (o of priorFieldOptions(); track o.key) {
+          <label class="radio-row" style="margin:0;">
+            <input type="checkbox" [checked]="isPriorEditable(o.key)" (change)="togglePriorEditable(o.key)" />
+            {{ o.label }} <span class="hint" style="margin:0;">· {{ o.key }}</span>
+          </label>
+        }
+      </div>
+    } @else {
+      <p class="hint">Chưa có trường nào từ bước khác. Hãy gắn biểu mẫu có trường cho các bước trước.</p>
+    }
   }
 
   <!-- TAB: Trường thêm (metadata có kiểu dữ liệu, ngoài biểu mẫu) -->

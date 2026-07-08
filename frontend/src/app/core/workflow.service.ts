@@ -34,6 +34,8 @@ export interface TaskDetail {
   formData: Record<string, unknown>;
   /** Dữ liệu các bước TRƯỚC đã hoàn thành (xem lại ngữ cảnh). */
   priorSteps: StepView[];
+  /** JSON các trường của bước TRƯỚC được phép SỬA ở bước này (cấu hình editPriorKeys). */
+  priorEditFieldsJson: string | null;
 }
 
 export interface StartableProcess {

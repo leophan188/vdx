@@ -61,13 +61,13 @@
       </div>
     }
 
-    <!-- NỘI DUNG CẦN ĐIỀN: biểu mẫu của bước hiện tại -->
-    @if (d.formId && fields().length) {
+    <!-- NỘI DUNG CẦN ĐIỀN: biểu mẫu bước hiện tại (+ trường bước trước được phép sửa) -->
+    @if (renderFields().length && !priorFields().length) {
       <div class="tp-sechead"><span>📝 Nội dung cần điền</span></div>
     }
-    @if (d.formId && fields().length) {
+    @if (renderFields().length) {
       <form id="task-proc-form" class="tp-grid">
-        @for (f of fields(); track f.key) {
+        @for (f of renderFields(); track f.key) {
           @if (f.type === 'section') {
             <h4 class="form-section tp-full">{{ f.label }}</h4>
           } @else if (visible(f.key)) {

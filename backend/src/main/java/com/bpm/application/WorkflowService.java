@@ -407,6 +407,7 @@ public class WorkflowService {
         Map<String, Object> vars = taskService.getVariables(taskId);
         String formId = null;
         String formSchemaJson = null;
+        String priorEditFieldsJson = null;
         int procVersion = 0;
         Object fieldPerms = null;
         List<String> actions = new ArrayList<>();
@@ -417,6 +418,20 @@ public class WorkflowService {
             JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
             if (step != null) {
                 formId = blankToNull(step.path("formId").asText(null));
+                // Trường của BƯỚC TRƯỚC được phép SỬA ở bước này (cấu hình editPriorKeys).
+                if (step.has("editPriorKeys") && step.get("editPriorKeys").isArray() && step.get("editPriorKeys").size() > 0) {
+                    Map<String, JsonNode> defs = collectFieldDefs(wi);
+                    com.fasterxml.jackson.databind.node.ArrayNode arr = objectMapper.createArrayNode();
+                    for (JsonNode k : step.get("editPriorKeys")) {
+                        String key = k.asText(null);
+                        if (key != null && defs.containsKey(key)) {
+                            arr.add(defs.get(key));
+                        }
+                    }
+                    if (arr.size() > 0) {
+                        priorEditFieldsJson = arr.toString();
+                    }
+                }
                 // Đóng băng schema theo phiên bản instance: form của bước hiện tại lấy từ snapshot (nếu có).
                 JsonNode formsSnapshot = parseFormsSnapshot(wi.getFormsJson());
                 if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
@@ -441,7 +456,54 @@ public class WorkflowService {
                     .toList();
         }
         return new TaskDto.Detail(t.getId(), t.getName(), t.getTaskDefinitionKey(), procName,
-                wi != null ? wi.getId() : null, formId, formSchemaJson, procVersion, fieldPerms, actions, vars, priorSteps);
+                wi != null ? wi.getId() : null, formId, formSchemaJson, procVersion, fieldPerms, actions, vars,
+                priorSteps, priorEditFieldsJson);
+    }
+
+    /** Bản đồ key trường → định nghĩa (JsonNode) gộp từ mọi biểu mẫu của instance (snapshot ưu tiên, fallback form hiện hành). */
+    private Map<String, JsonNode> collectFieldDefs(WorkflowInstance wi) {
+        Map<String, JsonNode> map = new HashMap<>();
+        JsonNode snap = parseFormsSnapshot(wi.getFormsJson());
+        if (snap != null) {
+            snap.fields().forEachRemaining(e -> indexFields(map, e.getValue().asText()));
+        } else {
+            JsonNode meta;
+            try {
+                meta = objectMapper.readTree(wi.getStepsMetaJson());
+            } catch (Exception ex) {
+                return map;
+            }
+            java.util.Set<String> formIds = new java.util.LinkedHashSet<>();
+            meta.forEach(s -> {
+                String fid = s.path("formId").asText(null);
+                if (fid != null && !fid.isBlank()) {
+                    formIds.add(fid);
+                }
+            });
+            for (String fid : formIds) {
+                try {
+                    indexFields(map, formService.get(fid).getSchemaJson());
+                } catch (Exception ignore) { /* form không còn */ }
+            }
+        }
+        return map;
+    }
+
+    private void indexFields(Map<String, JsonNode> map, String schemaJson) {
+        if (schemaJson == null || schemaJson.isBlank()) {
+            return;
+        }
+        try {
+            JsonNode fields = objectMapper.readTree(schemaJson).path("fields");
+            if (fields.isArray()) {
+                for (JsonNode f : fields) {
+                    String k = f.path("key").asText(null);
+                    if (k != null && !k.isBlank() && !map.containsKey(k)) {
+                        map.put(k, f);
+                    }
+                }
+            }
+        } catch (Exception ignore) { /* schema hỏng */ }
     }
 
     /** Hoàn thành việc (Story 3.4): ghi dữ liệu form + hành động → luồng tiến → gán việc bước kế (Story 3.5). */

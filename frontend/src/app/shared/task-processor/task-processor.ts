@@ -76,8 +76,22 @@ export class TaskProcessor {
   readonly open = signal(false);
   readonly detail = signal<TaskDetail | null>(null);
   readonly fields = signal<RField[]>([]);
+  /** Trường của bước trước được phép sửa ở bước này. */
+  readonly priorFields = signal<RField[]>([]);
   readonly values = signal<Record<string, unknown>>({});
   readonly busy = signal(false);
+
+  /** Danh sách render: [mục "Sửa bước trước" + trường bước trước] rồi [mục bước hiện tại + trường bước này]. */
+  readonly renderFields = computed<RField[]>(() => {
+    const pf = this.priorFields();
+    const cur = this.fields();
+    if (!pf.length) return cur;
+    const out: RField[] = [{ key: '__sec_prior', label: '✏️ Chỉnh sửa thông tin bước trước', type: 'section' }, ...pf];
+    if (cur.length) {
+      out.push({ key: '__sec_cur', label: 'Nội dung bước hiện tại', type: 'section' }, ...cur);
+    }
+    return out;
+  });
 
   /** Bước đầu (đề nghị) = "Nội dung yêu cầu"; các bước còn lại = accordion "Dữ liệu từ bước trước". */
   readonly requestStep = computed<StepView | null>(() => {
@@ -103,6 +117,7 @@ export class TaskProcessor {
   openTask(taskId: string): void {
     this.busy.set(false);
     this.fields.set([]);
+    this.priorFields.set([]);
     this.values.set({});
     this.detail.set(null);
     this.expandedPrior.set(new Set());
@@ -111,6 +126,7 @@ export class TaskProcessor {
       next: (d) => {
         this.detail.set(d);
         this.values.set({ ...d.formData });
+        this.priorFields.set(d.priorEditFieldsJson ? this.parseFields(d.priorEditFieldsJson) : []);
         if (d.formSchemaJson) {
           // Ưu tiên schema ĐÓNG BĂNG theo phiên bản của phiên chạy → form không đổi dù cấu hình sửa sau này.
           this.setFieldsAndDefaults(d.formSchemaJson);
