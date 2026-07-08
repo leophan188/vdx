@@ -366,7 +366,16 @@ a.breadcrumb__item:hover { color: var(--color-primary); }
 .org-node__check { color: var(--color-primary); font-weight: var(--weight-semibold); }
 
 /* --- Form builder (Story 2.6) --- */
-.builder { display: grid; grid-template-columns: 200px minmax(0, 1fr) 320px; gap: var(--space-3); height: calc(100vh - var(--topbar-h) - 200px); min-height: 440px; }
+.builder { display: grid; grid-template-columns: 190px minmax(0, 1fr) minmax(400px, 460px); gap: var(--space-3); height: calc(100vh - var(--topbar-h) - 140px); min-height: 560px; }
+/* Màn vừa: panel cấu hình xuống dưới, chiếm hết bề ngang để đủ chỗ hiển thị. */
+@media (max-width: 1280px) {
+  .builder { grid-template-columns: 180px minmax(0, 1fr); height: auto; }
+  .builder__props { grid-column: 1 / -1; max-height: 60vh; }
+}
+@media (max-width: 720px) {
+  .builder { grid-template-columns: 1fr; }
+  .builder__palette, .builder__props { grid-column: 1 / -1; }
+}
 .builder__palette, .builder__props {
   border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface);
   padding: var(--space-3); overflow: auto; display: flex; flex-direction: column; gap: var(--space-2);
