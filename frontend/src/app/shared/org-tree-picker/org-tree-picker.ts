@@ -91,6 +91,8 @@ export class OrgTreePicker implements OnInit {
       const uk = 'u:' + u.id;
       out.push({ key: uk, parentKey, id: u.id, label: u.name, type: 'unit', level, selectable: mode === 'unit' });
       for (const c of byParent.get(u.id) ?? []) walk(c, level + 1, uk);
+      // Chế độ "đơn vị": CHỈ hiển thị cây đơn vị — không bung chức danh/nhân sự cho gọn.
+      if (mode === 'unit') return;
       for (const p of posByUnit.get(u.id) ?? []) {
         const pk = 'p:' + p.id;
         out.push({ key: pk, parentKey: uk, id: p.id, label: p.title, type: 'position', level: level + 1, selectable: mode === 'position' });
