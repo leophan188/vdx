@@ -23,6 +23,15 @@ export interface FormVersion {
   publishedBy: string;
 }
 
+/** Tệp đính kèm đã upload (trường "Tải file"). Lưu mảng các ref này (JSON) vào giá trị trường. */
+export interface AttachmentRef {
+  id: string;
+  name: string;
+  size: number;
+  contentType: string;
+  url: string;
+}
+
 /** Dịch vụ biểu mẫu động (Story 2.6). */
 @Injectable({ providedIn: 'root' })
 export class FormService {
@@ -55,5 +64,12 @@ export class FormService {
   }
   versions(id: string): Observable<FormVersion[]> {
     return this.http.get<FormVersion[]>(`${this.base}/${id}/versions`, { withCredentials: true });
+  }
+
+  /** Upload một tệp đính kèm cho trường "Tải file". Trả metadata để lưu vào giá trị trường. */
+  uploadAttachment(file: File): Observable<AttachmentRef> {
+    const form = new FormData();
+    form.append('file', file);
+    return this.http.post<AttachmentRef>('/api/v1/attachments', form, { withCredentials: true });
   }
 }

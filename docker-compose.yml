@@ -61,6 +61,8 @@ services:
       BPM_LOG_FILE: /app/data/logs/backend.log
       # --- Thư mục media bài viết (trong volume bền) ---
       BPM_MEDIA_DIR: /app/data/media
+      # --- Thư mục tệp đính kèm biểu mẫu (trong volume bền) ---
+      BPM_ATTACHMENT_DIR: /app/data/attachments
       # --- OnlyOffice Document Server ---
       # url  = địa chỉ HTTPS trình duyệt tải api.js (phải cùng https để không bị mixed-content).
       # callback-host = địa chỉ OnlyOffice (container) gọi ngược backend để tải/lưu tài liệu (domain API công khai).

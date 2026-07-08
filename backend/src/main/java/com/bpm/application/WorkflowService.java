@@ -841,6 +841,12 @@ public class WorkflowService {
             switch (type) {
                 case "scoretable" -> appendScoreTable(out, label, f.path("criteria"), v);
                 case "table" -> appendTable(out, label, f.path("columns"), v);
+                case "file" -> {
+                    String names = fileNames(v);
+                    if (names != null) {
+                        out.add(new TaskDto.FieldValue(label, names));
+                    }
+                }
                 case "orgtree" -> {
                     String txt = resolveOrgValue(f.path("pickMode").asText("user"), v);
                     if (txt != null) {
@@ -877,6 +883,32 @@ public class WorkflowService {
                 yield "(chưa gán)".equals(u) ? id : u;
             }
         };
+    }
+
+    /** Tên các tệp đính kèm (JSON [{id,name,...}]) → chuỗi "a.pdf, b.docx"; null nếu rỗng. */
+    private String fileNames(Object value) {
+        if (value == null || value.toString().isBlank()) {
+            return null;
+        }
+        try {
+            JsonNode arr = objectMapper.readTree(value.toString());
+            if (!arr.isArray() || arr.size() == 0) {
+                return null;
+            }
+            StringBuilder sb = new StringBuilder();
+            for (JsonNode f : arr) {
+                String n = f.path("name").asText("");
+                if (!n.isBlank()) {
+                    if (sb.length() > 0) {
+                        sb.append(", ");
+                    }
+                    sb.append(n);
+                }
+            }
+            return sb.length() > 0 ? sb.toString() : null;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** Bung bảng nhiều dòng thành text đọc được (mỗi dòng: "cột: giá trị · …"). */

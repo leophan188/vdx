@@ -71,7 +71,7 @@
           @if (f.type === 'section') {
             <h4 class="form-section tp-full">{{ f.label }}</h4>
           } @else if (visible(f.key)) {
-            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable' || f.type==='table' || f.type==='orgtree' || f.type==='unitstaff'">
+            <div class="field" [class.tp-full]="f.type==='textarea' || f.type==='richtext' || f.type==='multiselect' || f.type==='scoretable' || f.type==='table' || f.type==='orgtree' || f.type==='unitstaff' || f.type==='file'">
               <label [attr.for]="'tpf_' + f.key">{{ f.label }}@if (f.required) { <span class="req">*</span> }</label>
 
               @switch (f.type) {
@@ -250,12 +250,36 @@
                     <small class="hint">Tổng trọng số = {{ totalWeight(f) }}% (nên = 100% để điểm trung bình đúng thang).</small>
                   }
                 }
+                @case ('file') {
+                  @if (!readonly_(f.key)) {
+                    <label class="btn btn--secondary btn--sm" style="display:inline-flex;align-items:center;gap:6px;cursor:pointer;">
+                      📎 Chọn tệp
+                      <input type="file" multiple hidden (change)="onPickFiles(f.key, $event)" />
+                    </label>
+                    @if (isUploading(f.key)) { <small class="hint" style="margin-left:8px">Đang tải lên…</small> }
+                  }
+                  @if (fileList(f.key).length) {
+                    <ul class="tp-filelist">
+                      @for (a of fileList(f.key); track a.id) {
+                        <li class="tp-fileitem">
+                          <a [href]="a.url" target="_blank" rel="noopener" class="tp-filename" [title]="a.name">📄 {{ a.name }}</a>
+                          <span class="tp-filesize">{{ fileSize(a.size) }}</span>
+                          @if (!readonly_(f.key)) {
+                            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá tệp" (click)="removeFile(f.key, a.id)">🗑</button>
+                          }
+                        </li>
+                      }
+                    </ul>
+                  } @else if (readonly_(f.key)) {
+                    <div class="tp-ro">(chưa có tệp)</div>
+                  }
+                }
                 @default {
                   <input type="text" [id]="'tpf_' + f.key" [readOnly]="readonly_(f.key)" [placeholder]="f.placeholder || ''"
                          [ngModel]="val(f.key)" [ngModelOptions]="{ standalone: true }" (ngModelChange)="setVal(f.key, $event)" />
                 }
               }
-              @if (readonly_(f.key)) { <small class="hint">Chỉ đọc ở bước này</small> }
+              @if (readonly_(f.key) && f.type !== 'file') { <small class="hint">Chỉ đọc ở bước này</small> }
             </div>
           }
         }

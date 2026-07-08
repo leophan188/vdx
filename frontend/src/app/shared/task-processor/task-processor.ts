@@ -5,7 +5,7 @@ import { OrgTreePicker } from '../org-tree-picker/org-tree-picker';
 import { UnitStaffPicker } from '../unit-staff-picker/unit-staff-picker';
 import { ToastService } from '../toast/toast.service';
 import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.service';
-import { FormService } from '../../core/form.service';
+import { FormService, AttachmentRef } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
 interface RCriterion { key: string; label: string; weight: number; }
@@ -63,6 +63,12 @@ interface RField {
     .tp-mtable thead th{background:var(--color-surface-2,rgba(127,127,127,.06));font-size:.86em;}
     .tp-mtable td > input{width:100%;box-sizing:border-box;border:0;background:transparent;color:inherit;font:inherit;padding:2px 0;}
     .tp-mtable-empty{text-align:center;opacity:.6;}
+    /* Danh sách tệp đính kèm */
+    .tp-filelist{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px;}
+    .tp-fileitem{display:flex;align-items:center;gap:10px;border:1px solid var(--color-border);border-radius:8px;padding:6px 10px;background:var(--color-surface);}
+    .tp-filename{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-primary,#1e50a0);text-decoration:none;}
+    .tp-filename:hover{text-decoration:underline;}
+    .tp-filesize{font-size:.82em;opacity:.6;white-space:nowrap;}
   `]
 })
 export class TaskProcessor {
@@ -301,8 +307,48 @@ export class TaskProcessor {
     this.setVal(fieldKey, JSON.stringify(rows));
   }
 
+  // ----- Trường "Tải file": giá trị lưu JSON mảng [{id,name,size,contentType,url}] -----
+  /** Các key trường đang upload dở (hiện trạng thái "đang tải"). */
+  readonly uploading = signal<Set<string>>(new Set());
+  isUploading(key: string): boolean { return this.uploading().has(key); }
+
+  fileList(key: string): AttachmentRef[] {
+    const raw = this.val(key);
+    if (typeof raw === 'string' && raw.trim()) { try { const a = JSON.parse(raw); return Array.isArray(a) ? a : []; } catch { return []; } }
+    if (Array.isArray(raw)) return raw as AttachmentRef[];
+    return [];
+  }
+  /** Upload lần lượt các file được chọn rồi gộp vào danh sách của trường. */
+  onPickFiles(key: string, ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const files = Array.from(input.files ?? []);
+    if (!files.length) return;
+    const mark = new Set(this.uploading()); mark.add(key); this.uploading.set(mark);
+    let remaining = files.length;
+    const done = () => {
+      remaining--;
+      if (remaining <= 0) { const s = new Set(this.uploading()); s.delete(key); this.uploading.set(s); }
+    };
+    for (const file of files) {
+      this.formSvc.uploadAttachment(file).subscribe({
+        next: (ref) => { this.setVal(key, JSON.stringify([...this.fileList(key), ref])); done(); },
+        error: (e) => { this.toast.error('Không tải được tệp', e?.error?.message || file.name); done(); }
+      });
+    }
+    input.value = ''; // cho phép chọn lại cùng file
+  }
+  removeFile(key: string, id: string): void {
+    this.setVal(key, JSON.stringify(this.fileList(key).filter((a) => a.id !== id)));
+  }
+  fileSize(bytes: number): string {
+    if (bytes < 1024) return bytes + ' B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(0) + ' KB';
+    return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+  }
+
   /** Một trường đã có dữ liệu (dùng cho kiểm tra bắt buộc). Bảng chấm điểm: mọi tiêu chí phải có điểm. */
   private isFilled(f: RField): boolean {
+    if (f.type === 'file') return this.fileList(f.key).length > 0;
     if (f.type === 'scoretable') {
       const sc = this.tableScores(f.key);
       return (f.criteria ?? []).length > 0 && (f.criteria ?? []).every((c) => typeof sc[c.key] === 'number' && !isNaN(sc[c.key]));
