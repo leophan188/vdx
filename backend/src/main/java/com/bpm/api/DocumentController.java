@@ -64,6 +64,12 @@ public class DocumentController {
         return Summary.of(service.get(id));
     }
 
+    /** Xoá hẳn tài liệu. */
+    @org.springframework.web.bind.annotation.DeleteMapping("/{id}")
+    public void delete(@PathVariable String id, Authentication auth) {
+        service.delete(id, actor(auth));
+    }
+
     @GetMapping("/{id}/versions")
     public List<Map<String, Object>> versions(@PathVariable String id) {
         return service.versions(id).stream().map(v -> Map.<String, Object>of(

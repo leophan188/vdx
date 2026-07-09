@@ -95,6 +95,15 @@ public class DocumentService {
         return versionRepo.findByDocumentIdOrderByVersionDesc(id);
     }
 
+    /** Xoá hẳn tài liệu + toàn bộ phiên bản. */
+    @Transactional
+    public void delete(String id, String actor) {
+        Document d = get(id);
+        versionRepo.deleteAll(versionRepo.findByDocumentIdOrderByVersionDesc(id));
+        repo.delete(d);
+        auditPort.record("DOCUMENT_DELETED", "Document", id, actor, "name=" + d.getName());
+    }
+
     /** Ghi nhận kết quả ký ban hành (Story 3.16). */
     @Transactional
     public Document sign(String id, String number, String actor) {
@@ -133,10 +142,13 @@ public class DocumentService {
         String body = "{\"c\":\"forcesave\",\"key\":\"" + d.getDocKey() + "\"}";
         try {
             HttpClient client = HttpClient.newHttpClient();
-            client.send(HttpRequest.newBuilder(URI.create(onlyOfficeUrl + "/coauthoring/CommandService.ashx"))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+            HttpResponse<String> resp = client.send(
+                    HttpRequest.newBuilder(URI.create(onlyOfficeUrl + "/coauthoring/CommandService.ashx"))
+                            .header("Content-Type", "application/json")
+                            .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
                     HttpResponse.BodyHandlers.ofString());
+            // error 0 = đã yêu cầu lưu; 4 = không có thay đổi; 1 = key không đúng (phiên đã đóng)…
+            log.info("[onlyoffice] forcesave {} (key={}) → HTTP {} body={}", id, d.getDocKey(), resp.statusCode(), resp.body());
         } catch (Exception e) {
             log.warn("[onlyoffice] forcesave {} lỗi: {}", id, e.getMessage());
         }

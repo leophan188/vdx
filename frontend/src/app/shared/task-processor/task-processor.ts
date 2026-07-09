@@ -70,6 +70,12 @@ interface RField {
     .tp-filename{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--color-primary,#1e50a0);text-decoration:none;}
     .tp-filename:hover{text-decoration:underline;}
     .tp-filesize{font-size:.82em;opacity:.6;white-space:nowrap;}
+    /* Tab Nội dung / Soạn thảo tài liệu (khi bước bật OnlyOffice) */
+    .tp-tabs{display:flex;gap:4px;border-bottom:1px solid var(--color-border);margin:0 0 14px;}
+    .tp-tab{appearance:none;border:0;background:transparent;color:var(--color-text);font:inherit;cursor:pointer;
+      padding:9px 16px;border-bottom:2px solid transparent;margin-bottom:-1px;opacity:.7;font-weight:600;}
+    .tp-tab:hover{opacity:1;}
+    .tp-tab--on{opacity:1;color:var(--color-primary,#1e50a0);border-bottom-color:var(--color-primary,#1e50a0);}
   `]
 })
 export class TaskProcessor {
@@ -99,6 +105,8 @@ export class TaskProcessor {
   readonly busy = signal(false);
   /** Id tài liệu OnlyOffice của bước (nếu bước bật soạn thảo) — để nhúng editor. */
   readonly officeDocId = signal<string | null>(null);
+  /** Tab đang xem khi bước có soạn thảo tài liệu: 'content' (form) | 'doc' (editor). */
+  readonly docTab = signal<'content' | 'doc'>('content');
 
   /** Danh sách render: [mục "Sửa bước trước" + trường bước trước] rồi [mục bước hiện tại + trường bước này]. */
   readonly renderFields = computed<RField[]>(() => {
@@ -140,6 +148,7 @@ export class TaskProcessor {
     this.values.set({});
     this.detail.set(null);
     this.officeDocId.set(null);
+    this.docTab.set('content');
     this.expandedPrior.set(new Set());
     this.open.set(true);
     this.wf.detail(taskId).subscribe({

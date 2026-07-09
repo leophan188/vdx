@@ -11,7 +11,7 @@ import { Component, ElementRef, HostListener, effect, inject, input, output, sig
   template: `
     @if (open()) {
       <div class="modal-backdrop" (click)="onBackdrop($event)">
-        <div class="modal" [class.modal--wide]="wide()" [class.modal--xwide]="xwide()" role="dialog" aria-modal="true"
+        <div class="modal" [class.modal--wide]="wide()" [class.modal--xwide]="xwide()" [class.modal--full]="full()" role="dialog" aria-modal="true"
              style="position:relative;">
           <div class="modal__header">
             <span class="modal__title">{{ title() }}</span>
@@ -52,6 +52,7 @@ export class Modal {
   readonly title = input('');
   readonly wide = input(false);
   readonly xwide = input(false); // rộng hơn nữa — cho bảng nhiều cột (vd xem trước import)
+  readonly full = input(false);  // toàn màn hình — cho màn xử lý việc/soạn thảo tài liệu
   readonly closed = output<void>();
 
   /** Đang hỏi xác nhận đóng (khi có dữ liệu nhập dở). */

@@ -8,8 +8,8 @@ import { DocumentService, EditorConfig } from '../core/document.service';
 @Component({
   selector: 'app-office-embed',
   styles: [`
-    :host { display:block; width:100%; }
-    .oo-frame { width:100%; height:72vh; min-height:520px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; }
+    :host { display:block; width:100%; height:100%; }
+    .oo-frame { width:100%; height:calc(100vh - 215px); min-height:480px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; }
   `],
   template: `
     @if (error()) {

@@ -43,6 +43,9 @@ export class DocumentService {
   get(id: string): Observable<DocSummary> {
     return this.http.get<DocSummary>(`${this.base}/${id}`, { withCredentials: true });
   }
+  remove(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${id}`, { withCredentials: true });
+  }
   versions(id: string): Observable<DocVersion[]> {
     return this.http.get<DocVersion[]>(`${this.base}/${id}/versions`, { withCredentials: true });
   }

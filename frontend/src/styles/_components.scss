@@ -252,6 +252,10 @@ a.breadcrumb__item:hover { color: var(--color-primary); }
 }
 .modal--wide { width: 720px; }
 .modal--xwide { width: min(1160px, 94vw); max-width: 94vw; }
+/* Toàn màn hình — cho màn xử lý việc + soạn thảo tài liệu (bỏ cảm giác popup chật). */
+.modal-backdrop:has(.modal--full) { padding: 0; align-items: stretch; }
+.modal--full { width: 100vw; max-width: 100vw; height: 100vh; max-height: 100vh; border-radius: 0; border: 0; }
+.modal--full .modal__body { padding: var(--space-3) var(--space-5); }
 .modal__header {
   display: flex; align-items: center; gap: var(--space-3);
   padding: var(--space-4); border-bottom: 1px solid var(--color-border);

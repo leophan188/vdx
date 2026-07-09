@@ -1,5 +1,5 @@
 <!-- Modal xử lý việc dùng chung (Story 3.4): form theo quyền trường + hành động. -->
-<app-modal [open]="open()" [xwide]="true" [title]="(detail()?.stepName || 'Xử lý việc')" (closed)="close()">
+<app-modal [open]="open()" [full]="true" [title]="(detail()?.stepName || 'Xử lý việc')" (closed)="close()">
   @if (detail(); as d) {
     <p class="hint" style="margin-top:0">
       Quy trình: <strong>{{ d.processName }}</strong>
@@ -7,6 +7,15 @@
       @if (d.stepKey) { <span class="badge badge--info" style="margin-left:6px">{{ d.stepKey }}</span> }
     </p>
 
+    <!-- Bước bật OnlyOffice → tách 2 tab: Nội dung (form) và Soạn thảo tài liệu (editor toàn khung). -->
+    @if (d.officeDoc) {
+      <div class="tp-tabs">
+        <button type="button" class="tp-tab" [class.tp-tab--on]="docTab()==='content'" (click)="docTab.set('content')">📝 Nội dung</button>
+        <button type="button" class="tp-tab" [class.tp-tab--on]="docTab()==='doc'" (click)="docTab.set('doc')">📄 Soạn thảo tài liệu</button>
+      </div>
+    }
+
+    @if (!d.officeDoc || docTab()==='content') {
     <!-- NỘI DUNG YÊU CẦU: dữ liệu bước đầu (đề nghị), luôn hiển thị -->
     @if (requestStep(); as r) {
       <div class="tp-card">
@@ -59,16 +68,6 @@
           </div>
         }
       </div>
-    }
-
-    <!-- SOẠN THẢO TÀI LIỆU: bước bật OnlyOffice → nhúng editor (mỗi bước 1 tài liệu riêng) -->
-    @if (d.officeDoc) {
-      <div class="tp-sechead tp-sechead--sep"><span>📝 Soạn thảo tài liệu</span></div>
-      @if (officeDocId(); as docId) {
-        <app-office-embed [docId]="docId" />
-      } @else {
-        <p class="hint">Đang mở tài liệu…</p>
-      }
     }
 
     <!-- NỘI DUNG CẦN ĐIỀN: biểu mẫu bước hiện tại (+ trường bước trước được phép sửa) -->
@@ -296,6 +295,16 @@
       </form>
     } @else {
       <p class="hint">Bước này không gắn biểu mẫu — chọn hành động để tiếp tục.</p>
+    }
+    }
+
+    <!-- TAB SOẠN THẢO TÀI LIỆU: editor OnlyOffice toàn khung -->
+    @if (d.officeDoc && docTab()==='doc') {
+      @if (officeDocId(); as docId) {
+        <app-office-embed [docId]="docId" />
+      } @else {
+        <p class="hint">Đang mở tài liệu…</p>
+      }
     }
   }
 

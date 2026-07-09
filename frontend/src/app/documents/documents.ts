@@ -54,4 +54,13 @@ export class Documents implements OnInit {
   open(d: DocSummary): void {
     this.router.navigate(['/documents', d.id]);
   }
+
+  remove(d: DocSummary, ev: Event): void {
+    ev.stopPropagation();
+    if (!window.confirm(`Xoá hẳn tài liệu "${d.name}"? Không khôi phục được.`)) return;
+    this.svc.remove(d.id).subscribe({
+      next: () => { this.toast.success('Đã xoá tài liệu', d.name); this.reload(); },
+      error: () => this.toast.error('Không xoá được tài liệu')
+    });
+  }
 }
