@@ -55,15 +55,19 @@ function fmtDmy(d: Date | null): string | null {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
 }
-/** Ngày (start|due) của các task LÁ trong cây con — gồm chính task nếu là lá. */
+/**
+ * Mọi ngày (start|due) trong cây con — gồm ngày CỦA CHÍNH node ở MỌI cấp (không chỉ lá).
+ * Nhờ vậy: node cha giữ được ngày của chính nó + gộp thêm ngày của Sub-task/Bug con
+ * (tránh trường hợp gắn Bug không ngày làm mất ngày vốn có của cha → hiện "—").
+ */
 export function subtreeLeafDates(taskId: string, tree: TaskTree, kind: 'start' | 'due'): Date[] {
-  const kids = tree.childrenOf.get(taskId) ?? [];
-  if (kids.length === 0) {
-    const t = tree.byId.get(taskId);
-    const d = parseDmy(kind === 'start' ? t?.startDate : t?.dueDate);
-    return d ? [d] : [];
+  const self = tree.byId.get(taskId);
+  const own = parseDmy(kind === 'start' ? self?.startDate : self?.dueDate);
+  const out: Date[] = own ? [own] : [];
+  for (const k of tree.childrenOf.get(taskId) ?? []) {
+    out.push(...subtreeLeafDates(k.id, tree, kind));
   }
-  return kids.flatMap((k) => subtreeLeafDates(k.id, tree, kind));
+  return out;
 }
 /** Ngày bắt đầu hiệu lực: lá → của nó; cha → MIN ngày bắt đầu các lá (gồm Bug/Sub-task). */
 export function effectiveStart(task: ProjectTask, tree: TaskTree): string | null {

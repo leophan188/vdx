@@ -10,7 +10,7 @@ import {
   ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember, ReorderItem
 } from '../../core/project.service';
 import { memberPersonOptions } from '../../shared/person-options';
-import { buildTree, hasChildren, subtreeLeafEstimate } from '../../shared/task-tree';
+import { buildTree, hasChildren, subtreeLeafEstimate, effectiveStart, effectiveDue } from '../../shared/task-tree';
 import { loadPref, savePref } from '../../shared/view-prefs';
 import { TypeFilter } from '../../shared/type-filter/type-filter';
 import { BUG_DESCRIPTION_TEMPLATE, mergeBugFieldsIntoDescription } from '../../shared/bug-template';
@@ -844,28 +844,13 @@ export class PrjBacklog implements OnInit {
     const p = (n: number) => String(n).padStart(2, '0');
     return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
   }
-  /** Mọi ngày bắt đầu/kết thúc của task LÁ trong cây con (gồm chính task nếu là lá). */
-  private leafDates(taskId: string, kind: 'start' | 'due'): Date[] {
-    const tr = this.tree();
-    const kids = tr.childrenOf.get(taskId) ?? [];
-    if (kids.length === 0) {
-      const t = tr.byId.get(taskId);
-      const d = this.parseDmy(kind === 'start' ? t?.startDate : t?.dueDate);
-      return d ? [d] : [];
-    }
-    return kids.flatMap((k) => this.leafDates(k.id, kind));
-  }
-  /** Ngày bắt đầu hiển thị: lá → của nó; cha → MIN ngày bắt đầu các lá. */
+  /** Ngày bắt đầu hiển thị: lá → của nó; cha → MIN ngày (của chính cha + mọi con, gồm Bug/Sub-task). */
   startOf(task: ProjectTask): string | null {
-    if (!hasChildren(task.id, this.tree())) return task.startDate;
-    const ds = this.leafDates(task.id, 'start');
-    return ds.length ? this.fmtDmy(new Date(Math.min(...ds.map((d) => d.getTime())))) : null;
+    return effectiveStart(task, this.tree());
   }
-  /** Ngày kết thúc hiển thị: lá → của nó; cha → MAX ngày kết thúc các lá. */
+  /** Ngày kết thúc hiển thị: lá → của nó; cha → MAX ngày (của chính cha + mọi con, gồm Bug/Sub-task). */
   dueOf(task: ProjectTask): string | null {
-    if (!hasChildren(task.id, this.tree())) return task.dueDate;
-    const ds = this.leafDates(task.id, 'due');
-    return ds.length ? this.fmtDmy(new Date(Math.max(...ds.map((d) => d.getTime())))) : null;
+    return effectiveDue(task, this.tree());
   }
   /** Duration (số ngày) từ ngày bắt đầu → kết thúc (gồm 2 đầu); '—' nếu thiếu. */
   durationOf(task: ProjectTask): string {
