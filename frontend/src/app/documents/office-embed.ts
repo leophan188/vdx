@@ -12,7 +12,9 @@ import { ToastService } from '../shared/toast/toast.service';
     /* Đúng khuôn editor toàn trang đang chạy tốt: cột flex chiều cao xác định + khung flex:1;min-height:0.
        KHÔNG đặt height:calc() thẳng lên khung — trong modal (grid/overflow) iframe hay phân giải sai chiều
        cao → vùng soạn thảo của OnlyOffice sập 0/đen. */
-    :host { display:flex; flex-direction:column; width:100%; flex:1 1 auto; min-height:520px; }
+    /* min-height:0 để embed co vừa khít khoảng trống → KHÔNG tràn body sinh thanh cuộn ngoài;
+       tài liệu dài đã có thanh cuộn nội bộ của OnlyOffice lo. */
+    :host { display:flex; flex-direction:column; width:100%; flex:1 1 auto; min-height:0; }
     .oo-bar { display:flex; justify-content:flex-end; margin-bottom:6px; }
     .oo-frame { flex:1; min-height:0; width:100%; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; background:var(--color-surface-alt); }
     .oo-frame > iframe { width:100%; height:100%; border:0; display:block; }
