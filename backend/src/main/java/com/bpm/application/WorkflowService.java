@@ -680,6 +680,17 @@ public class WorkflowService {
         if (action != null && !action.isBlank()) {
             vars.put("lastAction", action);
         }
+        // Đảm bảo mọi biến ĐIỀU KIỆN GATEWAY tồn tại (mặc định false) → tránh Flowable ném
+        // "Cannot resolve identifier" khi trường điều kiện chưa được nhập (kể cả điều kiện cứng trong BPMN).
+        WorkflowInstance wiPre = instanceRepo.findByFlowableInstanceId(piid).orElse(null);
+        if (wiPre != null) {
+            Map<String, Object> existing = runtimeService.getVariables(piid);
+            for (String key : conditionFieldKeys(wiPre.getStepsMetaJson())) {
+                if (!vars.containsKey(key) && (existing == null || !existing.containsKey(key))) {
+                    vars.put(key, false);
+                }
+            }
+        }
         taskService.complete(taskId, vars);
         auditPort.record("TASK_COMPLETED", "Task", taskId, actor,
                 "action=" + action + ", instance=" + piid);
@@ -695,6 +706,27 @@ public class WorkflowService {
                 auditPort.record("INSTANCE_COMPLETED", "WorkflowInstance", wi.getId(), actor, "instance=" + piid);
             }
         }
+    }
+
+    /** Key các trường xuất hiện trong ĐIỀU KIỆN gateway (stepsMeta[*].condition.field) — để đảm bảo biến tồn tại. */
+    private java.util.Set<String> conditionFieldKeys(String stepsMetaJson) {
+        java.util.Set<String> keys = new java.util.HashSet<>();
+        if (stepsMetaJson == null || stepsMetaJson.isBlank()) {
+            return keys;
+        }
+        try {
+            JsonNode meta = objectMapper.readTree(stepsMetaJson);
+            meta.forEach(s -> {
+                JsonNode c = s.path("condition");
+                if (c.isObject()) {
+                    String f = c.path("field").asText(null);
+                    if (f != null && !f.isBlank()) {
+                        keys.add(f);
+                    }
+                }
+            });
+        } catch (Exception ignore) { /* meta lỗi → bỏ qua */ }
+        return keys;
     }
 
     private Task requireTask(String taskId) {
