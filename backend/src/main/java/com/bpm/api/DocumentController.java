@@ -101,6 +101,12 @@ public class DocumentController {
         return Summary.of(service.archive(id, req.archiveNo(), req.classification(), req.retentionYears(), actor(auth)));
     }
 
+    /** Yêu cầu OnlyOffice lưu ngay tài liệu đang mở (khi người dùng rời editor). */
+    @PostMapping("/{id}/forcesave")
+    public void forcesave(@PathVariable String id) {
+        service.forceSave(id);
+    }
+
     /** OnlyOffice gọi khi lưu — CÔNG KHAI. Phải trả {"error":0}. */
     @PostMapping("/{id}/callback")
     public Map<String, Object> callback(@PathVariable String id, @RequestBody JsonNode body) {

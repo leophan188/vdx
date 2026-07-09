@@ -196,6 +196,12 @@ export class Builder implements OnInit {
     f.columns = [...(f.columns ?? []), { key: 'cot' + ((f.columns?.length ?? 0) + 1), label: 'Cột mới', type: 'text' }];
     this.touch();
   }
+  /** Kéo sắp xếp thứ tự cột trong bảng nhiều dòng. */
+  dropColumn(f: FormField, e: CdkDragDrop<FormColumn[]>): void {
+    if (!f.columns) return;
+    moveItemInArray(f.columns, e.previousIndex, e.currentIndex);
+    this.touch();
+  }
   /** Lựa chọn của cột kiểu dropdown (chuỗi ngăn cách dấu phẩy). */
   colOptions(c: FormColumn): string[] {
     return (c.options ?? '').split(',').map((s) => s.trim()).filter(Boolean);

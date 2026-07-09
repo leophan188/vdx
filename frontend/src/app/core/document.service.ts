@@ -49,6 +49,10 @@ export class DocumentService {
   editorConfig(id: string): Observable<EditorConfig> {
     return this.http.get<EditorConfig>(`${this.base}/${id}/editor-config`, { withCredentials: true });
   }
+  /** Yêu cầu OnlyOffice lưu ngay tài liệu đang mở (gọi khi rời editor). */
+  forceSave(id: string): Observable<void> {
+    return this.http.post<void>(`${this.base}/${id}/forcesave`, {}, { withCredentials: true });
+  }
   sign(id: string, number: string): Observable<DocSummary> {
     return this.http.post<DocSummary>(`${this.base}/${id}/sign`, { number }, { withCredentials: true });
   }

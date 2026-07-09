@@ -122,6 +122,26 @@ public class DocumentService {
         return get(id).getContent();
     }
 
+    /**
+     * Yêu cầu OnlyOffice LƯU NGAY tài liệu đang mở (forcesave) — gọi khi người dùng rời editor
+     * để không phải chờ status=2 (đóng editor, trễ ~10s). OnlyOffice sẽ gửi callback status=6 → lưu.
+     * Best-effort: nếu editor không còn phiên mở, OnlyOffice trả lỗi và bỏ qua.
+     */
+    @Transactional(readOnly = true)
+    public void forceSave(String id) {
+        Document d = get(id);
+        String body = "{\"c\":\"forcesave\",\"key\":\"" + d.getDocKey() + "\"}";
+        try {
+            HttpClient client = HttpClient.newHttpClient();
+            client.send(HttpRequest.newBuilder(URI.create(onlyOfficeUrl + "/coauthoring/CommandService.ashx"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+                    HttpResponse.BodyHandlers.ofString());
+        } catch (Exception e) {
+            log.warn("[onlyoffice] forcesave {} lỗi: {}", id, e.getMessage());
+        }
+    }
+
     /** Token tải nội dung (JWT ngắn) — endpoint /content công khai kiểm token này. */
     public String contentToken(String id) {
         return jwt.sign(Map.of("docId", id, "scope", "download"));

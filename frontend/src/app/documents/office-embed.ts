@@ -7,11 +7,15 @@ import { DocumentService, EditorConfig } from '../core/document.service';
  */
 @Component({
   selector: 'app-office-embed',
+  styles: [`
+    :host { display:block; width:100%; }
+    .oo-frame { width:100%; height:72vh; min-height:520px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; }
+  `],
   template: `
     @if (error()) {
       <div class="alert alert--error" style="margin:0 0 8px">{{ error() }}</div>
     }
-    <div [id]="containerId" style="width:100%;height:560px;border:1px solid var(--color-border);border-radius:8px;overflow:hidden;"></div>
+    <div [id]="containerId" class="oo-frame"></div>
   `
 })
 export class OfficeEmbed implements OnInit, OnDestroy {
@@ -63,6 +67,8 @@ export class OfficeEmbed implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    // Rời editor (đóng popup việc) → yêu cầu OnlyOffice lưu ngay (forcesave) trước khi huỷ.
+    try { this.svc.forceSave(this.docId()).subscribe({ error: () => {} }); } catch { /* ignore */ }
     try { this.editor?.destroyEditor?.(); } catch { /* ignore */ }
   }
 }

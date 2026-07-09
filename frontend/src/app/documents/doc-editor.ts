@@ -61,9 +61,14 @@ export class DocEditor implements OnInit, OnDestroy {
     });
   }
 
-  back(): void { this.router.navigate(['/documents']); }
+  back(): void {
+    // Lưu ngay trước khi rời (không chờ status=2 đóng editor).
+    try { this.svc.forceSave(this.id).subscribe({ error: () => {} }); } catch { /* ignore */ }
+    this.router.navigate(['/documents']);
+  }
 
   ngOnDestroy(): void {
+    try { this.svc.forceSave(this.id).subscribe({ error: () => {} }); } catch { /* ignore */ }
     try { this.editor?.destroyEditor?.(); } catch { /* ignore */ }
   }
 }

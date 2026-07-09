@@ -90,29 +90,33 @@
 
         @if (isTable(f.type)) {
           <div class="field">
-            <label>Cột của bảng (nhãn · mã · kiểu dữ liệu)</label>
-            @for (c of f.columns; track $index) {
-              <div style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-2);margin-bottom:6px;">
-                <div class="recip-row">
-                  <input [(ngModel)]="c.label" (ngModelChange)="touch()" placeholder="Tên cột" />
-                  <input [(ngModel)]="c.key" (ngModelChange)="touch()" placeholder="mã cột" style="width:90px" />
-                  <select [(ngModel)]="c.type" (ngModelChange)="touch()" style="width:130px">
-                    @for (t of COLUMN_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
-                  </select>
-                  <button type="button" class="btn btn--ghost btn--sm" (click)="removeColumn(f, $index)">✕</button>
+            <label>Cột của bảng (nhãn · mã · kiểu dữ liệu) — kéo ⠿ để sắp xếp</label>
+            <div cdkDropList (cdkDropListDropped)="dropColumn(f, $event)">
+              @for (c of f.columns; track $index) {
+                <div cdkDrag style="border:1px solid var(--color-border);border-radius:var(--radius-md);padding:var(--space-2);margin-bottom:6px;background:var(--color-surface);">
+                  <div class="recip-row">
+                    <span cdkDragHandle title="Kéo để sắp xếp" style="cursor:grab;color:var(--color-text-muted);padding:0 2px;">⠿</span>
+                    <input [(ngModel)]="c.label" (ngModelChange)="touch()" placeholder="Tên cột" />
+                    <input [(ngModel)]="c.key" (ngModelChange)="touch()" placeholder="mã cột" style="width:90px" />
+                    <select [(ngModel)]="c.type" (ngModelChange)="touch()" style="width:130px">
+                      @for (t of COLUMN_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
+                    </select>
+                    <button type="button" class="btn btn--ghost btn--sm" (click)="removeColumn(f, $index)">✕</button>
+                  </div>
+                  @if (c.type === 'dropdown' || c.type === 'multiselect') {
+                    <input [(ngModel)]="c.options" (ngModelChange)="touch()" placeholder="Lựa chọn: Thấp, Trung bình, Cao" style="width:100%;margin-top:6px" />
+                  }
+                  @if (c.type === 'orgtree') {
+                    <label style="display:block;margin-top:6px;font-size:.85em;opacity:.75;">Chọn theo (👥 nhân sự / 🪪 chức danh / 🏛️ đơn vị)</label>
+                    <select [(ngModel)]="c.pickMode" (ngModelChange)="touch()" style="width:100%;">
+                      <option ngValue="user">Nhân sự</option>
+                      <option ngValue="position">Chức danh</option>
+                      <option ngValue="unit">Đơn vị</option>
+                    </select>
+                  }
                 </div>
-                @if (c.type === 'dropdown' || c.type === 'multiselect') {
-                  <input [(ngModel)]="c.options" (ngModelChange)="touch()" placeholder="Lựa chọn: Thấp, Trung bình, Cao" style="width:100%;margin-top:6px" />
-                }
-                @if (c.type === 'orgtree') {
-                  <select [(ngModel)]="c.pickMode" (ngModelChange)="touch()" style="width:100%;margin-top:6px">
-                    <option ngValue="user">Nhân sự</option>
-                    <option ngValue="position">Chức danh</option>
-                    <option ngValue="unit">Đơn vị</option>
-                  </select>
-                }
-              </div>
-            }
+              }
+            </div>
             <button type="button" class="btn btn--secondary btn--sm" (click)="addColumn(f)">＋ Thêm cột</button>
           </div>
         }
