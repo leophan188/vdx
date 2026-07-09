@@ -205,6 +205,63 @@ public class WorkflowService {
         }
     }
 
+    /**
+     * Lấy biểu mẫu BƯỚC ĐẦU của quy trình mà KHÔNG tạo instance — để nhập nháp (chỉ tạo hồ sơ khi Gửi/soạn
+     * thảo tài liệu, tránh sinh hồ sơ rác khi chỉ chọn quy trình). Bước đầu = bước có người thực hiện, theo
+     * thứ tự khoá tự nhiên (khớp versionSteps). Instance thật vẫn do start()+firstOpenTaskId quyết định.
+     */
+    @Transactional(readOnly = true)
+    public com.bpm.api.dto.WorkflowDto.StartForm startForm(String processId) {
+        ProcessDefinition p = processService.get(processId);
+        if (p.getStatus() == ProcessStatus.RETIRED) {
+            throw new IllegalStateException("Quy trình đã ngừng dùng — không thể khởi tạo đơn mới");
+        }
+        ProcessVersion v = versionRepo.findFirstByProcessIdAndStatusOrderByVersionDesc(processId, ProcessStatus.PUBLISHED)
+                .orElseThrow(() -> new IllegalStateException("Quy trình chưa được ban hành (publish) — không thể khởi tạo"));
+        JsonNode meta;
+        try {
+            meta = objectMapper.readTree(v.getStepsMetaJson());
+        } catch (Exception e) {
+            throw new IllegalStateException("Cấu hình bước của quy trình lỗi JSON");
+        }
+        String firstKey = null;
+        List<String> keys = new ArrayList<>();
+        meta.fieldNames().forEachRemaining(keys::add);
+        keys.sort(java.util.Comparator.naturalOrder());
+        for (String k : keys) {
+            JsonNode s = meta.get(k);
+            if (s != null && s.has("assigneeType")) { firstKey = k; break; }
+        }
+        if (firstKey == null) {
+            throw new IllegalStateException("Quy trình không có bước nhập liệu đầu tiên");
+        }
+        JsonNode step = meta.get(firstKey);
+        String formId = blankToNull(step.path("formId").asText(null));
+        String formsJson = v.getFormsJson() != null ? v.getFormsJson()
+                : processService.buildFormsSnapshot(v.getStepsMetaJson());
+        String formSchemaJson = null;
+        JsonNode formsSnapshot = parseFormsSnapshot(formsJson);
+        if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
+            formSchemaJson = formsSnapshot.get(formId).asText();
+        }
+        Map<String, String> fieldPerms = null;
+        if (step.has("fieldPerms") && step.get("fieldPerms").isObject()) {
+            fieldPerms = objectMapper.convertValue(step.get("fieldPerms"),
+                    objectMapper.getTypeFactory().constructMapType(java.util.LinkedHashMap.class, String.class, String.class));
+        }
+        List<String> actions = new ArrayList<>();
+        if (step.has("actions") && step.get("actions").isArray()) {
+            step.get("actions").forEach(a -> actions.add(a.asText()));
+        }
+        if (actions.isEmpty()) {
+            actions.add("Hoàn thành");
+        }
+        boolean officeDoc = step.path("officeDoc").asBoolean(false);
+        String stepName = step.path("name").asText(step.path("statusLabel").asText(firstKey));
+        return new com.bpm.api.dto.WorkflowDto.StartForm(processId, p.getName(), v.getVersion(),
+                firstKey, stepName, formId, formSchemaJson, fieldPerms, actions, officeDoc);
+    }
+
     /** Khởi tạo nhiệm vụ từ quy trình đã publish + dữ liệu form bước đầu (FR-D01). */
     @Transactional
     public WorkflowInstance start(String processId, Map<String, Object> formData, String actor) {

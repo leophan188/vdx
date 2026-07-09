@@ -46,6 +46,20 @@ export interface StartableProcess {
   name: string;
 }
 
+/** Biểu mẫu bước đầu của quy trình (chưa tạo instance) — để nhập nháp trong task-processor. */
+export interface StartForm {
+  processId: string;
+  processName: string;
+  processVersion: number;
+  stepKey: string;
+  stepName: string;
+  formId: string | null;
+  formSchemaJson: string | null;
+  fieldPerms: Record<string, 'EDIT' | 'READONLY' | 'HIDDEN'> | null;
+  actions: string[];
+  officeDoc: boolean;
+}
+
 export interface InstanceResponse {
   id: string;
   processId: string;
@@ -125,6 +139,11 @@ export class WorkflowService {
   /** Quy trình đã ban hành mà người dùng có thể tạo yêu cầu. */
   startable(): Observable<StartableProcess[]> {
     return this.http.get<StartableProcess[]>(`${this.base}/instances/startable`, { withCredentials: true });
+  }
+
+  /** Biểu mẫu bước ĐẦU của quy trình — KHÔNG tạo instance (để nhập nháp, chỉ tạo hồ sơ khi Gửi/soạn thảo). */
+  startForm(processId: string): Observable<StartForm> {
+    return this.http.get<StartForm>(`${this.base}/instances/start-form`, { params: { processId }, withCredentials: true });
   }
 
   /** Khởi tạo phiên chạy từ quy trình đã publish. */

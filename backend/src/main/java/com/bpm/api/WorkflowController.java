@@ -51,6 +51,12 @@ public class WorkflowController {
         return service.startable();
     }
 
+    /** Biểu mẫu bước ĐẦU của quy trình — không tạo instance (để nhập nháp, chỉ tạo hồ sơ khi Gửi/soạn thảo). */
+    @GetMapping("/start-form")
+    public WorkflowDto.StartForm startForm(@RequestParam String processId) {
+        return service.startForm(processId);
+    }
+
     /** Theo dõi: danh sách phiên chạy + bước hiện tại + người giữ (Story 3.3). */
     @GetMapping("/all")
     public List<TaskDto.InstanceListItem> all() {

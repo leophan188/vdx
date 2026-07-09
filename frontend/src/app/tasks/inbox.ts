@@ -48,25 +48,13 @@ export class Inbox implements OnInit, OnDestroy {
     }
   }
 
-  /** Chọn 1 quy trình → khởi tạo hồ sơ → mở ngay form nhập liệu bước đầu. */
+  /**
+   * Chọn 1 quy trình → mở form nhập liệu bước đầu ở chế độ NHÁP (CHƯA tạo hồ sơ). Hồ sơ chỉ được tạo khi
+   * người dùng bấm Gửi hoặc mở tab Soạn thảo tài liệu → tránh sinh hồ sơ rác khi chỉ chọn/lướt quy trình.
+   */
   createFromProcess(p: StartableProcess): void {
-    this.busyId.set(p.id);
-    this.wf.start(p.id, {}).subscribe({
-      next: (resp) => {
-        this.busyId.set(null);
-        this.pickerOpen.set(false);
-        if (resp.firstTaskId) {
-          this.proc().openTask(resp.firstTaskId); // nhập liệu tạo request
-        } else {
-          this.toast.success('Đã tạo yêu cầu', p.name);
-          this.reload();
-        }
-      },
-      error: (e) => {
-        this.busyId.set(null);
-        this.toast.error('Không tạo được yêu cầu', e?.error?.message || 'Vui lòng thử lại.');
-      }
-    });
+    this.pickerOpen.set(false);
+    this.proc().openStartForm({ id: p.id, name: p.name });
   }
 
   initials(name: string): string {

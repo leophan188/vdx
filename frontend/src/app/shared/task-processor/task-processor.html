@@ -11,7 +11,7 @@
     @if (d.officeDoc) {
       <div class="tp-tabs">
         <button type="button" class="tp-tab" [class.tp-tab--on]="docTab()==='content'" (click)="docTab.set('content')">📝 Nội dung</button>
-        <button type="button" class="tp-tab" [class.tp-tab--on]="docTab()==='doc'" (click)="docTab.set('doc')">📄 Soạn thảo tài liệu</button>
+        <button type="button" class="tp-tab" [class.tp-tab--on]="docTab()==='doc'" [disabled]="materializing()" (click)="openDocTab()">📄 Soạn thảo tài liệu @if (materializing()) { <span class="hint">(đang tạo hồ sơ…)</span> }</button>
       </div>
     }
 
@@ -314,7 +314,7 @@
          (Trình duyệt/Hủy…) ở tab này — chúng thuộc tab "Nội dung". -->
     @if (!detail()?.officeDoc || docTab()==='content') {
       @for (a of detail()?.actions || []; track a) {
-        <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="act(a)">{{ actionLabel(a) }}</button>
+        <button type="button" class="btn btn--primary" [disabled]="busy() || materializing()" (click)="act(a)">{{ actionLabel(a) }}</button>
       }
     }
   </ng-container>

@@ -36,23 +36,8 @@ export class NewRequest implements OnInit {
   }
 
   create(p: StartableProcess): void {
-    this.busyId.set(p.id);
-    this.wf.start(p.id, {}).subscribe({
-      next: (resp) => {
-        this.busyId.set(null);
-        if (resp.firstTaskId) {
-          // Mở ngay form bước đầu để người dùng khai báo thông tin đã cấu hình, rồi gửi.
-          this.proc().openTask(resp.firstTaskId);
-        } else {
-          this.toast.success('Đã tạo yêu cầu', p.name);
-          this.router.navigate(['/inbox']);
-        }
-      },
-      error: (e) => {
-        this.busyId.set(null);
-        this.toast.error('Không tạo được yêu cầu', e?.error?.message || 'Vui lòng thử lại.');
-      }
-    });
+    // Mở form bước đầu ở chế độ NHÁP (chưa tạo hồ sơ) — chỉ tạo khi bấm Gửi hoặc mở soạn thảo tài liệu.
+    this.proc().openStartForm({ id: p.id, name: p.name });
   }
 
   /** Sau khi gửi form bước đầu → về Việc của tôi. */

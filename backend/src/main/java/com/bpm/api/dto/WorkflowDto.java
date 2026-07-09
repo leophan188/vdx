@@ -15,6 +15,15 @@ public class WorkflowDto {
     public record StartableProcess(String id, String processKey, String name) {
     }
 
+    /**
+     * Biểu mẫu bước ĐẦU của một quy trình — LẤY MÀ KHÔNG tạo instance (để nhập nháp; chỉ tạo hồ sơ khi Gửi
+     * hoặc khi mở soạn thảo tài liệu). Trùng các trường quan trọng của TaskDto.Detail để FE dùng chung.
+     */
+    public record StartForm(String processId, String processName, int processVersion,
+                            String stepKey, String stepName, String formId, String formSchemaJson,
+                            Map<String, String> fieldPerms, java.util.List<String> actions, boolean officeDoc) {
+    }
+
     public record InstanceResponse(String id, String processId, int processVersion,
                                    String flowableInstanceId, String status, Instant startedAt,
                                    String firstTaskId) {

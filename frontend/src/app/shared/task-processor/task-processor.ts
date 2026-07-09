@@ -5,7 +5,7 @@ import { OrgTreePicker } from '../org-tree-picker/org-tree-picker';
 import { UnitStaffPicker } from '../unit-staff-picker/unit-staff-picker';
 import { OfficeEmbed } from '../../documents/office-embed';
 import { ToastService } from '../toast/toast.service';
-import { WorkflowService, TaskDetail, StepView } from '../../core/workflow.service';
+import { WorkflowService, TaskDetail, StepView, StartForm } from '../../core/workflow.service';
 import { FormService, AttachmentRef } from '../../core/form.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
@@ -107,6 +107,12 @@ export class TaskProcessor {
   readonly officeDocId = signal<string | null>(null);
   /** Tab đang xem khi bước có soạn thảo tài liệu: 'content' (form) | 'doc' (editor). */
   readonly docTab = signal<'content' | 'doc'>('content');
+  /** Chế độ NHÁP: đang nhập bước đầu theo quy trình nhưng CHƯA tạo hồ sơ (processId nguồn để tạo khi Gửi/soạn thảo). */
+  readonly draftProcessId = signal<string | null>(null);
+  /** Đang là nháp = có nguồn quy trình nhưng chưa có taskId thật (chưa tạo hồ sơ). */
+  readonly isDraft = computed(() => !!this.draftProcessId() && !this.detail()?.taskId);
+  /** Đang tạo hồ sơ (start) từ nháp — chặn thao tác trùng. */
+  readonly materializing = signal(false);
 
   /** Danh sách render: [mục "Sửa bước trước" + trường bước trước] rồi [mục bước hiện tại + trường bước này]. */
   readonly renderFields = computed<RField[]>(() => {
@@ -149,6 +155,8 @@ export class TaskProcessor {
     this.detail.set(null);
     this.officeDocId.set(null);
     this.docTab.set('content');
+    this.draftProcessId.set(null);
+    this.materializing.set(false);
     this.expandedPrior.set(new Set());
     this.open.set(true);
     this.wf.detail(taskId).subscribe({
@@ -176,6 +184,68 @@ export class TaskProcessor {
         }
       },
       error: () => { this.toast.error('Không mở được việc'); this.open.set(false); }
+    });
+  }
+
+  /**
+   * Mở form bước ĐẦU theo quy trình ở chế độ NHÁP — CHƯA tạo hồ sơ. Chỉ tạo khi người dùng bấm Gửi (act)
+   * hoặc mở tab Soạn thảo tài liệu (openDocTab). Tránh sinh hồ sơ rác khi chỉ chọn/lướt quy trình.
+   */
+  openStartForm(p: { id: string; name: string }): void {
+    this.busy.set(false);
+    this.fields.set([]);
+    this.priorFields.set([]);
+    this.values.set({});
+    this.detail.set(null);
+    this.officeDocId.set(null);
+    this.docTab.set('content');
+    this.draftProcessId.set(p.id);
+    this.materializing.set(false);
+    this.expandedPrior.set(new Set());
+    this.open.set(true);
+    this.wf.startForm(p.id).subscribe({
+      next: (sf: StartForm) => {
+        // Dựng detail "tổng hợp" cho nháp: taskId rỗng (chưa có việc thật) → isDraft = true.
+        this.detail.set({
+          taskId: '', stepName: sf.stepName, stepKey: sf.stepKey, processName: sf.processName,
+          instanceId: null, formId: sf.formId, formSchemaJson: sf.formSchemaJson,
+          processVersion: sf.processVersion, fieldPerms: sf.fieldPerms, actions: sf.actions,
+          formData: {}, priorSteps: [], priorEditFieldsJson: null, officeDoc: sf.officeDoc
+        });
+        this.values.set({});
+        this.setFieldsAndDefaults(sf.formSchemaJson);
+      },
+      error: (e) => {
+        this.toast.error('Không mở được biểu mẫu bước đầu', e?.error?.message || '');
+        this.open.set(false);
+      }
+    });
+  }
+
+  /**
+   * Bấm sang tab "Soạn thảo tài liệu". Nếu đang nháp → PHẢI tạo hồ sơ trước (tài liệu gắn với hồ sơ),
+   * dùng dữ liệu đã nhập làm dữ liệu bước đầu. Không nháp → chỉ đổi tab.
+   */
+  openDocTab(): void {
+    if (!this.isDraft()) { this.docTab.set('doc'); return; }
+    const pid = this.draftProcessId();
+    if (!pid || this.materializing()) return;
+    this.materializing.set(true);
+    this.wf.start(pid, this.values()).subscribe({
+      next: (resp) => {
+        this.materializing.set(false);
+        if (!resp.firstTaskId) { this.toast.error('Không mở được tài liệu (không có việc bước đầu)'); return; }
+        // Đã có hồ sơ thật → chuyển sang chế độ việc bình thường, nạp tài liệu rồi mở tab.
+        this.detail.update((d) => d ? { ...d, taskId: resp.firstTaskId!, instanceId: resp.id } : d);
+        this.wf.officeDoc(resp.firstTaskId).subscribe({
+          next: (r) => { this.officeDocId.set(r.id); this.docTab.set('doc'); },
+          error: () => this.toast.error('Không mở được tài liệu soạn thảo')
+        });
+      },
+      error: (e) => {
+        this.materializing.set(false);
+        this.toast.error('Không tạo được hồ sơ để soạn thảo', e?.error?.message || 'Vui lòng thử lại.');
+      }
     });
   }
 
@@ -382,6 +452,8 @@ export class TaskProcessor {
   act(action: string): void {
     const d = this.detail();
     if (!d) return;
+    if (this.busy() || this.materializing()) return; // đang gửi / đang tạo hồ sơ cho soạn thảo → chặn double
+
     const missing = this.fields().filter((f) =>
       f.required && this.visible(f.key) && !this.readonly_(f.key) && !this.isFilled(f));
     if (missing.length) {
@@ -389,6 +461,29 @@ export class TaskProcessor {
       return;
     }
     this.busy.set(true);
+    // NHÁP: chưa có hồ sơ → tạo hồ sơ (start) rồi hoàn thành việc bước đầu bằng hành động đã chọn.
+    if (this.isDraft()) {
+      const pid = this.draftProcessId()!;
+      const vals = this.values();
+      this.wf.start(pid, vals).subscribe({
+        next: (resp) => {
+          if (!resp.firstTaskId) {
+            // Quy trình 1 bước tự đóng → coi như đã gửi.
+            this.toast.success('Đã tạo yêu cầu', d.processName);
+            this.open.set(false); this.completed.emit(); return;
+          }
+          this.wf.complete(resp.firstTaskId, action, vals).subscribe({
+            next: () => {
+              this.toast.success('Đã gửi yêu cầu', `${d.stepName} • ${this.actionLabel(action)}`);
+              this.open.set(false); this.completed.emit();
+            },
+            error: () => { this.toast.error('Không gửi được yêu cầu'); this.busy.set(false); }
+          });
+        },
+        error: (e) => { this.toast.error('Không tạo được hồ sơ', e?.error?.message || 'Vui lòng thử lại.'); this.busy.set(false); }
+      });
+      return;
+    }
     this.wf.complete(d.taskId, action, this.values()).subscribe({
       next: () => {
         this.toast.success('Đã xử lý việc', `${d.stepName} • ${action}`);
