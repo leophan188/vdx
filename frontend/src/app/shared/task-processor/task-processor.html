@@ -26,7 +26,9 @@
         @if (r.data.length) {
           <div class="tp-reqfields">
             @for (d2 of r.data; track d2.label) {
-              <div class="tp-fld" [class.tp-full]="d2.value.length > 60"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+              @if (!editablePriorLabels().has(d2.label)) {
+                <div class="tp-fld" [class.tp-full]="d2.value.length > 60"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+              }
             }
           </div>
         } @else {
@@ -58,7 +60,9 @@
               <div class="tp-step-body">
                 @if (s.data.length) {
                   @for (d2 of s.data; track d2.label) {
-                    <div class="tp-fld" [class.tp-full]="d2.value.length > 60"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+                    @if (!editablePriorLabels().has(d2.label)) {
+                      <div class="tp-fld" [class.tp-full]="d2.value.length > 60"><label>{{ d2.label }}</label><div class="tp-ro">{{ d2.value }}</div></div>
+                    }
                   }
                 } @else {
                   <small class="hint">(không có dữ liệu nhập ở bước này)</small>

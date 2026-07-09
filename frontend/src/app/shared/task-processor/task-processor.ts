@@ -103,6 +103,8 @@ export class TaskProcessor {
   readonly fields = signal<RField[]>([]);
   /** Trường của bước trước được phép sửa ở bước này. */
   readonly priorFields = signal<RField[]>([]);
+  /** Nhãn các trường đang CHO SỬA → ẩn bản read-only (dẹt) của chúng ở "Nội dung yêu cầu/bước trước" để không trùng. */
+  readonly editablePriorLabels = computed(() => new Set(this.priorFields().map((f) => f.label)));
   readonly values = signal<Record<string, unknown>>({});
   readonly busy = signal(false);
   /** Danh sách tài liệu OnlyOffice của bước (nhiều mẫu) + tài liệu đang chọn để nhúng editor. */
