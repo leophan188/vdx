@@ -1,9 +1,10 @@
-import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { Component, OnInit, OnDestroy, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../shared/toast/toast.service';
 import { DocumentService, EditorConfig } from '../core/document.service';
 import { FormService, FormSummary } from '../core/form.service';
+import { SearchableSelect, SelectOption } from '../shared/searchable-select/searchable-select';
 
 interface OoConnector { callCommand: (fn: unknown, isNoCalc?: boolean) => void; }
 interface OoEditor { destroyEditor?: () => void; createConnector?: () => OoConnector; }
@@ -14,7 +15,7 @@ declare global {
 /** Trình soạn thảo OnlyOffice nhúng (Story 3.10) + chèn mã trộn dữ liệu từ biểu mẫu (mail-merge). */
 @Component({
   selector: 'app-doc-editor',
-  imports: [FormsModule],
+  imports: [FormsModule, SearchableSelect],
   templateUrl: './doc-editor.html'
 })
 export class DocEditor implements OnInit, OnDestroy {
@@ -36,6 +37,9 @@ export class DocEditor implements OnInit, OnDestroy {
   readonly forms = signal<FormSummary[]>([]);
   readonly selectedFormId = signal<string>('');
   readonly mergeFields = signal<{ key: string; label: string }[]>([]);
+  /** Options cho ô chọn biểu mẫu có LỌC theo tên (searchable-select tự lọc không dấu). */
+  readonly formOptions = computed<SelectOption[]>(() =>
+    this.forms().map((f) => ({ value: f.id, label: f.name, sub: f.formKey })));
 
   ngOnInit(): void {
     this.svc.editorConfig(this.id).subscribe({
@@ -98,6 +102,13 @@ export class DocEditor implements OnInit, OnDestroy {
       () => this.toast.success('Đã copy mã — dán (Ctrl+V) vào tài liệu', token),
       () => this.toast.error('Không chèn được mã', token)
     );
+  }
+
+  /** Bắt đầu KÉO trường: đặt text «key» vào dataTransfer để thả vào tài liệu OnlyOffice (trình soạn tự chèn). */
+  onDragToken(ev: DragEvent, key: string): void {
+    const token = '«' + key + '»';
+    ev.dataTransfer?.setData('text/plain', token);
+    if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
   }
 
   private mount(cfg: EditorConfig): void {
