@@ -185,10 +185,12 @@ public class DocumentService {
         editorConfig.put("callbackUrl", callbackHost + "/api/v1/documents/" + id + "/callback");
         editorConfig.put("user", Map.of("id", userId == null ? "anonymous" : userId,
                 "name", displayName == null ? "Người dùng" : displayName));
-        // Bật nút Lưu + Ctrl+S ghi thẳng vào kho (status=6 ForceSave) — không chờ tới khi đóng editor.
+        // forcesave=true: Ctrl+S / rời editor ghi thẳng vào kho (status=6).
+        // autosave=false: TẮT tự lưu-cache của OnlyOffice — nếu bật, nó coi tài liệu "đã lưu" nên
+        // forcesave trả error 4 (không có thay đổi) và KHÔNG flush về kho. Tắt để thay đổi luôn "chưa lưu".
         Map<String, Object> customization = new LinkedHashMap<>();
         customization.put("forcesave", true);
-        customization.put("autosave", true);
+        customization.put("autosave", false);
         editorConfig.put("customization", customization);
 
         Map<String, Object> config = new LinkedHashMap<>();
