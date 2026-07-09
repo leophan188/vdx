@@ -649,12 +649,16 @@ export class PrjBacklog implements OnInit {
     }
     this.saving.set(true);
     const bug = this.isBugLike(this.f.type);
+    const sd = this.fromIso(this.startIso);
+    const dd = this.fromIso(this.dueIso);
+    // Est không nhập → tự tính theo duration × 8 (trừ SUBTASK do trần ≤ 4h).
+    const durEst = this.f.type !== 'SUBTASK' ? this.daysBetween(sd, dd) * 8 : 0;
     const body: TaskRequest = {
       ...this.f,
       title: this.f.title.trim(),
-      estimateHours: this.f.estimateHours ? Number(this.f.estimateHours) : 0,
-      startDate: this.fromIso(this.startIso),
-      dueDate: this.fromIso(this.dueIso),
+      estimateHours: this.f.estimateHours ? Number(this.f.estimateHours) : durEst,
+      startDate: sd,
+      dueDate: dd,
       // Khối "Chi tiết lỗi" chỉ áp dụng cho BUG/ISSUE — loại khác gửi null (xoá dữ liệu cũ nếu đổi loại).
       screen: bug ? (this.f.screen || null) : null,
       severity: bug ? (this.f.severity || null) : null,
@@ -769,6 +773,42 @@ export class PrjBacklog implements OnInit {
         this.silentReload(); // est đổi → % rollup cha + tổng est tính lại ngay
       },
       error: (e) => this.toast.error('Không cập nhật được est', e?.error?.message ?? '')
+    });
+  }
+
+  /** dd/MM/yyyy → yyyy-MM-dd cho <input type=date> trên lưới (public cho template). */
+  iso(d: string | null | undefined): string { return this.toIso(d ?? null); }
+
+  /** Số ngày (gồm 2 đầu) giữa 2 ngày dd/MM/yyyy; 0 nếu thiếu/không hợp lệ. */
+  private daysBetween(start: string | null, due: string | null): number {
+    const s = this.parseDmy(start); const e = this.parseDmy(due);
+    if (!s || !e || e < s) return 0;
+    return Math.round((e.getTime() - s.getTime()) / 86400000) + 1;
+  }
+
+  /**
+   * Cập nhật NGÀY bắt đầu/kết thúc ngay trên lưới (task LÁ). Nếu Est CHƯA nhập (=0) và có đủ 2 ngày
+   * → tự tính Est = duration (số ngày) × 8. (SUBTASK giữ nhập tay do trần ≤ 4h.)
+   */
+  saveDateInline(t: ProjectTask, which: 'start' | 'due', iso: string): void {
+    if (this.isRollup(t)) return; // cha/EPIC/STORY = ngày tự tổng hợp
+    const dmy = this.fromIso(iso);
+    const startDate = which === 'start' ? dmy : t.startDate;
+    const dueDate = which === 'due' ? dmy : t.dueDate;
+    if (startDate === t.startDate && dueDate === t.dueDate) return;
+    let estimateHours = t.estimateHours;
+    const dur = this.daysBetween(startDate, dueDate);
+    const autoEst = (!t.estimateHours || t.estimateHours === 0) && dur > 0 && t.type !== 'SUBTASK';
+    if (autoEst) estimateHours = dur * 8;
+    const body = this.buildRequest(t, { startDate, dueDate, estimateHours });
+    this.svc.updateTask(this.projectId(), t.id, body).subscribe({
+      next: (u) => {
+        this.patchLocal(u);
+        this.toast.success('Đã cập nhật ngày',
+          autoEst ? `${u.code}: est tự tính ${estimateHours}h (${dur} ngày × 8)` : u.code);
+        this.silentReload(); // ngày/est đổi → rollup cha + tổng tính lại
+      },
+      error: (e) => { this.toast.error('Không cập nhật được ngày', e?.error?.message ?? ''); this.silentReload(); }
     });
   }
 

@@ -8,8 +8,8 @@ import { DocumentService, EditorConfig } from '../core/document.service';
 @Component({
   selector: 'app-office-embed',
   styles: [`
-    :host { display:block; width:100%; height:100%; }
-    .oo-frame { width:100%; height:calc(100vh - 215px); min-height:480px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; }
+    :host { display:block; width:100%; }
+    .oo-frame { width:100%; height:calc(100vh - 210px); min-height:480px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; background:#fff; }
   `],
   template: `
     @if (error()) {
@@ -44,6 +44,9 @@ export class OfficeEmbed implements OnInit, OnDestroy {
         if (!DocsAPI) { this.error.set('Không tải được OnlyOffice (DocsAPI).'); return; }
         const config = { ...(cfg.config as Record<string, unknown>), width: '100%', height: '100%', type: 'desktop' };
         this.editor = new DocsAPI.DocEditor(this.containerId, config);
+        // OnlyOffice nhúng đôi khi render canvas ĐEN khi container vừa đổi kích thước (đổi tab/inset modal)
+        // → ép re-layout vài lần sau khi mount.
+        [300, 800, 1500].forEach((ms) => setTimeout(() => window.dispatchEvent(new Event('resize')), ms));
       })
       .catch(() => this.error.set('Không kết nối được OnlyOffice Document Server. Kiểm tra dịch vụ đang chạy.'));
   }

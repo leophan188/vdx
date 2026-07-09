@@ -214,6 +214,7 @@ public class DocumentService {
             payload = jwt.verify(body.get("token").asText());
         }
         int status = payload.path("status").asInt(0);
+        log.info("[onlyoffice] callback doc={} status={} (1=đang mở,2=lưu-khi-đóng,4=đóng-không-sửa,6=forcesave)", id, status);
         if (status != 2 && status != 6) {
             return; // 1=đang mở, 4=đóng không sửa, ... → không cần lưu
         }
