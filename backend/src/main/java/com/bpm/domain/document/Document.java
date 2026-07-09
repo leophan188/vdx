@@ -89,7 +89,8 @@ public class Document {
     public void saveNewContent(byte[] newContent, String actor) {
         this.content = newContent;
         this.version += 1;
-        this.docKey = newKey();
+        // KHÔNG đổi docKey ở đây: docKey đã được đổi mỗi lần MỞ editor (rotateKey), giữ ổn định
+        // trong suốt phiên để forcesave định kỳ khớp phiên đang mở.
         this.updatedAt = Instant.now();
         this.updatedBy = actor;
     }

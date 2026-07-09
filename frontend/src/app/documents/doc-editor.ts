@@ -24,12 +24,15 @@ export class DocEditor implements OnInit, OnDestroy {
   readonly title = signal('Tài liệu');
   readonly error = signal<string | null>(null);
   private editor?: { destroyEditor?: () => void };
+  private saveTimer?: ReturnType<typeof setInterval>;
 
   ngOnInit(): void {
     this.svc.editorConfig(this.id).subscribe({
       next: (cfg) => { this.title.set(cfg.name); this.mount(cfg); },
       error: () => this.error.set('Không lấy được cấu hình soạn thảo.')
     });
+    // Tự lưu định kỳ khi đang mở (phiên còn sống → forcesave ghi được về kho).
+    this.saveTimer = setInterval(() => this.svc.forceSave(this.id).subscribe({ error: () => {} }), 30000);
   }
 
   private mount(cfg: EditorConfig): void {
@@ -68,6 +71,7 @@ export class DocEditor implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.saveTimer) clearInterval(this.saveTimer);
     try { this.svc.forceSave(this.id).subscribe({ error: () => {} }); } catch { /* ignore */ }
     try { this.editor?.destroyEditor?.(); } catch { /* ignore */ }
   }

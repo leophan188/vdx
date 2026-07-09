@@ -28,12 +28,15 @@ export class OfficeEmbed implements OnInit, OnDestroy {
   private static seq = 0;
   readonly containerId = 'oo-embed-' + (++OfficeEmbed.seq);
   private editor?: { destroyEditor?: () => void };
+  private saveTimer?: ReturnType<typeof setInterval>;
 
   ngOnInit(): void {
     this.svc.editorConfig(this.docId()).subscribe({
       next: (cfg) => this.mount(cfg),
       error: () => this.error.set('Không lấy được cấu hình soạn thảo tài liệu.')
     });
+    // Tự lưu định kỳ khi editor còn mở (phiên OnlyOffice còn sống → forcesave ghi được về kho).
+    this.saveTimer = setInterval(() => this.svc.forceSave(this.docId()).subscribe({ error: () => {} }), 30000);
   }
 
   private mount(cfg: EditorConfig): void {
@@ -70,6 +73,7 @@ export class OfficeEmbed implements OnInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
+    if (this.saveTimer) clearInterval(this.saveTimer);
     // Rời editor (đóng popup việc) → yêu cầu OnlyOffice lưu ngay (forcesave) trước khi huỷ.
     try { this.svc.forceSave(this.docId()).subscribe({ error: () => {} }); } catch { /* ignore */ }
     try { this.editor?.destroyEditor?.(); } catch { /* ignore */ }
