@@ -3,6 +3,7 @@ import { ProjectService, ProjectTask, TaskStatus, TaskType, Project } from '../.
 import { ToastService } from '../../shared/toast/toast.service';
 import { loadPref, savePref } from '../../shared/view-prefs';
 import { TypeFilter, TypeChip } from '../../shared/type-filter/type-filter';
+import { buildTree, effectiveStart, effectiveDue } from '../../shared/task-tree';
 
 /** Đơn vị phóng (zoom) của trục thời gian. */
 export type GanttZoom = 'year' | 'month' | 'week' | 'day';
@@ -458,9 +459,15 @@ export class PrjTimeline implements OnInit {
     return out;
   });
 
+  /** Cây từ TẤT CẢ task (không lọc) — để rollup ngày cha từ Bug/Sub-task con. */
+  private readonly fullTree = computed(() => buildTree(this.tasks()));
+
   private toRow(t: ProjectTask, depth: number, min: Date, ppd: number): GanttRow {
-    const start = parseVnDate(t.startDate);
-    const end = parseVnDate(t.dueDate);
+    // Cha (Task/Story/Epic có con) → ngày TỰ TỔNG HỢP: min ngày bắt đầu / max ngày kết thúc các lá
+    // (gồm Bug/Issue/Sub-task). Task lá → dùng ngày của chính nó.
+    const tr = this.fullTree();
+    const start = parseVnDate(effectiveStart(t, tr));
+    const end = parseVnDate(effectiveDue(t, tr));
     const hasBar = !!(start && end);
     let left = 0, width = 0;
     let s = start, e = end;

@@ -43,3 +43,37 @@ export function subtreeLeafEstimate(taskId: string, tree: TaskTree): number {
 export function effectiveEstimate(task: ProjectTask, tree: TaskTree): number {
   return hasChildren(task.id, tree) ? subtreeLeafEstimate(task.id, tree) : (task.estimateHours || 0);
 }
+
+// ===== Rollup NGÀY (dd/MM/yyyy) từ task con (dùng chung backlog + timeline) =====
+function parseDmy(s: string | null | undefined): Date | null {
+  if (!s) return null;
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+}
+function fmtDmy(d: Date | null): string | null {
+  if (!d) return null;
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+}
+/** Ngày (start|due) của các task LÁ trong cây con — gồm chính task nếu là lá. */
+export function subtreeLeafDates(taskId: string, tree: TaskTree, kind: 'start' | 'due'): Date[] {
+  const kids = tree.childrenOf.get(taskId) ?? [];
+  if (kids.length === 0) {
+    const t = tree.byId.get(taskId);
+    const d = parseDmy(kind === 'start' ? t?.startDate : t?.dueDate);
+    return d ? [d] : [];
+  }
+  return kids.flatMap((k) => subtreeLeafDates(k.id, tree, kind));
+}
+/** Ngày bắt đầu hiệu lực: lá → của nó; cha → MIN ngày bắt đầu các lá (gồm Bug/Sub-task). */
+export function effectiveStart(task: ProjectTask, tree: TaskTree): string | null {
+  if (!hasChildren(task.id, tree)) return task.startDate ?? null;
+  const ds = subtreeLeafDates(task.id, tree, 'start');
+  return ds.length ? fmtDmy(new Date(Math.min(...ds.map((d) => d.getTime())))) : null;
+}
+/** Ngày kết thúc hiệu lực: lá → của nó; cha → MAX ngày kết thúc các lá (gồm Bug/Sub-task). */
+export function effectiveDue(task: ProjectTask, tree: TaskTree): string | null {
+  if (!hasChildren(task.id, tree)) return task.dueDate ?? null;
+  const ds = subtreeLeafDates(task.id, tree, 'due');
+  return ds.length ? fmtDmy(new Date(Math.max(...ds.map((d) => d.getTime())))) : null;
+}
