@@ -6,7 +6,7 @@ import { DocumentService, EditorConfig } from '../core/document.service';
 import { FormService, FormSummary } from '../core/form.service';
 import { SearchableSelect, SelectOption } from '../shared/searchable-select/searchable-select';
 
-interface OoConnector { callCommand: (fn: unknown, isNoCalc?: boolean) => void; }
+interface OoConnector { callCommand: (fn: unknown, cb?: unknown, isNoCalc?: boolean) => void; }
 interface OoEditor { destroyEditor?: () => void; createConnector?: () => OoConnector; }
 declare global {
   interface Window { DocsAPI?: { DocEditor: new (id: string, config: unknown) => OoEditor }; }
@@ -83,21 +83,26 @@ export class DocEditor implements OnInit, OnDestroy {
    */
   insertToken(key: string): void {
     const token = '«' + key + '»';
-    if (this.editor?.createConnector) {
+    const hasConn = !!this.editor && typeof this.editor.createConnector === 'function';
+    if (hasConn) {
       try {
-        if (!this.connector) this.connector = this.editor.createConnector();
+        if (!this.connector) this.connector = this.editor!.createConnector!();
         const safe = token.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         // Hàm chạy TRONG trình soạn (Api là global ở đó); dựng bằng Function để không vướng type + nhúng mã.
         const cmd = new Function(
           `var d=Api.GetDocument();var p=Api.CreateParagraph();p.AddText('${safe}');d.InsertContent([p],true);`
         );
-        this.connector!.callCommand(cmd, false);
+        this.connector!.callCommand(cmd, function () { /* xong */ });
         this.toast.success('Đã chèn mã', token);
         return;
-      } catch { /* rơi xuống fallback copy */ }
+      } catch (e) {
+        console.warn('[merge] callCommand lỗi', e);
+      }
     }
+    // Chẩn đoán: cho biết vì sao phải copy (connector không có / gọi lỗi) — giúp xác định bản OnlyOffice.
+    const why = hasConn ? '(chèn lỗi → copy) ' : '(OnlyOffice thiếu connector → copy) ';
     navigator.clipboard?.writeText(token).then(
-      () => this.toast.success('Đã copy mã — dán (Ctrl+V) vào tài liệu', token),
+      () => this.toast.success('Đã copy mã ' + why + '— dán (Ctrl+V)', token),
       () => this.toast.error('Không chèn được mã', token)
     );
   }
