@@ -46,7 +46,7 @@ GatewayPalette.prototype.getPaletteEntries = function () {
 const gatewayPaletteModule = { __init__: ['gatewayPalette'], gatewayPalette: ['type', GatewayPalette] };
 /* eslint-enable @typescript-eslint/no-explicit-any */
 
-type AssigneeType = 'ROLE' | 'POSITION' | 'USER';
+type AssigneeType = 'ROLE' | 'POSITION' | 'USER' | 'FIELD';
 type FieldType = 'text' | 'number' | 'date' | 'dropdown' | 'radio' | 'checkbox' | 'richtext';
 type OptionSource = 'STATIC' | 'CATALOG';
 type RecipientType = 'ASSIGNEE' | 'ROLE' | 'POSITION' | 'USER';
@@ -76,7 +76,7 @@ interface NotifyConfig {
 }
 
 type FieldPerm = 'EDIT' | 'READONLY' | 'HIDDEN';
-type FlowCondOp = 'eq' | 'ne' | 'truthy';
+type FlowCondOp = 'eq' | 'ne' | 'truthy' | 'notEmpty';
 
 /** Điều kiện trên nhánh (sequence flow) rời gateway — dựa trên dữ liệu form (Story 2.2). */
 interface FlowCondition {
@@ -88,6 +88,9 @@ interface FlowCondition {
 interface StepMeta {
   assigneeType?: AssigneeType;
   assigneeId?: string;
+  /** assigneeType=FIELD: key trường chứa NGƯỜI (unitstaff/orgtree-user) hoặc BẢNG người; cột người nếu là bảng. */
+  assigneeFieldKey?: string;
+  assigneeFieldCol?: string;
   slaHours?: number;
   actions?: string[];
   fields?: FieldDef[];
@@ -187,6 +190,7 @@ export class Designer implements AfterViewInit, OnDestroy {
   readonly currentPriorGroup = computed(() => this.stepGroups().find((g) => g.stepKey === this.selectedPriorStep()) ?? null);
   readonly COND_OPS: { v: FlowCondOp; l: string }[] = [
     { v: 'truthy', l: 'có giá trị' },
+    { v: 'notEmpty', l: 'có dữ liệu (bảng/danh sách)' },
     { v: 'eq', l: 'bằng' },
     { v: 'ne', l: 'khác' }
   ];
@@ -214,7 +218,8 @@ export class Designer implements AfterViewInit, OnDestroy {
   readonly ASSIGNEE_TYPES: { v: AssigneeType; l: string }[] = [
     { v: 'ROLE', l: 'Vai trò' },
     { v: 'POSITION', l: 'Chức danh' },
-    { v: 'USER', l: 'Nhân sự' }
+    { v: 'USER', l: 'Nhân sự' },
+    { v: 'FIELD', l: 'Theo người trong trường/bảng dữ liệu' }
   ];
 
   readonly FIELD_TYPES: { v: FieldType; l: string }[] = [
@@ -390,7 +395,7 @@ export class Designer implements AfterViewInit, OnDestroy {
     }
     const fl = this.dataFields().find((d) => d.key === c.field)?.label ?? c.field;
     const op = this.COND_OPS.find((o) => o.v === c.op)?.l ?? c.op;
-    return c.op === 'truthy' ? `${fl} ${op}` : `${fl} ${op} "${c.value ?? ''}"`;
+    return (c.op === 'truthy' || c.op === 'notEmpty') ? `${fl} ${op}` : `${fl} ${op} "${c.value ?? ''}"`;
   }
   saveFlowCondition(): void {
     const id = this.selectedFlowId();
@@ -545,6 +550,8 @@ export class Designer implements AfterViewInit, OnDestroy {
   }
   onAssigneeTypeChange(): void {
     this.meta.assigneeId = undefined;
+    this.meta.assigneeFieldKey = undefined;
+    this.meta.assigneeFieldCol = undefined;
     this.writeMeta();
   }
   /** Options cho ô tìm-kiếm-chọn người thực hiện (typeahead) — kèm chức vụ · bộ phận khi là nhân sự. */

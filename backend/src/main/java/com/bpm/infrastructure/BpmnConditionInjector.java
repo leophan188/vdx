@@ -142,6 +142,8 @@ public class BpmnConditionInjector {
         return switch (op) {
             case "eq" -> "${" + var + " == " + v + "}";
             case "ne" -> "${" + var + " != " + v + "}";
+            // "có dữ liệu": trường BẢNG/DANH SÁCH (giá trị là JSON) — đúng khi khác null/rỗng/[]/{} (loại bảng rỗng).
+            case "notEmpty" -> "${" + var + " != null && " + var + " != '' && " + var + " != '[]' && " + var + " != '{}'}";
             // "có giá trị": đúng cho boolean true + chuỗi không rỗng; sai cho false/rỗng/null (kể cả khi biến chưa tồn tại)
             default -> "${" + var + " == true || (" + var + " != null && " + var + " != '')}";
         };

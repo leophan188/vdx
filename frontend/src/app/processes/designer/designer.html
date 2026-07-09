@@ -42,14 +42,31 @@
           @for (t of ASSIGNEE_TYPES; track t.v) { <option [ngValue]="t.v">{{ t.l }}</option> }
         </select>
       </div>
-      <div class="field">
-        <label>Chọn {{ assigneeTypeLabel() }} (theo danh mục)</label>
-        <searchable-select [options]="assigneeSelOptions()" [value]="meta.assigneeId || ''"
-                           (valueChange)="onAssigneePick($event)" [allowEmpty]="true"
-                           [emptyLabel]="'— chọn ' + assigneeTypeLabel() + ' —'"
-                           [placeholder]="'Gõ tìm ' + assigneeTypeLabel() + '…'" />
-      </div>
+      @if (meta.assigneeType !== 'FIELD') {
+        <div class="field">
+          <label>Chọn {{ assigneeTypeLabel() }} (theo danh mục)</label>
+          <searchable-select [options]="assigneeSelOptions()" [value]="meta.assigneeId || ''"
+                             (valueChange)="onAssigneePick($event)" [allowEmpty]="true"
+                             [emptyLabel]="'— chọn ' + assigneeTypeLabel() + ' —'"
+                             [placeholder]="'Gõ tìm ' + assigneeTypeLabel() + '…'" />
+        </div>
+      } @else {
+        <div class="field">
+          <label>Trường chứa NGƯỜI (chọn nhân sự / bảng có cột người)</label>
+          <select [(ngModel)]="meta.assigneeFieldKey" (ngModelChange)="writeMeta()">
+            <option [ngValue]="undefined">— Chọn trường —</option>
+            @for (f of dataFields(); track f.key) { <option [ngValue]="f.key">{{ f.label }} · {{ f.key }}</option> }
+          </select>
+        </div>
+      }
     </div>
+    @if (meta.assigneeType === 'FIELD') {
+      <div class="field">
+        <label>Cột người (chỉ khi trường nguồn là BẢNG — mã cột chứa nhân sự)</label>
+        <input [(ngModel)]="meta.assigneeFieldCol" (ngModelChange)="writeMeta()" placeholder="VD: nhan_su (để trống nếu trường là 'chọn nhân sự')" />
+        <p class="hint" style="margin:4px 0 0;">Người được add vào trường/bảng này sẽ là người thực hiện bước (dạng ứng viên — ai trong danh sách cũng vào làm được). Không theo danh mục cố định.</p>
+      </div>
+    }
     <div class="field" style="max-width: 220px;">
       <label>Hạn xử lý (SLA, giờ)</label>
       <input type="number" min="0" [(ngModel)]="meta.slaHours" (ngModelChange)="writeMeta()" />
@@ -266,7 +283,7 @@
         @for (a of ALL_ACTIONS; track a.k) { <option [value]="a.k">{{ a.l }}</option> }
       </select>
     </div>
-  } @else if (flowCond.field && flowCond.op !== 'truthy') {
+  } @else if (flowCond.field && flowCond.op !== 'truthy' && flowCond.op !== 'notEmpty') {
     <div class="field"><label>Giá trị so sánh</label><input [(ngModel)]="flowCond.value" placeholder="VD: Cao" /></div>
   }
   @if (flowCond.field) {

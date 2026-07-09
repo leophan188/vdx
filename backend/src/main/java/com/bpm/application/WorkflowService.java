@@ -332,11 +332,16 @@ public class WorkflowService {
                 continue;
             }
             String type = step.path("assigneeType").asText("POSITION");
-            String aid = step.path("assigneeId").asText(null);
-            if (aid == null || aid.isBlank()) {
-                continue;
-            }
             try {
+                if ("FIELD".equals(type)) {
+                    // Người thực hiện ĐỘNG: lấy từ trường/bảng dữ liệu Hồ sơ (người được add vào bảng).
+                    assignFromField(flowableInstanceId, t, step, procName);
+                    continue;
+                }
+                String aid = step.path("assigneeId").asText(null);
+                if (aid == null || aid.isBlank()) {
+                    continue;
+                }
                 switch (type) {
                     case "POSITION" -> {
                         TaskAssignment ta = assignmentService.assignTaskToPosition(t.getId(), aid, actor);
@@ -353,6 +358,74 @@ public class WorkflowService {
                 log.warn("[workflow] không phân công được task {} ({}): {}", t.getTaskDefinitionKey(), type, e.getMessage());
             }
         }
+    }
+
+    /**
+     * Phân công bước theo TRƯỜNG/BẢNG dữ liệu (assigneeType=FIELD): người được add vào trường "chọn nhân sự"
+     * hoặc cột người của bảng → gán CANDIDATE (ai trong danh sách cũng vào làm được), không theo danh mục cố định.
+     */
+    private void assignFromField(String flowableInstanceId, Task t, JsonNode step, String procName) {
+        String fieldKey = blankToNull(step.path("assigneeFieldKey").asText(null));
+        if (fieldKey == null) {
+            return;
+        }
+        String col = blankToNull(step.path("assigneeFieldCol").asText(null));
+        Object val = runtimeService.getVariable(flowableInstanceId, fieldKey);
+        java.util.Set<String> userIds = extractUserIds(val, col);
+        if (userIds.isEmpty()) {
+            log.warn("[workflow] bước {} phân công theo trường '{}' nhưng chưa có người → việc để chờ nhận",
+                    t.getTaskDefinitionKey(), fieldKey);
+            return;
+        }
+        for (String uid : userIds) {
+            taskService.addCandidateUser(t.getId(), uid);
+            notifyAssignee(uid, t.getName(), procName);
+        }
+    }
+
+    /** Trích userId từ giá trị trường: bảng (JSON array, cột col) | mảng id | 1 id | danh sách phẩy. */
+    private java.util.Set<String> extractUserIds(Object val, String col) {
+        java.util.Set<String> ids = new java.util.LinkedHashSet<>();
+        if (val == null) {
+            return ids;
+        }
+        String s = String.valueOf(val).trim();
+        if (s.isEmpty()) {
+            return ids;
+        }
+        if (col != null) { // BẢNG: mảng dòng {col: userId}
+            try {
+                JsonNode arr = objectMapper.readTree(s);
+                if (arr.isArray()) {
+                    for (JsonNode row : arr) {
+                        String uid = blankToNull(row.path(col).asText(null));
+                        if (uid != null) {
+                            ids.add(uid);
+                        }
+                    }
+                }
+            } catch (Exception ignore) { /* không phải JSON hợp lệ */ }
+        } else if (s.startsWith("[")) { // mảng id
+            try {
+                JsonNode arr = objectMapper.readTree(s);
+                if (arr.isArray()) {
+                    arr.forEach(n -> {
+                        String u = blankToNull(n.asText(null));
+                        if (u != null) {
+                            ids.add(u);
+                        }
+                    });
+                }
+            } catch (Exception ignore) { /* bỏ qua */ }
+        } else { // 1 id hoặc danh sách phẩy
+            for (String part : s.split(",")) {
+                String u = part.trim();
+                if (!u.isEmpty()) {
+                    ids.add(u);
+                }
+            }
+        }
+        return ids;
     }
 
     /** Bắn thông báo in-app "việc mới" cho người được giao (Story 4.9). */
