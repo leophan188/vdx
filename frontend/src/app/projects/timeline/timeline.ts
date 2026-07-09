@@ -162,7 +162,9 @@ export class PrjTimeline implements OnInit {
   exportExcel(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
-    this.svc.exportTimeline(this.projectId()).subscribe({
+    // Xuất ĐÚNG theo bộ lọc loại đang áp — gửi danh sách task đang hiển thị.
+    const ids = this.visibleTasks().map((t) => t.id);
+    this.svc.exportTimeline(this.projectId(), ids).subscribe({
       next: (b) => { ProjectService.downloadBlob(b, 'timeline.xlsx'); this.exporting.set(false); },
       error: () => { this.exporting.set(false); this.toast.error('Không xuất được Excel timeline'); }
     });

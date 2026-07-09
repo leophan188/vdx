@@ -314,7 +314,9 @@ export class PrjBacklog implements OnInit {
   exportExcel(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
-    this.svc.exportBacklog(this.projectId()).subscribe({
+    // Xuất ĐÚNG theo bộ lọc đang áp (loại/trạng thái/người/tìm) — gửi danh sách task đang khớp lọc.
+    const ids = this.filteredRows().map((r) => r.task.id);
+    this.svc.exportBacklog(this.projectId(), ids).subscribe({
       next: (b) => { ProjectService.downloadBlob(b, 'backlog.xlsx'); this.exporting.set(false); },
       error: () => { this.exporting.set(false); this.toast.error('Không xuất được Excel backlog'); }
     });
@@ -394,8 +396,7 @@ export class PrjBacklog implements OnInit {
   });
 
   /** Ẩn dòng nếu có tổ tiên đang gập, hoặc loại không nằm trong bộ lọc, hoặc không khớp người (vẫn giữ task CHA). */
-  readonly visible = computed<TreeRow[]>(() => {
-    const col = this.collapsed();
+  readonly filteredRows = computed<TreeRow[]>(() => {
     const types = this.typeFilter();
     const statuses = this.statusFilter();
     const asg = this.filterAssignee();
@@ -444,6 +445,15 @@ export class PrjBacklog implements OnInit {
       if (!types.has(r.task.type)) return false;
       if (assigneeKeep && !assigneeKeep.has(r.task.id)) return false;
       if (statusKeep && !statusKeep.has(r.task.id)) return false;
+      return true;
+    });
+  });
+
+  /** Ẩn thêm dòng có tổ tiên đang GẬP (trên nền đã lọc) — dùng để HIỂN THỊ trên màn. */
+  readonly visible = computed<TreeRow[]>(() => {
+    const col = this.collapsed();
+    const byId = new Map(this.tasks().map((t) => [t.id, t]));
+    return this.filteredRows().filter((r) => {
       let p = r.task.parentId;
       while (p) {
         if (col.has(p)) return false;

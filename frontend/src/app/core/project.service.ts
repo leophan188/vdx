@@ -399,12 +399,14 @@ export class ProjectService {
     return this.http.get<ProjectTask[]>(`${this.base}/${projectId}/tasks`, this.opts);
   }
 
-  /** Xuất Excel backlog / timeline (định dạng đẹp) — trả Blob để tải về. */
-  exportBacklog(projectId: string): Observable<Blob> {
-    return this.http.get(`${this.base}/${projectId}/backlog/export`, { responseType: 'blob', withCredentials: true });
+  /** Xuất Excel backlog theo BỘ LỌC (taskIds = danh sách task đang khớp lọc; rỗng = toàn bộ). */
+  exportBacklog(projectId: string, taskIds?: string[]): Observable<Blob> {
+    return this.http.post(`${this.base}/${projectId}/backlog/export`, { taskIds: taskIds ?? null },
+      { responseType: 'blob', withCredentials: true });
   }
-  exportTimeline(projectId: string): Observable<Blob> {
-    return this.http.get(`${this.base}/${projectId}/timeline/export`, { responseType: 'blob', withCredentials: true });
+  exportTimeline(projectId: string, taskIds?: string[]): Observable<Blob> {
+    return this.http.post(`${this.base}/${projectId}/timeline/export`, { taskIds: taskIds ?? null },
+      { responseType: 'blob', withCredentials: true });
   }
   /** Kích hoạt tải Blob về máy với tên file cho trước. */
   static downloadBlob(blob: Blob, filename: string): void {

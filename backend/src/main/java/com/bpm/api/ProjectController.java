@@ -174,21 +174,39 @@ public class ProjectController {
         return taskService.list(id);
     }
 
-    /** Xuất BACKLOG (cây công việc) ra Excel định dạng đẹp để gửi khách. */
-    @GetMapping("/{id}/backlog/export")
-    public ResponseEntity<byte[]> exportBacklog(@PathVariable String id, Authentication auth) {
+    public record ExportFilter(java.util.List<String> taskIds) {
+    }
+
+    /**
+     * Xuất BACKLOG ra Excel theo BỘ LỌC đang áp trên màn. taskIds != null → chỉ xuất các task đó (đúng thứ
+     * tự backlog); null/rỗng → xuất toàn bộ. POST để tránh giới hạn độ dài URL khi danh sách id lớn.
+     */
+    @PostMapping("/{id}/backlog/export")
+    public ResponseEntity<byte[]> exportBacklog(@PathVariable String id,
+                                                @RequestBody(required = false) ExportFilter filter, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
         ProjectDto.ProjectResponse p = projectService.detail(id);
-        byte[] bytes = reportExportService.backlogXlsx("[" + p.code() + "] " + p.name(), taskService.list(id));
+        List<ProjectDto.TaskResponse> tasks = taskService.list(id);
+        if (filter != null && filter.taskIds() != null && !filter.taskIds().isEmpty()) {
+            java.util.Set<String> keep = new java.util.HashSet<>(filter.taskIds());
+            tasks = tasks.stream().filter(t -> keep.contains(t.id())).toList();
+        }
+        byte[] bytes = reportExportService.backlogXlsx("[" + p.code() + "] " + p.name(), tasks);
         return xlsxResponse(bytes, "backlog-" + p.code() + ".xlsx");
     }
 
-    /** Xuất TIMELINE (lịch trình + Gantt theo tuần) ra Excel định dạng đẹp để gửi khách. */
-    @GetMapping("/{id}/timeline/export")
-    public ResponseEntity<byte[]> exportTimeline(@PathVariable String id, Authentication auth) {
+    /** Xuất TIMELINE ra Excel theo BỘ LỌC đang áp (taskIds != null → chỉ các task đó; null/rỗng → toàn bộ). */
+    @PostMapping("/{id}/timeline/export")
+    public ResponseEntity<byte[]> exportTimeline(@PathVariable String id,
+                                                 @RequestBody(required = false) ExportFilter filter, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
         ProjectDto.ProjectResponse p = projectService.detail(id);
-        byte[] bytes = reportExportService.timelineXlsx("[" + p.code() + "] " + p.name(), taskService.list(id));
+        List<ProjectDto.TaskResponse> tasks = taskService.list(id);
+        if (filter != null && filter.taskIds() != null && !filter.taskIds().isEmpty()) {
+            java.util.Set<String> keep = new java.util.HashSet<>(filter.taskIds());
+            tasks = tasks.stream().filter(t -> keep.contains(t.id())).toList();
+        }
+        byte[] bytes = reportExportService.timelineXlsx("[" + p.code() + "] " + p.name(), tasks);
         return xlsxResponse(bytes, "timeline-" + p.code() + ".xlsx");
     }
 
