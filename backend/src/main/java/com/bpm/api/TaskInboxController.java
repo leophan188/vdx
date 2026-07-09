@@ -65,6 +65,12 @@ public class TaskInboxController {
         return Map.of("id", workflow.officeDocForTask(id, actor(auth)));
     }
 
+    /** Lấy/tạo DANH SÁCH tài liệu của bước (cấu hình nhiều mẫu) — mỗi phần tử {id, name}. */
+    @PostMapping("/tasks/{id}/office-docs")
+    public List<Map<String, Object>> officeDocs(@PathVariable String id, Authentication auth) {
+        return workflow.officeDocsForTask(id, actor(auth));
+    }
+
     /** Nhận một việc theo vai trò (claim). */
     @PostMapping("/tasks/{id}/claim")
     public void claim(@PathVariable String id, Authentication auth) {

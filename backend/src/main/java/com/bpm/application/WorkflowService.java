@@ -550,6 +550,53 @@ public class WorkflowService {
                 mergeValues, actor).getId();
     }
 
+    /**
+     * Lấy/tạo TẤT CẢ tài liệu OnlyOffice của bước (cấu hình NHIỀU mẫu ở Designer → step.officeDocs).
+     * Mỗi tài liệu 1 file riêng (slot = taskKey#index). Không cấu hình officeDocs → 1 tài liệu theo officeTemplateId (cũ).
+     */
+    @Transactional
+    public java.util.List<java.util.Map<String, Object>> officeDocsForTask(String taskId, String actor) {
+        Task t = requireTask(taskId);
+        WorkflowInstance wi = instanceRepo.findByFlowableInstanceId(t.getProcessInstanceId()).orElse(null);
+        if (wi == null) {
+            throw new IllegalStateException("Việc không thuộc phiên chạy nào");
+        }
+        JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
+        if (step == null || !step.path("officeDoc").asBoolean(false)) {
+            throw new IllegalStateException("Bước này không bật soạn thảo tài liệu");
+        }
+        Map<String, String> mergeValues = mergeValues(taskId, wi);
+        String procName = safeProcessName(wi.getProcessId());
+        java.util.List<java.util.Map<String, Object>> out = new ArrayList<>();
+        JsonNode docs = step.path("officeDocs");
+        if (docs.isArray() && docs.size() > 0) {
+            int i = 0;
+            for (JsonNode d : docs) {
+                String name = blankToNull(d.path("name").asText(null));
+                String tpl = blankToNull(d.path("templateId").asText(null));
+                String label = name != null ? name : (t.getName() + " " + (i + 1));
+                String slotKey = t.getTaskDefinitionKey() + "#" + i;
+                String id = documentService.getOrCreateForStep(wi.getId(), slotKey, procName + " — " + label,
+                        tpl, mergeValues, actor).getId();
+                out.add(docRef(id, label));
+                i++;
+            }
+        } else {
+            String tpl = blankToNull(step.path("officeTemplateId").asText(null));
+            String id = documentService.getOrCreateForStep(wi.getId(), t.getTaskDefinitionKey(),
+                    procName + " — " + t.getName(), tpl, mergeValues, actor).getId();
+            out.add(docRef(id, t.getName()));
+        }
+        return out;
+    }
+
+    private static java.util.Map<String, Object> docRef(String id, String name) {
+        java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+        m.put("id", id);
+        m.put("name", name);
+        return m;
+    }
+
     /** Bản đồ key trường → GIÁ TRỊ hiển thị (từ biến phiên chạy) để trộn vào mẫu docx. */
     private Map<String, String> mergeValues(String taskId, WorkflowInstance wi) {
         Map<String, String> out = new java.util.LinkedHashMap<>();

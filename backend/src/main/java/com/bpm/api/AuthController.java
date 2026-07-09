@@ -114,6 +114,7 @@ public class AuthController {
         out.put("hasAvatar", hasAvatar);
         out.put("jobTitle", jobTitle);
         out.put("deptCode", emp != null ? emp.getDeptCode() : null);
+        out.put("unitId", emp != null ? emp.getOrgUnitId() : null); // id đơn vị (để điền sẵn trường "chọn đơn vị" theo user)
         out.put("themeAccent", acc != null ? acc.getThemeAccent() : null);
         out.put("themeMode", acc != null ? acc.getThemeMode() : null);
         return out;

@@ -168,6 +168,10 @@ export class WorkflowService {
   officeDoc(taskId: string): Observable<{ id: string }> {
     return this.http.post<{ id: string }>(`${this.base}/tasks/${taskId}/office-doc`, {}, { withCredentials: true });
   }
+  /** Lấy/tạo DANH SÁCH tài liệu của bước (nhiều mẫu) — [{id, name}]. */
+  officeDocs(taskId: string): Observable<{ id: string; name: string }[]> {
+    return this.http.post<{ id: string; name: string }[]>(`${this.base}/tasks/${taskId}/office-docs`, {}, { withCredentials: true });
+  }
 
   /** Nhận việc theo vai trò (Story 3.x). */
   claim(taskId: string): Observable<void> {

@@ -68,8 +68,10 @@ interface StepMeta {
   editPriorKeys?: string[];
   /** Bước này có bật soạn thảo tài liệu OnlyOffice (mỗi bước 1 tài liệu riêng gắn hồ sơ). */
   officeDoc?: boolean;
-  /** Tài liệu mẫu để load ở bước (copy nội dung làm điểm bắt đầu). Rỗng = trang trắng. */
+  /** (Cũ) Tài liệu mẫu đơn để load ở bước. Rỗng = trang trắng. Nay dùng officeDocs (nhiều tài liệu). */
   officeTemplateId?: string;
+  /** Danh sách tài liệu soạn thảo của bước (nhiều mẫu). Mỗi cái: tên + mẫu (rỗng = trang trắng). */
+  officeDocs?: { name: string; templateId?: string }[];
   /** Điều kiện chuyển bước (Story 2.2) — chỉ áp cho phần tử SequenceFlow. */
   condition?: FlowCondition;
 }
@@ -302,6 +304,12 @@ export class Designer implements AfterViewInit, OnDestroy {
     if (!m.fields) m.fields = [];
     if (!m.fieldPerms) m.fieldPerms = {};
     if (!m.editPriorKeys) m.editPriorKeys = [];
+    // Migrate: bước cũ chỉ có officeTemplateId đơn → chuyển thành danh sách 1 tài liệu.
+    if (m.officeDoc && (!m.officeDocs || !m.officeDocs.length)) {
+      m.officeDocs = m.officeTemplateId
+        ? [{ name: 'Tài liệu 1', templateId: m.officeTemplateId }]
+        : [{ name: 'Tài liệu 1', templateId: undefined }];
+    }
     m.notify = { emailTo: [], appTo: [], cc: [], subject: '', content: '', ...(raw.notify ?? {}) };
     this.meta = m;
     this.loadFormFields(m.formId);
@@ -394,6 +402,25 @@ export class Designer implements AfterViewInit, OnDestroy {
       error: () => this.formFields.set([])
     });
   }
+  /** Bật soạn thảo → khởi tạo 1 tài liệu mặc định (migrate mẫu đơn cũ nếu có). */
+  onToggleOfficeDoc(): void {
+    if (this.meta.officeDoc && (!this.meta.officeDocs || !this.meta.officeDocs.length)) {
+      this.meta.officeDocs = this.meta.officeTemplateId
+        ? [{ name: 'Tài liệu 1', templateId: this.meta.officeTemplateId }]
+        : [{ name: 'Tài liệu 1', templateId: undefined }];
+    }
+    this.writeMeta();
+  }
+  addOfficeDoc(): void {
+    const list = this.meta.officeDocs ?? [];
+    this.meta.officeDocs = [...list, { name: 'Tài liệu ' + (list.length + 1), templateId: undefined }];
+    this.writeMeta();
+  }
+  removeOfficeDoc(i: number): void {
+    this.meta.officeDocs = (this.meta.officeDocs ?? []).filter((_, idx) => idx !== i);
+    this.writeMeta();
+  }
+
   /** Sao chép mã trộn «key» vào clipboard để dán vào file mẫu .docx. */
   copyToken(key: string): void {
     const token = '«' + key + '»';

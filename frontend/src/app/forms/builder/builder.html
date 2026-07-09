@@ -150,6 +150,13 @@
               <option ngValue="unit">Đơn vị</option>
             </select>
           </div>
+          @if (f.pickMode !== 'position') {
+            <label class="radio-row">
+              <input type="checkbox" [checked]="f.defaultValue === '__ME__'"
+                     (change)="setMeDefault(f, $any($event.target).checked)" />
+              Điền sẵn theo NGƯỜI ĐĂNG NHẬP ({{ f.pickMode === 'unit' ? 'đơn vị của họ' : 'chính họ' }})
+            </label>
+          }
         }
 
         <!-- Validation (Story 2.8) -->

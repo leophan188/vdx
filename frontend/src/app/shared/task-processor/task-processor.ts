@@ -7,6 +7,7 @@ import { OfficeEmbed } from '../../documents/office-embed';
 import { ToastService } from '../toast/toast.service';
 import { WorkflowService, TaskDetail, StepView, StartForm } from '../../core/workflow.service';
 import { FormService, AttachmentRef } from '../../core/form.service';
+import { AuthService } from '../../core/auth.service';
 
 type Perm = 'EDIT' | 'READONLY' | 'HIDDEN';
 interface RCriterion { key: string; label: string; weight: number; }
@@ -82,6 +83,7 @@ export class TaskProcessor {
   private wf = inject(WorkflowService);
   private formSvc = inject(FormService);
   private toast = inject(ToastService);
+  private auth = inject(AuthService);
 
   /** Nhãn tiếng Việt của mã hành động (đồng bộ với ALL_ACTIONS bên designer). */
   private static readonly ACTION_LABELS: Record<string, string> = {
@@ -103,8 +105,9 @@ export class TaskProcessor {
   readonly priorFields = signal<RField[]>([]);
   readonly values = signal<Record<string, unknown>>({});
   readonly busy = signal(false);
-  /** Id tài liệu OnlyOffice của bước (nếu bước bật soạn thảo) — để nhúng editor. */
-  readonly officeDocId = signal<string | null>(null);
+  /** Danh sách tài liệu OnlyOffice của bước (nhiều mẫu) + tài liệu đang chọn để nhúng editor. */
+  readonly officeDocs = signal<{ id: string; name: string }[]>([]);
+  readonly selectedDocId = signal<string>('');
   /** Tab đang xem khi bước có soạn thảo tài liệu: 'content' (form) | 'doc' (editor). */
   readonly docTab = signal<'content' | 'doc'>('content');
   /** Chế độ NHÁP: đang nhập bước đầu theo quy trình nhưng CHƯA tạo hồ sơ (processId nguồn để tạo khi Gửi/soạn thảo). */
@@ -153,7 +156,8 @@ export class TaskProcessor {
     this.priorFields.set([]);
     this.values.set({});
     this.detail.set(null);
-    this.officeDocId.set(null);
+    this.officeDocs.set([]);
+    this.selectedDocId.set('');
     this.docTab.set('content');
     this.draftProcessId.set(null);
     this.materializing.set(false);
@@ -163,10 +167,10 @@ export class TaskProcessor {
       next: (d) => {
         this.detail.set(d);
         this.values.set({ ...d.formData });
-        // Bước bật soạn thảo tài liệu → lấy/tạo tài liệu OnlyOffice của bước rồi nhúng editor.
+        // Bước bật soạn thảo tài liệu → lấy/tạo DANH SÁCH tài liệu của bước rồi nhúng editor tài liệu đầu.
         if (d.officeDoc) {
-          this.wf.officeDoc(taskId).subscribe({
-            next: (r) => this.officeDocId.set(r.id),
+          this.wf.officeDocs(taskId).subscribe({
+            next: (list) => { this.officeDocs.set(list); this.selectedDocId.set(list[0]?.id ?? ''); },
             error: () => this.toast.error('Không mở được tài liệu soạn thảo')
           });
         }
@@ -197,7 +201,8 @@ export class TaskProcessor {
     this.priorFields.set([]);
     this.values.set({});
     this.detail.set(null);
-    this.officeDocId.set(null);
+    this.officeDocs.set([]);
+    this.selectedDocId.set('');
     this.docTab.set('content');
     this.draftProcessId.set(p.id);
     this.materializing.set(false);
@@ -237,8 +242,8 @@ export class TaskProcessor {
         if (!resp.firstTaskId) { this.toast.error('Không mở được tài liệu (không có việc bước đầu)'); return; }
         // Đã có hồ sơ thật → chuyển sang chế độ việc bình thường, nạp tài liệu rồi mở tab.
         this.detail.update((d) => d ? { ...d, taskId: resp.firstTaskId!, instanceId: resp.id } : d);
-        this.wf.officeDoc(resp.firstTaskId).subscribe({
-          next: (r) => { this.officeDocId.set(r.id); this.docTab.set('doc'); },
+        this.wf.officeDocs(resp.firstTaskId).subscribe({
+          next: (list) => { this.officeDocs.set(list); this.selectedDocId.set(list[0]?.id ?? ''); this.docTab.set('doc'); },
           error: () => this.toast.error('Không mở được tài liệu soạn thảo')
         });
       },
@@ -259,9 +264,15 @@ export class TaskProcessor {
     const patch: Record<string, unknown> = {};
     for (const f of fs) {
       const has = cur[f.key] !== undefined && cur[f.key] !== null && cur[f.key] !== '';
-      if (!has && f.defaultValue != null && f.defaultValue !== '') {
-        patch[f.key] = f.type === 'boolean' ? (f.defaultValue === 'true' || f.defaultValue === '1') : f.defaultValue;
+      if (has || f.defaultValue == null || f.defaultValue === '') continue;
+      if (f.defaultValue === '__ME__') {
+        // Điền sẵn theo NGƯỜI ĐĂNG NHẬP: trường đơn vị → mã phòng ban; còn lại (nhân sự) → userId.
+        const me = this.auth.currentUser();
+        const v = f.pickMode === 'unit' ? me?.unitId : me?.userId;
+        if (v) patch[f.key] = v;
+        continue;
       }
+      patch[f.key] = f.type === 'boolean' ? (f.defaultValue === 'true' || f.defaultValue === '1') : f.defaultValue;
     }
     if (Object.keys(patch).length) this.values.update((o) => ({ ...o, ...patch }));
   }
@@ -397,6 +408,25 @@ export class TaskProcessor {
     this.setVal(fieldKey, JSON.stringify(rows));
   }
 
+  /** Điền cột STT (tự đánh số) = số dòng (1,2,3…) trước khi gửi → lưu/xuất/trộn đều có số thứ tự. */
+  private normalizeSttColumns(): void {
+    for (const f of this.fields()) {
+      if (f.type !== 'table' || !f.columns) continue;
+      const sttCols = f.columns.filter((c) => c.type === 'stt');
+      if (!sttCols.length) continue;
+      const rows = this.tableData(f.key);
+      if (!rows.length) continue;
+      let changed = false;
+      rows.forEach((row, i) => {
+        for (const c of sttCols) {
+          const want = String(i + 1);
+          if (row[c.key] !== want) { row[c.key] = want; changed = true; }
+        }
+      });
+      if (changed) this.setVal(f.key, JSON.stringify(rows));
+    }
+  }
+
   // ----- Trường "Tải file": giá trị lưu JSON mảng [{id,name,size,contentType,url}] -----
   /** Các key trường đang upload dở (hiện trạng thái "đang tải"). */
   readonly uploading = signal<Set<string>>(new Set());
@@ -453,6 +483,7 @@ export class TaskProcessor {
     const d = this.detail();
     if (!d) return;
     if (this.busy() || this.materializing()) return; // đang gửi / đang tạo hồ sơ cho soạn thảo → chặn double
+    this.normalizeSttColumns(); // điền số thứ tự cột STT trước khi kiểm tra/gửi
 
     const missing = this.fields().filter((f) =>
       f.required && this.visible(f.key) && !this.readonly_(f.key) && !this.isFilled(f));

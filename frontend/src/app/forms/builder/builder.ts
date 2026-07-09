@@ -14,7 +14,7 @@ type FieldType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean
 
 /** Kiểu dữ liệu của một cột trong bảng nhiều dòng — đầy đủ như trường thường (trừ loại bố cục). */
 type ColumnType = 'text' | 'textarea' | 'number' | 'date' | 'datetime' | 'boolean'
-  | 'dropdown' | 'multiselect' | 'orgtree' | 'unitstaff';
+  | 'dropdown' | 'multiselect' | 'orgtree' | 'unitstaff' | 'stt';
 interface FormColumn { key: string; label: string; type?: ColumnType; options?: string; pickMode?: 'user' | 'position' | 'unit'; }
 /** Một tiêu chí của bảng chấm điểm: nhãn + trọng số (%). */
 interface FormCriterion { key: string; label: string; weight: number; }
@@ -90,6 +90,7 @@ export class Builder implements OnInit {
   readonly FIELD_TYPES = this.PALETTE.map((p) => ({ v: p.t, l: p.l }));
   /** Kiểu dữ liệu chọn được cho từng cột của bảng nhiều dòng. */
   readonly COLUMN_TYPES: { v: ColumnType; l: string }[] = [
+    { v: 'stt', l: 'STT (tự đánh số)' },
     { v: 'text', l: 'Văn bản' },
     { v: 'textarea', l: 'Văn bản nhiều dòng' },
     { v: 'number', l: 'Số' },
@@ -207,6 +208,11 @@ export class Builder implements OnInit {
     return (c.options ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   }
   /** Loại trường có hỗ trợ đặt "giá trị mặc định". */
+  /** Đặt/bỏ "điền sẵn theo người đăng nhập" cho trường chọn cây tổ chức (lưu token __ME__ vào defaultValue). */
+  setMeDefault(f: FormField, on: boolean): void {
+    f.defaultValue = on ? '__ME__' : undefined;
+    this.touch();
+  }
   supportsDefault(t?: FieldType): boolean {
     return ['text', 'textarea', 'number', 'date', 'datetime', 'boolean', 'dropdown', 'radio', 'multiselect'].includes(t ?? '');
   }

@@ -155,6 +155,9 @@
                           @for (c of f.columns; track c.key) {
                             <td>
                               @switch (c.type) {
+                                @case ('stt') {
+                                  <span style="display:inline-block;text-align:center;width:100%;">{{ ri + 1 }}</span>
+                                }
                                 @case ('number') {
                                   <input type="number" [readOnly]="readonly_(f.key)"
                                          [ngModel]="cellVal(f.key, ri, c.key)" [ngModelOptions]="{ standalone: true }"
@@ -298,10 +301,21 @@
     }
     }
 
-    <!-- TAB SOẠN THẢO TÀI LIỆU: editor OnlyOffice toàn khung -->
+    <!-- TAB SOẠN THẢO TÀI LIỆU: chọn tài liệu (nếu nhiều) + editor OnlyOffice toàn khung -->
     @if (d.officeDoc && docTab()==='doc') {
-      @if (officeDocId(); as docId) {
-        <app-office-embed [docId]="docId" />
+      @if (officeDocs().length) {
+        @if (officeDocs().length > 1) {
+          <div class="tp-tabs" style="margin-bottom:8px;">
+            @for (doc of officeDocs(); track doc.id) {
+              <button type="button" class="tp-tab" [class.tp-tab--on]="selectedDocId()===doc.id"
+                      (click)="selectedDocId.set(doc.id)">📄 {{ doc.name }}</button>
+            }
+          </div>
+        }
+        <!-- track docId → đổi tài liệu sẽ HUỶ editor cũ (tự lưu) và tạo editor mới cho tài liệu đã chọn. -->
+        @for (docId of [selectedDocId()]; track docId) {
+          @if (docId) { <app-office-embed [docId]="docId" /> }
+        }
       } @else {
         <p class="hint">Đang mở tài liệu…</p>
       }

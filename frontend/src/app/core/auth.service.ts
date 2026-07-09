@@ -10,6 +10,8 @@ export interface LoginResult {
   jobTitle?: string | null;
   /** Mã phòng ban (nếu có). */
   deptCode?: string | null;
+  /** Id đơn vị (org unit) của người dùng — để điền sẵn trường "chọn đơn vị" theo user đăng nhập. */
+  unitId?: string | null;
   authorities: { authority: string }[];
   /** Đang dùng mật khẩu mặc định và không phải admin → BUỘC đổi trước khi vào app. */
   mustChangePassword?: boolean;
