@@ -9,6 +9,7 @@ import { AuthService, UserAccount } from '../../core/auth.service';
 import { OrgService, OrgUnit } from '../../core/org.service';
 import { computed } from '@angular/core';
 import { FormService, FormSummary } from '../../core/form.service';
+import { DocumentService, DocSummary } from '../../core/document.service';
 import { ToastService } from '../../shared/toast/toast.service';
 import { Modal } from '../../shared/modal/modal';
 import { Tabs, TabItem } from '../../shared/tabs/tabs';
@@ -67,6 +68,8 @@ interface StepMeta {
   editPriorKeys?: string[];
   /** Bước này có bật soạn thảo tài liệu OnlyOffice (mỗi bước 1 tài liệu riêng gắn hồ sơ). */
   officeDoc?: boolean;
+  /** Tài liệu mẫu để load ở bước (copy nội dung làm điểm bắt đầu). Rỗng = trang trắng. */
+  officeTemplateId?: string;
   /** Điều kiện chuyển bước (Story 2.2) — chỉ áp cho phần tử SequenceFlow. */
   condition?: FlowCondition;
 }
@@ -100,6 +103,7 @@ export class Designer implements AfterViewInit, OnDestroy {
   private authSvc = inject(AuthService);
   private orgSvc = inject(OrgService);
   private formSvc = inject(FormService);
+  private documentSvc = inject(DocumentService);
   private toast = inject(ToastService);
   private zone = inject(NgZone);
 
@@ -115,6 +119,8 @@ export class Designer implements AfterViewInit, OnDestroy {
   readonly users = signal<UserAccount[]>([]);
   readonly units = signal<OrgUnit[]>([]);
   readonly forms = signal<FormSummary[]>([]);
+  /** Tài liệu độc lập (không gắn hồ sơ) — dùng làm mẫu để load ở bước OnlyOffice. */
+  readonly templateDocs = signal<DocSummary[]>([]);
   /** userId → "chức vụ · bộ phận" (gộp mọi vị trí đang giữ) — hiển thị kèm khi chọn nhân sự. */
   private readonly userInfoById = computed(() => {
     const un = new Map(this.units().map((u) => [u.id, u.name]));
@@ -242,6 +248,8 @@ export class Designer implements AfterViewInit, OnDestroy {
     this.authSvc.listUsers().subscribe({ next: (u) => this.users.set(u), error: () => {} });
     this.orgSvc.all().subscribe({ next: (u) => this.units.set(u), error: () => {} });
     this.formSvc.list().subscribe({ next: (f) => this.forms.set(f), error: () => {} });
+    // Tài liệu mẫu = tài liệu độc lập (chưa gắn hồ sơ nào) trong màn Tài liệu.
+    this.documentSvc.list().subscribe({ next: (d) => this.templateDocs.set(d.filter((x) => !x.instanceId)), error: () => {} });
     this.svc.get(this.id).subscribe({
       next: (p) => {
         this.name.set(p.name);

@@ -66,10 +66,20 @@
 
   <!-- TAB: Biểu mẫu gắn vào bước + quyền trường (Story 2.9) -->
   @else if (configTab() === 'form') {
-    <label class="radio-row" style="margin-bottom:12px;">
+    <label class="radio-row" style="margin-bottom:8px;">
       <input type="checkbox" [(ngModel)]="meta.officeDoc" (ngModelChange)="writeMeta()" />
       📝 Bước này có soạn thảo tài liệu OnlyOffice (mỗi bước 1 tài liệu riêng, gắn theo hồ sơ)
     </label>
+    @if (meta.officeDoc) {
+      <div class="field" style="margin-bottom:12px;">
+        <label>Tài liệu mẫu để load ở bước này</label>
+        <select [(ngModel)]="meta.officeTemplateId" (ngModelChange)="writeMeta()">
+          <option [ngValue]="undefined">— Trang trắng —</option>
+          @for (d of templateDocs(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+        </select>
+        <p class="hint" style="margin:4px 0 0;">Hồ sơ tới bước này sẽ bắt đầu soạn từ bản sao của tài liệu mẫu đã chọn. Tạo tài liệu mẫu ở màn <strong>Tài liệu</strong> (không gắn hồ sơ).</p>
+      </div>
+    }
     <div class="field">
       <label>Biểu mẫu của bước</label>
       <select [(ngModel)]="meta.formId" (ngModelChange)="onFormChange()">

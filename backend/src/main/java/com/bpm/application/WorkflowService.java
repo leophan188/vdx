@@ -477,7 +477,8 @@ public class WorkflowService {
             throw new IllegalStateException("Bước này không bật soạn thảo tài liệu");
         }
         String docName = safeProcessName(wi.getProcessId()) + " — " + t.getName();
-        return documentService.getOrCreateForStep(wi.getId(), t.getTaskDefinitionKey(), docName, actor).getId();
+        String templateId = blankToNull(step.path("officeTemplateId").asText(null));
+        return documentService.getOrCreateForStep(wi.getId(), t.getTaskDefinitionKey(), docName, templateId, actor).getId();
     }
 
     /** Bản đồ key trường → định nghĩa (JsonNode) gộp từ mọi biểu mẫu của instance (snapshot ưu tiên, fallback form hiện hành). */

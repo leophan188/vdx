@@ -60,17 +60,22 @@ public class DocumentService {
         return d;
     }
 
-    /** Lấy (hoặc tạo mới từ template) tài liệu OnlyOffice gắn với 1 BƯỚC của phiên chạy — mỗi bước 1 file riêng. */
+    /**
+     * Lấy (hoặc tạo mới) tài liệu OnlyOffice gắn với 1 BƯỚC của phiên chạy — mỗi bước 1 file riêng.
+     * templateId != null: sao chép NỘI DUNG của tài liệu mẫu đó làm điểm bắt đầu; ngược lại dùng trang trắng.
+     */
     @Transactional
-    public Document getOrCreateForStep(String instanceId, String stepKey, String name, String actor) {
+    public Document getOrCreateForStep(String instanceId, String stepKey, String name, String templateId, String actor) {
         return repo.findFirstByInstanceIdAndStepKey(instanceId, stepKey).orElseGet(() -> {
-            byte[] blank = readTemplate();
-            Document d = new Document(name, instanceId, blank, actor);
+            byte[] content = (templateId != null && !templateId.isBlank())
+                    ? repo.findById(templateId).map(Document::getContent).orElseGet(this::readTemplate)
+                    : readTemplate();
+            Document d = new Document(name, instanceId, content, actor);
             d.setStepKey(stepKey);
             d = repo.save(d);
-            versionRepo.save(new DocumentVersion(d.getId(), d.getVersion(), blank, actor));
+            versionRepo.save(new DocumentVersion(d.getId(), d.getVersion(), content, actor));
             auditPort.record("DOCUMENT_CREATED", "Document", d.getId(), actor,
-                    "step=" + stepKey + " instance=" + instanceId);
+                    "step=" + stepKey + " instance=" + instanceId + " tpl=" + templateId);
             return d;
         });
     }
