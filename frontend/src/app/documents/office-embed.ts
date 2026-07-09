@@ -1,5 +1,6 @@
 import { Component, OnInit, OnDestroy, inject, input, signal } from '@angular/core';
 import { DocumentService, EditorConfig } from '../core/document.service';
+import { ToastService } from '../shared/toast/toast.service';
 
 /**
  * Nhúng trình soạn thảo OnlyOffice cho MỘT tài liệu (dùng trong modal xử lý việc — soạn thảo theo bước).
@@ -15,11 +16,23 @@ import { DocumentService, EditorConfig } from '../core/document.service';
     @if (error()) {
       <div class="alert alert--error" style="margin:0 0 8px">{{ error() }}</div>
     }
+    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+      <button type="button" class="btn btn--primary btn--sm" (click)="save()">💾 Lưu tài liệu</button>
+    </div>
     <div [id]="containerId" class="oo-frame"></div>
   `
 })
 export class OfficeEmbed implements OnInit, OnDestroy {
   private svc = inject(DocumentService);
+  private toast = inject(ToastService);
+
+  /** Nút Lưu cứng: yêu cầu OnlyOffice ghi ngay về kho. */
+  save(): void {
+    this.svc.forceSave(this.docId()).subscribe({
+      next: () => this.toast.success('Đã lưu tài liệu'),
+      error: () => this.toast.error('Không lưu được tài liệu')
+    });
+  }
 
   /** Id tài liệu cần soạn. */
   readonly docId = input.required<string>();
@@ -45,13 +58,38 @@ export class OfficeEmbed implements OnInit, OnDestroy {
       .then(() => {
         const DocsAPI = (window as unknown as { DocsAPI?: { DocEditor: new (id: string, c: unknown) => { destroyEditor?: () => void } } }).DocsAPI;
         if (!DocsAPI) { this.error.set('Không tải được OnlyOffice (DocsAPI).'); return; }
-        const config = { ...(cfg.config as Record<string, unknown>), width: '100%', height: '100%', type: 'desktop' };
+        // OnlyOffice nhúng hay render canvas ĐEN khi container đổi kích thước (đổi tab / inset modal) hoặc khi
+        // trình soạn đo container lúc chưa xong layout. Cách chắc ăn: đợi editor báo SẴN SÀNG rồi mới ép
+        // re-layout — dispatch resize LÚC container còn 0px (trước 1.5s trên server nguội) không có tác dụng.
+        const config = {
+          ...(cfg.config as Record<string, unknown>),
+          width: '100%', height: '100%', type: 'desktop',
+          events: {
+            onAppReady: () => this.repaint(),
+            onDocumentReady: () => this.repaint(),
+          },
+        };
         this.editor = new DocsAPI.DocEditor(this.containerId, config);
-        // OnlyOffice nhúng đôi khi render canvas ĐEN khi container vừa đổi kích thước (đổi tab/inset modal)
-        // → ép re-layout vài lần sau khi mount.
-        [300, 800, 1500].forEach((ms) => setTimeout(() => window.dispatchEvent(new Event('resize')), ms));
+        // Phòng khi editor không bắn event (bản cũ) → vẫn ép re-layout vài nhịp sau mount.
+        [400, 1200, 2500].forEach((ms) => setTimeout(() => this.repaint(), ms));
       })
       .catch(() => this.error.set('Không kết nối được OnlyOffice Document Server. Kiểm tra dịch vụ đang chạy.'));
+  }
+
+  /**
+   * Ép trình soạn OnlyOffice vẽ lại vùng tài liệu (chống "canvas đen"). Chỉ bắn sự kiện `resize` là
+   * không đủ khi kích thước container KHÔNG đổi — nên thay đổi thật 1px rồi trả lại để buộc reflow.
+   */
+  private repaint(): void {
+    const el = document.getElementById(this.containerId);
+    if (!el) return;
+    // Bóp chiều cao thật đi 1px rồi trả lại (xoá inline → về đúng chiều cao theo CSS) để buộc reflow.
+    el.style.height = (el.getBoundingClientRect().height - 1) + 'px';
+    window.dispatchEvent(new Event('resize'));
+    requestAnimationFrame(() => {
+      el.style.height = '';
+      window.dispatchEvent(new Event('resize'));
+    });
   }
 
   private loadScript(src: string): Promise<void> {

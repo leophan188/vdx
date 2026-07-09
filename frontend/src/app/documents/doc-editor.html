@@ -4,7 +4,7 @@
     <button type="button" class="btn btn--ghost btn--sm" (click)="back()">← Tài liệu</button>
     <strong class="doc-editor__title">{{ title() }}</strong>
     <span style="flex:1"></span>
-    <span class="hint">Lưu tự động qua OnlyOffice — đóng tab sẽ ghi phiên bản mới</span>
+    <button type="button" class="btn btn--primary btn--sm" (click)="save()">💾 Lưu</button>
   </div>
 
   @if (error(); as e) {
@@ -16,8 +16,5 @@
 
   <div class="doc-editor__split">
     <div id="onlyoffice-editor" class="doc-editor__frame"></div>
-    <aside class="doc-editor__side">
-      <app-collab-panel [id]="id" />
-    </aside>
   </div>
 </div>

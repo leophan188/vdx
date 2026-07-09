@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../shared/toast/toast.service';
 import { DocumentService, EditorConfig } from '../core/document.service';
-import { CollabPanel } from './collab-panel';
 
 declare global {
   interface Window { DocsAPI?: { DocEditor: new (id: string, config: unknown) => { destroyEditor?: () => void } }; }
@@ -11,7 +10,7 @@ declare global {
 /** Trình soạn thảo OnlyOffice nhúng (Story 3.10) + bảng cộng tác (3.11–3.17). */
 @Component({
   selector: 'app-doc-editor',
-  imports: [CollabPanel],
+  imports: [],
   templateUrl: './doc-editor.html'
 })
 export class DocEditor implements OnInit, OnDestroy {
@@ -61,6 +60,14 @@ export class DocEditor implements OnInit, OnDestroy {
       s.onload = () => resolve();
       s.onerror = () => reject();
       document.body.appendChild(s);
+    });
+  }
+
+  /** Nút Lưu cứng: yêu cầu OnlyOffice ghi ngay về kho. */
+  save(): void {
+    this.svc.forceSave(this.id).subscribe({
+      next: () => this.toast.success('Đã lưu tài liệu'),
+      error: () => this.toast.error('Không lưu được tài liệu')
     });
   }
 
