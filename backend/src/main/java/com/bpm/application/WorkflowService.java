@@ -237,12 +237,21 @@ public class WorkflowService {
         }
         JsonNode step = meta.get(firstKey);
         String formId = blankToNull(step.path("formId").asText(null));
-        String formsJson = v.getFormsJson() != null ? v.getFormsJson()
-                : processService.buildFormsSnapshot(v.getStepsMetaJson());
         String formSchemaJson = null;
-        JsonNode formsSnapshot = parseFormsSnapshot(formsJson);
-        if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
-            formSchemaJson = formsSnapshot.get(formId).asText();
+        // Đơn MỚI chưa có dữ liệu → ưu tiên schema HIỆN HÀNH của biểu mẫu để GIÁ TRỊ MẶC ĐỊNH / sửa form
+        // có hiệu lực NGAY (không phải ban hành lại quy trình). Fallback: snapshot đóng băng của phiên bản.
+        if (formId != null) {
+            try {
+                formSchemaJson = blankToNull(formService.get(formId).getSchemaJson());
+            } catch (Exception ignore) { /* form không còn → dùng snapshot */ }
+        }
+        if (formSchemaJson == null) {
+            String formsJson = v.getFormsJson() != null ? v.getFormsJson()
+                    : processService.buildFormsSnapshot(v.getStepsMetaJson());
+            JsonNode formsSnapshot = parseFormsSnapshot(formsJson);
+            if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
+                formSchemaJson = formsSnapshot.get(formId).asText();
+            }
         }
         Map<String, String> fieldPerms = null;
         if (step.has("fieldPerms") && step.get("fieldPerms").isObject()) {
