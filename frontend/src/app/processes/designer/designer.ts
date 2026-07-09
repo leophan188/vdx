@@ -15,6 +15,37 @@ import { Modal } from '../../shared/modal/modal';
 import { Tabs, TabItem } from '../../shared/tabs/tabs';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 
+/**
+ * Module bpmn-js: thêm nút "Cổng song song (Parallel)" và "Cổng OR (Inclusive)" vào palette — mặc định
+ * palette chỉ có cổng rẽ nhánh loại trừ; các loại kia phải đổi qua menu 🔧 nên khó thấy.
+ */
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function GatewayPalette(this: any, palette: any, create: any, elementFactory: any) {
+  this._create = create;
+  this._elementFactory = elementFactory;
+  palette.registerProvider(this);
+}
+GatewayPalette.$inject = ['palette', 'create', 'elementFactory'];
+GatewayPalette.prototype.getPaletteEntries = function () {
+  const create = this._create, elementFactory = this._elementFactory;
+  const make = (type: string) => (event: any) => {
+    const shape = elementFactory.createShape({ type });
+    create.start(event, shape);
+  };
+  return {
+    'create.parallel-gateway': {
+      group: 'gateway', className: 'bpmn-icon-gateway-parallel', title: 'Cổng SONG SONG (Parallel)',
+      action: { dragstart: make('bpmn:ParallelGateway'), click: make('bpmn:ParallelGateway') }
+    },
+    'create.inclusive-gateway': {
+      group: 'gateway', className: 'bpmn-icon-gateway-or', title: 'Cổng OR (Inclusive — song song có điều kiện)',
+      action: { dragstart: make('bpmn:InclusiveGateway'), click: make('bpmn:InclusiveGateway') }
+    }
+  };
+};
+const gatewayPaletteModule = { __init__: ['gatewayPalette'], gatewayPalette: ['type', GatewayPalette] };
+/* eslint-enable @typescript-eslint/no-explicit-any */
+
 type AssigneeType = 'ROLE' | 'POSITION' | 'USER';
 type FieldType = 'text' | 'number' | 'date' | 'dropdown' | 'radio' | 'checkbox' | 'richtext';
 type OptionSource = 'STATIC' | 'CATALOG';
@@ -225,7 +256,10 @@ export class Designer implements AfterViewInit, OnDestroy {
   isActionCond(): boolean { return this.flowCond.field === Designer.ACTION_VAR; }
 
   ngAfterViewInit(): void {
-    this.modeler = new BpmnModeler({ container: this.canvasRef().nativeElement });
+    this.modeler = new BpmnModeler({
+      container: this.canvasRef().nativeElement,
+      additionalModules: [gatewayPaletteModule]
+    });
     this.modeler.on('selection.changed', (e: any) =>
       this.zone.run(() => this.onSelect(e.newSelection?.[0] ?? null)));
     this.modeler.on('element.changed', (e: any) =>
