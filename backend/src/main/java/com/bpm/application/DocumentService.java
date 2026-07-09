@@ -153,6 +153,11 @@ public class DocumentService {
         editorConfig.put("callbackUrl", callbackHost + "/api/v1/documents/" + id + "/callback");
         editorConfig.put("user", Map.of("id", userId == null ? "anonymous" : userId,
                 "name", displayName == null ? "Người dùng" : displayName));
+        // Bật nút Lưu + Ctrl+S ghi thẳng vào kho (status=6 ForceSave) — không chờ tới khi đóng editor.
+        Map<String, Object> customization = new LinkedHashMap<>();
+        customization.put("forcesave", true);
+        customization.put("autosave", true);
+        editorConfig.put("customization", customization);
 
         Map<String, Object> config = new LinkedHashMap<>();
         config.put("document", document);
