@@ -167,9 +167,15 @@ public class DocumentService {
     }
 
     /** Config cho DocsAPI.DocEditor (đã ký JWT) + URL Document Server cho FE nhúng api.js. */
-    @Transactional(readOnly = true)
+    @Transactional
     public Map<String, Object> editorConfig(String id, String userId, String displayName, boolean canEdit) {
         Document d = get(id);
+        // Mỗi lần MỞ editor → docKey mới: OnlyOffice bắt đầu phiên MỚI (không dùng cache cũ đang kẹt),
+        // tải lại nội dung từ kho + theo dõi thay đổi đúng → đóng editor có sửa sẽ gửi status=2 để lưu.
+        if (canEdit) {
+            d.rotateKey();
+            d = repo.save(d);
+        }
         Map<String, Object> document = new LinkedHashMap<>();
         document.put("fileType", "docx");
         document.put("key", d.getDocKey());

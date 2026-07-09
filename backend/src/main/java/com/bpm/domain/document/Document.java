@@ -94,6 +94,12 @@ public class Document {
         this.updatedBy = actor;
     }
 
+    /** Đổi docKey mỗi lần MỞ editor → OnlyOffice coi là phiên MỚI (không dùng cache cũ),
+     *  tải lại nội dung + theo dõi thay đổi đúng → lưu-khi-đóng (status=2) hoạt động. */
+    public void rotateKey() {
+        this.docKey = newKey();
+    }
+
     private static String newKey() {
         return UUID.randomUUID().toString().replace("-", "");
     }
