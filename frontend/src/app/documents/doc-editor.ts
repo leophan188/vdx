@@ -78,37 +78,43 @@ export class DocEditor implements OnInit, OnDestroy {
   }
 
   /**
-   * Chèn mã «key» vào vị trí con trỏ trong OnlyOffice (Document Builder qua connector + Asc.scope).
-   * Bản OnlyOffice không hỗ trợ connector → fallback copy clipboard để dán tay.
+   * Chèn mã «key» vào vị trí con trỏ trong OnlyOffice (Document Builder qua connector.callCommand — mã NHÚNG
+   * thẳng vào lệnh, KHÔNG cần Asc.scope ở host). Bản OnlyOffice không có connector → fallback copy clipboard.
    */
   insertToken(key: string): void {
     const token = '«' + key + '»';
-    try {
-      const asc = (window as unknown as { Asc?: { scope?: Record<string, unknown> } }).Asc;
-      if (this.editor?.createConnector && asc) {
+    if (this.editor?.createConnector) {
+      try {
         if (!this.connector) this.connector = this.editor.createConnector();
-        asc.scope = asc.scope || {};
-        asc.scope['mergeToken'] = token;
-        // Hàm chạy TRONG trình soạn (Api/Asc là global ở đó) — dựng bằng Function để không vướng type FE.
+        const safe = token.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+        // Hàm chạy TRONG trình soạn (Api là global ở đó); dựng bằng Function để không vướng type + nhúng mã.
         const cmd = new Function(
-          'var d=Api.GetDocument();var p=Api.CreateParagraph();p.AddText(Asc.scope.mergeToken);d.InsertContent([p],true);'
+          `var d=Api.GetDocument();var p=Api.CreateParagraph();p.AddText('${safe}');d.InsertContent([p],true);`
         );
         this.connector!.callCommand(cmd, false);
         this.toast.success('Đã chèn mã', token);
         return;
-      }
-    } catch { /* rơi xuống fallback copy */ }
+      } catch { /* rơi xuống fallback copy */ }
+    }
     navigator.clipboard?.writeText(token).then(
       () => this.toast.success('Đã copy mã — dán (Ctrl+V) vào tài liệu', token),
       () => this.toast.error('Không chèn được mã', token)
     );
   }
 
-  /** Bắt đầu KÉO trường: đặt text «key» vào dataTransfer để thả vào tài liệu OnlyOffice (trình soạn tự chèn). */
+  /** Bắt đầu KÉO trường (dùng MIME riêng để trình soạn không tự chèn trùng; việc chèn do onDropToken lo). */
   onDragToken(ev: DragEvent, key: string): void {
-    const token = '«' + key + '»';
-    ev.dataTransfer?.setData('text/plain', token);
+    ev.dataTransfer?.setData('application/x-bpm-field', key);
     if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
+  }
+
+  /** Kết thúc KÉO: nếu thả TRÊN vùng tài liệu → chèn mã (qua connector, hoặc copy nếu không hỗ trợ). */
+  onDropToken(ev: DragEvent, key: string): void {
+    const frame = document.getElementById('onlyoffice-editor');
+    if (!frame) return;
+    const r = frame.getBoundingClientRect();
+    const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
+    if (inside) this.insertToken(key);
   }
 
   private mount(cfg: EditorConfig): void {
