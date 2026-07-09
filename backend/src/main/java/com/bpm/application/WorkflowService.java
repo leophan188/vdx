@@ -408,7 +408,7 @@ public class WorkflowService {
 
     private TaskDto.InboxItem toInboxItem(Task t, boolean claimable) {
         WorkflowInstance wi = instanceRepo.findByFlowableInstanceId(t.getProcessInstanceId()).orElse(null);
-        JsonNode step = wi != null ? stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey()) : null;
+        JsonNode step = wi != null ? stepMeta(liveStepsMeta(wi), t.getTaskDefinitionKey()) : null;
         Integer sla = slaHours(step);
         Instant due = effectiveDue(t, sla);
         // Vị trí bước hiện tại trong tổng thể quy trình (vd "Bước 6/10").
@@ -484,7 +484,7 @@ public class WorkflowService {
         if (wi != null) {
             procName = safeProcessName(wi.getProcessId());
             procVersion = wi.getProcessVersion();
-            JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
+            JsonNode step = stepMeta(liveStepsMeta(wi), t.getTaskDefinitionKey());
             if (step != null) {
                 formId = blankToNull(step.path("formId").asText(null));
                 // Trường của BƯỚC TRƯỚC được phép SỬA ở bước này (cấu hình editPriorKeys).
@@ -501,10 +501,18 @@ public class WorkflowService {
                         priorEditFieldsJson = arr.toString();
                     }
                 }
-                // Đóng băng schema theo phiên bản instance: form của bước hiện tại lấy từ snapshot (nếu có).
-                JsonNode formsSnapshot = parseFormsSnapshot(wi.getFormsJson());
-                if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
-                    formSchemaJson = formsSnapshot.get(formId).asText();
+                // TEST: ưu tiên schema HIỆN HÀNH của biểu mẫu (đổi trường/mặc định có hiệu lực ngay, không cần
+                // ban hành lại). Fallback: snapshot đóng băng theo phiên bản instance khi form đã xoá.
+                if (formId != null) {
+                    try {
+                        formSchemaJson = blankToNull(formService.get(formId).getSchemaJson());
+                    } catch (Exception ignore) { /* form không còn → dùng snapshot */ }
+                }
+                if (formSchemaJson == null) {
+                    JsonNode formsSnapshot = parseFormsSnapshot(wi.getFormsJson());
+                    if (formId != null && formsSnapshot != null && formsSnapshot.hasNonNull(formId)) {
+                        formSchemaJson = formsSnapshot.get(formId).asText();
+                    }
                 }
                 if (step.has("fieldPerms") && step.get("fieldPerms").isObject()) {
                     fieldPerms = objectMapper.convertValue(step.get("fieldPerms"), Map.class);
@@ -538,7 +546,7 @@ public class WorkflowService {
         if (wi == null) {
             throw new IllegalStateException("Việc không thuộc phiên chạy nào");
         }
-        JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
+        JsonNode step = stepMeta(liveStepsMeta(wi), t.getTaskDefinitionKey());
         if (step == null || !step.path("officeDoc").asBoolean(false)) {
             throw new IllegalStateException("Bước này không bật soạn thảo tài liệu");
         }
@@ -561,7 +569,7 @@ public class WorkflowService {
         if (wi == null) {
             throw new IllegalStateException("Việc không thuộc phiên chạy nào");
         }
-        JsonNode step = stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey());
+        JsonNode step = stepMeta(liveStepsMeta(wi), t.getTaskDefinitionKey());
         if (step == null || !step.path("officeDoc").asBoolean(false)) {
             throw new IllegalStateException("Bước này không bật soạn thảo tài liệu");
         }
@@ -622,19 +630,16 @@ public class WorkflowService {
         return String.valueOf(v);
     }
 
-    /** Bản đồ key trường → định nghĩa (JsonNode) gộp từ mọi biểu mẫu của instance (snapshot ưu tiên, fallback form hiện hành). */
+    /** Bản đồ key trường → định nghĩa (JsonNode) gộp từ mọi biểu mẫu của quy trình. TEST: ưu tiên form HIỆN HÀNH. */
     private Map<String, JsonNode> collectFieldDefs(WorkflowInstance wi) {
         Map<String, JsonNode> map = new HashMap<>();
-        JsonNode snap = parseFormsSnapshot(wi.getFormsJson());
-        if (snap != null) {
-            snap.fields().forEachRemaining(e -> indexFields(map, e.getValue().asText()));
-        } else {
-            JsonNode meta;
-            try {
-                meta = objectMapper.readTree(wi.getStepsMetaJson());
-            } catch (Exception ex) {
-                return map;
-            }
+        JsonNode meta;
+        try {
+            meta = objectMapper.readTree(liveStepsMeta(wi));
+        } catch (Exception ex) {
+            meta = null;
+        }
+        if (meta != null) {
             java.util.Set<String> formIds = new java.util.LinkedHashSet<>();
             meta.forEach(s -> {
                 String fid = s.path("formId").asText(null);
@@ -645,7 +650,14 @@ public class WorkflowService {
             for (String fid : formIds) {
                 try {
                     indexFields(map, formService.get(fid).getSchemaJson());
-                } catch (Exception ignore) { /* form không còn */ }
+                } catch (Exception ignore) { /* form không còn → thử snapshot */ }
+            }
+        }
+        // Fallback: snapshot đóng băng (khi form đã xoá / chưa lấy được key nào).
+        if (map.isEmpty()) {
+            JsonNode snap = parseFormsSnapshot(wi.getFormsJson());
+            if (snap != null) {
+                snap.fields().forEachRemaining(e -> indexFields(map, e.getValue().asText()));
             }
         }
         return map;
@@ -685,7 +697,7 @@ public class WorkflowService {
         WorkflowInstance wiPre = instanceRepo.findByFlowableInstanceId(piid).orElse(null);
         if (wiPre != null) {
             Map<String, Object> existing = runtimeService.getVariables(piid);
-            for (String key : conditionFieldKeys(wiPre.getStepsMetaJson())) {
+            for (String key : conditionFieldKeys(liveStepsMeta(wiPre))) {
                 if (!vars.containsKey(key) && (existing == null || !existing.containsKey(key))) {
                     vars.put(key, false);
                 }
@@ -698,7 +710,7 @@ public class WorkflowService {
         WorkflowInstance wi = instanceRepo.findByFlowableInstanceId(piid).orElse(null);
         if (wi != null) {
             // Gán việc bước kế vừa sinh (assign-after — không cần listener, không reentrancy).
-            assignActiveTasks(piid, wi.getStepsMetaJson(), actor);
+            assignActiveTasks(piid, liveStepsMeta(wi), actor);
             boolean ended = runtimeService.createProcessInstanceQuery().processInstanceId(piid).count() == 0;
             if (ended) {
                 wi.setStatus("COMPLETED");
@@ -735,6 +747,25 @@ public class WorkflowService {
             throw new IllegalArgumentException("Không tìm thấy việc: " + taskId);
         }
         return t;
+    }
+
+    /**
+     * Cấu hình bước HIỆN HÀNH của quy trình (bản nháp mới nhất trong Designer) — để lúc TEST không phải ban hành
+     * lại: fieldPerms / editPriorKeys / officeDocs / formId / actions / điều kiện… đọc theo config hiện tại.
+     * Fallback: snapshot đóng băng của instance khi không lấy được (quy trình đã xoá…). LƯU Ý: cấu trúc luồng
+     * + điều kiện gateway nằm trong BPMN đã deploy vào Flowable nên đổi nhánh/điều kiện vẫn cần ban hành lại.
+     */
+    private String liveStepsMeta(WorkflowInstance wi) {
+        if (wi == null) {
+            return null;
+        }
+        try {
+            String cur = processService.get(wi.getProcessId()).getStepsMetaJson();
+            if (cur != null && !cur.isBlank()) {
+                return cur;
+            }
+        } catch (Exception ignore) { /* quy trình không còn → dùng snapshot đóng băng */ }
+        return wi.getStepsMetaJson();
     }
 
     private JsonNode stepMeta(String stepsMetaJson, String stepKey) {
@@ -862,14 +893,14 @@ public class WorkflowService {
                 currentWho = ts.stream().map(t -> userDisplay(t.getAssignee())).distinct().collect(java.util.stream.Collectors.joining(", "));
                 // Trạng thái nghiệp vụ = statusLabel của bước đang mở (nếu cấu hình).
                 currentStatus = ts.stream()
-                        .map(t -> stepStatusLabel(wi.getStepsMetaJson(), t.getTaskDefinitionKey()))
+                        .map(t -> stepStatusLabel(liveStepsMeta(wi), t.getTaskDefinitionKey()))
                         .filter(s -> s != null).distinct().collect(java.util.stream.Collectors.joining(", "));
                 if (currentStatus.isBlank()) {
                     currentStatus = null;
                 }
                 Instant now = Instant.now();
                 for (Task t : ts) {
-                    Instant due = effectiveDue(t, slaHours(stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey())));
+                    Instant due = effectiveDue(t, slaHours(stepMeta(liveStepsMeta(wi), t.getTaskDefinitionKey())));
                     if (due != null && now.isAfter(due)) {
                         overdue = true;
                         break;
@@ -1006,7 +1037,7 @@ public class WorkflowService {
             String startedAt = a != null && a.getStartTime() != null ? a.getStartTime().toInstant().toString() : null;
             String endedAt = done ? a.getEndTime().toInstant().toString() : null;
             steps.add(new TaskDto.StepView(index, key, e.getValue(), assignee, startedAt, endedAt, status,
-                    stepFieldValues(wi.getStepsMetaJson(), formsSnapshot, key, vars)));
+                    stepFieldValues(liveStepsMeta(wi), formsSnapshot, key, vars)));
         }
         return steps;
     }
@@ -1373,7 +1404,7 @@ public class WorkflowService {
         if (wi == null) {
             return false;
         }
-        Instant due = effectiveDue(t, slaHours(stepMeta(wi.getStepsMetaJson(), t.getTaskDefinitionKey())));
+        Instant due = effectiveDue(t, slaHours(stepMeta(liveStepsMeta(wi), t.getTaskDefinitionKey())));
         return due != null && Instant.now().isAfter(due);
     }
 

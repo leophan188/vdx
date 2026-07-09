@@ -158,6 +158,13 @@
             </label>
           }
         }
+        @if (f.type === 'unitstaff') {
+          <label class="radio-row">
+            <input type="checkbox" [checked]="f.defaultValue === '__ME__'"
+                   (change)="setMeDefault(f, $any($event.target).checked)" />
+            Điền sẵn theo NGƯỜI ĐĂNG NHẬP (chính họ)
+          </label>
+        }
 
         <!-- Validation (Story 2.8) -->
         @if (f.type === 'number') {
