@@ -260,7 +260,9 @@ a.breadcrumb__item:hover { color: var(--color-primary); }
 }
 .app-shell.collapsed .modal-backdrop:has(.modal--full) { inset: var(--topbar-h) 0 0 var(--sidebar-w-collapsed); }
 .modal--full { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; border: 0; box-shadow: none; }
-.modal--full .modal__body { padding: var(--space-3) var(--space-5); }
+/* Full modal (màn xử lý việc/soạn thảo): body là cột flex để nội dung con (editor OnlyOffice) lấp
+   ĐÚNG khoảng trống còn lại — tránh đoán chiều cao bằng calc(100vh) khiến canvas OnlyOffice sập/đen. */
+.modal--full .modal__body { padding: var(--space-3) var(--space-5); display: flex; flex-direction: column; min-height: 0; }
 /* Mobile: sidebar là overlay → full khung như cũ. */
 @media (max-width: 720px) { .modal-backdrop:has(.modal--full) { inset: 0; } }
 .modal__header {

@@ -9,15 +9,19 @@ import { ToastService } from '../shared/toast/toast.service';
 @Component({
   selector: 'app-office-embed',
   styles: [`
-    :host { display:block; width:100%; }
-    .oo-frame { width:100%; height:calc(100vh - 240px); min-height:520px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; background:#fff; }
+    /* Đúng khuôn editor toàn trang đang chạy tốt: cột flex chiều cao xác định + khung flex:1;min-height:0.
+       KHÔNG đặt height:calc() thẳng lên khung — trong modal (grid/overflow) iframe hay phân giải sai chiều
+       cao → vùng soạn thảo của OnlyOffice sập 0/đen. */
+    :host { display:flex; flex-direction:column; width:100%; flex:1 1 auto; min-height:520px; }
+    .oo-bar { display:flex; justify-content:flex-end; margin-bottom:6px; }
+    .oo-frame { flex:1; min-height:0; width:100%; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; background:var(--color-surface-alt); }
     .oo-frame > iframe { width:100%; height:100%; border:0; display:block; }
   `],
   template: `
     @if (error()) {
       <div class="alert alert--error" style="margin:0 0 8px">{{ error() }}</div>
     }
-    <div style="display:flex;justify-content:flex-end;margin-bottom:6px;">
+    <div class="oo-bar">
       <button type="button" class="btn btn--primary btn--sm" (click)="save()">💾 Lưu tài liệu</button>
     </div>
     <div [id]="containerId" class="oo-frame"></div>
