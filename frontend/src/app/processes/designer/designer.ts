@@ -394,6 +394,15 @@ export class Designer implements AfterViewInit, OnDestroy {
       error: () => this.formFields.set([])
     });
   }
+  /** Sao chép mã trộn «key» vào clipboard để dán vào file mẫu .docx. */
+  copyToken(key: string): void {
+    const token = '«' + key + '»';
+    navigator.clipboard?.writeText(token).then(
+      () => this.toast.success('Đã sao chép mã', token),
+      () => this.toast.error('Không sao chép được', token)
+    );
+  }
+
   fieldPerm(key: string): FieldPerm {
     return this.meta.fieldPerms?.[key] ?? 'EDIT';
   }

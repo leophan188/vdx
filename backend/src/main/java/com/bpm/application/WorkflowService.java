@@ -535,7 +535,35 @@ public class WorkflowService {
         }
         String docName = safeProcessName(wi.getProcessId()) + " — " + t.getName();
         String templateId = blankToNull(step.path("officeTemplateId").asText(null));
-        return documentService.getOrCreateForStep(wi.getId(), t.getTaskDefinitionKey(), docName, templateId, actor).getId();
+        // Dữ liệu Hồ sơ để TRỘN vào mẫu (thay «tênTrường»): biến đã thu ở các bước (form data theo key trường).
+        Map<String, String> mergeValues = mergeValues(taskId, wi);
+        return documentService.getOrCreateForStep(wi.getId(), t.getTaskDefinitionKey(), docName, templateId,
+                mergeValues, actor).getId();
+    }
+
+    /** Bản đồ key trường → GIÁ TRỊ hiển thị (từ biến phiên chạy) để trộn vào mẫu docx. */
+    private Map<String, String> mergeValues(String taskId, WorkflowInstance wi) {
+        Map<String, String> out = new java.util.LinkedHashMap<>();
+        Map<String, Object> vars = taskService.getVariables(taskId);
+        Map<String, JsonNode> defs = collectFieldDefs(wi);
+        for (Map.Entry<String, Object> e : vars.entrySet()) {
+            out.put(e.getKey(), formatMergeValue(e.getValue(), defs.get(e.getKey())));
+        }
+        return out;
+    }
+
+    /** Chuyển giá trị biến sang chuỗi hiển thị: boolean→Có/Không; tập hợp→nối phẩy; còn lại→toString. */
+    private String formatMergeValue(Object v, JsonNode def) {
+        if (v == null) {
+            return "";
+        }
+        if (v instanceof Boolean b) {
+            return b ? "Có" : "Không";
+        }
+        if (v instanceof java.util.Collection<?> c) {
+            return c.stream().map(x -> x == null ? "" : String.valueOf(x)).collect(java.util.stream.Collectors.joining(", "));
+        }
+        return String.valueOf(v);
     }
 
     /** Bản đồ key trường → định nghĩa (JsonNode) gộp từ mọi biểu mẫu của instance (snapshot ưu tiên, fallback form hiện hành). */

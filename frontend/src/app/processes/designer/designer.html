@@ -77,8 +77,21 @@
           <option [ngValue]="undefined">— Trang trắng —</option>
           @for (d of templateDocs(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
         </select>
-        <p class="hint" style="margin:4px 0 0;">Hồ sơ tới bước này sẽ bắt đầu soạn từ bản sao của tài liệu mẫu đã chọn. Tạo tài liệu mẫu ở màn <strong>Tài liệu</strong> (không gắn hồ sơ).</p>
+        <p class="hint" style="margin:4px 0 0;">Hồ sơ tới bước này sẽ bắt đầu soạn từ bản sao của tài liệu mẫu đã chọn. Tạo/nhập tài liệu mẫu ở màn <strong>Tài liệu</strong> (không gắn hồ sơ).</p>
       </div>
+      @if (formFields().length) {
+        <div class="field" style="margin-bottom:12px;">
+          <label>Mã trộn dữ liệu — chèn vào file mẫu để tự điền từ Hồ sơ</label>
+          <p class="hint" style="margin:0 0 6px;">Bấm để sao chép mã rồi dán vào file mẫu (Word/OnlyOffice) tại chỗ cần điền. Khi mở soạn thảo, mã được thay bằng dữ liệu người dùng đã nhập ở bước này.</p>
+          <div style="display:flex;flex-wrap:wrap;gap:6px;">
+            @for (f of formFields(); track f.key) {
+              <button type="button" class="btn btn--ghost btn--sm" style="font-weight:500;" (click)="copyToken(f.key)" [title]="'Sao chép mã «' + f.key + '»'">
+                {{ f.label }} · <code>«{{ f.key }}»</code>
+              </button>
+            }
+          </div>
+        </div>
+      }
     }
     <div class="field">
       <label>Biểu mẫu của bước</label>

@@ -6,6 +6,10 @@
 
   <data-grid [columns]="cols" [rows]="rows()" title="Danh sách tài liệu"
              [emptyText]="loading() ? 'Đang tải…' : 'Chưa có tài liệu nào.'">
+    <button gridActions type="button" class="btn btn--ghost" (click)="fileInput.click()" [disabled]="importing()">
+      {{ importing() ? 'Đang nhập…' : '⬆ Nhập .docx' }}
+    </button>
+    <input #fileInput type="file" accept=".docx" hidden (change)="importFile($event)" />
     <button gridActions type="button" class="btn btn--primary" (click)="create()">＋ Tạo tài liệu</button>
 
     <ng-template gridCell="version" let-d><span class="badge badge--neutral">v{{ d.version }}</span></ng-template>

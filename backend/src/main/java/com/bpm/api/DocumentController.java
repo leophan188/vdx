@@ -8,7 +8,9 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 
@@ -52,6 +54,22 @@ public class DocumentController {
     public Summary create(@RequestBody CreateRequest req, Authentication auth) {
         return Summary.of(service.create(req.name() == null || req.name().isBlank() ? "Tài liệu mới" : req.name(),
                 req.instanceId(), actor(auth)));
+    }
+
+    /** NHẬP tài liệu mẫu từ file .docx tải lên (multipart). Trả tài liệu vừa tạo để mở soạn/sửa mẫu. */
+    @PostMapping(value = "/import", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public Summary importDoc(@RequestParam("file") MultipartFile file,
+                             @RequestParam(value = "name", required = false) String name,
+                             Authentication auth) throws IOException {
+        String docName = (name != null && !name.isBlank()) ? name : stripDocxExt(file.getOriginalFilename());
+        return Summary.of(service.importTemplate(docName, file.getBytes(), actor(auth)));
+    }
+
+    private static String stripDocxExt(String fn) {
+        if (fn == null || fn.isBlank()) {
+            return "Tài liệu nhập";
+        }
+        return fn.replaceFirst("(?i)\\.docx?$", "");
     }
 
     @GetMapping

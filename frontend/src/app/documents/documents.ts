@@ -27,6 +27,7 @@ export class Documents implements OnInit {
 
   readonly rows = signal<DocSummary[]>([]);
   readonly loading = signal(true);
+  readonly importing = signal(false);
 
   ngOnInit(): void { this.reload(); }
 
@@ -48,6 +49,20 @@ export class Documents implements OnInit {
     this.svc.create(name || 'Tài liệu mới').subscribe({
       next: (d) => { this.toast.success('Đã tạo tài liệu', d.name); this.open(d); },
       error: () => this.toast.error('Không tạo được tài liệu')
+    });
+  }
+
+  /** Nhập file .docx làm tài liệu MẪU (có thể chứa mã trộn «tênTrường»). Nhập xong mở luôn để soạn/sửa mẫu. */
+  importFile(ev: Event): void {
+    const input = ev.target as HTMLInputElement;
+    const file = input.files?.[0];
+    input.value = ''; // cho phép chọn lại cùng file
+    if (!file) return;
+    if (!/\.docx$/i.test(file.name)) { this.toast.error('Chỉ nhận file Word .docx'); return; }
+    this.importing.set(true);
+    this.svc.importDocx(file).subscribe({
+      next: (d) => { this.importing.set(false); this.toast.success('Đã nhập tài liệu', d.name); this.open(d); },
+      error: (e) => { this.importing.set(false); this.toast.error('Không nhập được tài liệu', e?.error?.message || 'File không hợp lệ.'); }
     });
   }
 

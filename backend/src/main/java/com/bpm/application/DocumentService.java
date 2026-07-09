@@ -7,6 +7,7 @@ import com.bpm.infrastructure.DocumentRepository;
 import com.bpm.infrastructure.DocumentVersionRepository;
 import com.bpm.infrastructure.onlyoffice.OnlyOfficeJwt;
 import com.fasterxml.jackson.databind.JsonNode;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -14,6 +15,7 @@ import org.springframework.core.io.ClassPathResource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -61,15 +63,42 @@ public class DocumentService {
     }
 
     /**
+     * NHẬP tài liệu MẪU từ file .docx tải lên (làm điểm bắt đầu cho soạn thảo, có thể chứa mã trộn «tênTrường»).
+     * Tài liệu mẫu = instanceId null (không gắn phiên chạy) → hiện trong danh sách chọn mẫu ở designer.
+     */
+    @Transactional
+    public Document importTemplate(String name, byte[] bytes, String actor) {
+        if (bytes == null || bytes.length == 0) {
+            throw new IllegalArgumentException("File rỗng");
+        }
+        // Xác thực là .docx mở được (tránh lưu file không phải Word → OnlyOffice render lỗi).
+        try (XWPFDocument ignored = new XWPFDocument(new ByteArrayInputStream(bytes))) {
+            // hợp lệ
+        } catch (Exception e) {
+            throw new IllegalArgumentException("File không phải .docx hợp lệ (chỉ nhận Word .docx)");
+        }
+        Document d = repo.save(new Document(name, null, bytes, actor));
+        versionRepo.save(new DocumentVersion(d.getId(), d.getVersion(), bytes, actor));
+        auditPort.record("DOCUMENT_IMPORTED", "Document", d.getId(), actor, "name=" + name + " size=" + bytes.length);
+        return d;
+    }
+
+    /**
      * Lấy (hoặc tạo mới) tài liệu OnlyOffice gắn với 1 BƯỚC của phiên chạy — mỗi bước 1 file riêng.
      * templateId != null: sao chép NỘI DUNG của tài liệu mẫu đó làm điểm bắt đầu; ngược lại dùng trang trắng.
      */
     @Transactional
-    public Document getOrCreateForStep(String instanceId, String stepKey, String name, String templateId, String actor) {
+    public Document getOrCreateForStep(String instanceId, String stepKey, String name, String templateId,
+                                       Map<String, String> mergeValues, String actor) {
         return repo.findFirstByInstanceIdAndStepKey(instanceId, stepKey).orElseGet(() -> {
-            byte[] content = (templateId != null && !templateId.isBlank())
-                    ? repo.findById(templateId).map(Document::getContent).orElseGet(this::readTemplate)
-                    : readTemplate();
+            byte[] content;
+            if (templateId != null && !templateId.isBlank()) {
+                byte[] tpl = repo.findById(templateId).map(Document::getContent).orElseGet(this::readTemplate);
+                // Trộn dữ liệu Hồ sơ vào mẫu (thay «tênTrường») — chỉ 1 lần lúc TẠO; sau đó sửa tự do.
+                content = DocxMerge.merge(tpl, mergeValues);
+            } else {
+                content = readTemplate();
+            }
             Document d = new Document(name, instanceId, content, actor);
             d.setStepKey(stepKey);
             d = repo.save(d);

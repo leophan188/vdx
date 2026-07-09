@@ -40,6 +40,13 @@ export class DocumentService {
   create(name: string, instanceId?: string): Observable<DocSummary> {
     return this.http.post<DocSummary>(this.base, { name, instanceId: instanceId ?? null }, { withCredentials: true });
   }
+  /** Nhập tài liệu MẪU từ file .docx (multipart) — làm mẫu có thể chứa mã trộn «tênTrường». */
+  importDocx(file: File, name?: string): Observable<DocSummary> {
+    const fd = new FormData();
+    fd.append('file', file);
+    if (name && name.trim()) fd.append('name', name.trim());
+    return this.http.post<DocSummary>(`${this.base}/import`, fd, { withCredentials: true });
+  }
   get(id: string): Observable<DocSummary> {
     return this.http.get<DocSummary>(`${this.base}/${id}`, { withCredentials: true });
   }
