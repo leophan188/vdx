@@ -43,9 +43,9 @@ interface TreeRow {
     .bl-tree { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow-x: auto; background: var(--color-surface); }
     .bl-head, .bl-row {
       display: grid;
-      grid-template-columns: minmax(220px, 1.6fr) 92px 118px 150px 62px 110px 96px 96px 84px 96px 116px;
+      grid-template-columns: minmax(220px, 1.6fr) 92px 118px 150px 62px 110px 148px 148px 84px 96px 116px;
       align-items: center; gap: var(--space-2);
-      padding: var(--space-2) var(--space-3); min-width: 1180px;
+      padding: var(--space-2) var(--space-3); min-width: 1284px;
     }
     .bl-head { font-weight: 600; font-size: var(--font-size-sm); color: var(--color-text-muted);
       background: var(--color-surface-alt); border-bottom: 1px solid var(--color-border); }
@@ -785,8 +785,10 @@ export class PrjBacklog implements OnInit {
     });
   }
 
-  /** dd/MM/yyyy → yyyy-MM-dd cho <input type=date> trên lưới (public cho template). */
-  iso(d: string | null | undefined): string { return this.toIso(d ?? null); }
+  /** dd/MM/yyyy → yyyy-MM-dd cho <input type=date>; task CHƯA có ngày → mặc định HÔM NAY. */
+  iso(d: string | null | undefined): string { return this.toIso(d ?? null) || this.todayIso(); }
+  /** Hôm nay dạng dd/MM/yyyy (cho API). */
+  private todayDmy(): string { return this.fromIso(this.todayIso())!; }
 
   /** Số ngày (gồm 2 đầu) giữa 2 ngày dd/MM/yyyy; 0 nếu thiếu/không hợp lệ. */
   private daysBetween(start: string | null, due: string | null): number {
@@ -802,8 +804,9 @@ export class PrjBacklog implements OnInit {
   saveDateInline(t: ProjectTask, which: 'start' | 'due', iso: string): void {
     if (this.isRollup(t)) return; // cha/EPIC/STORY = ngày tự tổng hợp
     const dmy = this.fromIso(iso);
-    const startDate = which === 'start' ? dmy : t.startDate;
-    const dueDate = which === 'due' ? dmy : t.dueDate;
+    // Ngày còn lại nếu task CHƯA có → mặc định HÔM NAY (khớp giá trị đang hiển thị trên lưới).
+    const startDate = which === 'start' ? dmy : (t.startDate ?? this.todayDmy());
+    const dueDate = which === 'due' ? dmy : (t.dueDate ?? this.todayDmy());
     if (startDate === t.startDate && dueDate === t.dueDate) return;
     let estimateHours = t.estimateHours;
     const dur = this.daysBetween(startDate, dueDate);
