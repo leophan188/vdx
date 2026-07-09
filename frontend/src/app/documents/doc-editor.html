@@ -22,7 +22,7 @@
       <aside class="doc-editor__side" style="flex-direction:column; padding:12px; gap:10px; overflow:auto;">
         <div>
           <strong>🔗 Chèn trường dữ liệu</strong>
-          <p class="hint" style="margin:4px 0 0;">Chọn biểu mẫu, rồi <strong>kéo-thả</strong> trường vào tài liệu (hoặc <strong>bấm</strong> để chèn tại con trỏ). Khi chạy quy trình, mã «…» được thay bằng dữ liệu Hồ sơ đã nhập tới bước đó.</p>
+          <p class="hint" style="margin:4px 0 0;">Chọn biểu mẫu, rồi <strong>kéo-thả</strong> trường vào tài liệu (hoặc <strong>bấm</strong> để copy rồi dán Ctrl+V). Khi chạy quy trình, mã «…» được thay bằng dữ liệu Hồ sơ đã nhập tới bước đó.</p>
         </div>
         <searchable-select [options]="formOptions()" [value]="selectedFormId()"
                            (valueChange)="onSelectForm($event)" placeholder="Lọc / chọn biểu mẫu…"
@@ -34,8 +34,8 @@
           @for (f of mergeFields(); track f.key) {
             <button type="button" class="btn btn--ghost btn--sm"
                     style="justify-content:space-between; text-align:left; cursor:grab;"
-                    draggable="true" (dragstart)="onDragToken($event, f.key)" (dragend)="onDropToken($event, f.key)"
-                    (click)="insertToken(f.key)" [title]="'Kéo vào tài liệu hoặc bấm để chèn «' + f.key + '»'">
+                    draggable="true" (dragstart)="onDragToken($event, f.key)"
+                    (click)="insertToken(f.key)" [title]="'Kéo vào tài liệu, hoặc bấm để copy «' + f.key + '»'">
               <span style="display:inline-flex;align-items:center;gap:6px;"><span style="opacity:.4;">⠿</span>{{ f.label }}</span>
               <code style="opacity:.7;">«{{ f.key }}»</code>
             </button>

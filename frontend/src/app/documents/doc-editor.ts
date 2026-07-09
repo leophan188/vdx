@@ -99,27 +99,17 @@ export class DocEditor implements OnInit, OnDestroy {
         console.warn('[merge] callCommand lỗi', e);
       }
     }
-    // Chẩn đoán: cho biết vì sao phải copy (connector không có / gọi lỗi) — giúp xác định bản OnlyOffice.
-    const why = hasConn ? '(chèn lỗi → copy) ' : '(OnlyOffice thiếu connector → copy) ';
+    // Community Edition không có connector → copy để dán tay (Ctrl+V).
     navigator.clipboard?.writeText(token).then(
-      () => this.toast.success('Đã copy mã ' + why + '— dán (Ctrl+V)', token),
-      () => this.toast.error('Không chèn được mã', token)
+      () => this.toast.success('Đã copy mã — dán (Ctrl+V) vào tài liệu', token),
+      () => this.toast.error('Không copy được mã', token)
     );
   }
 
-  /** Bắt đầu KÉO trường (dùng MIME riêng để trình soạn không tự chèn trùng; việc chèn do onDropToken lo). */
+  /** Bắt đầu KÉO trường: đặt text «key» → thả vào tài liệu (nếu bản OnlyOffice nhận thả text sẽ chèn tại chỗ). */
   onDragToken(ev: DragEvent, key: string): void {
-    ev.dataTransfer?.setData('application/x-bpm-field', key);
+    ev.dataTransfer?.setData('text/plain', '«' + key + '»');
     if (ev.dataTransfer) ev.dataTransfer.effectAllowed = 'copy';
-  }
-
-  /** Kết thúc KÉO: nếu thả TRÊN vùng tài liệu → chèn mã (qua connector, hoặc copy nếu không hỗ trợ). */
-  onDropToken(ev: DragEvent, key: string): void {
-    const frame = document.getElementById('onlyoffice-editor');
-    if (!frame) return;
-    const r = frame.getBoundingClientRect();
-    const inside = ev.clientX >= r.left && ev.clientX <= r.right && ev.clientY >= r.top && ev.clientY <= r.bottom;
-    if (inside) this.insertToken(key);
   }
 
   private mount(cfg: EditorConfig): void {
