@@ -105,6 +105,15 @@ interface TreeRow {
     .bl-est:hover { border-color: var(--color-primary-soft); }
     .bl-est:focus { outline: none; border-color: var(--color-primary);
       box-shadow: 0 0 0 2px var(--color-primary-soft); }
+    /* Chọn/sửa ngày ngay trên lưới (task lá) */
+    .bl-date-input {
+      width: 100%; max-width: 140px; font-variant-numeric: tabular-nums;
+      padding: 2px var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-sm);
+    }
+    .bl-date-input:hover { border-color: var(--color-primary-soft); }
+    .bl-date-input:focus { outline: none; border-color: var(--color-primary);
+      box-shadow: 0 0 0 2px var(--color-primary-soft); }
     .field-hint { font-size: var(--font-size-xs); color: var(--color-text-muted); margin-top: 2px; }
     .bl-form { display: grid; gap: var(--space-3); width: 100%; }
     /* Chọn loại dạng pill (đồng bộ với quick-create) */
