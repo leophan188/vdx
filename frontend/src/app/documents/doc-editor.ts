@@ -1,37 +1,103 @@
 import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { ToastService } from '../shared/toast/toast.service';
 import { DocumentService, EditorConfig } from '../core/document.service';
+import { FormService, FormSummary } from '../core/form.service';
 
+interface OoConnector { callCommand: (fn: unknown, isNoCalc?: boolean) => void; }
+interface OoEditor { destroyEditor?: () => void; createConnector?: () => OoConnector; }
 declare global {
-  interface Window { DocsAPI?: { DocEditor: new (id: string, config: unknown) => { destroyEditor?: () => void } }; }
+  interface Window { DocsAPI?: { DocEditor: new (id: string, config: unknown) => OoEditor }; }
 }
 
-/** Trình soạn thảo OnlyOffice nhúng (Story 3.10) + bảng cộng tác (3.11–3.17). */
+/** Trình soạn thảo OnlyOffice nhúng (Story 3.10) + chèn mã trộn dữ liệu từ biểu mẫu (mail-merge). */
 @Component({
   selector: 'app-doc-editor',
-  imports: [],
+  imports: [FormsModule],
   templateUrl: './doc-editor.html'
 })
 export class DocEditor implements OnInit, OnDestroy {
   private route = inject(ActivatedRoute);
   private router = inject(Router);
   private svc = inject(DocumentService);
+  private formSvc = inject(FormService);
   private toast = inject(ToastService);
 
   readonly id = this.route.snapshot.paramMap.get('id')!;
   readonly title = signal('Tài liệu');
   readonly error = signal<string | null>(null);
-  private editor?: { destroyEditor?: () => void };
+  private editor?: OoEditor;
+  private connector?: OoConnector;
   private saveTimer?: ReturnType<typeof setInterval>;
+
+  // ----- Chèn mã trộn dữ liệu (chỉ hiện với tài liệu MẪU — instanceId null) -----
+  readonly isTemplate = signal(false);
+  readonly forms = signal<FormSummary[]>([]);
+  readonly selectedFormId = signal<string>('');
+  readonly mergeFields = signal<{ key: string; label: string }[]>([]);
 
   ngOnInit(): void {
     this.svc.editorConfig(this.id).subscribe({
       next: (cfg) => { this.title.set(cfg.name); this.mount(cfg); },
       error: () => this.error.set('Không lấy được cấu hình soạn thảo.')
     });
+    // Panel chèn mã trộn: chỉ cho tài liệu mẫu (không gắn hồ sơ). Nạp danh sách biểu mẫu để chọn trường.
+    this.svc.get(this.id).subscribe({
+      next: (d) => {
+        if (!d.instanceId) {
+          this.isTemplate.set(true);
+          this.formSvc.list().subscribe({ next: (f) => this.forms.set(f), error: () => {} });
+        }
+      },
+      error: () => {}
+    });
     // Tự lưu định kỳ khi đang mở (phiên còn sống → forcesave ghi được về kho).
     this.saveTimer = setInterval(() => this.svc.forceSave(this.id).subscribe({ error: () => {} }), 30000);
+  }
+
+  /** Chọn biểu mẫu → nạp danh sách trường (key + nhãn) để chèn mã «key» vào mẫu. */
+  onSelectForm(formId: string): void {
+    this.selectedFormId.set(formId);
+    if (!formId) { this.mergeFields.set([]); return; }
+    this.formSvc.get(formId).subscribe({
+      next: (f) => {
+        try {
+          const parsed = f.schemaJson ? JSON.parse(f.schemaJson) : { fields: [] };
+          this.mergeFields.set((parsed.fields ?? [])
+            .filter((x: { key?: string; type?: string }) => x.key && x.type !== 'section')
+            .map((x: { key: string; label?: string }) => ({ key: x.key, label: x.label || x.key })));
+        } catch { this.mergeFields.set([]); }
+      },
+      error: () => this.mergeFields.set([])
+    });
+  }
+
+  /**
+   * Chèn mã «key» vào vị trí con trỏ trong OnlyOffice (Document Builder qua connector + Asc.scope).
+   * Bản OnlyOffice không hỗ trợ connector → fallback copy clipboard để dán tay.
+   */
+  insertToken(key: string): void {
+    const token = '«' + key + '»';
+    try {
+      const asc = (window as unknown as { Asc?: { scope?: Record<string, unknown> } }).Asc;
+      if (this.editor?.createConnector && asc) {
+        if (!this.connector) this.connector = this.editor.createConnector();
+        asc.scope = asc.scope || {};
+        asc.scope['mergeToken'] = token;
+        // Hàm chạy TRONG trình soạn (Api/Asc là global ở đó) — dựng bằng Function để không vướng type FE.
+        const cmd = new Function(
+          'var d=Api.GetDocument();var p=Api.CreateParagraph();p.AddText(Asc.scope.mergeToken);d.InsertContent([p],true);'
+        );
+        this.connector!.callCommand(cmd, false);
+        this.toast.success('Đã chèn mã', token);
+        return;
+      }
+    } catch { /* rơi xuống fallback copy */ }
+    navigator.clipboard?.writeText(token).then(
+      () => this.toast.success('Đã copy mã — dán (Ctrl+V) vào tài liệu', token),
+      () => this.toast.error('Không chèn được mã', token)
+    );
   }
 
   private mount(cfg: EditorConfig): void {

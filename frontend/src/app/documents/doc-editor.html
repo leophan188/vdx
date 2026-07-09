@@ -14,7 +14,33 @@
     </div>
   }
 
-  <div class="doc-editor__split">
+  <div class="doc-editor__split" [style.grid-template-columns]="isTemplate() ? '' : '1fr'">
     <div id="onlyoffice-editor" class="doc-editor__frame"></div>
+
+    <!-- Panel CHÈN TRƯỜNG DỮ LIỆU (chỉ tài liệu mẫu): chọn biểu mẫu → bấm trường để chèn mã «key». -->
+    @if (isTemplate()) {
+      <aside class="doc-editor__side" style="flex-direction:column; padding:12px; gap:10px; overflow:auto;">
+        <div>
+          <strong>🔗 Chèn trường dữ liệu</strong>
+          <p class="hint" style="margin:4px 0 0;">Chọn biểu mẫu rồi bấm trường để chèn mã «…» vào vị trí con trỏ. Khi chạy quy trình, mã được thay bằng dữ liệu Hồ sơ đã nhập tới bước đó.</p>
+        </div>
+        <select [ngModel]="selectedFormId()" (ngModelChange)="onSelectForm($event)">
+          <option value="">— Chọn biểu mẫu —</option>
+          @for (f of forms(); track f.id) { <option [value]="f.id">{{ f.name }} ({{ f.formKey }})</option> }
+        </select>
+        @if (selectedFormId() && !mergeFields().length) {
+          <p class="hint">Biểu mẫu này chưa có trường nào.</p>
+        }
+        <div style="display:flex; flex-direction:column; gap:6px; overflow:auto;">
+          @for (f of mergeFields(); track f.key) {
+            <button type="button" class="btn btn--ghost btn--sm"
+                    style="justify-content:space-between; text-align:left;"
+                    (click)="insertToken(f.key)" [title]="'Chèn «' + f.key + '»'">
+              <span>{{ f.label }}</span> <code style="opacity:.7;">«{{ f.key }}»</code>
+            </button>
+          }
+        </div>
+      </aside>
+    }
   </div>
 </div>
