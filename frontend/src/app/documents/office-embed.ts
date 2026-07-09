@@ -10,7 +10,8 @@ import { ToastService } from '../shared/toast/toast.service';
   selector: 'app-office-embed',
   styles: [`
     :host { display:block; width:100%; }
-    .oo-frame { width:100%; height:calc(100vh - 210px); min-height:480px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; background:#fff; }
+    .oo-frame { width:100%; height:calc(100vh - 240px); min-height:520px; border:1px solid var(--color-border); border-radius:8px; overflow:hidden; background:#fff; }
+    .oo-frame > iframe { width:100%; height:100%; border:0; display:block; }
   `],
   template: `
     @if (error()) {

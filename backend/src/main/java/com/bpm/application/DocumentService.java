@@ -197,6 +197,9 @@ public class DocumentService {
         Map<String, Object> customization = new LinkedHashMap<>();
         customization.put("forcesave", true);
         customization.put("autosave", false);
+        // Ép giao diện SÁNG: trình duyệt để dark-mode khiến OnlyOffice 8.2 tự bật "dark document" → trang
+        // tài liệu render ĐEN (vùng soạn thảo tối thui). Cố định theme sáng để trang luôn là nền trắng.
+        customization.put("uiTheme", "theme-light");
         editorConfig.put("customization", customization);
 
         Map<String, Object> config = new LinkedHashMap<>();

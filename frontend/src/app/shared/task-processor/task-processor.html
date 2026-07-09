@@ -310,8 +310,12 @@
 
   <ng-container modalFooter>
     <button type="button" class="btn btn--ghost" (click)="close()">Đóng</button>
-    @for (a of detail()?.actions || []; track a) {
-      <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="act(a)">{{ actionLabel(a) }}</button>
+    <!-- Tab "Soạn thảo tài liệu" chỉ để soạn + Lưu (nút Lưu nằm trong editor). Ẩn nút hành động quy trình
+         (Trình duyệt/Hủy…) ở tab này — chúng thuộc tab "Nội dung". -->
+    @if (!detail()?.officeDoc || docTab()==='content') {
+      @for (a of detail()?.actions || []; track a) {
+        <button type="button" class="btn btn--primary" [disabled]="busy()" (click)="act(a)">{{ actionLabel(a) }}</button>
+      }
     }
   </ng-container>
 </app-modal>
