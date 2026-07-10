@@ -10,6 +10,8 @@ import com.bpm.infrastructure.OrgUnitRepository;
 import com.bpm.infrastructure.ProcessDefinitionRepository;
 import com.bpm.infrastructure.UserAccountRepository;
 import com.bpm.infrastructure.WorkflowInstanceRepository;
+import com.bpm.infrastructure.DocumentRepository;
+import com.bpm.domain.document.Document;
 import org.flowable.engine.HistoryService;
 import org.flowable.engine.RuntimeService;
 import org.flowable.engine.TaskService;
@@ -152,6 +154,8 @@ public class Qt0101DemoSeeder {
 
     private final ProcessService processService;
     private final FormService formService;
+    private final DocumentRepository documentRepo;
+    private final DocumentService documentService;
     private final WorkflowService workflowService;
     private final TaskService taskService;
     private final RuntimeService runtimeService;
@@ -170,14 +174,21 @@ public class Qt0101DemoSeeder {
     /** Cờ chạy 1 lần: xoá HẾT hồ sơ QT01.01 lúc boot (GIỮ quy trình + biểu mẫu) — dùng để làm sạch rồi tạo lại. */
     @Value("${bpm.wipe.qt0101.instances.onboot:false}")
     private boolean wipeInstancesOnBoot;
+    /** Cờ chạy 1 lần: XOÁ SẠCH QT01.01 (hồ sơ + tài liệu + biểu mẫu + quy trình). Dùng để làm lại từ đầu. */
+    @Value("${bpm.wipe.qt0101.all.onboot:false}")
+    private boolean wipeAllOnBoot;
 
-    public Qt0101DemoSeeder(ProcessService processService, FormService formService, WorkflowService workflowService,
+    public Qt0101DemoSeeder(ProcessService processService, FormService formService,
+                            DocumentRepository documentRepo, DocumentService documentService,
+                            WorkflowService workflowService,
                             TaskService taskService, RuntimeService runtimeService, HistoryService historyService,
                             ProcessDefinitionRepository processRepo, WorkflowInstanceRepository instanceRepo,
                             EmployeeRepository employeeRepo, UserAccountRepository userRepo,
                             OrgUnitRepository orgUnitRepo, AuditPort auditPort) {
         this.processService = processService;
         this.formService = formService;
+        this.documentRepo = documentRepo;
+        this.documentService = documentService;
         this.workflowService = workflowService;
         this.taskService = taskService;
         this.runtimeService = runtimeService;
@@ -216,6 +227,32 @@ public class Qt0101DemoSeeder {
             log.info("[Qt0101DemoSeeder] onboot wipe-instances: đã xoá {} hồ sơ QT01.01 (giữ quy trình + biểu mẫu).", n);
         } catch (Exception e) {
             log.warn("[Qt0101DemoSeeder] onboot wipe-instances lỗi: {}", e.toString());
+        }
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    void maybeWipeAllOnBoot() {
+        if (!wipeAllOnBoot) {
+            return;
+        }
+        try {
+            int[] docs = {0};
+            // 1) Xoá TÀI LIỆU gắn hồ sơ QT01 (trước khi xoá hồ sơ).
+            processRepo.findAll().stream().filter(p -> GUARD_KEY.equals(p.getProcessKey())).findFirst().ifPresent(p -> {
+                for (WorkflowInstance wi : instanceRepo.findByProcessId(p.getId())) {
+                    for (Document d : documentRepo.findByInstanceId(wi.getId())) {
+                        try {
+                            documentService.delete(d.getId(), "system");
+                            docs[0]++;
+                        } catch (Exception ignore) { /* */ }
+                    }
+                }
+            });
+            // 2) reset() = xoá hồ sơ (Flowable runtime+history) + biểu mẫu (qt0101-buoc-*) + quy trình.
+            reset("system");
+            log.info("[Qt0101DemoSeeder] onboot wipe-ALL: XOÁ SẠCH QT01.01 (đã xoá {} tài liệu + hồ sơ + biểu mẫu + quy trình).", docs[0]);
+        } catch (Exception e) {
+            log.warn("[Qt0101DemoSeeder] onboot wipe-ALL lỗi: {}", e.toString());
         }
     }
 
