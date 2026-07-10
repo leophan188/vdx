@@ -432,13 +432,21 @@ public class ProjectService {
                 }
             }
             String uid = t.getAssigneeUserId();
-            if (uid != null && !cancelled) { // không tính việc đã huỷ vào thống kê theo người
-                int[] agg = assigneeAgg.computeIfAbsent(uid, k -> new int[2]);
+            if (uid != null) {
+                // agg = [total, done, backlog, todo, doing, review, cancel] — liệt kê ĐỦ trạng thái theo người.
+                int[] agg = assigneeAgg.computeIfAbsent(uid, k -> new int[7]);
                 agg[0]++;
-                if (done) {
-                    agg[1]++;
+                switch (t.getStatus()) {
+                    case DONE -> agg[1]++;
+                    case BACKLOG -> agg[2]++;
+                    case TODO -> agg[3]++;
+                    case IN_PROGRESS -> agg[4]++;
+                    case IN_REVIEW -> agg[5]++;
+                    case CANCELLED -> agg[6]++;
                 }
-                assigneeEst.merge(uid, t.getEstimateHours(), Double::sum);
+                if (!cancelled) { // ước lượng giờ không tính việc đã huỷ
+                    assigneeEst.merge(uid, t.getEstimateHours(), Double::sum);
+                }
             }
         }
 
@@ -446,8 +454,9 @@ public class ProjectService {
         for (Map.Entry<String, int[]> e : assigneeAgg.entrySet()) {
             String uid = e.getKey();
             UserAccount acc = userRepo.findById(uid).orElse(null);
+            int[] v = e.getValue();
             byAssignee.add(new ProjectDto.AssigneeStat(uid, acc != null ? displayName(acc) : uid,
-                    e.getValue()[0], e.getValue()[1], assigneeEst.getOrDefault(uid, 0.0)));
+                    v[0], v[1], v[2], v[3], v[4], v[5], v[6], assigneeEst.getOrDefault(uid, 0.0)));
         }
 
         double pct = completionFrom(leafEstimate, leafDoneEstimate, leafTasks, leafDoneTasks);

@@ -237,7 +237,8 @@ public final class ProjectDto {
 
     // ===== Report =====
 
-    public record AssigneeStat(String userId, String name, int total, int done, double estimate) {
+    public record AssigneeStat(String userId, String name, int total, int done,
+                               int backlog, int todo, int doing, int review, int cancel, double estimate) {
     }
 
     /** Báo cáo dự án: tỷ lệ hoàn thành + phân rã theo trạng thái/loại/người + số liệu est + bug + quá hạn. */

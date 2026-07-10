@@ -27,7 +27,8 @@ const STATUS_META: { key: TaskStatus; label: string }[] = [
   { key: 'TODO', label: 'Cần làm' },
   { key: 'IN_PROGRESS', label: 'Đang làm' },
   { key: 'IN_REVIEW', label: 'Kiểm thử' },
-  { key: 'DONE', label: 'Hoàn thành' }
+  { key: 'DONE', label: 'Hoàn thành' },
+  { key: 'CANCELLED', label: 'Huỷ' }
 ];
 
 /** Mức ưu tiên (thống kê bug/issue). */

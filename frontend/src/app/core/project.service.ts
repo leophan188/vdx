@@ -170,6 +170,11 @@ export interface AssigneeStat {
   name: string;
   total: number;
   done: number;
+  backlog: number;
+  todo: number;
+  doing: number;
+  review: number;
+  cancel: number;
   estimate: number;
 }
 

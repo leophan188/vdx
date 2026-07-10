@@ -182,7 +182,7 @@ export class PrjOverview {
     { status: 'TODO', label: 'Cần làm', color: 'var(--status-pending)' },
     { status: 'IN_PROGRESS', label: 'Đang làm', color: 'var(--status-active)' },
     { status: 'IN_REVIEW', label: 'Kiểm thử', color: 'var(--color-info)' },
-    { status: 'DONE', label: 'Đã xong', color: 'var(--status-done)' },
+    { status: 'DONE', label: 'Hoàn thành', color: 'var(--status-done)' },
     { status: 'CANCELLED', label: 'Huỷ', color: 'var(--status-cancel)' }
   ];
 
@@ -218,18 +218,23 @@ export class PrjOverview {
   readonly assigneeRows = computed(() => {
     const r = this.report();
     if (!r) return [];
-    return r.byAssignee.map((a) => ({
-      ...a,
-      donePct: a.total > 0 ? Math.round((a.done / a.total) * 100) : 0
-    }));
+    return r.byAssignee.map((a) => {
+      const scope = a.total - a.cancel; // Huỷ ngoài phạm vi % hoàn thành
+      return { ...a, donePct: scope > 0 ? Math.round((a.done / scope) * 100) : 0 };
+    });
   });
 
   readonly assigneeCols: GridColumn[] = [
     { key: 'name', header: 'Người phụ trách' },
-    { key: 'total', header: 'Tổng task', align: 'center', width: '110px', sortable: true },
-    { key: 'done', header: 'Đã xong', align: 'center', width: '120px', sortable: true },
-    { key: 'estimate', header: 'Est (h)', align: 'center', width: '100px', sortable: true },
-    { key: 'donePct', header: '% hoàn thành', width: '200px', sortable: true }
+    { key: 'total', header: 'Tổng', align: 'center', width: '70px', sortable: true },
+    { key: 'backlog', header: 'Backlog', align: 'center', width: '80px', sortable: true },
+    { key: 'todo', header: 'Cần làm', align: 'center', width: '80px', sortable: true },
+    { key: 'doing', header: 'Đang làm', align: 'center', width: '80px', sortable: true },
+    { key: 'review', header: 'Kiểm thử', align: 'center', width: '80px', sortable: true },
+    { key: 'done', header: 'Hoàn thành', align: 'center', width: '90px', sortable: true },
+    { key: 'cancel', header: 'Huỷ', align: 'center', width: '60px', sortable: true },
+    { key: 'estimate', header: 'Est (h)', align: 'center', width: '80px', sortable: true },
+    { key: 'donePct', header: '% hoàn thành', width: '160px', sortable: true }
   ];
 
   constructor() {
