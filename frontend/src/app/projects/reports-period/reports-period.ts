@@ -243,7 +243,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rp__leg-cnt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
     .rp__leg-pct { text-align: right; color: #64748b; font-variant-numeric: tabular-nums; }
 
-    .rp__tbl { width: 100%; border-collapse: collapse; }
+    .rp__tbl { width: 100%; border-collapse: collapse; table-layout: fixed; }
     .rp__tbl colgroup .c-stt { width: 32px; } .rp__tbl colgroup .c-pic { width: 42px; }
     .rp__tbl colgroup .c-n { width: 58px; } .rp__tbl colgroup .c-status { width: 92px; }
     .rp__tbl colgroup .c-date { width: 78px; } .rp__tbl colgroup .c-pct { width: 130px; }
@@ -253,7 +253,9 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
       font-variant-numeric: tabular-nums; }
     .rp__tbl tbody tr:nth-child(even) td { background: #f8fafc; }
     .rp__l { text-align: left !important; }
-    .rp__tbl td.rp__l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+    /* Tên công việc dài → XUỐNG DÒNG (không cắt "…"), giữ nguyên chiều rộng cột. */
+    .rp__tbl td { vertical-align: top; word-break: break-word; overflow-wrap: anywhere; }
+    .rp__tbl td.rp__l { white-space: normal; overflow: visible; }
     .rp__ava { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
       border-radius: 50%; background: #1e50a0; color: #fff; font-size: 9px; font-weight: 800; margin-right: 6px; vertical-align: middle; }
     .rp__ava--sm { margin-right: 0; }
