@@ -65,6 +65,27 @@ public class ProjectReportExportService {
                 statusLabel(t.status()), nz(t.dueDate()), Math.round(t.progressPct()) + "%"};
     }
 
+    /** Đếm công việc theo TỪNG trạng thái (gộp cả 4 khối, khử trùng theo taskId) — liệt kê đủ trạng thái. */
+    private List<String[]> statusSummaryRows(ProjectDto.PeriodReportResponse r) {
+        java.util.LinkedHashMap<String, Integer> cnt = new java.util.LinkedHashMap<>();
+        for (String s : new String[]{"BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"}) {
+            cnt.put(s, 0);
+        }
+        java.util.Set<String> seen = new java.util.HashSet<>();
+        for (List<ProjectDto.ReportTaskItem> list : List.of(r.done(), r.overdue(), r.inProgress(), r.upcoming())) {
+            for (ProjectDto.ReportTaskItem t : list) {
+                if (seen.add(t.taskId()) && cnt.containsKey(t.status())) {
+                    cnt.merge(t.status(), 1, Integer::sum);
+                }
+            }
+        }
+        List<String[]> rows = new java.util.ArrayList<>();
+        for (java.util.Map.Entry<String, Integer> e : cnt.entrySet()) {
+            rows.add(new String[]{statusLabel(e.getKey()), String.valueOf(e.getValue())});
+        }
+        return rows;
+    }
+
     /** Chỉ số tổng quan — dùng chung. */
     private List<String[]> overviewRows(ProjectDto.ReportOverview ov) {
         return List.of(
@@ -101,6 +122,16 @@ public class ProjectReportExportService {
                 Row row = sh.createRow(rr++);
                 put(row, 0, kv[0], ovLabel);
                 Cell v = put(row, 1, kv[1], ovValue);
+                sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 1, last));
+            }
+            rr++;
+
+            // Thống kê theo TỪNG trạng thái (liệt kê đủ trạng thái).
+            merged(sh, rr, last, "THỐNG KÊ THEO TRẠNG THÁI", section, 20); rr++;
+            for (String[] kv : statusSummaryRows(r)) {
+                Row row = sh.createRow(rr++);
+                put(row, 0, kv[0], ovLabel);
+                put(row, 1, kv[1], ovValue);
                 sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 1, last));
             }
             rr++;
@@ -148,6 +179,18 @@ public class ProjectReportExportService {
             for (String[] kv : overviewRows(r.overview())) {
                 XWPFTableRow row = first ? ovt.getRow(0) : ovt.createRow();
                 first = false;
+                cell(row, 0, kv[0], true, LABEL_HEX, 30);
+                cell(row, 1, kv[1], false, null, 70);
+            }
+            blank(doc);
+
+            heading(doc, "THỐNG KÊ THEO TRẠNG THÁI");
+            XWPFTable stt = doc.createTable();
+            stt.setWidth("100%");
+            boolean firstSt = true;
+            for (String[] kv : statusSummaryRows(r)) {
+                XWPFTableRow row = firstSt ? stt.getRow(0) : stt.createRow();
+                firstSt = false;
                 cell(row, 0, kv[0], true, LABEL_HEX, 30);
                 cell(row, 1, kv[1], false, null, 70);
             }
