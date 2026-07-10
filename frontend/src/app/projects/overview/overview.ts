@@ -143,6 +143,12 @@ export class PrjOverview {
   /** Thống kê RIÊNG BIỆT Task / Bug / Issue (tổng, xong, đang làm, chưa làm, trễ hạn, %). */
   readonly catStats = computed<CatStat[]>(() => categoryStats(this.tasks()));
 
+  /** Tiến độ % hoàn thành của từng EPIC / Story (rollup progressPct). Epic trước, giữ thứ tự backlog. */
+  readonly epicStoryRows = computed(() =>
+    this.tasks()
+      .filter((t) => t.type === 'EPIC' || t.type === 'STORY')
+      .map((t) => ({ code: t.code, title: t.title, type: t.type, pct: Math.max(0, Math.min(100, Math.round(t.progressPct ?? 0))) })));
+
   /** Bug/Issue của dự án — để kiểm soát chất lượng theo nhân sự. */
   private readonly bugList = computed(() => this.tasks().filter((t) => t.type === 'BUG' || t.type === 'ISSUE'));
   readonly bugCount = computed(() => this.bugList().length);

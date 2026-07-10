@@ -136,6 +136,19 @@ public class ProjectReportExportService {
             }
             rr++;
 
+            // Tiến độ EPIC/Story (chỉ báo cáo tuần — có tổng quan dự án).
+            if (r.epicStory() != null && !r.epicStory().isEmpty()) {
+                merged(sh, rr, last, "TIẾN ĐỘ EPIC / STORY — " + r.epicStory().size() + " mục", section, 20); rr++;
+                Row h = sh.createRow(rr++);
+                for (int c = 0; c < COLS.length; c++) put(h, c, COLS[c], header);
+                for (ProjectDto.ReportTaskItem t : r.epicStory()) {
+                    Row row = sh.createRow(rr++);
+                    String[] vals = rowOf(t);
+                    for (int c = 0; c < vals.length; c++) put(row, c, vals[c], (c == 1 || c == 4 || c == 6) ? center : cell);
+                }
+                rr++;
+            }
+
             for (Section sec : sections(r)) {
                 merged(sh, rr, last, sec.title() + " — " + sec.rows().size() + " mục", section, 20); rr++;
                 Row h = sh.createRow(rr++);
@@ -195,6 +208,20 @@ public class ProjectReportExportService {
                 cell(row, 1, kv[1], false, null, 70);
             }
             blank(doc);
+
+            if (r.epicStory() != null && !r.epicStory().isEmpty()) {
+                heading(doc, "TIẾN ĐỘ EPIC / STORY — " + r.epicStory().size() + " mục");
+                XWPFTable et = doc.createTable();
+                et.setWidth("100%");
+                XWPFTableRow ehr = et.getRow(0);
+                for (int c = 0; c < COLS.length; c++) cell(ehr, c, COLS[c], true, BRAND_HEX, 0);
+                for (ProjectDto.ReportTaskItem t : r.epicStory()) {
+                    XWPFTableRow row = et.createRow();
+                    String[] vals = rowOf(t);
+                    for (int c = 0; c < vals.length; c++) cell(row, c, vals[c], false, null, 0);
+                }
+                blank(doc);
+            }
 
             for (Section sec : sections(r)) {
                 heading(doc, sec.title() + " — " + sec.rows().size() + " mục");

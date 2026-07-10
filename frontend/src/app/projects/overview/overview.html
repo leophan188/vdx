@@ -92,6 +92,22 @@
       }
     </section>
 
+    <!-- ===== Nhóm: Tiến độ EPIC / Story ===== -->
+    @if (epicStoryRows().length) {
+      <h3 class="prj-ov__section-title">Tiến độ EPIC / Story — {{ epicStoryRows().length }} mục</h3>
+      <section class="prj-ov__panel">
+        @for (e of epicStoryRows(); track e.code) {
+          <div style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--color-border);">
+            <span style="min-width:70px;font-size:.82em;color:var(--color-text-muted);">{{ e.code }}</span>
+            <span class="badge" [class]="e.type==='EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type==='EPIC' ? 'Epic' : 'Story' }}</span>
+            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.title }}</span>
+            <div class="prj-ov__mini-bar" style="width:160px;"><div class="prj-ov__mini-fill" [style.width.%]="e.pct"></div></div>
+            <b style="min-width:48px;text-align:right;">{{ e.pct }}%</b>
+          </div>
+        }
+      </section>
+    }
+
     <!-- ===== Nhóm: Bug/Issue theo nhân sự (kiểm soát chất lượng) ===== -->
     @if (bugCount() > 0) {
       <h3 class="prj-ov__section-title">Bug/Issue theo nhân sự — {{ bugCount() }} bug/issue</h3>

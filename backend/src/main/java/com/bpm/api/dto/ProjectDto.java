@@ -312,7 +312,8 @@ public final class ProjectDto {
             String periodLabel,
             List<ReportTaskItem> done, List<ReportTaskItem> inProgress,
             List<ReportTaskItem> upcoming, List<ReportTaskItem> overdue,
-            ReportOverview overview) {
+            ReportOverview overview,
+            List<ReportTaskItem> epicStory) {
     }
 
     // ===== Burndown (req: biểu đồ cháy việc) =====

@@ -62,7 +62,7 @@ public class ProjectReportService {
         LocalDate d = day != null ? day : LocalDate.now();
         boolean isToday = d.equals(LocalDate.now());
         String label = (isToday ? "Hôm nay " : "Ngày ") + d.format(DMY);
-        return build(projectId, d, d, d.plusDays(1), label, d);
+        return build(projectId, d, d, d.plusDays(1), label, d, false);
     }
 
     @Transactional(readOnly = true)
@@ -77,7 +77,7 @@ public class ProjectReportService {
         LocalDate monday = a.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
         String label = "Tuần " + monday.format(DMY) + "–" + sunday.format(DMY);
-        return build(projectId, monday, sunday, a.plusDays(7), label, a);
+        return build(projectId, monday, sunday, a.plusDays(7), label, a, true);
     }
 
     // ===================== BURNDOWN =====================
@@ -212,7 +212,7 @@ public class ProjectReportService {
      * @param upcomingTo   biên trên cửa sổ "sắp tới" (loại trừ): daily=+1 ngày, weekly=+7 ngày
      */
     private ProjectDto.PeriodReportResponse build(String projectId, LocalDate periodStart, LocalDate periodEnd,
-                                                  LocalDate upcomingTo, String label, LocalDate refToday) {
+                                                  LocalDate upcomingTo, String label, LocalDate refToday, boolean isWeekly) {
         Project p = projectRepo.findById(projectId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dự án"));
         List<ProjectTask> tasks = taskRepo.findByProjectIdOrderByOrderIndexAscSeqAsc(projectId);
@@ -238,6 +238,7 @@ public class ProjectReportService {
         List<ProjectDto.ReportTaskItem> inProgress = new ArrayList<>();
         List<ProjectDto.ReportTaskItem> upcoming = new ArrayList<>();
         List<ProjectDto.ReportTaskItem> overdue = new ArrayList<>();
+        List<ProjectDto.ReportTaskItem> epicStory = new ArrayList<>(); // tiến độ % EPIC/Story (tổng quan)
 
         int totalTasks = tasks.size(), doneTasks = 0, overdueCount = 0, bugCount = 0;
         double totalEstimate = 0, doneEstimate = 0;
@@ -260,6 +261,11 @@ public class ProjectReportService {
 
             ProjectDto.ReportTaskItem item = item(t, p.getCode(), nameCache,
                     progress.getOrDefault(t.getId(), 0.0), taskById);
+
+            // Báo cáo TUẦN: tổng quan tiến độ % của EPIC/Story (dự án). Ngày: không (focus việc trong ngày).
+            if (isWeekly && (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY)) {
+                epicStory.add(item);
+            }
 
             if (isDone) {
                 Instant upd = t.getUpdatedAt();
@@ -285,7 +291,7 @@ public class ProjectReportService {
                 completionPct(tasks, parentIds), totalTasks, doneTasks,
                 round2(totalEstimate), round2(doneEstimate), overdueCount, bugCount);
 
-        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview);
+        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory);
     }
 
     private ProjectDto.ReportTaskItem item(ProjectTask t, String projectCode,

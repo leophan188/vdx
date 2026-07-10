@@ -311,6 +311,7 @@ export interface PeriodReport {
   upcoming: ReportTaskItem[];    // TODO/BACKLOG có startDate trong cửa sổ tới, hoặc chưa lên lịch
   overdue: ReportTaskItem[];     // dueDate < hôm nay & chưa DONE
   overview: ReportOverview;
+  epicStory: ReportTaskItem[];   // (chỉ báo cáo TUẦN) tiến độ % EPIC/Story của dự án
 }
 
 // ===== Burndown (biểu đồ cháy việc) =====

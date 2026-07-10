@@ -42,6 +42,30 @@
       <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
     </section>
 
+    <!-- (0) Tiến độ EPIC / Story — chỉ báo cáo TUẦN (tổng quan dự án) -->
+    @if (r.epicStory?.length) {
+      <section class="rpp__sec">
+        <button type="button" class="rpp__sec-head" (click)="toggle('epic')">
+          <span class="rpp__sec-caret" [class.is-collapsed]="isCollapsed('epic')">▾</span>
+          <span>🏆 Tiến độ EPIC / Story</span>
+          <span class="rpp__sec-count">{{ r.epicStory.length }} mục</span>
+        </button>
+        @if (!isCollapsed('epic')) {
+          <div class="rpp__sec-body">
+            @for (e of r.epicStory; track e.taskId) {
+              <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--color-border);">
+                <span style="min-width:64px;font-size:.82em;opacity:.65;">{{ e.code }}</span>
+                <span class="badge" [class]="e.type==='EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type==='EPIC' ? 'Epic' : 'Story' }}</span>
+                <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.title }}</span>
+                <div class="rpp__mini-bar" style="width:140px;"><div class="rpp__mini-fill" [style.width.%]="e.progressPct"></div></div>
+                <b style="min-width:46px;text-align:right;">{{ clampPct(e.progressPct) }}%</b>
+              </div>
+            }
+          </div>
+        }
+      </section>
+    }
+
     <!-- (1) Ma trận Task/Bug/Issue × trạng thái -->
     <section class="rpp__sec">
       <button type="button" class="rpp__sec-head" (click)="toggle('types')">
