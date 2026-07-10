@@ -357,32 +357,6 @@
         </div>
       </section>
 
-      <!-- THEO NHÂN SỰ -->
-      @if (printPeople().length) {
-        <section class="rp__block">
-          <h3 class="rp__h">THEO NHÂN SỰ — {{ printPeople().length }} người</h3>
-          <table class="rp__tbl">
-            <colgroup><col class="c-stt"><col class="c-name"><col class="c-n"><col class="c-n"><col class="c-n"><col class="c-n"><col class="c-pct"></colgroup>
-            <thead><tr>
-              <th>STT</th><th class="rp__l">Nhân sự</th><th>Tổng</th><th>Xong</th><th>Đang làm</th><th>Trễ hạn</th><th>% Hoàn thành</th>
-            </tr></thead>
-            <tbody>
-              @for (p of printPeople(); track p.name; let i = $index) {
-                <tr>
-                  <td>{{ i + 1 }}</td>
-                  <td class="rp__l"><span class="rp__ava">{{ initials(p.name) }}</span>{{ p.name }}</td>
-                  <td>{{ p.total }}</td><td>{{ p.done }}</td><td>{{ p.doing }}</td><td>{{ p.overdue }}</td>
-                  <td>
-                    <div class="rp__pbar"><div class="rp__pbar-fill" [style.width.%]="clampPct(p.pct)"></div>
-                      <span class="rp__pbar-val">{{ clampPct(p.pct) }}%</span></div>
-                  </td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </section>
-      }
-
       <!-- TIẾN ĐỘ EPIC / STORY (báo cáo tuần) -->
       @if (printEpic().length) {
         <section class="rp__block">
@@ -434,6 +408,60 @@
             </tbody>
           </table>
           @if (printDoneMore() > 0) { <div class="rp__more">… còn {{ printDoneMore() }} mục khác</div> }
+        </section>
+      }
+
+      <!-- ĐANG LÀM -->
+      @if (printDoing().length) {
+        <section class="rp__block">
+          <h3 class="rp__h">ĐANG LÀM ({{ r.inProgress.length }})</h3>
+          <table class="rp__tbl">
+            <colgroup><col class="c-stt"><col class="c-task"><col class="c-pic"><col class="c-status"><col class="c-date"><col class="c-date"><col class="c-pct"></colgroup>
+            <thead><tr>
+              <th>STT</th><th class="rp__l">Tên công việc</th><th>PIC</th><th class="rp__l">Trạng thái</th><th>Bắt đầu</th><th>Kết thúc</th><th>%</th>
+            </tr></thead>
+            <tbody>
+              @for (t of printDoing(); track t.taskId; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td class="rp__l" [title]="t.title">{{ t.title }}</td>
+                  <td><span class="rp__ava rp__ava--sm" [title]="t.assigneeName || ''">{{ initials(t.assigneeName) }}</span></td>
+                  <td class="rp__l"><i class="rp__sdot" [style.background]="statusColor(t.status)"></i>{{ statusLabel(t.status) }}</td>
+                  <td>{{ t.startDate || '—' }}</td><td>{{ t.dueDate || '—' }}</td>
+                  <td><div class="rp__pbar"><div class="rp__pbar-fill" [style.width.%]="clampPct(t.progressPct)"></div>
+                    <span class="rp__pbar-val">{{ clampPct(t.progressPct) }}%</span></div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (printDoingMore() > 0) { <div class="rp__more">… còn {{ printDoingMore() }} mục khác</div> }
+        </section>
+      }
+
+      <!-- SẮP LÀM -->
+      @if (printUpcoming().length) {
+        <section class="rp__block">
+          <h3 class="rp__h">SẮP LÀM ({{ r.upcoming.length }})</h3>
+          <table class="rp__tbl">
+            <colgroup><col class="c-stt"><col class="c-task"><col class="c-pic"><col class="c-status"><col class="c-date"><col class="c-date"><col class="c-pct"></colgroup>
+            <thead><tr>
+              <th>STT</th><th class="rp__l">Tên công việc</th><th>PIC</th><th class="rp__l">Trạng thái</th><th>Bắt đầu</th><th>Kết thúc</th><th>%</th>
+            </tr></thead>
+            <tbody>
+              @for (t of printUpcoming(); track t.taskId; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td class="rp__l" [title]="t.title">{{ t.title }}</td>
+                  <td><span class="rp__ava rp__ava--sm" [title]="t.assigneeName || ''">{{ initials(t.assigneeName) }}</span></td>
+                  <td class="rp__l"><i class="rp__sdot" [style.background]="statusColor(t.status)"></i>{{ statusLabel(t.status) }}</td>
+                  <td>{{ t.startDate || '—' }}</td><td>{{ t.dueDate || '—' }}</td>
+                  <td><div class="rp__pbar"><div class="rp__pbar-fill" [style.width.%]="clampPct(t.progressPct)"></div>
+                    <span class="rp__pbar-val">{{ clampPct(t.progressPct) }}%</span></div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (printUpcomingMore() > 0) { <div class="rp__more">… còn {{ printUpcomingMore() }} mục khác</div> }
         </section>
       }
     </div>

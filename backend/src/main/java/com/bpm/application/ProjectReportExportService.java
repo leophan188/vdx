@@ -64,7 +64,6 @@ public class ProjectReportExportService {
     private List<Section> sections(ProjectDto.PeriodReportResponse r) {
         return List.of(
                 new Section("✅ ĐÃ HOÀN THÀNH", r.done(), GREEN),
-                new Section("⛔ TRỄ HẠN", r.overdue(), RED),
                 new Section("🔄 ĐANG LÀM", r.inProgress(), BLUE),
                 new Section("🗒️ SẮP LÀM", r.upcoming(), BRAND));
     }
@@ -212,26 +211,6 @@ public class ProjectReportExportService {
             rr = Math.max(rr, stRow0 + 13); // chừa chỗ cho biểu đồ
             rr++;
 
-            // THEO NHÂN SỰ — tỷ lệ hoàn thành mỗi người (dùng chung data bar cột G).
-            if (r.byPerson() != null && !r.byPerson().isEmpty()) {
-                merged(sh, rr, last, "THEO NHÂN SỰ — " + r.byPerson().size() + " người", section, 20); rr++;
-                String[] pcols = {"STT", "Nhân sự", "Tổng", "Xong", "Đang làm", "Trễ hạn", "% Hoàn thành"};
-                Row h = sh.createRow(rr++);
-                for (int c = 0; c < pcols.length; c++) put(h, c, pcols[c], header);
-                int pi = 1;
-                for (ProjectDto.PersonProgress pp : r.byPerson()) {
-                    Row row = sh.createRow(rr++);
-                    put(row, 0, String.valueOf(pi++), center);
-                    put(row, 1, pp.name(), cell);
-                    put(row, 2, String.valueOf(pp.total()), center);
-                    put(row, 3, String.valueOf(pp.done()), center);
-                    put(row, 4, String.valueOf(pp.doing()), center);
-                    put(row, 5, String.valueOf(pp.overdue()), center);
-                    putNum(row, 6, pp.pct(), pct);
-                }
-                rr++;
-            }
-
             // Tiến độ EPIC/Story (chỉ báo cáo tuần — có tổng quan dự án).
             if (r.epicStory() != null && !r.epicStory().isEmpty()) {
                 merged(sh, rr, last, "TIẾN ĐỘ EPIC / STORY — " + r.epicStory().size() + " mục", section, 20); rr++;
@@ -340,25 +319,6 @@ public class ProjectReportExportService {
                 cell(row, 1, kv[1], false, null, 70);
             }
             blank(doc);
-
-            // THEO NHÂN SỰ — tỷ lệ hoàn thành mỗi người.
-            if (r.byPerson() != null && !r.byPerson().isEmpty()) {
-                heading(doc, "THEO NHÂN SỰ — " + r.byPerson().size() + " người");
-                String[] pcols = {"STT", "Nhân sự", "Tổng", "Xong", "Đang làm", "Trễ hạn", "% Hoàn thành"};
-                XWPFTable pt = doc.createTable();
-                pt.setWidth("100%");
-                XWPFTableRow phr = pt.getRow(0);
-                for (int c = 0; c < pcols.length; c++) cell(phr, c, pcols[c], true, BRAND_HEX, 0);
-                int pi = 1;
-                for (ProjectDto.PersonProgress pp : r.byPerson()) {
-                    XWPFTableRow row = pt.createRow();
-                    String[] pv = {String.valueOf(pi++), pp.name(), String.valueOf(pp.total()),
-                            String.valueOf(pp.done()), String.valueOf(pp.doing()),
-                            String.valueOf(pp.overdue()), bar(pp.pct())};
-                    for (int c = 0; c < pv.length; c++) cell(row, c, pv[c], false, null, 0);
-                }
-                blank(doc);
-            }
 
             if (r.epicStory() != null && !r.epicStory().isEmpty()) {
                 heading(doc, "TIẾN ĐỘ EPIC / STORY — " + r.epicStory().size() + " mục");

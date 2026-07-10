@@ -538,6 +538,10 @@ export class PrjReportsPeriod {
   readonly printEpicMore = computed(() => Math.max(0, (this.report()?.epicStory?.length ?? 0) - this.PRINT_CAP));
   readonly printDone = computed(() => (this.report()?.done ?? []).slice(0, this.PRINT_CAP));
   readonly printDoneMore = computed(() => Math.max(0, (this.report()?.done?.length ?? 0) - this.PRINT_CAP));
+  readonly printDoing = computed(() => (this.report()?.inProgress ?? []).slice(0, this.PRINT_CAP));
+  readonly printDoingMore = computed(() => Math.max(0, (this.report()?.inProgress?.length ?? 0) - this.PRINT_CAP));
+  readonly printUpcoming = computed(() => (this.report()?.upcoming ?? []).slice(0, this.PRINT_CAP));
+  readonly printUpcomingMore = computed(() => Math.max(0, (this.report()?.upcoming?.length ?? 0) - this.PRINT_CAP));
 
   /** Tiêu đề + ngày cho header trang in. */
   readonly printTitle = computed(() =>
@@ -553,11 +557,19 @@ export class PrjReportsPeriod {
     return `${p(d)}/${p(m)}/${y} · ${wd}`;
   });
 
-  /** Mở trang in: bật lớp phủ → in → tắt. */
+  /** Mở trang in: bật lớp phủ → đổi tiêu đề tài liệu (tránh "VMO DX — Hệ thống nội bộ" lọt vào header PDF) → in → khôi phục. */
   openPrint(): void {
     this.printMode.set(true);
+    const prevTitle = document.title;
+    const clean = (this.period() === 'weekly' ? 'Bao cao tuan' : 'Bao cao ngay')
+      + (this.report()?.periodLabel ? ' - ' + this.report()!.periodLabel : '');
     setTimeout(() => {
-      const done = () => { this.printMode.set(false); window.removeEventListener('afterprint', done); };
+      document.title = clean;
+      const done = () => {
+        this.printMode.set(false);
+        document.title = prevTitle;
+        window.removeEventListener('afterprint', done);
+      };
       window.addEventListener('afterprint', done);
       window.print();
     }, 120);
