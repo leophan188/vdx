@@ -46,6 +46,30 @@
                        (valueChange)="setAssignee($event)"
                        [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
   </div>
+  <!-- Lọc theo KHOẢNG NGÀY (task có lịch chạm khoảng) -->
+  <div class="filter-bar__field">
+    <label>Từ ngày</label>
+    <input type="date" class="bl-date" [value]="dateFrom()" (change)="dateFrom.set($any($event.target).value)" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Đến ngày</label>
+    <input type="date" class="bl-date" [value]="dateTo()" (change)="dateTo.set($any($event.target).value)" />
+  </div>
+  <!-- Chips lọc nhanh -->
+  <div class="filter-bar__field">
+    <span class="filter-bar__label">Nhanh</span>
+    <div class="bl-chips">
+      <button type="button" class="bl-chip" [class.is-on]="isFlagOn('noassignee')"
+              (click)="toggleFlag('noassignee')">Chưa gán người</button>
+      <button type="button" class="bl-chip" [class.is-on]="isFlagOn('nodeadline')"
+              (click)="toggleFlag('nodeadline')">Chưa có hạn</button>
+      <button type="button" class="bl-chip" [class.is-on]="isFlagOn('overdue')"
+              (click)="toggleFlag('overdue')">Quá hạn</button>
+    </div>
+  </div>
+  @if (search() || filterAssignee() || dateFrom() || dateTo() || quickFlags().size) {
+    <button type="button" class="btn btn--ghost btn--sm" (click)="clearQuickFilters()" title="Xoá lọc phụ (giữ Loại/Trạng thái)">✕ Xoá lọc</button>
+  }
   <span class="filter-bar__spacer"></span>
   <button type="button" class="btn btn--secondary btn--sm" (click)="exportExcel()" [disabled]="exporting()"
           title="Xuất backlog ra Excel định dạng đẹp">

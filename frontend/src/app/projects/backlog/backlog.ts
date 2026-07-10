@@ -60,6 +60,14 @@ interface TreeRow {
     .bl-row--parent { border-left-color: var(--type-parent); background: var(--type-parent-bg); }
     .bl-search { height: var(--control-h-sm); min-width: 220px; padding: 0 var(--space-3); border: 1px solid var(--color-border);
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-sm); }
+    .bl-date { height: var(--control-h-sm); padding: 0 var(--space-2); border: 1px solid var(--color-border);
+      border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font-size: var(--text-xs); }
+    .bl-chips { display: inline-flex; gap: var(--space-1); flex-wrap: wrap; }
+    .bl-chip { height: var(--control-h-sm); padding: 0 var(--space-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius-pill, 999px); background: var(--color-surface); color: var(--color-text-muted);
+      font: inherit; font-size: var(--text-xs); cursor: pointer; white-space: nowrap; }
+    .bl-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .bl-chip.is-on { background: var(--color-primary); border-color: var(--color-primary); color: var(--color-text-invert); font-weight: var(--weight-medium); }
     .bl-atts { display: flex; flex-wrap: wrap; gap: 8px; }
     .bl-att { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden; border: 1px solid var(--color-border); }
     .bl-att img { width: 100%; height: 100%; object-fit: cover; display: block; }
@@ -325,6 +333,32 @@ export class PrjBacklog implements OnInit {
   readonly search = signal('');
   /** Giá trị đặc biệt cho lọc "Chưa gán". */
   readonly UNASSIGNED = '__UNASSIGNED__';
+
+  /** Lọc theo KHOẢNG NGÀY (yyyy-MM-dd) — task có lịch [bắt đầu, kết thúc] CHẠM khoảng này (không lưu). */
+  readonly dateFrom = signal('');
+  readonly dateTo = signal('');
+  /** Chips lọc NHANH (AND, chỉ áp task LÁ): 'noassignee' | 'nodeadline' | 'overdue'. */
+  readonly quickFlags = signal<Set<string>>(new Set());
+  isFlagOn(f: string): boolean { return this.quickFlags().has(f); }
+  toggleFlag(f: string): void {
+    const s = new Set(this.quickFlags());
+    s.has(f) ? s.delete(f) : s.add(f);
+    this.quickFlags.set(s);
+  }
+  /** Xoá bộ lọc phụ (tìm/người/ngày/chips) — giữ lọc Loại & Trạng thái. */
+  clearQuickFilters(): void {
+    this.search.set('');
+    this.dateFrom.set('');
+    this.dateTo.set('');
+    this.quickFlags.set(new Set());
+    this.setAssignee('');
+  }
+  /** Parse dd/MM/yyyy → mốc thời gian (ms); null nếu rỗng/sai. */
+  private dmyMs(s: string | null): number | null {
+    if (!s) return null;
+    const m = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    return m ? new Date(+m[3], +m[2] - 1, +m[1]).getTime() : null;
+  }
   private typeKey(): string { return 'bpm.backlog.typeFilter.' + (this.projectId() || 'x'); }
   private statusKey(): string { return 'bpm.backlog.statusFilter.' + (this.projectId() || 'x'); }
   private asgKey(): string { return 'bpm.backlog.assignee.' + (this.projectId() || 'x'); }
@@ -440,11 +474,48 @@ export class PrjBacklog implements OnInit {
       }
     }
 
+    // Lọc KHOẢNG NGÀY: task có [bắt đầu, kết thúc] chạm [from, to] — giữ cả cấp cha.
+    let dateKeep: Set<string> | null = null;
+    const fromMs = this.dateFrom() ? new Date(this.dateFrom()).getTime() : null;
+    const toMs = this.dateTo() ? new Date(this.dateTo()).getTime() + 86_400_000 - 1 : null;
+    if (fromMs !== null || toMs !== null) {
+      dateKeep = new Set<string>();
+      for (const t of this.tasks()) {
+        const s = this.dmyMs(t.startDate), d = this.dmyMs(t.dueDate);
+        const ts = s ?? d, te = d ?? s;
+        if (ts === null && te === null) continue;      // không có lịch → loại khi đang lọc ngày
+        if (fromMs !== null && (te === null || te < fromMs)) continue;
+        if (toMs !== null && (ts === null || ts > toMs)) continue;
+        addAncestors(dateKeep, t);
+      }
+    }
+
+    // Chips nhanh (AND, chỉ task LÁ): chưa gán / chưa có hạn / quá hạn — giữ cả cấp cha.
+    let flagKeep: Set<string> | null = null;
+    const flags = this.quickFlags();
+    if (flags.size) {
+      const parentIds = new Set(this.tasks().map((t) => t.parentId).filter(Boolean) as string[]);
+      const isLeaf = (t: ProjectTask) => t.type !== 'EPIC' && t.type !== 'STORY' && !parentIds.has(t.id);
+      const todayMs = new Date(new Date().toDateString()).getTime();
+      flagKeep = new Set<string>();
+      for (const t of this.tasks()) {
+        if (!isLeaf(t)) continue;
+        const due = this.dmyMs(t.dueDate);
+        if (flags.has('noassignee') && t.assigneeUserId) continue;
+        if (flags.has('nodeadline') && t.dueDate) continue;
+        if (flags.has('overdue') &&
+            !(due !== null && due < todayMs && t.status !== 'DONE' && t.status !== 'CANCELLED')) continue;
+        addAncestors(flagKeep, t);
+      }
+    }
+
     return this.rows().filter((r) => {
       if (searchKeep && !searchKeep.has(r.task.id)) return false;
       if (!types.has(r.task.type)) return false;
       if (assigneeKeep && !assigneeKeep.has(r.task.id)) return false;
       if (statusKeep && !statusKeep.has(r.task.id)) return false;
+      if (dateKeep && !dateKeep.has(r.task.id)) return false;
+      if (flagKeep && !flagKeep.has(r.task.id)) return false;
       return true;
     });
   });
