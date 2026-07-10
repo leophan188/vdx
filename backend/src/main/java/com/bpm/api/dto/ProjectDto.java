@@ -148,7 +148,7 @@ public final class ProjectDto {
                                       String reporterName, String testerName) {
             return new TaskResponse(
                     t.getId(), t.getProjectId(), t.getParentId(), t.getSeq(),
-                    projectCode + "-" + t.getSeq(),
+                    String.valueOf(t.getSeq()),
                     t.getTitle(), t.getDescription(), t.getType().name(), t.getStatus().name(),
                     t.getPriority().name(), t.getAssigneeUserId(), assigneeName,
                     assigneeCode, assigneePosition, assigneeTitle, assigneeDept,
@@ -206,7 +206,7 @@ public final class ProjectDto {
         public static MyTaskResponse of(ProjectTask t, String projectCode, String projectName,
                                         double progressPct, String assigneeCode) {
             return new MyTaskResponse(t.getId(), t.getProjectId(), projectCode, projectName,
-                    projectCode + "-" + t.getSeq(), t.getTitle(), t.getType().name(), t.getStatus().name(),
+                    String.valueOf(t.getSeq()), t.getTitle(), t.getType().name(), t.getStatus().name(),
                     t.getPriority().name(), t.getEstimateHours(),
                     t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct, assigneeCode);
         }

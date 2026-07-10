@@ -363,7 +363,7 @@ public class ProjectReportService {
             reporter = nameCache.computeIfAbsent(t.getReporterUserId(), uid ->
                     userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
         }
-        return new ProjectDto.ReportTaskItem(t.getId(), projectCode + "-" + t.getSeq(), t.getTitle(),
+        return new ProjectDto.ReportTaskItem(t.getId(), String.valueOf(t.getSeq()), t.getTitle(),
                 t.getType().name(), t.getStatus().name(), assignee, t.getEstimateHours(),
                 t.getStartDate() == null ? null : t.getStartDate().format(DMY),
                 t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct,

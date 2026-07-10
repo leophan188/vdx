@@ -202,7 +202,7 @@ public class MeTaskService {
             String projectName = p == null ? null : p.getName();
             out.add(new MeTaskDto.MyBugView(
                     t.getId(), t.getProjectId(), projectCode, projectName,
-                    projectCode == null ? null : projectCode + "-" + t.getSeq(),
+                    String.valueOf(t.getSeq()),
                     t.getTitle(), t.getType().name(), t.getStatus().name(), t.getPriority().name(),
                     t.getAssigneeUserId(), nameByUser.get(t.getAssigneeUserId()),
                     t.getReporterUserId(), nameByUser.get(t.getReporterUserId()),

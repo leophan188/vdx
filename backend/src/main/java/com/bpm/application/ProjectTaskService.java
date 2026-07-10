@@ -120,7 +120,7 @@ public class ProjectTaskService {
                 break;
             }
             chain.addFirst(new ProjectDto.ParentRef(par.getType().name(),
-                    projectCode + "-" + par.getSeq(), par.getTitle()));
+                    String.valueOf(par.getSeq()), par.getTitle()));
             pid = par.getParentId();
         }
         return chain;
@@ -244,7 +244,7 @@ public class ProjectTaskService {
         projectRepo.save(p); // lưu seq mới
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_CREATED", "ProjectTask", saved.getId(), actor,
-                "projectId=" + projectId + ", code=" + p.getCode() + "-" + saved.getSeq());
+                "projectId=" + projectId + ", code=" + saved.getSeq());
         recordActivity(saved, actor, TaskActivity.CREATED,
                 "Tạo " + typeLabel(saved.getType()) + " " + code(p, saved));
         // Nếu tạo task có sẵn assignee → báo người được giao (trừ chính người thao tác).
@@ -274,7 +274,7 @@ public class ProjectTaskService {
         applyFields(t, req, parentId);
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_UPDATED", "ProjectTask", saved.getId(), actor,
-                "projectId=" + projectId + ", code=" + p.getCode() + "-" + saved.getSeq());
+                "projectId=" + projectId + ", code=" + saved.getSeq());
         recordActivity(saved, actor, TaskActivity.EDIT,
                 "Sửa " + typeLabel(saved.getType()) + " " + code(p, saved));
         // Trạng thái đổi qua PUT cũng ghi nhận + thông báo assignee.
@@ -510,7 +510,7 @@ public class ProjectTaskService {
 
     /**
      * Nhật ký hoạt động toàn dự án (mới → cũ, tối đa 300 dòng gần nhất).
-     * Resolve taskCode (= projectCode + "-" + seq) và taskTitle từ ProjectTask;
+     * Resolve taskCode (= seq) và taskTitle từ ProjectTask;
      * task đã xoá → taskCode/taskTitle null nhưng vẫn giữ dòng.
      */
     @Transactional(readOnly = true)
@@ -533,7 +533,7 @@ public class ProjectTaskService {
         List<ProjectDto.ProjectActivityItem> out = new ArrayList<>();
         for (TaskActivity a : activities) {
             ProjectTask t = taskById.get(a.getTaskId());
-            String taskCode = t == null ? null : p.getCode() + "-" + t.getSeq();
+            String taskCode = t == null ? null : String.valueOf(t.getSeq());
             String taskTitle = t == null ? null : t.getTitle();
             out.add(new ProjectDto.ProjectActivityItem(a.getId(), a.getTaskId(), taskCode, taskTitle,
                     a.getActorName(), a.getAction(), a.getDetail(),
@@ -623,7 +623,7 @@ public class ProjectTaskService {
     }
 
     private String code(Project p, ProjectTask t) {
-        return p.getCode() + "-" + t.getSeq();
+        return String.valueOf(t.getSeq());
     }
 
     /** Ràng buộc phân cấp: loại KHÁC Epic BẮT BUỘC chọn cha ĐÚNG loại. */
@@ -832,7 +832,7 @@ public class ProjectTaskService {
                 break;
             }
             chain.addFirst(new ProjectDto.ParentRef(par.getType().name(),
-                    projectCode + "-" + par.getSeq(), par.getTitle()));
+                    String.valueOf(par.getSeq()), par.getTitle()));
             pid = par.getParentId();
         }
         return ProjectDto.TaskResponse.of(t, projectCode, name, code, position, title, dept, leaf, progressPct,
