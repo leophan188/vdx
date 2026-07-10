@@ -75,10 +75,8 @@
 
       <span class="topbar__spacer"></span>
       <!-- TẠO NHANH: bấm mở THẲNG form tạo (chọn loại ngay trong form) -->
-      <button type="button" class="topbar__quick" (click)="openQuickCreate('TASK')"
-              title="Tạo nhanh (Task / Bug / Issue / Epic / Story / Sub-task)">
-        <span class="topbar__quick-ico">＋</span><span class="topbar__quick-label">Tạo nhanh</span>
-      </button>
+      <button type="button" class="btn btn--primary btn--sm" (click)="openQuickCreate('TASK')"
+              title="Tạo nhanh (Task / Bug / Issue / Epic / Story / Sub-task)">＋ Tạo nhanh</button>
       <!-- Giao diện: Sáng/Tối + bộ màu chủ đạo (gộp 1 dropdown cho tiện) -->
       <div class="topbar__theme">
         <button type="button" class="topbar__icon-btn" (click)="toggleThemeMenu()"
