@@ -21,26 +21,36 @@
   @if (loading()) {
     <div class="rpp__loading">Đang tải báo cáo…</div>
   } @else if (report(); as r) {
-    <!-- Số liệu tổng quan -->
-    <section class="rpp__hero">
-      <div class="rpp__hero-top">
-        <span class="rpp__hero-label">Tiến độ hoàn thành</span>
-        <span class="rpp__hero-pct">{{ pct() }}%</span>
-      </div>
-      <div class="rpp__hero-bar" role="progressbar"
-           [attr.aria-valuenow]="pct()" aria-valuemin="0" aria-valuemax="100">
-        <div class="rpp__hero-fill" [style.width.%]="pct()"></div>
-      </div>
-    </section>
+    <!-- TUẦN: tổng quan DỰ ÁN (tiến độ chung + số liệu toàn dự án). NGÀY: bỏ (chỉ số liệu trong ngày). -->
+    @if (period() === 'weekly') {
+      <section class="rpp__hero">
+        <div class="rpp__hero-top">
+          <span class="rpp__hero-label">Tiến độ hoàn thành (dự án)</span>
+          <span class="rpp__hero-pct">{{ pct() }}%</span>
+        </div>
+        <div class="rpp__hero-bar" role="progressbar"
+             [attr.aria-valuenow]="pct()" aria-valuemin="0" aria-valuemax="100">
+          <div class="rpp__hero-fill" [style.width.%]="pct()"></div>
+        </div>
+      </section>
 
-    <section class="rpp__stats">
-      <stat-card icon="📋" label="Tổng task" [value]="r.overview.totalTasks" tint="var(--color-primary)" />
-      <stat-card icon="✅" label="Hoàn thành" [value]="r.overview.doneTasks" tint="var(--status-done)" />
-      <stat-card icon="⏱️" label="Est done / tổng (h)"
-                 [value]="r.overview.doneEstimate + ' / ' + r.overview.totalEstimate" tint="var(--status-active)" />
-      <stat-card icon="⛔" label="Quá hạn" [value]="r.overview.overdueCount" tint="var(--overdue)" />
-      <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
-    </section>
+      <section class="rpp__stats">
+        <stat-card icon="📋" label="Tổng task" [value]="r.overview.totalTasks" tint="var(--color-primary)" />
+        <stat-card icon="✅" label="Hoàn thành" [value]="r.overview.doneTasks" tint="var(--status-done)" />
+        <stat-card icon="⏱️" label="Est done / tổng (h)"
+                   [value]="r.overview.doneEstimate + ' / ' + r.overview.totalEstimate" tint="var(--status-active)" />
+        <stat-card icon="⛔" label="Quá hạn" [value]="r.overview.overdueCount" tint="var(--overdue)" />
+        <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
+      </section>
+    } @else {
+      <!-- NGÀY: số liệu CỦA NGÀY (không phải tổng quan dự án). -->
+      <section class="rpp__stats">
+        <stat-card icon="✅" label="Hoàn thành trong ngày" [value]="r.done.length" tint="var(--status-done)" />
+        <stat-card icon="🔄" label="Đang làm" [value]="r.inProgress.length" tint="var(--status-active)" />
+        <stat-card icon="🗒️" label="Sắp làm" [value]="r.upcoming.length" tint="var(--status-pending)" />
+        <stat-card icon="⛔" label="Trễ hạn" [value]="r.overdue.length" tint="var(--overdue)" />
+      </section>
+    }
 
     <!-- (0) Tiến độ EPIC / Story — chỉ báo cáo TUẦN (tổng quan dự án) -->
     @if (r.epicStory?.length) {
