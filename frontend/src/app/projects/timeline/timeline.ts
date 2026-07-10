@@ -110,9 +110,10 @@ const DAY_MS = 86_400_000;
     /* Cột phải: vùng trục (cuộn ngang) */
     .gantt__scroll { flex: 1 1 auto; overflow-x: auto; }
     .gantt__canvas { position: relative; }
-    /* Header trục 3 TẦNG: Năm / Tháng / (Tuần|Ngày) — ô đơn vị ĐỀU NHAU. */
-    .gantt__axis3 { height: 48px; position: relative; border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
-    .gantt__tier { position: relative; height: 16px; }
+    /* Header trục theo zoom: tầng chia ĐỀU chiều cao 48px (1/2/3 tầng) để canh hàng với danh sách. */
+    .gantt__axis3 { height: 48px; position: relative; display: flex; flex-direction: column;
+      border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
+    .gantt__tier { position: relative; flex: 1 1 0; min-height: 0; }
     .gantt__tcell { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--color-border); box-sizing: border-box;
       display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--color-text-muted);
       overflow: hidden; white-space: nowrap; }
@@ -457,8 +458,11 @@ export class PrjTimeline implements OnInit {
     return out;
   });
 
-  /** Gridline theo tầng đơn vị (để làn Gantt canh cột đều). */
-  readonly ticks = computed<AxisTick[]>(() => this.unitTicks());
+  /** Gridline làn Gantt: theo tuần/ngày khi zoom Ngày/Tuần; theo tháng khi zoom Tháng/Năm. */
+  readonly ticks = computed<AxisTick[]>(() => {
+    const z = this.zoom();
+    return z === 'day' || z === 'week' ? this.unitTicks() : this.monthTicks();
+  });
 
   // ===== Các hàng Gantt (cây phẳng theo parentId, giữ thứ tự orderIndex) =====
   /** Id các task LÀ CHA (được task khác trỏ parentId tới) — để nhận diện "Task cha". */
