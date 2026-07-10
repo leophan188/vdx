@@ -10,11 +10,16 @@
         <button type="button" (click)="toggleNav()"
                 [title]="navCollapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">{{ navCollapsed() ? '»' : '«' }}</button>
       </div>
-      @for (t of visibleTabs(); track t.key) {
-        <button type="button" class="tab" [class.active]="tab() === t.key"
-                (click)="tab.set(t.key)" [title]="t.label">
-          <span class="tab-ico">{{ t.icon }}</span><span class="tab-label">{{ t.label }}</span>
-        </button>
+      @for (grp of tabGroups(); track grp.group) {
+        @if (grp.group && !navCollapsed()) {
+          <span class="tab-group">{{ grp.group }}</span>
+        }
+        @for (t of grp.tabs; track t.key) {
+          <button type="button" class="tab" [class.active]="tab() === t.key"
+                  (click)="tab.set(t.key)" [title]="t.label">
+            <span class="tab-ico">{{ t.icon }}</span><span class="tab-label">{{ t.label }}</span>
+          </button>
+        }
       }
     </nav>
 

@@ -16,7 +16,8 @@ import { PrjDiary } from './diary/diary';
 import { PrjTaskDetail } from './task-detail/task-detail';
 import { loadPref, savePref } from '../shared/view-prefs';
 
-interface WsTab { key: string; label: string; icon: string; feature?: string; }
+interface WsTab { key: string; label: string; icon: string; feature?: string; group: string; }
+interface TabGroup { group: string; tabs: WsTab[]; }
 
 /** Không gian làm việc của một dự án: tab Tổng quan (gộp thống kê) / Thành viên / Backlog / Kanban / Timeline / Bug / Báo cáo ngày-tuần. */
 @Component({
@@ -38,6 +39,9 @@ interface WsTab { key: string; label: string; icon: string; feature?: string; }
       color: var(--color-text-muted); width: 26px; height: 26px; border-radius: var(--radius-md); cursor: pointer;
       display: flex; align-items: center; justify-content: center; font-size: 14px; }
     .pw-nav__toggle button:hover { color: var(--color-primary); border-color: var(--color-primary); }
+    .pw-nav .tab-group { display: block; padding: 10px 12px 4px; font-size: var(--text-xs);
+      font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .pw-nav .tab-group:first-child { padding-top: 2px; }
     .pw-nav .tab { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 0;
       background: transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text-muted);
       font: inherit; font-weight: var(--weight-medium); text-align: left; white-space: nowrap; width: 100%; }
@@ -79,21 +83,35 @@ export class ProjectWorkspace implements OnInit {
   readonly detailOpen = signal(false);
 
   readonly tabs: WsTab[] = [
-    { key: 'overview', label: 'Tổng quan', icon: '📊' }, // luôn hiện (đã vào được dự án)
-    { key: 'kanban', label: 'Kanban', icon: '📋', feature: 'PRJ_KANBAN' },
-    { key: 'bugs', label: 'Bug / Issue', icon: '🐞', feature: 'PRJ_BUGS' },
-    { key: 'backlog', label: 'Backlog', icon: '🗂️', feature: 'PRJ_BACKLOG' },
-    { key: 'timeline', label: 'Timeline', icon: '📅', feature: 'PRJ_TIMELINE' },
-    { key: 'timesheet', label: 'Timesheet', icon: '⏱️', feature: 'PRJ_TIMESHEET' },
-    { key: 'log', label: 'Log', icon: '📜', feature: 'PRJ_LOG' },
-    { key: 'diary', label: 'Nhật ký', icon: '📔', feature: 'PRJ_DIARY' },
-    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️', feature: 'PRJ_REPORTS' },
-    { key: 'members', label: 'Thành viên', icon: '👥', feature: 'PRJ_MEMBERS' }
+    { key: 'overview', label: 'Tổng quan', icon: '📊', group: '' }, // luôn hiện; đứng đầu, không nhóm
+    // Nhóm CÔNG VIỆC
+    { key: 'kanban', label: 'Kanban', icon: '📋', feature: 'PRJ_KANBAN', group: 'Công việc' },
+    { key: 'backlog', label: 'Backlog', icon: '🗂️', feature: 'PRJ_BACKLOG', group: 'Công việc' },
+    { key: 'bugs', label: 'Bug / Issue', icon: '🐞', feature: 'PRJ_BUGS', group: 'Công việc' },
+    { key: 'timeline', label: 'Timeline', icon: '📅', feature: 'PRJ_TIMELINE', group: 'Công việc' },
+    // Nhóm THEO DÕI & BÁO CÁO
+    { key: 'timesheet', label: 'Timesheet', icon: '⏱️', feature: 'PRJ_TIMESHEET', group: 'Theo dõi & Báo cáo' },
+    { key: 'log', label: 'Log', icon: '📜', feature: 'PRJ_LOG', group: 'Theo dõi & Báo cáo' },
+    { key: 'diary', label: 'Nhật ký', icon: '📔', feature: 'PRJ_DIARY', group: 'Theo dõi & Báo cáo' },
+    { key: 'reports-period', label: 'Báo cáo ngày/tuần', icon: '🗓️', feature: 'PRJ_REPORTS', group: 'Theo dõi & Báo cáo' },
+    // Nhóm QUẢN LÝ
+    { key: 'members', label: 'Thành viên', icon: '👥', feature: 'PRJ_MEMBERS', group: 'Quản lý' }
   ];
 
   /** Tab hiển thị theo quyền (FEAT_PRJ_*); tab không có feature → luôn hiện. ADMIN thấy tất cả. */
   readonly visibleTabs = computed<WsTab[]>(() =>
     this.tabs.filter((t) => !t.feature || this.auth.hasFeature(t.feature)));
+
+  /** Tab đã gom theo NHÓM CON (giữ thứ tự; nhóm '' = mục đứng đầu không tiêu đề). */
+  readonly tabGroups = computed<TabGroup[]>(() => {
+    const out: TabGroup[] = [];
+    for (const t of this.visibleTabs()) {
+      let g = out.find((x) => x.group === t.group);
+      if (!g) { g = { group: t.group, tabs: [] }; out.push(g); }
+      g.tabs.push(t);
+    }
+    return out;
+  });
 
   /** Đảm bảo tab đang chọn nằm trong tab được phép; nếu không → về tab đầu tiên được phép. */
   selectTab(key: string): void { this.tab.set(key); }

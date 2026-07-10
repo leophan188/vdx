@@ -5,36 +5,71 @@
   <div class="app-shell" [class.collapsed]="collapsed()" [class.app-shell--mobile-open]="mobileOpen()">
     <!-- Nền mờ phía sau sidebar overlay (chỉ hiện trên mobile khi mở) — bấm để đóng. -->
     <div class="app-shell__scrim" (click)="closeMobileNav()" aria-hidden="true"></div>
-    <!-- RAIL DỌC: logo + icon 5 nhóm; bấm icon → xổ flyout ngang -->
-    <aside class="sidebar rail">
-      <div class="rail__brand" title="VMO DX — Hệ thống nội bộ">
-        <span class="sidebar__logo vmo-mark" aria-hidden="true">
-          <svg viewBox="0 0 48 48">
-            <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
-            <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
-            <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
-          </svg>
-        </span>
-      </div>
-
-      <nav class="rail__nav" aria-label="Nhóm điều hướng">
-        @for (g of visibleGroups(); track g.key) {
-          <button type="button" class="rail__group"
-                  [class.active]="activeGroupKey() === g.key"
-                  [class.open]="openGroup() === g.key"
-                  (click)="toggleGroup(g.key)" [attr.aria-label]="g.label" [title]="g.label">
-            <span class="rail__group-ico">{{ g.icon }}</span>
-          </button>
-        }
-      </nav>
-
-      <div class="rail__foot" title="VMO DX · Phiên bản 2.0.0">
-        <span class="rail__group-ico">🛡️</span>
-      </div>
+    <!-- SIDEBAR: MỞ RỘNG = menu dọc đầy đủ; THU GỌN (.collapsed) = rail icon + flyout ngang -->
+    <aside class="sidebar" [class.rail]="collapsed()">
+      @if (collapsed()) {
+        <!-- ===== RAIL (thu gọn): logo + icon nhóm ===== -->
+        <div class="rail__brand" title="VMO DX — Hệ thống nội bộ">
+          <span class="sidebar__logo vmo-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
+              <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
+              <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
+            </svg>
+          </span>
+        </div>
+        <nav class="rail__nav" aria-label="Nhóm điều hướng">
+          @for (g of visibleGroups(); track g.key) {
+            <button type="button" class="rail__group"
+                    [class.active]="activeGroupKey() === g.key"
+                    [class.open]="openGroup() === g.key"
+                    (click)="toggleGroup(g.key)" [attr.aria-label]="g.label" [title]="g.label">
+              <span class="rail__group-ico">{{ g.icon }}</span>
+            </button>
+          }
+        </nav>
+        <div class="rail__foot" title="VMO DX · Phiên bản 2.0.0"><span class="rail__group-ico">🛡️</span></div>
+      } @else {
+        <!-- ===== MENU DỌC ĐẦY ĐỦ (mở rộng) ===== -->
+        <div class="sidebar__brand">
+          <span class="sidebar__logo vmo-mark" aria-hidden="true">
+            <svg viewBox="0 0 48 48">
+              <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
+              <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
+              <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
+            </svg>
+          </span>
+          <span class="sidebar__brand-text">
+            <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
+            <small>Hệ thống nội bộ</small>
+          </span>
+        </div>
+        <nav class="main-nav" aria-label="Điều hướng chính" (click)="closeMobileNav()">
+          @for (g of visibleGroups(); track g.key) {
+            <span class="nav-group">{{ g.label }}</span>
+            @for (it of g.items; track it.link) {
+              <a [routerLink]="it.link" routerLinkActive="active"
+                 [routerLinkActiveOptions]="{ exact: it.exact || false }" [title]="it.label">
+                <span class="nav-ico">{{ it.icon }}</span><span>{{ it.label }}</span>
+                @if (badgeFor(it.badge)) { <span class="nav-badge">{{ badgeFor(it.badge) }}</span> }
+              </a>
+            }
+          }
+        </nav>
+        <div class="sidebar__foot">
+          <div class="sidebar__foot-card sidebar__foot-card--static">
+            <span class="nav-ico">🛡️</span>
+            <span class="sidebar__foot-meta">
+              <span>VMO DX</span>
+              <span class="sidebar__foot-ver">Phiên bản 2.0.0</span>
+            </span>
+          </div>
+        </div>
+      }
     </aside>
 
-    <!-- FLYOUT NGANG: mục con của nhóm đang mở -->
-    @if (openGroup()) {
+    <!-- FLYOUT NGANG (chỉ ở chế độ thu gọn): mục con của nhóm đang mở -->
+    @if (collapsed() && openGroup()) {
       <div class="nav-flyout__scrim" (click)="closeFlyout()" aria-hidden="true"></div>
       @for (g of visibleGroups(); track g.key) {
         @if (openGroup() === g.key) {
@@ -61,8 +96,6 @@
       <button type="button" class="topbar__icon-btn topbar__collapse-btn" (click)="toggleSidebar()"
               [attr.aria-label]="collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'"
               [title]="collapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">{{ collapsed() ? '⮞' : '⮜' }}</button>
-      <span class="topbar__spacer"></span>
-      <app-global-search />
       <span class="topbar__spacer"></span>
       <!-- TẠO NHANH: bấm ＋ mở THẲNG form tạo (chọn loại ngay trong form) -->
       <button type="button" class="topbar__icon-btn" (click)="openQuickCreate('TASK')"

@@ -7,9 +7,9 @@ import { AuthService } from './core/auth.service';
 import { ThemeService } from './shared/theme.service';
 import { ToastHost } from './shared/toast/toast-host';
 import { NotificationBell } from './shared/notification-bell/notification-bell';
-import { GlobalSearch } from './shared/global-search/global-search';
 import { QuickCreate } from './shared/quick-create/quick-create';
 import { QuickCreateType } from './core/me-bug.service';
+import { loadPref, savePref } from './shared/view-prefs';
 
 /** Bản đồ tiền tố URL → tiêu đề trang (khớp startsWith; dài hơn ưu tiên trước cho route con). */
 const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
@@ -76,7 +76,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, GlobalSearch, QuickCreate],
+  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, QuickCreate],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -199,10 +199,13 @@ export class App {
   protected toggleThemeMenu(): void { this.themeMenuOpen.update((o) => !o); }
   protected closeThemeMenu(): void { this.themeMenuOpen.set(false); }
 
-  /** Thu gọn sidebar (DESIGN.md: điều hướng thu gọn được). */
-  protected readonly collapsed = signal(false);
+  /** Thu gọn sidebar: false = menu dọc đầy đủ (mặc định), true = rail icon + flyout. Lưu localStorage. */
+  protected readonly collapsed = signal<boolean>(loadPref<boolean>('bpm.shell.collapsed', false));
   protected toggleSidebar(): void {
-    this.collapsed.update((c) => !c);
+    const v = !this.collapsed();
+    this.collapsed.set(v);
+    savePref('bpm.shell.collapsed', v);
+    if (!v) this.openGroup.set(null); // mở rộng → đóng flyout còn sót
   }
 
   /** Mở sidebar dạng overlay trên mobile (≤860px). Trên desktop class này vô hại (media query). */
