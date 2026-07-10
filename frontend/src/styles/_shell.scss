@@ -3,14 +3,74 @@
    Thu gọn được. Chưa đăng nhập → không render shell (xem app.html).
    ========================================================================= */
 .app-shell {
+  --rail-w: 66px;
   display: grid;
-  grid-template-columns: var(--sidebar-w) 1fr;
+  grid-template-columns: var(--rail-w) 1fr;
   grid-template-rows: var(--topbar-h) 1fr;
   grid-template-areas: 'sidebar topbar' 'sidebar content';
   height: 100vh;        /* khoá đúng chiều cao màn hình → sidebar/topbar đứng yên */
   overflow: hidden;     /* không cho cả trang cuộn; chỉ .content cuộn */
 }
-.app-shell.collapsed { grid-template-columns: var(--sidebar-w-collapsed) 1fr; }
+/* Rail luôn mảnh; class .collapsed (nút cũ) không đổi bề rộng nữa. */
+.app-shell.collapsed { grid-template-columns: var(--rail-w) 1fr; }
+
+/* ===== RAIL DỌC (icon 5 nhóm) ===== */
+.sidebar.rail {
+  align-items: center;
+  padding: var(--space-3) 0;
+  gap: var(--space-2);
+}
+.rail__brand { display: flex; align-items: center; justify-content: center; height: 40px; margin-bottom: var(--space-2); }
+.rail__brand .sidebar__logo { height: 30px; width: 30px; }
+.rail__nav { display: flex; flex-direction: column; align-items: center; gap: 6px; flex: 1 1 auto;
+  width: 100%; overflow-y: auto; overflow-x: hidden; min-height: 0; }
+.rail__group {
+  width: 44px; height: 44px; border: 0; border-radius: var(--radius-lg); cursor: pointer;
+  background: transparent; color: var(--sidebar-fg-muted); font-size: 20px; line-height: 1;
+  display: flex; align-items: center; justify-content: center; position: relative;
+}
+.rail__group:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-fg); }
+.rail__group.active { color: var(--sidebar-active-fg); }
+/* Vạch chỉ báo nhóm đang ở/đang mở */
+.rail__group.active::before,
+.rail__group.open::before {
+  content: ''; position: absolute; left: -11px; top: 10px; bottom: 10px; width: 3px;
+  border-radius: 0 3px 3px 0; background: var(--color-primary);
+}
+.rail__group.open { background: var(--sidebar-active-bg); color: var(--sidebar-active-fg); }
+.rail__foot { display: flex; align-items: center; justify-content: center; height: 40px; opacity: .8; font-size: 18px; }
+
+/* ===== FLYOUT NGANG (mục con) ===== */
+.nav-flyout__scrim { position: fixed; inset: 0; z-index: 1250; background: transparent; }
+.nav-flyout {
+  position: fixed; left: var(--rail-w); top: 0; bottom: 0; width: 244px; z-index: 1300;
+  background: var(--sidebar-bg); color: var(--sidebar-fg);
+  border-right: 1px solid var(--color-border); box-shadow: 8px 0 28px rgba(0, 0, 0, .28);
+  display: flex; flex-direction: column; padding: var(--space-3) var(--space-2);
+  animation: navFlyIn .14s ease-out;
+}
+@keyframes navFlyIn { from { opacity: 0; transform: translateX(-8px); } to { opacity: 1; transform: none; } }
+.nav-flyout__head {
+  color: var(--sidebar-section); font-size: var(--text-xs); font-weight: var(--weight-semibold);
+  text-transform: uppercase; letter-spacing: .04em; padding: var(--space-2) var(--space-3) var(--space-3);
+}
+.nav-flyout__list { display: flex; flex-direction: column; gap: 2px; overflow-y: auto; min-height: 0; }
+.nav-flyout__list a {
+  display: flex; align-items: center; gap: var(--space-3); min-width: 0;
+  color: var(--sidebar-fg-muted); padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-md); font-weight: var(--weight-medium); white-space: nowrap; text-decoration: none;
+}
+.nav-flyout__list a:hover { background: var(--sidebar-hover-bg); color: var(--sidebar-fg); }
+.nav-flyout__list a.active {
+  background: var(--sidebar-active-bg); color: var(--sidebar-active-fg); font-weight: var(--weight-semibold);
+  box-shadow: 0 6px 16px color-mix(in srgb, var(--color-primary) 38%, transparent);
+}
+.nav-flyout__list a span:not(.nav-ico) { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.nav-flyout__list .nav-ico { width: 18px; text-align: center; flex: none; }
+.nav-flyout__list a .nav-badge {
+  margin-left: auto; flex: none; min-width: 20px; height: 18px; padding: 0 6px; border-radius: 999px;
+  background: var(--color-primary); color: #fff; font-size: 11px; font-weight: 700; line-height: 18px; text-align: center;
+}
 
 /* --- Sidebar --- */
 .sidebar {
@@ -335,6 +395,8 @@ app-global-search { display: block; flex: 1 1 576px; max-width: 738px; min-width
     box-shadow: var(--shadow-pop);
     overflow-y: auto;
   }
+  /* Rail vẫn mảnh khi thành overlay; flyout (z cao hơn) xổ cạnh nó. */
+  .sidebar.rail { width: var(--rail-w); }
   /* Mở bằng nút ☰ (app.ts thêm class .app-shell--mobile-open). */
   .app-shell--mobile-open .sidebar { transform: translateX(0); }
 

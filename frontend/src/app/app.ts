@@ -35,6 +35,45 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/excel-reports', 'Import Excel'],
 ];
 
+/** Một mục điều hướng con (trong flyout). */
+interface NavItem { label: string; icon: string; link: string; feature: string; exact?: boolean; badge?: 'inbox' | 'mytask'; }
+/** Một NHÓM điều hướng (icon trên rail dọc; item xổ ngang). */
+interface NavGroup { key: string; label: string; icon: string; items: NavItem[]; }
+
+/** Cấu hình điều hướng: 5 nhóm (rail dọc) → mục con (flyout ngang). */
+const NAV_GROUPS: NavGroup[] = [
+  { key: 'personal', label: 'Cá nhân', icon: '🏠', items: [
+    { label: 'Bảng tin VDX', icon: '🌐', link: '/home', feature: 'SOCIAL' },
+    { label: 'Việc của tôi', icon: '📥', link: '/inbox', feature: 'INBOX', badge: 'inbox' },
+    { label: 'Hồ sơ của tôi', icon: '🗂️', link: '/my-requests', feature: 'REQUESTS' },
+    { label: 'Backlog của tôi', icon: '📋', link: '/my-tasks', feature: 'MYTASKS', badge: 'mytask' },
+    { label: 'Đăng ký OT', icon: '🕒', link: '/ot', feature: 'OT' },
+    { label: 'Đăng ký nghỉ', icon: '🌴', link: '/leave', feature: 'LEAVE' },
+    { label: 'Tài liệu', icon: '📄', link: '/documents', feature: 'DOCS' },
+  ] },
+  { key: 'project', label: 'Dự án', icon: '📁', items: [
+    { label: 'Quản lý dự án', icon: '📁', link: '/projects', feature: 'PROJECT', exact: true },
+  ] },
+  { key: 'reports', label: 'Báo cáo & Thống kê', icon: '📊', items: [
+    { label: 'Dashboard', icon: '📊', link: '/dashboard', feature: 'REPORTS' },
+    { label: 'Reports vận hành', icon: '📈', link: '/reports', feature: 'REPORTS' },
+  ] },
+  { key: 'tools', label: 'Công cụ', icon: '🧰', items: [
+    { label: 'Import Excel', icon: '🧰', link: '/excel-reports', feature: 'IMPORT' },
+  ] },
+  { key: 'admin', label: 'Quản trị hệ thống', icon: '⚙️', items: [
+    { label: 'Quản lý nhân sự', icon: '👥', link: '/employees', feature: 'HR' },
+    { label: 'Quản lý tài khoản', icon: '👤', link: '/accounts', feature: 'ACCOUNTS' },
+    { label: 'Phân quyền', icon: '🔐', link: '/permissions', feature: 'PERMISSION' },
+    { label: 'Danh mục', icon: '🗂️', link: '/catalog', feature: 'CATALOG' },
+    { label: 'Quy trình', icon: '🔀', link: '/processes', feature: 'PROCESS' },
+    { label: 'Biểu mẫu', icon: '📋', link: '/forms', feature: 'PROCESS' },
+    { label: 'Theo dõi quy trình', icon: '📡', link: '/tracking', feature: 'TRACKING' },
+    { label: 'Cấu hình & dữ liệu', icon: '🛠️', link: '/system-config', feature: 'SYSTEM' },
+    { label: 'Truy vết kiểm toán', icon: '📜', link: '/audit', feature: 'AUDIT' },
+  ] },
+];
+
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, GlobalSearch, QuickCreate],
@@ -48,6 +87,43 @@ export class App {
 
   /** Tiêu đề trang hiện tại (cập nhật theo Router) — hiển thị bên trái topbar. */
   protected readonly pageTitle = signal(this.titleFor(this.router.url));
+  /** URL hiện tại (cho việc tô sáng nhóm đang mở trên rail). */
+  protected readonly currentUrl = signal(this.router.url);
+
+  /** Nhóm điều hướng đang mở flyout (null = đóng). */
+  protected readonly openGroup = signal<string | null>(null);
+
+  /** Nhóm có ≥1 mục hiển thị (theo quyền), kèm mục đã lọc. */
+  protected readonly visibleGroups = computed<NavGroup[]>(() =>
+    NAV_GROUPS
+      .map((g) => ({ ...g, items: g.items.filter((i) => this.has(i.feature)) }))
+      .filter((g) => g.items.length > 0)
+  );
+
+  /** Nhóm chứa route hiện tại (tô sáng icon trên rail). */
+  protected readonly activeGroupKey = computed<string | null>(() => {
+    const path = (this.currentUrl() || '').split(/[?#]/)[0];
+    for (const g of NAV_GROUPS) {
+      for (const it of g.items) {
+        if (path === it.link || path.startsWith(it.link + '/')) return g.key;
+      }
+    }
+    return null;
+  });
+
+  /** Bấm icon nhóm: mở/đóng flyout của nhóm đó. */
+  protected toggleGroup(key: string): void {
+    this.openGroup.update((cur) => (cur === key ? null : key));
+  }
+  protected closeFlyout(): void { this.openGroup.set(null); }
+  /** Bấm 1 mục: điều hướng xong đóng flyout + đóng overlay mobile. */
+  protected onNavItem(): void { this.openGroup.set(null); this.closeMobileNav(); }
+  /** Số badge cho mục (inbox / my-task). */
+  protected badgeFor(kind: 'inbox' | 'mytask' | undefined): number {
+    if (kind === 'inbox') return this.inboxCount();
+    if (kind === 'mytask') return this.myTaskCount();
+    return 0;
+  }
 
   private readonly http = inject(HttpClient);
   /** Số đếm việc — hiện badge cạnh menu "Việc của tôi" / "Việc dự án của tôi". */
@@ -59,6 +135,7 @@ export class App {
       .pipe(filter((e): e is NavigationEnd => e instanceof NavigationEnd))
       .subscribe((e) => {
         this.pageTitle.set(this.titleFor(e.urlAfterRedirects));
+        this.currentUrl.set(e.urlAfterRedirects);
         this.loadCounts();
       });
     this.loadCounts();
