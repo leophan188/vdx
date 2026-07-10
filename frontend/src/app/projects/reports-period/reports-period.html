@@ -91,6 +91,7 @@
               <span class="rpp__mname">Loại</span>
               @for (s of statusMeta; track s.key) { <span>{{ s.label }}</span> }
               <span>Tổng</span>
+              <span>% HT</span>
             </div>
             @for (c of typeStatusRows(); track c.key) {
               <div class="rpp__mrow" [style.--cat-color]="c.color">
@@ -99,6 +100,10 @@
                   <span [class.rpp__zero]="c.byStatus[s.key] === 0">{{ c.byStatus[s.key] }}</span>
                 }
                 <span class="rpp__mtotal">{{ c.total }}</span>
+                <span class="rpp__mpct">
+                  <span class="rpp__mpct-bar"><span class="rpp__mpct-fill" [style.width.%]="catDonePct(c)"></span></span>
+                  <span class="rpp__mpct-val">{{ catDonePct(c) }}%</span>
+                </span>
               </div>
             }
           </div>

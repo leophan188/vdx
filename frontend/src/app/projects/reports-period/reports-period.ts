@@ -106,10 +106,14 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
 
     /* Ma trận loại × trạng thái */
     .rpp__matrix { display: grid; gap: 2px; overflow-x: auto; }
-    .rpp__mrow { display: grid; grid-template-columns: minmax(140px, 1.4fr) repeat(5, minmax(58px, 1fr)) minmax(60px, .8fr);
+    .rpp__mrow { display: grid; grid-template-columns: minmax(140px, 1.4fr) repeat(6, minmax(52px, 1fr)) minmax(56px, .8fr) minmax(120px, 1.2fr);
       align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3);
       border-radius: var(--radius-md); font-variant-numeric: tabular-nums; }
     .rpp__mrow > span:not(.rpp__mname) { text-align: center; }
+    .rpp__mpct { display: flex; align-items: center; gap: var(--space-2); justify-content: center; }
+    .rpp__mpct-bar { flex: 1; max-width: 76px; height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+    .rpp__mpct-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
+    .rpp__mpct-val { min-width: 34px; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
     .rpp__mrow:not(.rpp__mrow--head) { background: var(--color-surface-alt); }
     .rpp__mrow--head { color: var(--color-text-muted); font-size: var(--text-xs);
       font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .03em; }
@@ -354,6 +358,7 @@ export class PrjReportsPeriod {
   }
   clampPct(v: number): number { return Math.max(0, Math.min(100, Math.round(v ?? 0))); }
   personPct(p: PersonStat): number { return p.total ? Math.round((p.done / p.total) * 100) : 0; }
+  catDonePct(c: TypeStatusRow): number { return c.total ? Math.round((c.byStatus['DONE'] / c.total) * 100) : 0; }
 
   openPerson(p: PersonStat): void { this.detailModal.set({ title: 'Công việc của ' + p.name, items: p.items }); }
 
