@@ -54,7 +54,7 @@
     @if (report(); as r) {
       <section class="prj-ov__stats">
         <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
-        <stat-card icon="✅" label="Đã xong" [value]="r.doneTasks" tint="var(--status-done)" />
+        <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
         <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="r.doneEstimate + ' / ' + r.totalEstimate" tint="var(--status-active)" />
         <stat-card icon="🧾" label="Đã log (h)" [value]="r.totalSpent" tint="var(--color-info)" />
         <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
@@ -77,13 +77,15 @@
             <div class="prj-ov__cat-bar">
               <div class="prj-ov__cat-fill" [style.width.%]="c.donePct"></div>
             </div>
-            <div class="prj-ov__cat-pct">{{ c.done }}/{{ c.total }} đã xong · {{ c.donePct }}%</div>
+            <div class="prj-ov__cat-pct">{{ c.done }}/{{ c.total }} hoàn thành · {{ c.donePct }}%</div>
           </div>
           <div class="prj-ov__cat-grid">
-            <span class="prj-ov__cat-cell">✅ Đã xong <b>{{ c.done }}</b></span>
+            <span class="prj-ov__cat-cell">✅ Hoàn thành <b>{{ c.done }}</b></span>
             <span class="prj-ov__cat-cell">🔄 Đang làm <b>{{ c.doing }}</b></span>
             <span class="prj-ov__cat-cell">🔍 Kiểm thử <b>{{ c.review }}</b></span>
-            <span class="prj-ov__cat-cell">🗒️ Chưa làm <b>{{ c.todo }}</b></span>
+            <span class="prj-ov__cat-cell">🗒️ Cần làm <b>{{ c.todo }}</b></span>
+            <span class="prj-ov__cat-cell">📋 Backlog <b>{{ c.backlog }}</b></span>
+            <span class="prj-ov__cat-cell">🚫 Huỷ <b>{{ c.cancel }}</b></span>
             <span class="prj-ov__cat-cell prj-ov__cat-cell--over">⏰ Trễ hạn <b>{{ c.overdue }}</b></span>
           </div>
         </div>
