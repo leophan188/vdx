@@ -258,6 +258,10 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
       border-radius: 50%; background: #1e50a0; color: #fff; font-size: 9px; font-weight: 800; margin-right: 6px; vertical-align: middle; }
     .rp__ava--sm { margin-right: 0; }
     .rp__sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .rp__es-tag { display: inline-block; font-size: 8px; font-weight: 800; letter-spacing: .03em; padding: 1px 5px;
+      border-radius: 4px; margin-right: 6px; background: #e3ecf9; color: #1e50a0; vertical-align: middle; }
+    .rp__es-tag--epic { background: #efe6fb; color: #6b3fb0; }
+    .rp__epic-row td { background: #f3f6fb !important; font-weight: 700; }
     .rp__pbar { position: relative; height: 14px; border-radius: 999px; background: #edf0f4; overflow: hidden; }
     .rp__pbar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: #3fbf6a; }
     .rp__pbar-val { position: relative; z-index: 1; font-size: 9px; font-weight: 700; color: #14532d;
@@ -580,6 +584,9 @@ export class PrjReportsPeriod {
   statusColor(s: TaskStatus): string {
     return STATUS_META.find((x) => x.key === s)?.color ?? '#94a3b8';
   }
+  /** Cấp lồng Epic→Story (thụt lề trang in): từ parentPath "Epic: … › Story: …". */
+  epicLevel(t: ReportTaskItem): number { return t.parentPath ? t.parentPath.split('›').length : 0; }
+
   /** Chữ cái đầu (avatar PIC trang in). */
   initials(name: string | null): string {
     if (!name) return '—';

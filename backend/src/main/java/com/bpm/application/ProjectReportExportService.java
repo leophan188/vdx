@@ -398,7 +398,7 @@ public class ProjectReportExportService {
     }
 
     private static final String[] BL_COLS =
-            {"Mã", "Loại", "Công việc", "Trạng thái", "Người thực hiện", "Est (h)", "% HT", "Bắt đầu", "Kết thúc", "Ưu tiên"};
+            {"Loại", "Công việc", "Trạng thái", "Người thực hiện", "Est (h)", "% HT", "Bắt đầu", "Kết thúc", "Ưu tiên"};
 
     /** Xuất BACKLOG (cây công việc) ra Excel định dạng đẹp. */
     public byte[] backlogXlsx(String projectName, List<ProjectDto.TaskResponse> tasks) {
@@ -431,19 +431,20 @@ public class ProjectReportExportService {
                 ProjectDto.TaskResponse t = n.t();
                 boolean grp = !t.leaf();
                 Row row = sh.createRow(rr++);
+                // Thò thụt cây: mỗi cấp thêm khoảng thụt + "› " cho nhóm để nhìn rõ cha–con như web.
                 String indent = "    ".repeat(Math.min(n.level(), 6));
-                put(row, 0, t.code(), grp ? epicC : center);
-                put(row, 1, typeLabel(t.type()), grp ? epicC : center);
-                put(row, 2, indent + nz(t.title()), grp ? epic : cell);
-                put(row, 3, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
-                put(row, 4, nz(t.assigneeName()), grp ? epic : cell);
-                put(row, 5, t.estimateHours() > 0 ? trimNum(t.estimateHours()) : "", grp ? epicC : center);
-                put(row, 6, Math.round(t.progressPct()) + "%", grp ? epicC : center);
-                put(row, 7, nz(t.startDate()), grp ? epicC : center);
-                put(row, 8, nz(t.dueDate()), grp ? epicC : center);
-                put(row, 9, priorityVi(t.priority()), grp ? epicC : center);
+                String name = indent + (grp && n.level() > 0 ? "› " : "") + nz(t.title());
+                put(row, 0, typeLabel(t.type()), grp ? epicC : center);
+                put(row, 1, name, grp ? epic : cell);
+                put(row, 2, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
+                put(row, 3, nz(t.assigneeName()), grp ? epic : cell);
+                put(row, 4, t.estimateHours() > 0 ? trimNum(t.estimateHours()) : "", grp ? epicC : center);
+                put(row, 5, Math.round(t.progressPct()) + "%", grp ? epicC : center);
+                put(row, 6, nz(t.startDate()), grp ? epicC : center);
+                put(row, 7, nz(t.dueDate()), grp ? epicC : center);
+                put(row, 8, priorityVi(t.priority()), grp ? epicC : center);
             }
-            int[] w = {3000, 2600, 17000, 3800, 4800, 2200, 2200, 3000, 3000, 3000};
+            int[] w = {2600, 18000, 3800, 4800, 2200, 2200, 3000, 3000, 3000};
             for (int c = 0; c < BL_COLS.length; c++) sh.setColumnWidth(c, w[c]);
             sh.createFreezePane(0, 4);
             wb.write(out);
@@ -455,7 +456,7 @@ public class ProjectReportExportService {
 
     // ===================== TIMELINE (lịch trình + Gantt theo tuần) =====================
     private static final String[] TL_COLS =
-            {"Mã", "Công việc", "Người thực hiện", "Bắt đầu", "Kết thúc", "Số ngày", "Trạng thái", "% HT"};
+            {"Công việc", "Người thực hiện", "Bắt đầu", "Kết thúc", "Số ngày", "Trạng thái", "% HT"};
 
     /** Xuất TIMELINE ra Excel: bảng lịch trình + biểu đồ Gantt theo tuần. */
     public byte[] timelineXlsx(String projectName, List<ProjectDto.TaskResponse> tasks) {
@@ -478,7 +479,8 @@ public class ProjectReportExportService {
             sched.sort(java.util.Comparator.comparing((ProjectDto.TaskResponse t) -> parse(t.startDate()))
                     .thenComparing(t -> parse(t.dueDate())));
 
-            XSSFSheet sh = wb.createSheet("Timeline");
+            // ===== SHEET 1: Lịch trình (bảng) — cột cân đối, KHÔNG có Mã =====
+            XSSFSheet sh = wb.createSheet("Lịch trình");
             int last = TL_COLS.length - 1;
             int rr = 0;
             merged(sh, rr++, last, "TIMELINE — LỊCH TRÌNH DỰ ÁN", title, 28);
@@ -491,38 +493,40 @@ public class ProjectReportExportService {
                 java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
                 long days = java.time.temporal.ChronoUnit.DAYS.between(s, d) + 1;
                 Row row = sh.createRow(rr++);
-                put(row, 0, t.code(), center);
-                put(row, 1, nz(t.title()), cell);
-                put(row, 2, nz(t.assigneeName()), cell);
-                put(row, 3, nz(t.startDate()), center);
-                put(row, 4, nz(t.dueDate()), center);
-                put(row, 5, String.valueOf(days), center);
-                put(row, 6, statusVi(t.status()), sst.getOrDefault(t.status(), center));
-                put(row, 7, Math.round(t.progressPct()) + "%", center);
+                put(row, 0, nz(t.title()), cell);
+                put(row, 1, nz(t.assigneeName()), cell);
+                put(row, 2, nz(t.startDate()), center);
+                put(row, 3, nz(t.dueDate()), center);
+                put(row, 4, String.valueOf(days), center);
+                put(row, 5, statusVi(t.status()), sst.getOrDefault(t.status(), center));
+                put(row, 6, Math.round(t.progressPct()) + "%", center);
             }
-            int[] w = {2800, 15000, 4600, 3000, 3000, 2400, 3600, 2400};
+            int[] w = {24000, 5200, 3400, 3400, 2600, 4000, 2600};
             for (int c = 0; c < TL_COLS.length; c++) sh.setColumnWidth(c, w[c]);
+            sh.createFreezePane(0, 5);
 
-            // Biểu đồ Gantt theo TUẦN (nếu có dữ liệu ngày).
+            // ===== SHEET 2: Gantt (theo tuần) — tách riêng để không phá độ rộng bảng =====
             if (!sched.isEmpty()) {
+                XSSFSheet gs = wb.createSheet("Gantt");
                 java.time.LocalDate min = sched.stream().map(t -> parse(t.startDate())).min(java.time.LocalDate::compareTo).get();
                 java.time.LocalDate max = sched.stream().map(t -> parse(t.dueDate())).max(java.time.LocalDate::compareTo).get();
                 java.time.LocalDate w0 = min.with(java.time.DayOfWeek.MONDAY);
                 int weeks = (int) (java.time.temporal.ChronoUnit.WEEKS.between(w0, max.with(java.time.DayOfWeek.MONDAY)) + 1);
                 weeks = Math.min(weeks, 60);
-                rr += 2;
-                merged(sh, rr++, Math.max(last, weeks + 1), "BIỂU ĐỒ GANTT (theo tuần)", section, 20);
-                Row gh = sh.createRow(rr++);
+                int gr = 0;
+                merged(gs, gr++, weeks, "BIỂU ĐỒ GANTT (theo tuần)", title, 28);
+                merged(gs, gr++, weeks, projectName, subtitle, 18);
+                Row gh = gs.createRow(gr++);
                 put(gh, 0, "Công việc", header);
                 for (int wk = 0; wk < weeks; wk++) {
                     put(gh, wk + 1, w0.plusWeeks(wk).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM")), header);
-                    sh.setColumnWidth(wk + 1, 1400);
+                    gs.setColumnWidth(wk + 1, 1200);
                 }
                 for (ProjectDto.TaskResponse t : sched) {
                     if (!t.leaf()) continue; // Gantt chỉ vẽ task lá cho gọn
                     java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
-                    Row row = sh.createRow(rr++);
-                    put(row, 0, t.code() + " " + nz(t.title()), cell);
+                    Row row = gs.createRow(gr++);
+                    put(row, 0, nz(t.title()), cell);
                     boolean done = "DONE".equals(t.status());
                     for (int wk = 0; wk < weeks; wk++) {
                         java.time.LocalDate ws = w0.plusWeeks(wk), we = ws.plusDays(6);
@@ -530,7 +534,8 @@ public class ProjectReportExportService {
                         put(row, wk + 1, "", overlap ? (done ? barDone : bar) : center);
                     }
                 }
-                sh.setColumnWidth(0, 18000);
+                gs.setColumnWidth(0, 26000);
+                gs.createFreezePane(1, 3);
             }
             wb.write(out);
             return out.toByteArray();

@@ -368,9 +368,12 @@
             </tr></thead>
             <tbody>
               @for (t of printEpic(); track t.taskId; let i = $index) {
-                <tr>
+                <tr [class.rp__epic-row]="t.type === 'EPIC'">
                   <td>{{ i + 1 }}</td>
-                  <td class="rp__l" [title]="t.title">{{ t.title }}</td>
+                  <td class="rp__l" [title]="t.title" [style.padding-left.px]="8 + epicLevel(t) * 18">
+                    <span class="rp__es-tag" [class.rp__es-tag--epic]="t.type === 'EPIC'">{{ t.type === 'EPIC' ? 'EPIC' : 'Story' }}</span>
+                    {{ t.title }}
+                  </td>
                   <td><span class="rp__ava rp__ava--sm" [title]="t.assigneeName || ''">{{ initials(t.assigneeName) }}</span></td>
                   <td class="rp__l"><i class="rp__sdot" [style.background]="statusColor(t.status)"></i>{{ statusLabel(t.status) }}</td>
                   <td>{{ t.startDate || '—' }}</td><td>{{ t.dueDate || '—' }}</td>
