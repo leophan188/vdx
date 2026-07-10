@@ -42,16 +42,9 @@ public class PermissionSeeder implements ApplicationRunner {
             }
         }
 
-        // QUANTRI = "Toàn quyền mọi chức năng" → luôn đảm bảo có ĐỦ MỌI chức năng (kể cả chức năng
-        // mới thêm sau này). CHỈ cập nhật khi CÒN tồn tại (không tạo lại nếu admin đã xoá).
-        roleRepo.findById("QUANTRI").ifPresent(r -> {
-            Set<String> allF = all();
-            if (!allF.equals(r.getFeatures())) {
-                r.setFeatures(allF);
-                roleRepo.save(r);
-                log.info("PermissionSeeder: cập nhật QUANTRI = toàn quyền ({} chức năng)", allF.size());
-            }
-        });
+        // KHÔNG ép QUANTRI về toàn quyền mỗi lần khởi động nữa — tôn trọng việc admin CẮT BỚT chức năng
+        // rồi lưu (trước đây seeder ghi đè lại full sau mỗi restart/deploy → "cắt xong lại full").
+        // QUANTRI vẫn được tạo với TOÀN QUYỀN ở lần bootstrap đầu (bảng rỗng, bên dưới); sau đó do admin tự quản.
 
         // CHỈ seed vai trò mẫu khi bảng RỖNG (bootstrap lần đầu). Đã có dữ liệu → tôn trọng
         // việc admin đã thêm/xoá; KHÔNG tự tạo lại vai trò đã xoá sau mỗi lần khởi động/deploy.
