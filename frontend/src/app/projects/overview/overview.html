@@ -70,6 +70,21 @@
       }
     </section>
 
+    <!-- Tiến độ % EPIC / Story (thứ tự cây, Story thụt dưới Epic) -->
+    @if (epicStoryRows().length) {
+      <h3 class="ov2__h">Tiến độ EPIC / Story — {{ epicStoryRows().length }} mục</h3>
+      <section class="ov2__panel">
+        @for (e of epicStoryRows(); track e.code) {
+          <div class="ov2__es-row" [style.padding-left.px]="e.level * 22">
+            <span class="badge" [class]="e.type === 'EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type === 'EPIC' ? 'Epic' : 'Story' }}</span>
+            <span class="ov2__es-title" [title]="e.title">{{ e.title }}</span>
+            <div class="ov2__es-bar"><div class="ov2__es-fill" [style.width.%]="e.pct"></div></div>
+            <b class="ov2__es-pct">{{ e.pct }}%</b>
+          </div>
+        }
+      </section>
+    }
+
     <!-- Thông tin dự án (dữ liệu hiện có) -->
     <section class="ov2__panel">
       <h3 class="ov2__panel-h">Thông tin dự án</h3>
@@ -201,6 +216,27 @@
             }
           </tbody>
         </table>
+
+        @if (epicStoryRows().length) {
+          <h3 class="ovp__h">Tiến độ EPIC / Story</h3>
+          <table class="ovp__cat ovp__es">
+            <colgroup><col><col style="width:150px"></colgroup>
+            <thead><tr><th class="l">Hạng mục</th><th>% Hoàn thành</th></tr></thead>
+            <tbody>
+              @for (e of epicStoryRows(); track e.code) {
+                <tr>
+                  <td class="l" [style.padding-left.px]="8 + e.level * 16">
+                    <span class="ovp__es-tag" [class.ovp__es-tag--epic]="e.type === 'EPIC'">{{ e.type === 'EPIC' ? 'EPIC' : 'Story' }}</span>
+                    {{ e.title }}
+                  </td>
+                  <td>
+                    <div class="ovp__pbar"><div class="ovp__pbar-fill" [style.width.%]="e.pct"></div><span>{{ e.pct }}%</span></div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        }
 
         <div class="ovp__foot">Báo cáo tạo từ hệ thống VMO DX · {{ p.name }} ({{ p.code }})</div>
       }

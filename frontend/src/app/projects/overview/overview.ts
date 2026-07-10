@@ -98,6 +98,14 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ov2__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
     .ov2__actions { display: flex; gap: var(--space-2); align-items: flex-start; }
 
+    /* Tiến độ EPIC / Story */
+    .ov2__es-row { display: flex; align-items: center; gap: var(--space-3); padding: 6px 0; border-bottom: 1px solid var(--color-border); }
+    .ov2__es-row:last-child { border-bottom: 0; }
+    .ov2__es-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ov2__es-bar { width: 160px; flex: 0 0 auto; height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
+    .ov2__es-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
+    .ov2__es-pct { flex: 0 0 auto; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+
     /* ===== TRANG IN / PDF Tổng quan (báo cáo khách) ===== */
     .rp-overlay { position: fixed; inset: 0; z-index: 1000; overflow: auto; background: #5b6472;
       padding: 20px 12px 40px; display: flex; flex-direction: column; align-items: center; }
@@ -126,6 +134,13 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ovp__cat th { background: #eef2f7; color: #475569; font-size: 10px; text-transform: uppercase; font-weight: 800; padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
     .ovp__cat td { padding: 6px; border: 1px solid #eef0f2; text-align: center; }
     .ovp__cat .l { text-align: left; }
+    .ovp__es td.l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+    .ovp__es-tag { display: inline-block; font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
+      margin-right: 6px; background: #e3ecf9; color: #1e50a0; }
+    .ovp__es-tag--epic { background: #efe6fb; color: #6b3fb0; }
+    .ovp__pbar { position: relative; height: 14px; border-radius: 999px; background: #edf0f4; overflow: hidden; }
+    .ovp__pbar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: #3fbf6a; }
+    .ovp__pbar span { position: relative; z-index: 1; font-size: 9px; font-weight: 700; color: #14532d; line-height: 14px; padding-right: 6px; display: block; text-align: right; }
     .ovp__foot { margin-top: 16px; text-align: center; font-size: 10px; color: #94a3b8; }
   `]
 })

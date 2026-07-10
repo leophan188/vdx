@@ -695,6 +695,45 @@ public class ProjectReportExportService {
                 put(row, 6, String.valueOf(a[5]), center);
                 putNum(row, 7, scope > 0 ? Math.round(a[1] * 100.0 / scope) : 0, pct);
             }
+            rr++;
+
+            // TIẾN ĐỘ EPIC / STORY (thứ tự cây, Story thụt dưới Epic) + % hoàn thành
+            java.util.List<ProjectDto.TaskResponse> es = new java.util.ArrayList<>();
+            for (ProjectDto.TaskResponse t : tasks) if ("EPIC".equals(t.type()) || "STORY".equals(t.type())) es.add(t);
+            if (!es.isEmpty()) {
+                merged(sh, rr++, last, "TIẾN ĐỘ EPIC / STORY", section, 20);
+                Row eh = sh.createRow(rr++);
+                put(eh, 0, "Hạng mục", header);
+                for (int c = 1; c < last; c++) put(eh, c, "", header);
+                sh.addMergedRegion(new CellRangeAddress(eh.getRowNum(), eh.getRowNum(), 0, last - 1));
+                put(eh, last, "% HT", header);
+
+                java.util.Set<String> esIds = new java.util.HashSet<>();
+                for (ProjectDto.TaskResponse t : es) esIds.add(t.id());
+                java.util.LinkedHashMap<String, java.util.List<ProjectDto.TaskResponse>> childrenOf = new java.util.LinkedHashMap<>();
+                for (ProjectDto.TaskResponse t : es) {
+                    String k = (t.parentId() != null && esIds.contains(t.parentId())) ? t.parentId() : "";
+                    childrenOf.computeIfAbsent(k, x -> new java.util.ArrayList<>()).add(t);
+                }
+                java.util.Deque<Object[]> stack = new java.util.ArrayDeque<>();
+                java.util.List<ProjectDto.TaskResponse> roots = childrenOf.getOrDefault("", java.util.List.of());
+                for (int i = roots.size() - 1; i >= 0; i--) stack.push(new Object[]{roots.get(i), 0});
+                java.util.Set<String> seen = new java.util.HashSet<>();
+                while (!stack.isEmpty()) {
+                    Object[] o = stack.pop();
+                    ProjectDto.TaskResponse t = (ProjectDto.TaskResponse) o[0];
+                    int lvl = (int) o[1];
+                    if (!seen.add(t.id())) continue;
+                    Row row = sh.createRow(rr++);
+                    String tag = "EPIC".equals(t.type()) ? "Epic" : "Story";
+                    put(row, 0, "    ".repeat(Math.min(lvl, 5)) + (lvl > 0 ? "› " : "") + tag + ": " + nz(t.title()), cellL);
+                    for (int c = 1; c < last; c++) put(row, c, "", cellL);
+                    sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, last - 1));
+                    putNum(row, last, Math.round(t.progressPct()), pct);
+                    java.util.List<ProjectDto.TaskResponse> kids = childrenOf.getOrDefault(t.id(), java.util.List.of());
+                    for (int i = kids.size() - 1; i >= 0; i--) stack.push(new Object[]{kids.get(i), lvl + 1});
+                }
+            }
 
             int[] w = {5200, 2600, 3400, 3000, 3000, 3000, 2400, 3000};
             for (int c = 0; c < cols.length; c++) sh.setColumnWidth(c, w[c]);
