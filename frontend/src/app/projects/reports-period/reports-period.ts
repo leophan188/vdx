@@ -130,10 +130,14 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
 
     /* Theo nhân sự */
     .rpp__people { display: grid; gap: 2px; }
-    .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(60px, 1fr)) minmax(66px, .9fr);
+    .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(54px, 1fr)) minmax(120px, 1.3fr) minmax(66px, .9fr);
       align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
       font-variant-numeric: tabular-nums; }
     .rpp__prow > span:not(.rpp__pname) { text-align: center; }
+    .rpp__ppct { display: flex; align-items: center; gap: var(--space-2); justify-content: center; }
+    .rpp__ppct-bar { flex: 1; max-width: 72px; height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+    .rpp__ppct-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
+    .rpp__ppct-val { min-width: 34px; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
     .rpp__prow--head { color: var(--color-text-muted); font-size: var(--text-xs);
       font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .03em; }
     button.rpp__prow { width: 100%; border: 0; background: var(--color-surface-alt); cursor: pointer;
@@ -349,6 +353,7 @@ export class PrjReportsPeriod {
     a.remove();
   }
   clampPct(v: number): number { return Math.max(0, Math.min(100, Math.round(v ?? 0))); }
+  personPct(p: PersonStat): number { return p.total ? Math.round((p.done / p.total) * 100) : 0; }
 
   openPerson(p: PersonStat): void { this.detailModal.set({ title: 'Công việc của ' + p.name, items: p.items }); }
 

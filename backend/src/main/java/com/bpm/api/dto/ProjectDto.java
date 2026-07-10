@@ -293,7 +293,7 @@ public final class ProjectDto {
     /** Một dòng tóm tắt task trong báo cáo ngày/tuần. */
     public record ReportTaskItem(
             String taskId, String code, String title, String type, String status,
-            String assigneeName, double estimateHours, String dueDate, double progressPct,
+            String assigneeName, double estimateHours, String startDate, String dueDate, double progressPct,
             String priority, String severity, String assigneeUserId,
             /** Chuỗi cha "Epic: … › Story: …" (null nếu là gốc) — làm rõ ngữ cảnh công việc. */
             String parentPath,
@@ -307,13 +307,19 @@ public final class ProjectDto {
             double totalEstimate, double doneEstimate, int overdueCount, int bugCount) {
     }
 
+    /** Tỷ lệ hoàn thành theo nhân sự trong kỳ báo cáo. */
+    public record PersonProgress(String userId, String name,
+                                 int total, int done, int doing, int todo, int overdue, double pct) {
+    }
+
     /** Báo cáo ngày/tuần: nhãn kỳ + 4 nhóm task + tổng quan. */
     public record PeriodReportResponse(
             String periodLabel,
             List<ReportTaskItem> done, List<ReportTaskItem> inProgress,
             List<ReportTaskItem> upcoming, List<ReportTaskItem> overdue,
             ReportOverview overview,
-            List<ReportTaskItem> epicStory) {
+            List<ReportTaskItem> epicStory,
+            List<PersonProgress> byPerson) {
     }
 
     // ===== Burndown (req: biểu đồ cháy việc) =====

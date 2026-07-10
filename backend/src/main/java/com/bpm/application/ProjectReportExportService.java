@@ -46,23 +46,50 @@ public class ProjectReportExportService {
     private static final String LABEL_HEX = "F0F3F7";
 
     private static final String[] COLS =
-            {"Mã", "Loại", "Công việc", "Thuộc (Epic/Story)", "Trạng thái", "Hạn", "% HT"};
+            {"STT", "Tên công việc", "PIC", "Trạng thái", "Bắt đầu", "Kết thúc", "%"};
 
-    private record Section(String title, List<ProjectDto.ReportTaskItem> rows) {}
+    // Màu khối/thẻ theo trạng thái (RGB).
+    private static final byte[] GREEN = {(byte) 0x2E, (byte) 0xA0, (byte) 0x5A};
+    private static final byte[] BLUE = {(byte) 0x1E, (byte) 0x50, (byte) 0xA0};
+    private static final byte[] RED = {(byte) 0xC0, (byte) 0x39, (byte) 0x2B};
+    private static final byte[] GREEN_BG = {(byte) 0xE6, (byte) 0xF4, (byte) 0xEA};
+    private static final byte[] BLUE_BG = {(byte) 0xE3, (byte) 0xEC, (byte) 0xF9};
+    private static final byte[] RED_BG = {(byte) 0xFB, (byte) 0xE9, (byte) 0xE7};
+
+    private record Section(String title, List<ProjectDto.ReportTaskItem> rows, byte[] color) {}
 
     private List<Section> sections(ProjectDto.PeriodReportResponse r) {
         return List.of(
-                new Section("Đã hoàn thành", r.done()),
-                new Section("Trễ hạn", r.overdue()),
-                new Section("Đang làm", r.inProgress()),
-                new Section("Sắp làm", r.upcoming()));
+                new Section("✅ ĐÃ HOÀN THÀNH", r.done(), GREEN),
+                new Section("⛔ TRỄ HẠN", r.overdue(), RED),
+                new Section("🔄 ĐANG LÀM", r.inProgress(), BLUE),
+                new Section("🗒️ SẮP LÀM", r.upcoming(), BRAND));
     }
 
-    /** Một dòng dữ liệu công việc — DÙNG CHUNG cho cả Excel lẫn Word (đảm bảo giống nhau). */
-    private String[] rowOf(ProjectDto.ReportTaskItem t) {
+    /** Cấp lồng của công việc (theo parentPath "Epic › Story › …") để thụt lề tên. */
+    private int level(ProjectDto.ReportTaskItem t) {
+        if (t.parentPath() == null || t.parentPath().isBlank()) {
+            return 0;
+        }
+        return (int) t.parentPath().chars().filter(c -> c == '›').count() + 1;
+    }
+
+    /** Một dòng dữ liệu công việc (STT · Tên thụt lề · PIC · Trạng thái · Bắt đầu · Kết thúc · %). */
+    private String[] rowOf(ProjectDto.ReportTaskItem t, int stt) {
+        int lvl = level(t);
+        String name = "    ".repeat(lvl) + (lvl > 0 ? "└ " : "") + nz(t.title());
         return new String[]{
-                nz(t.code()), typeLabel(t.type()), nz(t.title()), nz(t.parentPath()),
-                statusLabel(t.status()), nz(t.dueDate()), Math.round(t.progressPct()) + "%"};
+                String.valueOf(stt), name, nz(t.assigneeName()), statusLabel(t.status()),
+                nz(t.startDate()), nz(t.dueDate()), Math.round(t.progressPct()) + "%"};
+    }
+
+    /** Thanh tiến trình bằng ký tự cho Word: "██████░░░░ 60%". */
+    private static String bar(double pct) {
+        int p = (int) Math.round(Math.max(0, Math.min(100, pct)));
+        int filled = Math.round(p / 10f);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < 10; i++) sb.append(i < filled ? '█' : '░');
+        return sb.append(' ').append(p).append('%').toString();
     }
 
     /** Đếm công việc theo TỪNG trạng thái (gộp cả 4 khối, khử trùng theo taskId) — liệt kê đủ trạng thái. */
@@ -116,10 +143,26 @@ public class ProjectReportExportService {
             XSSFSheet sh = wb.createSheet("Báo cáo");
             int last = COLS.length - 1;
             int rr = 0;
-            merged(sh, rr, last, "BÁO CÁO DỰ ÁN", title, 28); rr++;
+            merged(sh, rr, last, "BÁO CÁO — " + r.periodLabel(), title, 28); rr++;
             merged(sh, rr, last, projectName, subtitle, 18); rr++;
-            merged(sh, rr, last, "Kỳ báo cáo: " + r.periodLabel(), subtitle, 16); rr++;
             rr++; // dòng trống
+
+            // ===== 3 THẺ SỐ LIỆU: Hoàn thành (xanh) · Đang làm (xanh dương) · Trễ hạn (đỏ) =====
+            int[][] cardCols = {{0, 1}, {2, 4}, {5, 6}};
+            String[] cardLabel = {"✅ HOÀN THÀNH", "🔄 ĐANG LÀM", "⛔ TRỄ HẠN"};
+            int[] cardVal = {r.done().size(), r.inProgress().size(), r.overdue().size()};
+            byte[][] cardColor = {GREEN, BLUE, RED};
+            byte[][] cardBg = {GREEN_BG, BLUE_BG, RED_BG};
+            Row cardHead = sh.createRow(rr);
+            Row cardNum = sh.createRow(rr + 1);
+            cardNum.setHeightInPoints(34);
+            for (int i = 0; i < 3; i++) {
+                put(cardHead, cardCols[i][0], cardLabel[i], style(wb, true, 11, WHITE, cardColor[i], false, HorizontalAlignment.CENTER));
+                put(cardNum, cardCols[i][0], String.valueOf(cardVal[i]), style(wb, true, 24, cardColor[i], cardBg[i], false, HorizontalAlignment.CENTER));
+                sh.addMergedRegion(new CellRangeAddress(rr, rr, cardCols[i][0], cardCols[i][1]));
+                sh.addMergedRegion(new CellRangeAddress(rr + 1, rr + 1, cardCols[i][0], cardCols[i][1]));
+            }
+            rr += 3;
 
             merged(sh, rr, last, "TỔNG QUAN", section, 20); rr++;
             for (String[] kv : overviewRows(r.overview())) {
@@ -140,25 +183,41 @@ public class ProjectReportExportService {
             }
             rr++;
 
+            // THEO NHÂN SỰ — tỷ lệ hoàn thành mỗi người (dùng chung data bar cột G).
+            if (r.byPerson() != null && !r.byPerson().isEmpty()) {
+                merged(sh, rr, last, "THEO NHÂN SỰ — " + r.byPerson().size() + " người", section, 20); rr++;
+                String[] pcols = {"STT", "Nhân sự", "Tổng", "Xong", "Đang làm", "Trễ hạn", "% Hoàn thành"};
+                Row h = sh.createRow(rr++);
+                for (int c = 0; c < pcols.length; c++) put(h, c, pcols[c], header);
+                int pi = 1;
+                for (ProjectDto.PersonProgress pp : r.byPerson()) {
+                    Row row = sh.createRow(rr++);
+                    put(row, 0, String.valueOf(pi++), center);
+                    put(row, 1, pp.name(), cell);
+                    put(row, 2, String.valueOf(pp.total()), center);
+                    put(row, 3, String.valueOf(pp.done()), center);
+                    put(row, 4, String.valueOf(pp.doing()), center);
+                    put(row, 5, String.valueOf(pp.overdue()), center);
+                    putNum(row, 6, pp.pct(), pct);
+                }
+                rr++;
+            }
+
             // Tiến độ EPIC/Story (chỉ báo cáo tuần — có tổng quan dự án).
             if (r.epicStory() != null && !r.epicStory().isEmpty()) {
                 merged(sh, rr, last, "TIẾN ĐỘ EPIC / STORY — " + r.epicStory().size() + " mục", section, 20); rr++;
                 Row h = sh.createRow(rr++);
                 for (int c = 0; c < COLS.length; c++) put(h, c, COLS[c], header);
+                int estt = 1;
                 for (ProjectDto.ReportTaskItem t : r.epicStory()) {
-                    Row row = sh.createRow(rr++);
-                    String[] vals = rowOf(t);
-                    for (int c = 0; c < vals.length; c++) {
-                        if (c == 6) { putNum(row, 6, t.progressPct(), pct); }        // % HT: số → data bar
-                        else if (c == 4) { put(row, 4, vals[4], sst.getOrDefault(t.status(), center)); } // màu trạng thái
-                        else { put(row, c, vals[c], c == 1 ? center : cell); }
-                    }
+                    writeTaskRow(sh.createRow(rr++), rowOf(t, estt++), t, cell, center, pct, sst);
                 }
                 rr++;
             }
 
             for (Section sec : sections(r)) {
-                merged(sh, rr, last, sec.title() + " — " + sec.rows().size() + " mục", section, 20); rr++;
+                XSSFCellStyle secStyle = style(wb, true, 12, WHITE, sec.color(), false, HorizontalAlignment.LEFT);
+                merged(sh, rr, last, sec.title() + " (" + sec.rows().size() + ")", secStyle, 20); rr++;
                 Row h = sh.createRow(rr++);
                 for (int c = 0; c < COLS.length; c++) put(h, c, COLS[c], header);
                 if (sec.rows().isEmpty()) {
@@ -166,16 +225,15 @@ public class ProjectReportExportService {
                     put(row, 0, "— Không có —", cell);
                     sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 0, last));
                 } else {
+                    int stt = 1;
                     for (ProjectDto.ReportTaskItem t : sec.rows()) {
-                        Row row = sh.createRow(rr++);
-                        String[] vals = rowOf(t);
-                        for (int c = 0; c < vals.length; c++) put(row, c, vals[c], (c == 1 || c == 4 || c == 6) ? center : cell);
+                        writeTaskRow(sh.createRow(rr++), rowOf(t, stt++), t, cell, center, pct, sst);
                     }
                 }
                 rr++; // trống giữa các khối
             }
 
-            int[] w = {3200, 2600, 16000, 12000, 4200, 3400, 4200};
+            int[] w = {1600, 20000, 5200, 4200, 3200, 3200, 4200};
             for (int c = 0; c < COLS.length; c++) sh.setColumnWidth(c, w[c]);
 
             // THANH TIẾN TRÌNH %: data bar xanh trên cột "% HT" (G) — chỉ áp lên ô SỐ (bỏ qua header/section).
@@ -205,6 +263,19 @@ public class ProjectReportExportService {
         c.setCellValue(v);
         c.setCellStyle(style);
         return c;
+    }
+
+    /** Ghi 1 dòng công việc (STT · Tên · PIC · Trạng thái tô màu · Bắt đầu · Kết thúc · % số→data bar). */
+    private void writeTaskRow(Row row, String[] vals, ProjectDto.ReportTaskItem t,
+                              XSSFCellStyle cell, XSSFCellStyle center, XSSFCellStyle pct,
+                              java.util.Map<String, XSSFCellStyle> sst) {
+        put(row, 0, vals[0], center);   // STT
+        put(row, 1, vals[1], cell);     // Tên (thụt lề)
+        put(row, 2, vals[2], cell);     // PIC
+        put(row, 3, vals[3], sst.getOrDefault(t.status(), center)); // Trạng thái (màu)
+        put(row, 4, vals[4], center);   // Bắt đầu
+        put(row, 5, vals[5], center);   // Kết thúc
+        putNum(row, 6, t.progressPct(), pct); // %
     }
 
     // ===================== WORD =====================
@@ -240,22 +311,42 @@ public class ProjectReportExportService {
             }
             blank(doc);
 
+            // THEO NHÂN SỰ — tỷ lệ hoàn thành mỗi người.
+            if (r.byPerson() != null && !r.byPerson().isEmpty()) {
+                heading(doc, "THEO NHÂN SỰ — " + r.byPerson().size() + " người");
+                String[] pcols = {"STT", "Nhân sự", "Tổng", "Xong", "Đang làm", "Trễ hạn", "% Hoàn thành"};
+                XWPFTable pt = doc.createTable();
+                pt.setWidth("100%");
+                XWPFTableRow phr = pt.getRow(0);
+                for (int c = 0; c < pcols.length; c++) cell(phr, c, pcols[c], true, BRAND_HEX, 0);
+                int pi = 1;
+                for (ProjectDto.PersonProgress pp : r.byPerson()) {
+                    XWPFTableRow row = pt.createRow();
+                    String[] pv = {String.valueOf(pi++), pp.name(), String.valueOf(pp.total()),
+                            String.valueOf(pp.done()), String.valueOf(pp.doing()),
+                            String.valueOf(pp.overdue()), bar(pp.pct())};
+                    for (int c = 0; c < pv.length; c++) cell(row, c, pv[c], false, null, 0);
+                }
+                blank(doc);
+            }
+
             if (r.epicStory() != null && !r.epicStory().isEmpty()) {
                 heading(doc, "TIẾN ĐỘ EPIC / STORY — " + r.epicStory().size() + " mục");
                 XWPFTable et = doc.createTable();
                 et.setWidth("100%");
                 XWPFTableRow ehr = et.getRow(0);
                 for (int c = 0; c < COLS.length; c++) cell(ehr, c, COLS[c], true, BRAND_HEX, 0);
+                int estt = 1;
                 for (ProjectDto.ReportTaskItem t : r.epicStory()) {
                     XWPFTableRow row = et.createRow();
-                    String[] vals = rowOf(t);
+                    String[] vals = rowOf(t, estt++);
                     for (int c = 0; c < vals.length; c++) cell(row, c, vals[c], false, null, 0);
                 }
                 blank(doc);
             }
 
             for (Section sec : sections(r)) {
-                heading(doc, sec.title() + " — " + sec.rows().size() + " mục");
+                heading(doc, sec.title() + " (" + sec.rows().size() + ")");
                 XWPFTable tbl = doc.createTable();
                 tbl.setWidth("100%");
                 XWPFTableRow hr = tbl.getRow(0);
@@ -264,9 +355,10 @@ public class ProjectReportExportService {
                     XWPFTableRow row = tbl.createRow();
                     cell(row, 0, "— Không có —", false, null, 0);
                 } else {
+                    int nseq = 1;
                     for (ProjectDto.ReportTaskItem t : sec.rows()) {
                         XWPFTableRow row = tbl.createRow();
-                        String[] vals = rowOf(t);
+                        String[] vals = rowOf(t, nseq++);
                         for (int c = 0; c < vals.length; c++) cell(row, c, vals[c], false, null, 0);
                     }
                 }

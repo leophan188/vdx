@@ -318,7 +318,36 @@ public class ProjectReportService {
             }
         }
 
-        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory);
+        // Tỷ lệ hoàn thành THEO NHÂN SỰ (chỉ việc lá: bỏ EPIC/STORY & việc Huỷ)
+        java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue]
+        java.util.Map<String, String> pName = new java.util.LinkedHashMap<>(); // key -> tên hiển thị
+        for (ProjectTask t : tasks) {
+            if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
+            if (t.getStatus() == TaskStatus.CANCELLED) continue;
+            String uid = t.getAssigneeUserId();
+            String key = uid == null ? "" : uid;
+            String nm = uid == null ? "(chưa gán)"
+                    : nameCache.computeIfAbsent(uid, x -> userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
+            pName.putIfAbsent(key, nm);
+            int[] a = pAgg.computeIfAbsent(key, x -> new int[5]);
+            a[0]++;
+            boolean d = t.getStatus() == TaskStatus.DONE;
+            if (d) a[1]++;
+            else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) a[2]++;
+            else a[3]++; // TODO / BACKLOG
+            if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !d) a[4]++;
+        }
+        List<ProjectDto.PersonProgress> byPerson = new ArrayList<>();
+        for (var e : pAgg.entrySet()) {
+            int[] a = e.getValue();
+            double pct = a[0] == 0 ? 0 : Math.round(a[1] * 1000.0 / a[0]) / 10.0;
+            byPerson.add(new ProjectDto.PersonProgress(
+                    e.getKey().isEmpty() ? null : e.getKey(), pName.get(e.getKey()),
+                    a[0], a[1], a[2], a[3], a[4], pct));
+        }
+        byPerson.sort((x, y) -> Integer.compare(y.total(), x.total()));
+
+        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory, byPerson);
     }
 
     private ProjectDto.ReportTaskItem item(ProjectTask t, String projectCode,
@@ -336,6 +365,7 @@ public class ProjectReportService {
         }
         return new ProjectDto.ReportTaskItem(t.getId(), projectCode + "-" + t.getSeq(), t.getTitle(),
                 t.getType().name(), t.getStatus().name(), assignee, t.getEstimateHours(),
+                t.getStartDate() == null ? null : t.getStartDate().format(DMY),
                 t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct,
                 t.getPriority() == null ? null : t.getPriority().name(),
                 t.getSeverity() == null ? null : t.getSeverity().name(),

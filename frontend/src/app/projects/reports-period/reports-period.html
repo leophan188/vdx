@@ -185,7 +185,7 @@
           <div class="rpp__people">
             <div class="rpp__prow rpp__prow--head">
               <span class="rpp__pname">Nhân sự</span>
-              <span>Task</span><span>Bug</span><span>Issue</span><span>Xong</span><span>Tổng</span>
+              <span>Task</span><span>Bug</span><span>Issue</span><span>Xong</span><span>% Hoàn thành</span><span>Tổng</span>
             </div>
             @for (p of byPerson(); track p.name) {
               <button type="button" class="rpp__prow" (click)="openPerson(p)" title="Xem chi tiết công việc">
@@ -196,6 +196,10 @@
                 <span>{{ p.bug }}</span>
                 <span>{{ p.issue }}</span>
                 <span>{{ p.done }}</span>
+                <span class="rpp__ppct">
+                  <span class="rpp__ppct-bar"><span class="rpp__ppct-fill" [style.width.%]="personPct(p)"></span></span>
+                  <span class="rpp__ppct-val">{{ personPct(p) }}%</span>
+                </span>
                 <span class="rpp__ptotal">{{ p.total }} <span class="rpp__pchev">›</span></span>
               </button>
             }
