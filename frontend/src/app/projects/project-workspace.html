@@ -3,21 +3,7 @@
                    [subtitle]="(project()?.code || '') + (project()?.description ? ' · ' + project()!.description : '')"
                    [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
 
-  <div class="pw-layout">
-    <!-- Menu DỌC (1 click) — chức năng con của dự án, gom nhóm -->
-    <nav class="pw-nav" aria-label="Điều hướng dự án">
-      @for (grp of tabGroups(); track grp.group) {
-        @if (grp.group) { <span class="tab-group">{{ grp.group }}</span> }
-        @for (t of grp.tabs; track t.key) {
-          <button type="button" class="tab" [class.active]="tab() === t.key"
-                  (click)="tab.set(t.key)" [title]="t.label">
-            <span class="tab-ico">{{ t.icon }}</span><span class="tab-label">{{ t.label }}</span>
-          </button>
-        }
-      }
-    </nav>
-
-    <div class="pw-body">
+  <!-- Menu tab dự án nằm ở SIDEBAR trái của app (theo module). Nội dung full chiều ngang. -->
   @if (id(); as pid) {
     <!-- @for keyed theo refresh() để tạo lại tab (tải lại) sau khi đổi từ chi tiết task -->
     @for (n of [refresh()]; track n) {
@@ -39,6 +25,4 @@
     <app-prj-task-detail [projectId]="pid" [task]="detailTask()" [open]="detailOpen()"
                          (closed)="closeDetail()" (changed)="onTaskChanged()" />
   }
-    </div>
-  </div>
 </section>

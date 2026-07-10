@@ -207,6 +207,19 @@
 }
 .topbar__module-ico { font-size: 15px; }
 
+/* Nút TẠO NHANH (có chữ) */
+.topbar__quick {
+  display: inline-flex; align-items: center; gap: 6px; border: 0; cursor: pointer;
+  background: var(--color-primary); color: #fff; font: inherit; font-weight: var(--weight-semibold);
+  padding: 7px 12px; border-radius: var(--radius-md); white-space: nowrap; line-height: 1;
+}
+.topbar__quick:hover { background: var(--color-primary-hover, var(--color-primary)); filter: brightness(1.05); }
+.topbar__quick-ico { font-size: 15px; }
+
+/* Màn vừa: module chỉ còn icon cho gọn; màn hẹp: nút tạo nhanh chỉ còn ＋. */
+@media (max-width: 1040px) { .topbar__module-label { display: none; } }
+@media (max-width: 600px) { .topbar__quick-label { display: none; } }
+
 /* --- Tìm kiếm toàn cục (quick-jump) --- */
 /* Phần tử flex trong .topbar là HOST <app-global-search>, KHÔNG phải .gsearch.
    Phải cấp flex cho host (nếu để trên .gsearch thì vô hình vì host tự co nội dung). */

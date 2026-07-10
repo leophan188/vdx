@@ -21,13 +21,27 @@
         </span>
       </div>
       <nav class="main-nav" aria-label="Chức năng" (click)="closeMobileNav()">
-        @if (activeModuleLabel()) { <span class="nav-group">{{ activeModuleLabel() }}</span> }
-        @for (it of moduleItems(); track it.link) {
-          <a [routerLink]="it.link" routerLinkActive="active"
-             [routerLinkActiveOptions]="{ exact: it.exact || false }" [title]="it.label">
-            <span class="nav-ico">{{ it.icon }}</span><span>{{ it.label }}</span>
-            @if (badgeFor(it.badge)) { <span class="nav-badge">{{ badgeFor(it.badge) }}</span> }
-          </a>
+        @if (inProject()) {
+          <!-- Trong 1 dự án: sidebar = TAB của dự án -->
+          @for (grp of projectTabGroups(); track grp.group) {
+            @if (grp.group) { <span class="nav-group">{{ grp.group }}</span> }
+            @for (t of grp.tabs; track t.key) {
+              <a [routerLink]="['/projects', projectId()]" [queryParams]="{ tab: t.key }"
+                 [class.active]="activeProjectTab() === t.key" [title]="t.label">
+                <span class="nav-ico">{{ t.icon }}</span><span>{{ t.label }}</span>
+              </a>
+            }
+          }
+        } @else {
+          <!-- Ngoài dự án: sidebar = chức năng con của module đang chọn -->
+          @if (activeModuleLabel()) { <span class="nav-group">{{ activeModuleLabel() }}</span> }
+          @for (it of moduleItems(); track it.link) {
+            <a [routerLink]="it.link" routerLinkActive="active"
+               [routerLinkActiveOptions]="{ exact: it.exact || false }" [title]="it.label">
+              <span class="nav-ico">{{ it.icon }}</span><span>{{ it.label }}</span>
+              @if (badgeFor(it.badge)) { <span class="nav-badge">{{ badgeFor(it.badge) }}</span> }
+            </a>
+          }
         }
       </nav>
       <div class="sidebar__foot">
@@ -60,9 +74,11 @@
       </nav>
 
       <span class="topbar__spacer"></span>
-      <!-- TẠO NHANH: bấm ＋ mở THẲNG form tạo (chọn loại ngay trong form) -->
-      <button type="button" class="topbar__icon-btn" (click)="openQuickCreate('TASK')"
-              title="Tạo nhanh (Task / Bug / Issue / Epic / Story / Sub-task)">＋</button>
+      <!-- TẠO NHANH: bấm mở THẲNG form tạo (chọn loại ngay trong form) -->
+      <button type="button" class="topbar__quick" (click)="openQuickCreate('TASK')"
+              title="Tạo nhanh (Task / Bug / Issue / Epic / Story / Sub-task)">
+        <span class="topbar__quick-ico">＋</span><span class="topbar__quick-label">Tạo nhanh</span>
+      </button>
       <!-- Giao diện: Sáng/Tối + bộ màu chủ đạo (gộp 1 dropdown cho tiện) -->
       <div class="topbar__theme">
         <button type="button" class="topbar__icon-btn" (click)="toggleThemeMenu()"

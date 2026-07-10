@@ -10,6 +10,7 @@ import { NotificationBell } from './shared/notification-bell/notification-bell';
 import { QuickCreate } from './shared/quick-create/quick-create';
 import { QuickCreateType } from './core/me-bug.service';
 import { loadPref, savePref } from './shared/view-prefs';
+import { PROJECT_TABS, PrjTabGroup, groupPrjTabs } from './projects/project-tabs';
 
 /** Bản đồ tiền tố URL → tiêu đề trang (khớp startsWith; dài hơn ưu tiên trước cho route con). */
 const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
@@ -125,6 +126,24 @@ export class App {
   );
   protected readonly activeModuleLabel = computed<string>(() =>
     this.visibleGroups().find((g) => g.key === this.activeModule())?.label ?? ''
+  );
+
+  // ===== Ngữ cảnh DỰ ÁN: khi ở /projects/{id}, sidebar hiện TAB của dự án =====
+  /** ID dự án nếu đang ở trong 1 dự án cụ thể (không phải trang danh sách /projects). */
+  protected readonly projectId = computed<string | null>(() => {
+    const m = (this.currentUrl() || '').match(/^\/projects\/([^/?#]+)/);
+    return m ? m[1] : null;
+  });
+  protected readonly inProject = computed<boolean>(() => !!this.projectId());
+  /** Tab dự án đang chọn (từ query ?tab=), mặc định 'overview'. */
+  protected readonly activeProjectTab = computed<string>(() => {
+    const q = (this.currentUrl() || '').split('?')[1] || '';
+    const tab = new URLSearchParams(q).get('tab');
+    return tab || 'overview';
+  });
+  /** Tab dự án theo quyền, gom nhóm — cho sidebar khi đang trong dự án. */
+  protected readonly projectTabGroups = computed<PrjTabGroup[]>(() =>
+    groupPrjTabs(PROJECT_TABS.filter((t) => !t.feature || this.has(t.feature)))
   );
   /** Bấm module trên toolbar: chọn module + đi tới mục đầu của nó. */
   protected clickModule(key: string): void {
