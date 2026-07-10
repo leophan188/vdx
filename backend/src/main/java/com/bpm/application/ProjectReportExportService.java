@@ -458,8 +458,10 @@ public class ProjectReportExportService {
     private static final String[] TL_COLS =
             {"Công việc", "Người thực hiện", "Bắt đầu", "Kết thúc", "Số ngày", "Trạng thái", "% HT"};
 
-    /** Xuất TIMELINE ra Excel: bảng lịch trình + biểu đồ Gantt theo tuần. */
-    public byte[] timelineXlsx(String projectName, List<ProjectDto.TaskResponse> tasks) {
+    /** Xuất TIMELINE ra Excel: bảng lịch trình + biểu đồ Gantt theo tuần (header 3 tầng Năm/Tháng/Tuần).
+     *  clampFrom/clampTo = khung ngày theo bộ lọc màn hình (null = tự vừa theo công việc). */
+    public byte[] timelineXlsx(String projectName, List<ProjectDto.TaskResponse> tasks,
+                               java.time.LocalDate clampFrom, java.time.LocalDate clampTo) {
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
             XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
@@ -505,37 +507,69 @@ public class ProjectReportExportService {
             for (int c = 0; c < TL_COLS.length; c++) sh.setColumnWidth(c, w[c]);
             sh.createFreezePane(0, 5);
 
-            // ===== SHEET 2: Gantt (theo tuần) — tách riêng để không phá độ rộng bảng =====
+            // ===== SHEET 2: Gantt (theo tuần) — header 3 TẦNG Năm/Tháng/Tuần, theo khung ngày lọc =====
             if (!sched.isEmpty()) {
                 XSSFSheet gs = wb.createSheet("Gantt");
-                java.time.LocalDate min = sched.stream().map(t -> parse(t.startDate())).min(java.time.LocalDate::compareTo).get();
-                java.time.LocalDate max = sched.stream().map(t -> parse(t.dueDate())).max(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate dataMin = sched.stream().map(t -> parse(t.startDate())).min(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate dataMax = sched.stream().map(t -> parse(t.dueDate())).max(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate min = clampFrom != null ? clampFrom : dataMin;
+                java.time.LocalDate max = clampTo != null ? clampTo : dataMax;
+                if (max.isBefore(min)) { java.time.LocalDate tmp = min; min = max; max = tmp; }
                 java.time.LocalDate w0 = min.with(java.time.DayOfWeek.MONDAY);
                 int weeks = (int) (java.time.temporal.ChronoUnit.WEEKS.between(w0, max.with(java.time.DayOfWeek.MONDAY)) + 1);
-                weeks = Math.min(weeks, 60);
+                weeks = Math.max(1, Math.min(weeks, 80));
+
+                XSSFCellStyle yearSt = style(wb, true, 10, WHITE, BRAND, true, HorizontalAlignment.CENTER);
+                XSSFCellStyle monSt = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.CENTER);
+
                 int gr = 0;
-                merged(gs, gr++, weeks, "BIỂU ĐỒ GANTT (theo tuần)", title, 28);
+                merged(gs, gr++, weeks, "BIỂU ĐỒ GANTT", title, 28);
                 merged(gs, gr++, weeks, projectName, subtitle, 18);
-                Row gh = gs.createRow(gr++);
-                put(gh, 0, "Công việc", header);
-                for (int wk = 0; wk < weeks; wk++) {
-                    put(gh, wk + 1, w0.plusWeeks(wk).format(java.time.format.DateTimeFormatter.ofPattern("dd/MM")), header);
-                    gs.setColumnWidth(wk + 1, 1200);
+
+                // 3 hàng header: Năm (gr) · Tháng (gr+1) · Tuần (gr+2). Cột 0 = "Công việc" gộp 3 hàng.
+                int yRow = gr, mRow = gr + 1, wRow = gr + 2;
+                Row yr = gs.createRow(yRow), mr = gs.createRow(mRow), wr = gs.createRow(wRow);
+                put(yr, 0, "Công việc", header);
+                gs.addMergedRegion(new CellRangeAddress(yRow, wRow, 0, 0));
+                // Nhãn năm/tháng/tuần cho từng cột tuần (theo Thứ Hai của tuần).
+                int wk = 0;
+                while (wk < weeks) { // gộp NĂM
+                    int y = w0.plusWeeks(wk).getYear(), c0 = wk + 1, j = wk;
+                    while (j < weeks && w0.plusWeeks(j).getYear() == y) j++;
+                    for (int c = c0; c <= j; c++) put(yr, c, c == c0 ? "Năm " + y : "", yearSt);
+                    if (j > c0) gs.addMergedRegion(new CellRangeAddress(yRow, yRow, c0, j));
+                    wk = j;
                 }
+                wk = 0;
+                while (wk < weeks) { // gộp THÁNG
+                    java.time.LocalDate d0 = w0.plusWeeks(wk);
+                    int y = d0.getYear(), m = d0.getMonthValue(), c0 = wk + 1, j = wk;
+                    while (j < weeks && w0.plusWeeks(j).getYear() == y && w0.plusWeeks(j).getMonthValue() == m) j++;
+                    for (int c = c0; c <= j; c++) put(mr, c, c == c0 ? "Tháng " + m : "", monSt);
+                    if (j > c0) gs.addMergedRegion(new CellRangeAddress(mRow, mRow, c0, j));
+                    wk = j;
+                }
+                for (int i = 0; i < weeks; i++) { // TUẦN (W##)
+                    java.time.LocalDate mon = w0.plusWeeks(i);
+                    put(wr, i + 1, "W" + mon.get(java.time.temporal.IsoFields.WEEK_OF_WEEK_BASED_YEAR), header);
+                    gs.setColumnWidth(i + 1, 1100);
+                }
+                gr = wRow + 1;
+
                 for (ProjectDto.TaskResponse t : sched) {
-                    if (!t.leaf()) continue; // Gantt chỉ vẽ task lá cho gọn
                     java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
+                    if (d.isBefore(w0) || s.isAfter(w0.plusWeeks(weeks))) continue; // ngoài khung → bỏ
                     Row row = gs.createRow(gr++);
                     put(row, 0, nz(t.title()), cell);
                     boolean done = "DONE".equals(t.status());
-                    for (int wk = 0; wk < weeks; wk++) {
-                        java.time.LocalDate ws = w0.plusWeeks(wk), we = ws.plusDays(6);
+                    for (int i = 0; i < weeks; i++) {
+                        java.time.LocalDate ws = w0.plusWeeks(i), we = ws.plusDays(6);
                         boolean overlap = !s.isAfter(we) && !d.isBefore(ws);
-                        put(row, wk + 1, "", overlap ? (done ? barDone : bar) : center);
+                        put(row, i + 1, "", overlap ? (done ? barDone : bar) : center);
                     }
                 }
                 gs.setColumnWidth(0, 26000);
-                gs.createFreezePane(1, 3);
+                gs.createFreezePane(1, wRow + 1);
             }
             wb.write(out);
             return out.toByteArray();

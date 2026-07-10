@@ -174,7 +174,7 @@ public class ProjectController {
         return taskService.list(id);
     }
 
-    public record ExportFilter(java.util.List<String> taskIds) {
+    public record ExportFilter(java.util.List<String> taskIds, String fromDate, String toDate) {
     }
 
     /**
@@ -206,8 +206,16 @@ public class ProjectController {
             java.util.Set<String> keep = new java.util.HashSet<>(filter.taskIds());
             tasks = tasks.stream().filter(t -> keep.contains(t.id())).toList();
         }
-        byte[] bytes = reportExportService.timelineXlsx("[" + p.code() + "] " + p.name(), tasks);
+        java.time.LocalDate from = parseIso(filter == null ? null : filter.fromDate());
+        java.time.LocalDate to = parseIso(filter == null ? null : filter.toDate());
+        byte[] bytes = reportExportService.timelineXlsx("[" + p.code() + "] " + p.name(), tasks, from, to);
         return xlsxResponse(bytes, "timeline-" + p.code() + ".xlsx");
+    }
+
+    /** Parse yyyy-MM-dd (ISO từ input date FE) → LocalDate; null nếu rỗng/sai. */
+    private static java.time.LocalDate parseIso(String iso) {
+        if (iso == null || iso.isBlank()) return null;
+        try { return java.time.LocalDate.parse(iso.trim()); } catch (Exception e) { return null; }
     }
 
     /** Xuất TỔNG QUAN DỰ ÁN ra Excel (báo cáo khách — KHÔNG có người thực hiện & trễ hạn). */

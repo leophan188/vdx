@@ -424,8 +424,9 @@ export class ProjectService {
     return this.http.post(`${this.base}/${projectId}/backlog/export`, { taskIds: taskIds ?? null },
       { responseType: 'blob', withCredentials: true });
   }
-  exportTimeline(projectId: string, taskIds?: string[]): Observable<Blob> {
-    return this.http.post(`${this.base}/${projectId}/timeline/export`, { taskIds: taskIds ?? null },
+  exportTimeline(projectId: string, taskIds?: string[], fromDate?: string, toDate?: string): Observable<Blob> {
+    return this.http.post(`${this.base}/${projectId}/timeline/export`,
+      { taskIds: taskIds ?? null, fromDate: fromDate || null, toDate: toDate || null },
       { responseType: 'blob', withCredentials: true });
   }
   /** Xuất Excel TỔNG QUAN dự án (báo cáo khách — không có người thực hiện & trễ hạn). */
