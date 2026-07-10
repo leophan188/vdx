@@ -107,8 +107,9 @@ const DAY_MS = 86_400_000;
     .gantt__pct-num { flex: 0 0 auto; font-size: var(--text-xs); color: var(--color-text-muted);
       font-variant-numeric: tabular-nums; min-width: 30px; text-align: right; }
 
-    /* Cột phải: vùng trục (cuộn ngang) */
-    .gantt__scroll { flex: 1 1 auto; overflow-x: auto; }
+    /* Cột phải: vùng trục (cuộn ngang). min-width:0 để flex item CO được → chỉ vùng này cuộn ngang,
+       không đẩy tràn ra ngoài gây cuộn ngang cả trang. */
+    .gantt__scroll { flex: 1 1 auto; min-width: 0; overflow-x: auto; }
     .gantt__canvas { position: relative; }
     /* Header trục theo zoom: tầng chia ĐỀU chiều cao 48px (1/2/3 tầng) để canh hàng với danh sách. */
     .gantt__axis3 { height: 48px; position: relative; display: flex; flex-direction: column;
@@ -297,10 +298,10 @@ export class PrjTimeline implements OnInit {
   /** px mỗi ngày theo zoom — gốc của mọi phép định vị bar/trục. */
   private readonly pxPerDay = computed<number>(() => {
     switch (this.zoom()) {
-      case 'year': return 1100 / 365;  // ~3px/ngày
-      case 'month': return 240 / 30;   // ~8px/ngày
-      case 'week': return 168 / 7;     // 24px/ngày
-      case 'day': return 40;           // 40px/ngày
+      case 'year': return 800 / 365;   // ~2.2px/ngày (năm ~800px)
+      case 'month': return 78 / 30;    // ~2.6px/ngày (tháng ~78px, đủ hiện "Tháng 7")
+      case 'week': return 54 / 7;      // ~7.7px/ngày (tuần ~54px, đủ hiện "W30")
+      case 'day': return 26;           // 26px/ngày (đủ hiện số ngày)
       default: return 8;
     }
   });
