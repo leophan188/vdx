@@ -22,8 +22,11 @@
      Dùng :has() để Ctrl+P ở màn khác không bị trắng trang. */
   body:has(.rp-overlay) *,
   body:has(.gantt.is-printing) * { visibility: hidden !important; }
-  .rp-overlay, .rp-overlay *,
-  .gantt.is-printing, .gantt.is-printing * { visibility: visible !important; }
+  /* Luật hiện lại phải ĐẶC HIỆU HƠN luật ẩn (đều !important) → thêm tiền tố body:has(...) */
+  body:has(.rp-overlay) .rp-overlay,
+  body:has(.rp-overlay) .rp-overlay *,
+  body:has(.gantt.is-printing) .gantt.is-printing,
+  body:has(.gantt.is-printing) .gantt.is-printing * { visibility: visible !important; }
 
   /* --- IN BÁO CÁO (PDF nhiều trang) --- */
   .rp-overlay {
