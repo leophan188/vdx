@@ -192,6 +192,21 @@
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 32ch;
 }
 
+/* --- TOOLBAR NGANG: module chức năng chính --- */
+.topbar__modules { display: flex; align-items: center; gap: 2px; overflow-x: auto; min-width: 0; }
+.topbar__module {
+  display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent;
+  color: color-mix(in srgb, var(--topbar-fg) 72%, transparent);
+  padding: 7px 12px; border-radius: var(--radius-md); cursor: pointer;
+  font: inherit; font-weight: var(--weight-medium); white-space: nowrap; line-height: 1;
+}
+.topbar__module:hover { background: color-mix(in srgb, var(--topbar-fg) 10%, transparent); color: var(--topbar-fg); }
+.topbar__module.active {
+  background: color-mix(in srgb, var(--color-primary) 16%, transparent);
+  color: var(--color-primary); font-weight: var(--weight-semibold);
+}
+.topbar__module-ico { font-size: 15px; }
+
 /* --- Tìm kiếm toàn cục (quick-jump) --- */
 /* Phần tử flex trong .topbar là HOST <app-global-search>, KHÔNG phải .gsearch.
    Phải cấp flex cho host (nếu để trên .gsearch thì vô hình vì host tự co nội dung). */

@@ -90,17 +90,14 @@ export class App {
   /** URL hiện tại (cho việc tô sáng nhóm đang mở trên rail). */
   protected readonly currentUrl = signal(this.router.url);
 
-  /** Nhóm điều hướng đang mở flyout (null = đóng). */
-  protected readonly openGroup = signal<string | null>(null);
-
-  /** Nhóm có ≥1 mục hiển thị (theo quyền), kèm mục đã lọc. */
+  /** Nhóm (MODULE) có ≥1 mục hiển thị theo quyền — hiện trên TOOLBAR NGANG. */
   protected readonly visibleGroups = computed<NavGroup[]>(() =>
     NAV_GROUPS
       .map((g) => ({ ...g, items: g.items.filter((i) => this.has(i.feature)) }))
       .filter((g) => g.items.length > 0)
   );
 
-  /** Nhóm chứa route hiện tại (tô sáng icon trên rail). */
+  /** Module chứa route hiện tại (để tự chọn module theo trang). */
   protected readonly activeGroupKey = computed<string | null>(() => {
     const path = (this.currentUrl() || '').split(/[?#]/)[0];
     for (const g of NAV_GROUPS) {
@@ -111,13 +108,31 @@ export class App {
     return null;
   });
 
-  /** Bấm icon nhóm: mở/đóng flyout của nhóm đó. */
-  protected toggleGroup(key: string): void {
-    this.openGroup.update((cur) => (cur === key ? null : key));
+  /** Module người dùng bấm chọn trên toolbar (null = theo route). */
+  protected readonly selectedModule = signal<string | null>(null);
+  /** Module đang hiển thị: ưu tiên bấm chọn → theo route → module đầu tiên. */
+  protected readonly activeModule = computed<string | null>(() => {
+    const groups = this.visibleGroups();
+    const sel = this.selectedModule();
+    if (sel && groups.some((g) => g.key === sel)) return sel;
+    const byRoute = this.activeGroupKey();
+    if (byRoute && groups.some((g) => g.key === byRoute)) return byRoute;
+    return groups[0]?.key ?? null;
+  });
+  /** Mục con (chức năng) của module đang chọn — hiện ở SIDEBAR DỌC. */
+  protected readonly moduleItems = computed<NavItem[]>(() =>
+    this.visibleGroups().find((g) => g.key === this.activeModule())?.items ?? []
+  );
+  protected readonly activeModuleLabel = computed<string>(() =>
+    this.visibleGroups().find((g) => g.key === this.activeModule())?.label ?? ''
+  );
+  /** Bấm module trên toolbar: chọn module + đi tới mục đầu của nó. */
+  protected clickModule(key: string): void {
+    this.selectedModule.set(key);
+    const g = this.visibleGroups().find((x) => x.key === key);
+    if (g && g.items.length) this.router.navigateByUrl(g.items[0].link);
+    this.closeMobileNav();
   }
-  protected closeFlyout(): void { this.openGroup.set(null); }
-  /** Bấm 1 mục: điều hướng xong đóng flyout + đóng overlay mobile. */
-  protected onNavItem(): void { this.openGroup.set(null); this.closeMobileNav(); }
   /** Số badge cho mục (inbox / my-task). */
   protected badgeFor(kind: 'inbox' | 'mytask' | undefined): number {
     if (kind === 'inbox') return this.inboxCount();
@@ -136,6 +151,7 @@ export class App {
       .subscribe((e) => {
         this.pageTitle.set(this.titleFor(e.urlAfterRedirects));
         this.currentUrl.set(e.urlAfterRedirects);
+        this.selectedModule.set(this.activeGroupKey()); // module theo trang hiện tại
         this.loadCounts();
       });
     this.loadCounts();
@@ -205,7 +221,6 @@ export class App {
     const v = !this.collapsed();
     this.collapsed.set(v);
     savePref('bpm.shell.collapsed', v);
-    if (!v) this.openGroup.set(null); // mở rộng → đóng flyout còn sót
   }
 
   /** Mở sidebar dạng overlay trên mobile (≤860px). Trên desktop class này vô hại (media query). */

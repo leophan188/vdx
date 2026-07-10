@@ -25,33 +25,26 @@ interface TabGroup { group: string; tabs: WsTab[]; }
     PrjReportsPeriod, PrjTimesheet, PrjLog, PrjDiary, PrjTaskDetail],
   templateUrl: './project-workspace.html',
   styles: [`
-    /* Menu NGANG: Tổng quan trực tiếp + nhóm con dạng dropdown. */
-    .pw-menubar { display: flex; align-items: center; gap: 4px; flex-wrap: wrap;
-      border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); padding-bottom: 6px; }
-    .pw-mtab { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent;
-      padding: 9px 14px; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text-muted);
-      font: inherit; font-weight: var(--weight-medium); white-space: nowrap; }
-    .pw-mtab:hover { background: var(--color-surface-alt); color: var(--color-text); }
-    .pw-mtab.active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: var(--weight-semibold); }
-    .pw-mtab .tab-ico { flex: 0 0 auto; }
-    .pw-menu { position: relative; }
-    .pw-menu__chev { font-size: 11px; opacity: .7; margin-left: 2px; }
-    .pw-menu__btn.open { background: var(--color-surface-alt); color: var(--color-text); }
-    .pw-menu__scrim { position: fixed; inset: 0; z-index: 40; background: transparent; }
-    .pw-menu__pop { position: absolute; top: calc(100% + 4px); left: 0; z-index: 41; min-width: 210px;
-      display: flex; flex-direction: column; gap: 2px; padding: var(--space-2);
-      background: var(--color-surface); border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg); box-shadow: var(--shadow-pop, 0 14px 30px rgba(0,0,0,.18)); }
-    .pw-menu__item { display: flex; align-items: center; gap: 10px; border: 0; background: transparent;
-      padding: 9px 12px; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text);
-      font: inherit; font-weight: var(--weight-medium); text-align: left; white-space: nowrap; }
-    .pw-menu__item:hover { background: var(--color-surface-alt); }
-    .pw-menu__item.active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: var(--weight-semibold); }
-    .pw-menu__item .tab-ico { flex: 0 0 auto; width: 20px; text-align: center; }
+    /* Menu DỌC (1 click) — chức năng con của dự án + nội dung. */
+    .pw-layout { display: grid; grid-template-columns: 200px 1fr; gap: var(--space-4); align-items: start; }
+    .pw-nav { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: 2px;
+      padding: var(--space-2); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+    .pw-nav .tab-group { display: block; padding: 10px 12px 4px; font-size: var(--text-xs);
+      font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); }
+    .pw-nav .tab-group:first-child { padding-top: 2px; }
+    .pw-nav .tab { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 0;
+      background: transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text-muted);
+      font: inherit; font-weight: var(--weight-medium); text-align: left; white-space: nowrap; width: 100%; }
+    .pw-nav .tab:hover { background: var(--color-surface-alt); color: var(--color-text); }
+    .pw-nav .tab.active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: var(--weight-semibold); }
+    .pw-nav .tab-ico { flex: 0 0 auto; width: 20px; text-align: center; }
     .pw-body { min-width: 0; }
 
-    @media (max-width: 720px) {
-      .pw-menubar { flex-wrap: nowrap; overflow-x: auto; }
+    /* Màn hẹp: menu thành hàng ngang cuộn được. */
+    @media (max-width: 760px) {
+      .pw-layout { grid-template-columns: 1fr; }
+      .pw-nav { position: static; flex-direction: row; overflow-x: auto; }
+      .pw-nav .tab-group { display: none; }
     }
   `]
 })
@@ -100,15 +93,6 @@ export class ProjectWorkspace implements OnInit {
     return out;
   });
 
-  /** Nhóm con đang mở dropdown trên menu NGANG (null = đóng). */
-  readonly openMenu = signal<string | null>(null);
-  toggleMenu(group: string): void { this.openMenu.update((c) => (c === group ? null : group)); }
-  closeMenu(): void { this.openMenu.set(null); }
-  /** Nhóm chứa tab đang chọn (tô sáng nút nhóm trên menu ngang). */
-  readonly activeTabGroup = computed<string>(() =>
-    this.tabs.find((t) => t.key === this.tab())?.group ?? '');
-  /** Chọn tab từ dropdown: đổi tab + đóng menu. */
-  pickTab(key: string): void { this.tab.set(key); this.openMenu.set(null); }
 
   /** Đảm bảo tab đang chọn nằm trong tab được phép; nếu không → về tab đầu tiên được phép. */
   selectTab(key: string): void { this.tab.set(key); }
