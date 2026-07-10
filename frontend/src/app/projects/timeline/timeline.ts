@@ -176,17 +176,22 @@ export class PrjTimeline implements OnInit {
     if (this.printMode()) return;
     this.printMode.set(true);
     const prevTitle = document.title;
+    // Ép khổ A4 NGANG cho lần in này (chèn động — tin cậy hơn named page trên Chrome).
+    const pageStyle = document.createElement('style');
+    pageStyle.textContent = '@page { size: A4 landscape !important; margin: 8mm !important; }';
+    document.head.appendChild(pageStyle);
     setTimeout(() => {
       // Tính tỉ lệ zoom để toàn bộ Gantt (danh sách + trục) vừa bề ngang trang A4 ngang.
       const list = document.querySelector('.gantt__list') as HTMLElement | null;
       const total = (list?.offsetWidth ?? 480) + this.canvasWidth();
-      const pagePx = 1040; // ~277mm khổ A4 ngang @96dpi (trừ lề)
+      const pagePx = 1080; // ~281mm khổ A4 ngang @96dpi (trừ lề 8mm)
       const zoom = Math.max(0.35, Math.min(1, pagePx / Math.max(1, total)));
       document.documentElement.style.setProperty('--gantt-print-zoom', String(zoom));
       document.title = 'Timeline';
       const done = () => {
         this.printMode.set(false);
         document.title = prevTitle;
+        pageStyle.remove();
         window.removeEventListener('afterprint', done);
       };
       window.addEventListener('afterprint', done);

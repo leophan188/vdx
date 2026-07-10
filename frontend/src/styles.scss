@@ -39,7 +39,7 @@
   /* --- IN TIMELINE (Gantt giống web, thu nhỏ vừa A4 ngang) --- */
   .gantt.is-printing {
     position: absolute !important; inset: auto !important; left: 0 !important; top: 0 !important;
-    width: 100% !important; page: gantt-land;
+    width: 100% !important;
   }
   .gantt.is-printing .gantt__zoom,
   .gantt.is-printing .btn,
@@ -55,6 +55,6 @@
     -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
   }
 
+  /* Mặc định khổ dọc (báo cáo). Timeline tự chèn động @page landscape khi in (openPrintPdf). */
   @page { size: A4 portrait; margin: 10mm; }
-  @page gantt-land { size: A4 landscape; margin: 8mm; }
 }
