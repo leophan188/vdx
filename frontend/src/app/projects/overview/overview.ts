@@ -1,12 +1,11 @@
-import { Component, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { StatCard } from '../../shared/stat-card/stat-card';
-import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
-import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { formatThousands } from '../../shared/format';
 import { categoryStats, CatStat } from '../work-stats';
 import {
-  ProjectService, Project, ProjectReport, ProjectStatus, TaskStatus, TaskType, ProjectTask
+  ProjectService, Project, ProjectReport, ProjectStatus, TaskStatus, TaskType, ProjectTask,
+  ProjectMember, ProjectActivityItem
 } from '../../core/project.service';
 
 interface StatusBar { status: TaskStatus; label: string; color: string; count: number; pct: number; }
@@ -21,124 +20,106 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
 @Component({
   selector: 'app-prj-overview',
   standalone: true,
-  imports: [StatCard, DataGrid, GridCellDirective, EmployeeChip],
+  imports: [StatCard, EmployeeChip],
   templateUrl: './overview.html',
   styles: [`
-    .prj-ov { display: grid; gap: var(--space-4); }
+    .ov2 { display: grid; gap: var(--space-4); }
 
-    .prj-ov__head { display: flex; flex-wrap: wrap; align-items: flex-start;
-      justify-content: space-between; gap: var(--space-3); padding: var(--space-5);
-      border: 1px solid var(--color-border); border-radius: var(--radius-lg);
-      background: var(--color-surface); }
-    .prj-ov__title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
-      margin: 0 0 var(--space-2); font-size: var(--font-size-xl, 1.25rem); }
-    .prj-ov__code { font-size: var(--font-size-sm); font-weight: 600; color: var(--color-text-muted);
-      background: var(--color-surface-alt); padding: 2px var(--space-2); border-radius: var(--radius-sm); }
-    .prj-ov__meta { display: flex; flex-wrap: wrap; gap: var(--space-4);
-      color: var(--color-text-muted); font-size: var(--font-size-sm); }
-    .prj-ov__meta b { color: var(--color-text); font-weight: 600; }
-
-    /* Tiêu đề nhóm */
-    .prj-ov__section-title { margin: var(--space-2) 0 0; font-size: var(--text-sm, .85rem);
-      font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .04em;
-      color: var(--color-text-muted); }
-
-    /* Tiến độ */
-    .prj-ov__progress { padding: var(--space-5); border: 1px solid var(--color-border);
+    /* Header */
+    .ov2__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
+      gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-border);
       border-radius: var(--radius-lg); background: var(--color-surface); }
-    .prj-ov__progress-top { display: flex; align-items: baseline; justify-content: space-between;
-      margin-bottom: var(--space-3); }
-    .prj-ov__progress-label { font-weight: 600; }
-    .prj-ov__progress-sub { color: var(--color-text-muted); font-size: var(--font-size-sm); }
-    .prj-ov__progress-pct { font-size: 1.75rem; font-weight: 700; color: var(--color-primary);
-      line-height: 1; }
-    .prj-ov__bar { height: 16px; border-radius: var(--radius-full); overflow: hidden;
-      background: var(--color-surface-alt); border: 1px solid var(--color-border); }
-    .prj-ov__bar-fill { height: 100%; border-radius: var(--radius-full);
-      background: linear-gradient(90deg, var(--status-active), var(--status-done));
-      transition: width .3s ease; }
+    .ov2__title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: 0 0 var(--space-2); font-size: 1.35rem; }
+    .ov2__code { font-size: .8rem; font-weight: 600; color: var(--color-text-muted); background: var(--color-surface-alt);
+      padding: 2px 8px; border-radius: var(--radius-sm); }
+    .ov2__meta { display: flex; flex-wrap: wrap; gap: var(--space-4); color: var(--color-text-muted); font-size: var(--text-sm); }
+    .ov2__meta b { color: var(--color-text); font-weight: 600; }
 
-    .prj-ov__stats { display: grid; gap: var(--space-3);
-      grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    /* Panel trên: tiến độ + lưới thẻ */
+    .ov2__top { display: grid; gap: var(--space-3); grid-template-columns: minmax(240px, 300px) 1fr; align-items: stretch; }
+    @media (max-width: 720px) { .ov2__top { grid-template-columns: 1fr; } }
+    .ov2__progress { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-2); justify-content: center; }
+    .ov2__progress-label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 600; }
+    .ov2__progress-pct { font-size: 2.4rem; font-weight: 800; color: var(--color-primary); line-height: 1; }
+    .ov2__progress-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .ov2__bar { height: 10px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; margin-top: var(--space-1); }
+    .ov2__bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--status-active), var(--status-done)); transition: width .3s; }
+    .ov2__stats { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
 
-    /* Phân bổ (byStatus / byType) */
-    .prj-ov__panels { display: grid; gap: var(--space-4);
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
-    .prj-ov__panel { padding: var(--space-4); border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm); }
-    .prj-ov__panel-title { margin: 0 0 var(--space-3); font-size: var(--text-sm, .85rem);
-      font-weight: var(--weight-semibold); color: var(--color-text-muted); }
+    .ov2__h { margin: var(--space-2) 0 0; font-size: 1rem; font-weight: var(--weight-semibold); }
 
-    .prj-ov__barrow { display: grid; grid-template-columns: 110px 1fr 40px; align-items: center;
-      gap: var(--space-3); margin: var(--space-2) 0; font-size: var(--text-sm, .85rem); }
-    .prj-ov__row-bar { height: 10px; border-radius: var(--radius-full);
-      background: var(--color-surface-alt); overflow: hidden; }
-    .prj-ov__row-fill { height: 100%; border-radius: var(--radius-full); }
-    .prj-ov__row-val { text-align: right; color: var(--color-text-muted); }
+    /* Thẻ theo loại (Công việc / Bug / Issue) */
+    .ov2__cats { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+    .ov2__cat { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      background: var(--color-surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: var(--space-3); }
+    .ov2__cat-head { display: flex; align-items: center; gap: var(--space-2); }
+    .ov2__cat-ico { font-size: 1.1rem; }
+    .ov2__cat-name { font-weight: var(--weight-semibold); }
+    .ov2__cat-total { margin-left: auto; font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--cat, var(--color-primary)); font-variant-numeric: tabular-nums; }
+    .ov2__cat-bar { height: 7px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
+    .ov2__cat-fill { height: 100%; border-radius: 999px; background: var(--cat, var(--status-done)); }
+    .ov2__cat-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .ov2__cat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+    .ov2__cat-list li { display: flex; align-items: center; justify-content: space-between; padding: 5px 10px;
+      border-radius: var(--radius-md); background: var(--color-surface-alt); font-size: var(--text-sm); }
+    .ov2__cat-list b { font-variant-numeric: tabular-nums; }
+    .ov2__cat-link { align-self: flex-start; margin-top: 2px; border: 0; background: none; color: var(--color-primary);
+      cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: 600; padding: 0; }
+    .ov2__cat-link:hover { text-decoration: underline; }
 
-    .prj-ov__types { display: flex; flex-wrap: wrap; gap: var(--space-2) var(--space-3); }
-    .prj-ov__type { display: inline-flex; align-items: center; gap: var(--space-2); }
-    .prj-ov__type-count { font-weight: var(--weight-semibold); color: var(--color-text); }
+    /* Panel chung + thông tin dự án */
+    .ov2__panel { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg); background: var(--color-surface); }
+    .ov2__panel-h { margin: 0 0 var(--space-4); font-size: 1rem; font-weight: var(--weight-semibold); }
+    .ov2__info { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); }
+    .ov2__info-k { font-size: var(--text-xs); color: var(--color-text-muted); text-transform: uppercase; letter-spacing: .03em; }
+    .ov2__info-v { font-weight: 600; margin-top: 2px; }
 
-    .prj-ov__mini { display: flex; align-items: center; gap: var(--space-2); }
-    .prj-ov__mini-bar { flex: 1; min-width: 60px; height: 8px; border-radius: var(--radius-full);
-      background: var(--color-surface-alt); overflow: hidden; }
-    .prj-ov__mini-fill { height: 100%; border-radius: var(--radius-full); background: var(--status-done); }
+    /* 2 cột đáy */
+    .ov2__two { display: grid; gap: var(--space-4); grid-template-columns: 1fr 1fr; }
+    @media (max-width: 860px) { .ov2__two { grid-template-columns: 1fr; } }
 
-    /* Mô tả */
-    .prj-ov__desc { padding: var(--space-5); border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg); background: var(--color-surface); }
-    .prj-ov__desc h3 { margin: 0 0 var(--space-3); font-size: var(--font-size-md, 1rem); }
-    .prj-ov__desc p { margin: 0; color: var(--color-text); line-height: 1.6; white-space: pre-wrap; }
-    .prj-ov__desc .muted { color: var(--color-text-muted); font-style: italic; }
+    .ov2__act { display: flex; flex-direction: column; }
+    .ov2__act-row { display: flex; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+    .ov2__act-row:last-child { border-bottom: 0; }
+    .ov2__act-ico { flex: 0 0 auto; }
+    .ov2__act-body { flex: 1; min-width: 0; }
+    .ov2__act-main { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ov2__act-main b { font-weight: 600; }
+    .ov2__act-time { color: var(--color-text-muted); font-size: var(--text-xs); }
 
-    .prj-ov__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
-    .hint { color: var(--color-text-muted); }
+    .ov2__mem { display: flex; flex-direction: column; }
+    .ov2__mem-row { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); }
+    .ov2__mem-row:last-child { border-bottom: 0; }
+    .ov2__mem-role { margin-left: auto; }
+    .ov2__mem-md { color: var(--color-text-muted); font-size: var(--text-xs); min-width: 56px; text-align: right; }
 
-    /* Thống kê RIÊNG Task / Bug / Issue */
-    .prj-ov__cats { display: grid; gap: var(--space-4);
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
-    .prj-ov__cat { padding: var(--space-4); border: 1px solid var(--color-border);
-      border-radius: var(--radius-lg); background: var(--color-surface); box-shadow: var(--shadow-sm);
-      border-top: 3px solid var(--cat-color, var(--color-primary)); display: grid; gap: var(--space-3); }
-    .prj-ov__cat-head { display: flex; align-items: baseline; gap: var(--space-2); }
-    .prj-ov__cat-ico { font-size: 1.1rem; }
-    .prj-ov__cat-name { font-weight: var(--weight-semibold); }
-    .prj-ov__cat-total { margin-left: auto; font-size: 1.75rem; font-weight: 700; line-height: 1;
-      color: var(--cat-color, var(--color-primary)); font-variant-numeric: tabular-nums; }
-    .prj-ov__cat-bar { height: 8px; border-radius: var(--radius-full); background: var(--color-surface-alt);
-      overflow: hidden; }
-    .prj-ov__cat-fill { height: 100%; border-radius: var(--radius-full); background: var(--cat-color, var(--status-done)); }
-    .prj-ov__cat-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-2); }
-    .prj-ov__cat-cell { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
-      padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-alt);
-      font-size: var(--text-sm); }
-    .prj-ov__cat-cell b { font-variant-numeric: tabular-nums; }
-    .prj-ov__cat-cell--over { color: var(--overdue, #e5484d); }
-    .prj-ov__cat-cell--over b { color: var(--overdue, #e5484d); }
-    .prj-ov__cat-pct { font-size: var(--text-xs); color: var(--color-text-muted); }
-
-    /* Bug/Issue theo nhân sự */
-    .prj-ov__bugcols { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); }
-    .prj-ov__bugcol-title { margin: 0 0 var(--space-3); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
-    .prj-ov__bugrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
-      padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); background: var(--color-surface-alt);
-      margin-bottom: 2px; font-size: var(--text-sm); }
-    .prj-ov__bugrank { color: var(--color-text-muted); font-size: var(--text-xs); margin-right: 4px; }
-    .prj-ov__bugcount { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums;
-      background: color-mix(in srgb, var(--overdue, #e5484d) 15%, transparent); color: var(--overdue, #e5484d);
-      padding: 0 9px; border-radius: 999px; font-size: var(--text-xs); }
+    .ov2__empty { color: var(--color-text-muted); font-style: italic; font-size: var(--text-sm); padding: var(--space-2) 0; }
+    .ov2__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
   `]
 })
 export class PrjOverview {
   private svc = inject(ProjectService);
 
   readonly projectId = input.required<string>();
+  /** Chuyển sang tab khác (link "Xem chi tiết →"). */
+  readonly openTab = output<string>();
 
   readonly project = signal<Project | null>(null);
   readonly report = signal<ProjectReport | null>(null);
   readonly tasks = signal<ProjectTask[]>([]);
+  readonly members = signal<ProjectMember[]>([]);
+  readonly activity = signal<ProjectActivityItem[]>([]);
   readonly loading = signal(true);
+
+  /** Hoạt động gần đây (8 mục mới nhất). */
+  readonly recentActivity = computed(() => this.activity().slice(0, 8));
+  /** Khách hàng suy từ tiền tố CHỮ của mã dự án (VCB26118 → VCB); '—' nếu không có. */
+  readonly customer = computed(() => {
+    const code = this.project()?.code ?? '';
+    const m = code.match(/^[A-Za-z]+/);
+    return m ? m[0].toUpperCase() : '—';
+  });
 
   /** Thống kê RIÊNG BIỆT Task / Bug / Issue (tổng, xong, đang làm, chưa làm, trễ hạn, %). */
   readonly catStats = computed<CatStat[]>(() => categoryStats(this.tasks()));
@@ -245,19 +226,6 @@ export class PrjOverview {
     });
   });
 
-  readonly assigneeCols: GridColumn[] = [
-    { key: 'name', header: 'Người phụ trách' },
-    { key: 'total', header: 'Tổng', align: 'center', width: '70px', sortable: true },
-    { key: 'backlog', header: 'Backlog', align: 'center', width: '80px', sortable: true },
-    { key: 'todo', header: 'Cần làm', align: 'center', width: '80px', sortable: true },
-    { key: 'doing', header: 'Đang làm', align: 'center', width: '80px', sortable: true },
-    { key: 'review', header: 'Kiểm thử', align: 'center', width: '80px', sortable: true },
-    { key: 'done', header: 'Hoàn thành', align: 'center', width: '90px', sortable: true },
-    { key: 'cancel', header: 'Huỷ', align: 'center', width: '60px', sortable: true },
-    { key: 'estimate', header: 'Est (h)', align: 'center', width: '80px', sortable: true },
-    { key: 'donePct', header: '% hoàn thành', width: '160px', sortable: true }
-  ];
-
   constructor() {
     effect(() => {
       const id = this.projectId();
@@ -279,6 +247,58 @@ export class PrjOverview {
       next: (t) => this.tasks.set(t ?? []),
       error: () => this.tasks.set([])
     });
+    this.svc.listMembers(id).subscribe({
+      next: (m) => this.members.set(m ?? []),
+      error: () => this.members.set([])
+    });
+    this.svc.projectActivity(id).subscribe({
+      next: (a) => this.activity.set(a ?? []),
+      error: () => this.activity.set([])
+    });
+  }
+
+  /** Nhãn hành động cho dòng hoạt động (nhận cả DIARY từ nhật ký dự án). */
+  actionLabel(a: string): string {
+    switch (a) {
+      case 'CREATED': return 'tạo';
+      case 'STATUS': return 'đổi trạng thái';
+      case 'ASSIGN': return 'gán người';
+      case 'EDIT': return 'sửa';
+      case 'COMMENT': return 'bình luận';
+      case 'ATTACH': return 'đính kèm';
+      case 'SPENT': return 'ghi giờ';
+      case 'DIARY': return 'ghi nhật ký';
+      default: return String(a).toLowerCase();
+    }
+  }
+  actionIcon(a: string): string {
+    switch (a) {
+      case 'CREATED': return '✨';
+      case 'STATUS': return '🔄';
+      case 'ASSIGN': return '👤';
+      case 'EDIT': return '✏️';
+      case 'COMMENT': return '💬';
+      case 'ATTACH': return '📎';
+      case 'SPENT': return '⏱️';
+      case 'DIARY': return '📔';
+      default: return '•';
+    }
+  }
+  /** Thời gian tương đối gọn: "5 phút trước", "2 giờ trước", "3 ngày trước". */
+  relTime(iso: string | null): string {
+    if (!iso) return '';
+    const t = Date.parse(iso);
+    if (isNaN(t)) return '';
+    const diff = Date.now() - t;
+    const min = Math.floor(diff / 60000);
+    if (min < 1) return 'vừa xong';
+    if (min < 60) return min + ' phút trước';
+    const hr = Math.floor(min / 60);
+    if (hr < 24) return hr + ' giờ trước';
+    const day = Math.floor(hr / 24);
+    if (day < 30) return day + ' ngày trước';
+    const mon = Math.floor(day / 30);
+    return mon + ' tháng trước';
   }
 
   /** Ngân sách (VND) — phân tách hàng nghìn (helper chung), '—' nếu trống. */

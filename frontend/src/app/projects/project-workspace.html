@@ -13,7 +13,7 @@
     <!-- @for keyed theo refresh() để tạo lại tab (tải lại) sau khi đổi từ chi tiết task -->
     @for (n of [refresh()]; track n) {
       @switch (tab()) {
-        @case ('overview') { <app-prj-overview [projectId]="pid" /> }
+        @case ('overview') { <app-prj-overview [projectId]="pid" (openTab)="selectTab($event)" /> }
         @case ('members') { <app-prj-members [projectId]="pid" /> }
         @case ('backlog') { <app-prj-backlog [projectId]="pid" (openTask)="openDetail($event)" /> }
         @case ('kanban') { <app-prj-kanban [projectId]="pid" (openTask)="openDetail($event)" /> }

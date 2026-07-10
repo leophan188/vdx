@@ -1,206 +1,139 @@
-<!-- Tab Tổng quan (hợp nhất): tóm tắt dự án + báo cáo + thống kê -->
+<!-- Tab Tổng quan (thiết kế lại): panel tiến độ + lưới thẻ · thẻ theo loại · thông tin dự án · hoạt động + thành viên -->
 @if (project(); as p) {
-  <div class="prj-ov">
-    <!-- Tiêu đề + trạng thái + PM dự án + khoảng ngày -->
-    <header class="prj-ov__head">
+  <div class="ov2">
+    <!-- Tiêu đề dự án -->
+    <header class="ov2__head">
       <div>
-        <h2 class="prj-ov__title">
+        <h2 class="ov2__title">
           {{ p.name }}
-          <span class="prj-ov__code">{{ p.code }}</span>
+          <span class="ov2__code">{{ p.code }}</span>
           <span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span>
         </h2>
-        <div class="prj-ov__meta">
+        <div class="ov2__meta">
           <span>PM dự án: <b>{{ p.ownerName || '—' }}</b></span>
-          <span>Thời gian: <b>{{ dateRange() }}</b></span>
+          <span>🗓 <b>{{ dateRange() }}</b></span>
           <span>Ngân sách: <b>{{ formatBudget(p.budget) }}</b></span>
-          <span>Nỗ lực (KH → TT):
-            <b>{{ p.plannedEffortMm == null ? '—' : formatMM(p.plannedEffortMm) + ' MM' }}</b>
-            <b> → {{ formatMM(p.totalEffortMM) }} MM</b>
-            @if (p.plannedEffortMm) {
-              <span class="badge" [class]="p.totalEffortMM > p.plannedEffortMm ? 'badge--cancel' : 'badge--active'"
-                    [title]="'Thực tế vs kế hoạch'">
-                {{ p.totalEffortMM > p.plannedEffortMm ? '▲ vượt ' : '▼ còn ' }}{{ formatMM(effortVariance(p)) }} MM
-              </span>
-            }
+          <span>Nỗ lực (KH→TT):
+            <b>{{ p.plannedEffortMm == null ? '—' : formatMM(p.plannedEffortMm) + ' MM' }}
+               → {{ formatMM(p.totalEffortMM) }} MM</b>
           </span>
         </div>
       </div>
     </header>
 
-    <!-- ===== Nhóm: Tiến độ ===== -->
-    <h3 class="prj-ov__section-title">Tiến độ</h3>
-
-    <!-- Thanh tiến độ % hoàn thành lớn -->
-    <section class="prj-ov__progress">
-      <div class="prj-ov__progress-top">
-        <div>
-          <div class="prj-ov__progress-label">Tiến độ hoàn thành</div>
-          @if (report(); as r) {
-            <div class="prj-ov__progress-sub">
-              {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc lá ·
-              {{ r.doneEstimate }}/{{ r.totalEstimate }} h est · đã log {{ r.totalSpent }} h
-            </div>
-          }
-        </div>
-        <span class="prj-ov__progress-pct">{{ pct() }}%</span>
-      </div>
-      <div class="prj-ov__bar" role="progressbar"
-           [attr.aria-valuenow]="pct()" aria-valuemin="0" aria-valuemax="100">
-        <div class="prj-ov__bar-fill" [style.width.%]="pct()"></div>
-      </div>
-    </section>
-
-    <!-- Các thẻ số liệu -->
+    <!-- Panel trên: tiến độ (trái) + lưới thẻ số liệu (phải) -->
     @if (report(); as r) {
-      <section class="prj-ov__stats">
-        <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
-        <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
-        <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="r.doneEstimate + ' / ' + r.totalEstimate" tint="var(--status-active)" />
-        <stat-card icon="🧾" label="Đã log (h)" [value]="r.totalSpent" tint="var(--color-info)" />
-        <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
-        <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
-        <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
+      <section class="ov2__top">
+        <div class="ov2__progress">
+          <span class="ov2__progress-label">Tiến độ hoàn thành</span>
+          <span class="ov2__progress-pct">{{ pct() }}%</span>
+          <span class="ov2__progress-sub">
+            {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc · {{ r.doneEstimate }}/{{ r.totalEstimate }}h est · đã log {{ r.totalSpent }}h
+          </span>
+          <div class="ov2__bar"><div class="ov2__bar-fill" [style.width.%]="pct()"></div></div>
+        </div>
+        <div class="ov2__stats">
+          <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
+          <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
+          <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="r.doneEstimate + ' / ' + r.totalEstimate" tint="var(--status-active)" />
+          <stat-card icon="🧾" label="Đã log (h)" [value]="r.totalSpent" tint="var(--color-info)" />
+          <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
+          <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
+          <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
+        </div>
       </section>
     }
 
-    <!-- ===== Nhóm: Thống kê RIÊNG Task / Bug / Issue ===== -->
-    <h3 class="prj-ov__section-title">Thống kê theo loại</h3>
-    <section class="prj-ov__cats">
+    <!-- Thống kê theo loại: 3 thẻ (Công việc / Bug / Issue) -->
+    <h3 class="ov2__h">Thống kê theo loại</h3>
+    <section class="ov2__cats">
       @for (c of catStats(); track c.key) {
-        <div class="prj-ov__cat" [style.--cat-color]="c.color">
-          <div class="prj-ov__cat-head">
-            <span class="prj-ov__cat-ico">{{ c.icon }}</span>
-            <span class="prj-ov__cat-name">{{ c.label }}</span>
-            <span class="prj-ov__cat-total">{{ c.total }}</span>
+        <div class="ov2__cat" [style.--cat]="c.color">
+          <div class="ov2__cat-head">
+            <span class="ov2__cat-ico">{{ c.icon }}</span>
+            <span class="ov2__cat-name">{{ c.label }}</span>
+            <span class="ov2__cat-total">{{ c.total }}</span>
           </div>
-          <div>
-            <div class="prj-ov__cat-bar">
-              <div class="prj-ov__cat-fill" [style.width.%]="c.donePct"></div>
-            </div>
-            <div class="prj-ov__cat-pct">{{ c.done }}/{{ c.total }} hoàn thành · {{ c.donePct }}%</div>
-          </div>
-          <div class="prj-ov__cat-grid">
-            <span class="prj-ov__cat-cell">✅ Hoàn thành <b>{{ c.done }}</b></span>
-            <span class="prj-ov__cat-cell">🔄 Đang làm <b>{{ c.doing }}</b></span>
-            <span class="prj-ov__cat-cell">🔍 Kiểm thử <b>{{ c.review }}</b></span>
-            <span class="prj-ov__cat-cell">🗒️ Cần làm <b>{{ c.todo }}</b></span>
-            <span class="prj-ov__cat-cell">📋 Backlog <b>{{ c.backlog }}</b></span>
-            <span class="prj-ov__cat-cell">🚫 Huỷ <b>{{ c.cancel }}</b></span>
-            <span class="prj-ov__cat-cell prj-ov__cat-cell--over">⏰ Trễ hạn <b>{{ c.overdue }}</b></span>
-          </div>
+          <div class="ov2__cat-bar"><div class="ov2__cat-fill" [style.width.%]="c.donePct"></div></div>
+          <div class="ov2__cat-sub">{{ c.done }}/{{ c.total }} hoàn thành · {{ c.donePct }}%</div>
+          <ul class="ov2__cat-list">
+            <li><span>✅ Hoàn thành</span><b>{{ c.done }}</b></li>
+            <li><span>🔄 Đang làm</span><b>{{ c.doing }}</b></li>
+            <li><span>🔍 Kiểm thử</span><b>{{ c.review }}</b></li>
+            <li><span>🗒️ Cần làm</span><b>{{ c.todo }}</b></li>
+            <li><span>📋 Backlog</span><b>{{ c.backlog }}</b></li>
+            <li><span>🚫 Huỷ</span><b>{{ c.cancel }}</b></li>
+          </ul>
+          <button type="button" class="ov2__cat-link"
+                  (click)="openTab.emit(c.key === 'TASK' ? 'kanban' : 'bugs')">Xem chi tiết →</button>
         </div>
       }
     </section>
 
-    <!-- ===== Nhóm: Tiến độ EPIC / Story ===== -->
-    @if (epicStoryRows().length) {
-      <h3 class="prj-ov__section-title">Tiến độ EPIC / Story — {{ epicStoryRows().length }} mục</h3>
-      <section class="prj-ov__panel">
-        @for (e of epicStoryRows(); track e.code) {
-          <div style="display:flex;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid var(--color-border);"
-               [style.padding-left.px]="e.level * 24">
-            <span style="min-width:70px;font-size:.82em;color:var(--color-text-muted);">{{ e.code }}</span>
-            <span class="badge" [class]="e.type==='EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type==='EPIC' ? 'Epic' : 'Story' }}</span>
-            <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.title }}</span>
-            <div class="prj-ov__mini-bar" style="width:160px;"><div class="prj-ov__mini-fill" [style.width.%]="e.pct"></div></div>
-            <b style="min-width:48px;text-align:right;">{{ e.pct }}%</b>
-          </div>
-        }
-      </section>
-    }
-
-    <!-- ===== Nhóm: Bug/Issue theo nhân sự (kiểm soát chất lượng) ===== -->
-    @if (bugCount() > 0) {
-      <h3 class="prj-ov__section-title">Bug/Issue theo nhân sự — {{ bugCount() }} bug/issue</h3>
-      <div class="prj-ov__bugcols">
-        <div class="prj-ov__panel">
-          <h4 class="prj-ov__bugcol-title">🔎 Tester đã log bug (ai báo nhiều)</h4>
-          @for (p of bugByReporter(); track p.name; let i = $index) {
-            <div class="prj-ov__bugrow">
-              <span><span class="prj-ov__bugrank">{{ i + 1 }}.</span> {{ p.name }}</span>
-              <span class="prj-ov__bugcount">{{ p.count }}</span>
-            </div>
-          }
-        </div>
-        <div class="prj-ov__panel">
-          <h4 class="prj-ov__bugcol-title">🐞 Dev bị log bug (ai bị nhiều)</h4>
-          @for (p of bugByAssignee(); track p.name; let i = $index) {
-            <div class="prj-ov__bugrow">
-              <span><span class="prj-ov__bugrank">{{ i + 1 }}.</span> {{ p.name }}</span>
-              <span class="prj-ov__bugcount">{{ p.count }}</span>
-            </div>
-          }
-        </div>
+    <!-- Thông tin dự án (dữ liệu hiện có) -->
+    <section class="ov2__panel">
+      <h3 class="ov2__panel-h">Thông tin dự án</h3>
+      <div class="ov2__info">
+        <div><div class="ov2__info-k">Khách hàng</div><div class="ov2__info-v">{{ customer() }}</div></div>
+        <div><div class="ov2__info-k">Trạng thái</div>
+          <div class="ov2__info-v"><span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span></div></div>
+        <div><div class="ov2__info-k">PM dự án</div><div class="ov2__info-v">{{ p.ownerName || '—' }}</div></div>
+        <div><div class="ov2__info-k">Ngân sách</div><div class="ov2__info-v">{{ formatBudget(p.budget) }}</div></div>
+        <div><div class="ov2__info-k">Ngày bắt đầu</div><div class="ov2__info-v">{{ p.startDate || '—' }}</div></div>
+        <div><div class="ov2__info-k">Ngày kết thúc</div><div class="ov2__info-v">{{ p.dueDate || '—' }}</div></div>
       </div>
-    }
-
-
-    <!-- ===== Nhóm: Phân bổ (byStatus / byType) ===== -->
-    @if (report()) {
-      <h3 class="prj-ov__section-title">Phân bổ</h3>
-      <div class="prj-ov__panels">
-        <!-- byStatus -->
-        <section class="prj-ov__panel">
-          <h4 class="prj-ov__panel-title">Theo trạng thái</h4>
-          @for (b of statusBars(); track b.status) {
-            <div class="prj-ov__barrow">
-              <span>{{ b.label }}</span>
-              <div class="prj-ov__row-bar">
-                <div class="prj-ov__row-fill" [style.width.%]="b.pct" [style.background]="b.color"></div>
-              </div>
-              <span class="prj-ov__row-val">{{ b.count }}</span>
-            </div>
-          }
-        </section>
-
-        <!-- byType -->
-        <section class="prj-ov__panel">
-          <h4 class="prj-ov__panel-title">Theo loại</h4>
-          @if (typeStats().length) {
-            <div class="prj-ov__types">
-              @for (t of typeStats(); track t.type) {
-                <span class="prj-ov__type">
-                  <span class="badge" [class]="t.badge">{{ t.label }}</span>
-                  <span class="prj-ov__type-count">{{ t.count }}</span>
-                </span>
-              }
-            </div>
-          } @else {
-            <p class="hint">Chưa có dữ liệu.</p>
-          }
-        </section>
-      </div>
-
-      <!-- ===== Nhóm: Theo người ===== -->
-      <h3 class="prj-ov__section-title">Theo người</h3>
-      <data-grid [columns]="assigneeCols" [rows]="assigneeRows()"
-                 [title]="'Theo người phụ trách (' + assigneeRows().length + ')'"
-                 [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
-                 emptyText="Chưa có ai được giao việc.">
-        <ng-template gridCell="name" let-a>
-          <employee-chip [name]="a.name" />
-        </ng-template>
-        <ng-template gridCell="donePct" let-a>
-          <div class="prj-ov__mini">
-            <div class="prj-ov__mini-bar"><div class="prj-ov__mini-fill" [style.width.%]="a.donePct"></div></div>
-            <span>{{ a.donePct }}%</span>
-          </div>
-        </ng-template>
-      </data-grid>
-    }
-
-    <!-- Mô tả dự án -->
-    <section class="prj-ov__desc">
-      <h3>Mô tả dự án</h3>
       @if (p.description) {
-        <p>{{ p.description }}</p>
-      } @else {
-        <p class="muted">Chưa có mô tả cho dự án này.</p>
+        <div style="margin-top: var(--space-4);">
+          <div class="ov2__info-k">Mô tả</div>
+          <div style="margin-top:4px; line-height:1.6; white-space:pre-wrap;">{{ p.description }}</div>
+        </div>
       }
+    </section>
+
+    <!-- Hoạt động gần đây | Thành viên dự án -->
+    <section class="ov2__two">
+      <div class="ov2__panel">
+        <h3 class="ov2__panel-h">Hoạt động gần đây</h3>
+        <div class="ov2__act">
+          @for (a of recentActivity(); track a.id) {
+            <div class="ov2__act-row">
+              <span class="ov2__act-ico">{{ actionIcon(a.action) }}</span>
+              <div class="ov2__act-body">
+                <div class="ov2__act-main">
+                  <b>{{ a.actorName }}</b> {{ actionLabel(a.action) }}
+                  @if (a.taskCode) { <span>“{{ a.taskTitle }}”</span> }
+                </div>
+                <div class="ov2__act-time">{{ relTime(a.createdAt) }}</div>
+              </div>
+            </div>
+          } @empty {
+            <div class="ov2__empty">Chưa có hoạt động nào.</div>
+          }
+        </div>
+      </div>
+
+      <div class="ov2__panel">
+        <h3 class="ov2__panel-h">Thành viên dự án ({{ members().length }})</h3>
+        <div class="ov2__mem">
+          @for (m of members(); track m.id) {
+            <div class="ov2__mem-row">
+              <employee-chip [name]="m.name" [code]="m.empCode" [position]="m.jobPosition" [title]="m.title" [dept]="m.deptCode" />
+              <span class="ov2__mem-role">
+                <span class="badge" [class]="m.roleInProject === 'PM' ? 'badge--active' : (m.roleInProject === 'LEAD' ? 'badge--pending' : 'badge--neutral')">
+                  {{ m.roleInProject === 'PM' ? 'PM' : (m.roleInProject === 'LEAD' ? 'Lead' : 'Thành viên') }}
+                </span>
+              </span>
+              <span class="ov2__mem-md">{{ m.manday }} md</span>
+            </div>
+          } @empty {
+            <div class="ov2__empty">Chưa có thành viên.</div>
+          }
+        </div>
+      </div>
     </section>
   </div>
 } @else {
-  <div class="prj-ov__loading">
+  <div class="ov2__loading">
     {{ loading() ? 'Đang tải tổng quan…' : 'Không tải được dữ liệu dự án.' }}
   </div>
 }
