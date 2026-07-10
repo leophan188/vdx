@@ -26,8 +26,8 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ov2 { display: grid; gap: var(--space-4); }
 
     /* Header */
-    .ov2__head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between;
-      gap: var(--space-3); padding: var(--space-5); border: 1px solid var(--color-border);
+    .ov2__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: var(--space-3); padding: var(--space-4) var(--space-5); border: 1px solid var(--color-border);
       border-radius: var(--radius-lg); background: var(--color-surface); }
     .ov2__title { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin: 0 0 var(--space-2); font-size: 1.35rem; }
     .ov2__code { font-size: .8rem; font-weight: 600; color: var(--color-text-muted); background: var(--color-surface-alt);
@@ -96,6 +96,37 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
 
     .ov2__empty { color: var(--color-text-muted); font-style: italic; font-size: var(--text-sm); padding: var(--space-2) 0; }
     .ov2__loading { padding: var(--space-6); text-align: center; color: var(--color-text-muted); }
+    .ov2__actions { display: flex; gap: var(--space-2); align-items: flex-start; }
+
+    /* ===== TRANG IN / PDF Tổng quan (báo cáo khách) ===== */
+    .rp-overlay { position: fixed; inset: 0; z-index: 1000; overflow: auto; background: #5b6472;
+      padding: 20px 12px 40px; display: flex; flex-direction: column; align-items: center; }
+    .ovp-bar { position: sticky; top: 0; z-index: 2; width: 210mm; max-width: 100%; display: flex; align-items: center; gap: 10px;
+      padding: 8px 12px; margin-bottom: 14px; background: #1f2937; color: #e5e7eb; border-radius: 8px; font-size: 12px; }
+    .rp-page { width: 210mm; max-width: 100%; background: #fff; box-shadow: 0 6px 30px rgba(0,0,0,.35); padding: 12mm 12mm 14mm; }
+    .ovp { color: #1f2937; font-family: system-ui, "Segoe UI", Roboto, sans-serif; font-size: 12px; }
+    .ovp__head { background: #1e3a5f; color: #fff; border-radius: 8px; padding: 12px 16px; text-align: center; margin-bottom: 14px; }
+    .ovp__title { font-size: 18px; font-weight: 800; letter-spacing: .3px; }
+    .ovp__proj { margin-top: 4px; font-size: 12px; opacity: .92; }
+    .ovp__progress { display: flex; align-items: center; gap: 16px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; }
+    .ovp__pct { font-size: 30px; font-weight: 800; color: #1e50a0; line-height: 1; }
+    .ovp__psub { font-size: 11px; color: #64748b; margin-top: 4px; }
+    .ovp__bar { flex: 1; height: 12px; border-radius: 999px; background: #edf0f4; overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ovp__bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg,#2563eb,#22c55e); }
+    .ovp__h { background: #1e3a5f; color: #fff; font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 6px; margin: 14px 0 8px;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ovp__info { width: 100%; border-collapse: collapse; }
+    .ovp__info th { background: #f1f5f9; text-align: left; font-weight: 700; color: #475569; padding: 6px 10px; border: 1px solid #e2e8f0; width: 18%; white-space: nowrap; }
+    .ovp__info td { padding: 6px 10px; border: 1px solid #e2e8f0; font-weight: 600; }
+    .ovp__stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .ovp__stat { border: 1px solid #e5e7eb; border-radius: 8px; padding: 8px 12px; display: flex; align-items: baseline; justify-content: space-between; }
+    .ovp__stat-l { color: #64748b; font-size: 11px; }
+    .ovp__stat b { font-size: 18px; font-weight: 800; }
+    .ovp__cat { width: 100%; border-collapse: collapse; }
+    .ovp__cat th { background: #eef2f7; color: #475569; font-size: 10px; text-transform: uppercase; font-weight: 800; padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
+    .ovp__cat td { padding: 6px; border: 1px solid #eef0f2; text-align: center; }
+    .ovp__cat .l { text-align: left; }
+    .ovp__foot { margin-top: 16px; text-align: center; font-size: 10px; color: #94a3b8; }
   `]
 })
 export class PrjOverview {
@@ -111,6 +142,28 @@ export class PrjOverview {
   readonly members = signal<ProjectMember[]>([]);
   readonly activity = signal<ProjectActivityItem[]>([]);
   readonly loading = signal(true);
+
+  /** Xuất báo cáo Tổng quan cho khách (Excel + PDF) — KHÔNG có người thực hiện & trễ hạn. */
+  readonly exporting = signal(false);
+  readonly printMode = signal(false);
+  exportExcel(): void {
+    if (this.exporting()) return;
+    this.exporting.set(true);
+    this.svc.exportOverview(this.projectId()).subscribe({
+      next: (b) => { ProjectService.downloadBlob(b, 'tong-quan-' + (this.project()?.code || 'du-an') + '.xlsx'); this.exporting.set(false); },
+      error: () => { this.exporting.set(false); }
+    });
+  }
+  openPrint(): void { this.printMode.set(true); setTimeout(() => this.printNow(), 150); }
+  printNow(): void {
+    const prev = document.title;
+    document.title = 'Tong quan - ' + (this.project()?.code || 'du an');
+    const done = () => { document.title = prev; window.removeEventListener('afterprint', done); };
+    window.addEventListener('afterprint', done);
+    window.print();
+  }
+  /** "Chưa làm" = Cần làm + Backlog (gộp cho báo cáo khách). */
+  notStarted(c: CatStat): number { return c.todo + c.backlog; }
 
   /** Hoạt động gần đây (8 mục mới nhất). */
   readonly recentActivity = computed(() => this.activity().slice(0, 8));
@@ -169,6 +222,12 @@ export class PrjOverview {
   readonly pct = computed(() =>
     Math.max(0, Math.min(100, Math.round(this.report()?.completionPct ?? this.project()?.completionPct ?? 0)))
   );
+
+  /** Est done/tổng — làm tròn cho gọn thẻ (tránh tràn "83.45 / 948.45"). */
+  readonly estValue = computed(() => {
+    const r = this.report();
+    return r ? Math.round(r.doneEstimate) + ' / ' + Math.round(r.totalEstimate) : '—';
+  });
 
   readonly dateRange = computed(() => {
     const p = this.project();

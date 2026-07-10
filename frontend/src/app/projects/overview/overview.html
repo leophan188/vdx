@@ -3,21 +3,21 @@
   <div class="ov2">
     <!-- Tiêu đề dự án -->
     <header class="ov2__head">
-      <div>
-        <h2 class="ov2__title">
-          {{ p.name }}
-          <span class="ov2__code">{{ p.code }}</span>
-          <span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span>
-        </h2>
-        <div class="ov2__meta">
-          <span>PM dự án: <b>{{ p.ownerName || '—' }}</b></span>
-          <span>🗓 <b>{{ dateRange() }}</b></span>
-          <span>Ngân sách: <b>{{ formatBudget(p.budget) }}</b></span>
-          <span>Nỗ lực (KH→TT):
-            <b>{{ p.plannedEffortMm == null ? '—' : formatMM(p.plannedEffortMm) + ' MM' }}
-               → {{ formatMM(p.totalEffortMM) }} MM</b>
-          </span>
-        </div>
+      <div class="ov2__meta">
+        <span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span>
+        <span>PM dự án: <b>{{ p.ownerName || '—' }}</b></span>
+        <span>🗓 <b>{{ dateRange() }}</b></span>
+        <span>Ngân sách: <b>{{ formatBudget(p.budget) }}</b></span>
+        <span>Nỗ lực (KH→TT):
+          <b>{{ p.plannedEffortMm == null ? '—' : formatMM(p.plannedEffortMm) + ' MM' }}
+             → {{ formatMM(p.totalEffortMM) }} MM</b>
+        </span>
+      </div>
+      <div class="ov2__actions">
+        <button type="button" class="btn btn--secondary btn--sm" (click)="exportExcel()" [disabled]="exporting()"
+                title="Xuất Tổng quan ra Excel (báo cáo khách)">{{ exporting() ? 'Đang xuất…' : '⬇ Excel' }}</button>
+        <button type="button" class="btn btn--primary btn--sm" (click)="openPrint()"
+                title="In / Lưu PDF Tổng quan (báo cáo khách)">🖨 In / PDF</button>
       </div>
     </header>
 
@@ -35,7 +35,7 @@
         <div class="ov2__stats">
           <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
           <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
-          <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="r.doneEstimate + ' / ' + r.totalEstimate" tint="var(--status-active)" />
+          <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="estValue()" tint="var(--status-active)" />
           <stat-card icon="🧾" label="Đã log (h)" [value]="r.totalSpent" tint="var(--color-info)" />
           <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
           <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
@@ -135,5 +135,75 @@
 } @else {
   <div class="ov2__loading">
     {{ loading() ? 'Đang tải tổng quan…' : 'Không tải được dữ liệu dự án.' }}
+  </div>
+}
+
+<!-- ===== TRANG IN / PDF (báo cáo khách — KHÔNG có người thực hiện & trễ hạn) ===== -->
+@if (printMode() && project(); as p) {
+  <div class="rp-overlay">
+    <div class="ovp-bar no-print">
+      <span>Xem trước — bấm “In / Lưu PDF”, chọn khổ A4 dọc, tắt header/footer trình duyệt.</span>
+      <span style="flex:1"></span>
+      <button type="button" class="btn btn--primary btn--sm" (click)="printNow()">🖨 In / Lưu PDF</button>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="printMode.set(false)">Đóng</button>
+    </div>
+
+    <div class="rp-page ovp">
+      <header class="ovp__head">
+        <div class="ovp__title">TỔNG QUAN DỰ ÁN</div>
+        <div class="ovp__proj">{{ p.name }} · {{ p.code }}</div>
+      </header>
+
+      @if (report(); as r) {
+        <section class="ovp__progress">
+          <div>
+            <div class="ovp__pct">{{ pct() }}%</div>
+            <div class="ovp__psub">{{ r.doneTasks }}/{{ r.totalTasks }} công việc hoàn thành ·
+              {{ r.doneEstimate }}/{{ r.totalEstimate }}h est · đã log {{ r.totalSpent }}h</div>
+          </div>
+          <div class="ovp__bar"><div class="ovp__bar-fill" [style.width.%]="pct()"></div></div>
+        </section>
+
+        <h3 class="ovp__h">Thông tin dự án</h3>
+        <table class="ovp__info">
+          <tbody>
+            <tr><th>Khách hàng</th><td>{{ customer() }}</td><th>Trạng thái</th><td>{{ statusLabel(p.status) }}</td></tr>
+            <tr><th>PM dự án</th><td>{{ p.ownerName || '—' }}</td><th>Ngân sách</th><td>{{ formatBudget(p.budget) }}</td></tr>
+            <tr><th>Ngày bắt đầu</th><td>{{ p.startDate || '—' }}</td><th>Ngày kết thúc</th><td>{{ p.dueDate || '—' }}</td></tr>
+            <tr><th>Nỗ lực (KH → TT)</th><td colspan="3">
+              {{ p.plannedEffortMm == null ? '—' : formatMM(p.plannedEffortMm) + ' MM' }} → {{ formatMM(p.totalEffortMM) }} MM</td></tr>
+          </tbody>
+        </table>
+
+        <h3 class="ovp__h">Số liệu</h3>
+        <div class="ovp__stats">
+          <div class="ovp__stat"><span class="ovp__stat-l">Tổng công việc</span><b>{{ r.totalTasks }}</b></div>
+          <div class="ovp__stat"><span class="ovp__stat-l">Hoàn thành</span><b>{{ r.doneTasks }}</b></div>
+          <div class="ovp__stat"><span class="ovp__stat-l">Est done / tổng (h)</span><b>{{ r.doneEstimate }} / {{ r.totalEstimate }}</b></div>
+          <div class="ovp__stat"><span class="ovp__stat-l">Đã log (h)</span><b>{{ r.totalSpent }}</b></div>
+          <div class="ovp__stat"><span class="ovp__stat-l">Thành viên</span><b>{{ p.memberCount }}</b></div>
+          <div class="ovp__stat"><span class="ovp__stat-l">Lỗi (bug)</span><b>{{ r.bugCount }}</b></div>
+        </div>
+
+        <h3 class="ovp__h">Thống kê theo loại</h3>
+        <table class="ovp__cat">
+          <thead><tr>
+            <th class="l">Loại</th><th>Tổng</th><th>Hoàn thành</th><th>Đang làm</th><th>Kiểm thử</th><th>Chưa làm</th><th>Huỷ</th><th>% HT</th>
+          </tr></thead>
+          <tbody>
+            @for (c of catStats(); track c.key) {
+              <tr>
+                <td class="l">{{ c.icon }} {{ c.label }}</td>
+                <td>{{ c.total }}</td><td>{{ c.done }}</td><td>{{ c.doing }}</td><td>{{ c.review }}</td>
+                <td>{{ notStarted(c) }}</td><td>{{ c.cancel }}</td>
+                <td><b>{{ c.donePct }}%</b></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+
+        <div class="ovp__foot">Báo cáo tạo từ hệ thống VMO DX · {{ p.name }} ({{ p.code }})</div>
+      }
+    </div>
   </div>
 }

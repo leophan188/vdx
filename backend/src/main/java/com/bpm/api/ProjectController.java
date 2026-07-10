@@ -210,6 +210,17 @@ public class ProjectController {
         return xlsxResponse(bytes, "timeline-" + p.code() + ".xlsx");
     }
 
+    /** Xuất TỔNG QUAN DỰ ÁN ra Excel (báo cáo khách — KHÔNG có người thực hiện & trễ hạn). */
+    @GetMapping("/{id}/overview/export")
+    public ResponseEntity<byte[]> exportOverview(@PathVariable String id, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        ProjectDto.ProjectResponse p = projectService.detail(id);
+        ProjectDto.ReportResponse r = projectService.report(id);
+        List<ProjectDto.TaskResponse> tasks = taskService.list(id);
+        byte[] bytes = reportExportService.projectOverviewXlsx("[" + p.code() + "] " + p.name(), p, r, tasks);
+        return xlsxResponse(bytes, "tong-quan-" + p.code() + ".xlsx");
+    }
+
     private static ResponseEntity<byte[]> xlsxResponse(byte[] bytes, String fname) {
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + fname + "\"")

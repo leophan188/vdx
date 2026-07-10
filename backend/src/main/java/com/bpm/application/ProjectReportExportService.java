@@ -544,6 +544,133 @@ public class ProjectReportExportService {
         }
     }
 
+    // ===================== TỔNG QUAN DỰ ÁN (báo cáo khách — KHÔNG có người thực hiện & trễ hạn) =====================
+    /** Khách hàng suy từ tiền tố CHỮ của mã dự án (VCB26118 → VCB). */
+    private static String customerOf(String code) {
+        if (code == null) return "—";
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^[A-Za-z]+").matcher(code);
+        return m.find() ? m.group().toUpperCase() : "—";
+    }
+    private static String projectStatusVi(String s) {
+        if (s == null) return "—";
+        switch (s) {
+            case "PLANNING": return "Lập kế hoạch";
+            case "ACTIVE": return "Đang thực hiện";
+            case "ON_HOLD": return "Tạm dừng";
+            case "DONE": return "Hoàn thành";
+            case "CANCELLED": return "Đã hủy";
+            default: return s;
+        }
+    }
+    /** Gộp loại → nhóm thống kê (Công việc / Bug / Issue). */
+    private static String catOf(String type) {
+        if ("BUG".equals(type)) return "Bug";
+        if ("ISSUE".equals(type)) return "Issue";
+        return "Công việc"; // EPIC/STORY/TASK/SUBTASK
+    }
+
+    public byte[] projectOverviewXlsx(String projectName, ProjectDto.ProjectResponse p,
+                                      ProjectDto.ReportResponse r, List<ProjectDto.TaskResponse> tasks) {
+        try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
+            XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
+            XSSFCellStyle section = style(wb, true, 12, WHITE, BRAND, false, HorizontalAlignment.LEFT);
+            XSSFCellStyle header = style(wb, true, 10, null, HEADER_BG, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle center = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
+            XSSFCellStyle ovLabel = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.LEFT);
+            XSSFCellStyle ovValue = style(wb, false, 10, null, null, true, HorizontalAlignment.LEFT);
+            XSSFCellStyle cellL = style(wb, false, 10, null, null, true, HorizontalAlignment.LEFT);
+            XSSFCellStyle pct = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
+            pct.setDataFormat(wb.createDataFormat().getFormat("0\"%\""));
+            java.util.Map<String, XSSFCellStyle> sst = statusStyles(wb);
+
+            XSSFSheet sh = wb.createSheet("Tổng quan");
+            int last = 7; // 8 cột (dùng cho bảng thống kê theo loại)
+            int rr = 0;
+            merged(sh, rr++, last, "TỔNG QUAN DỰ ÁN", title, 28);
+            merged(sh, rr++, last, projectName, subtitle, 18);
+            rr++;
+
+            // THÔNG TIN DỰ ÁN (không có người thực hiện)
+            merged(sh, rr++, last, "THÔNG TIN DỰ ÁN", section, 20);
+            String[][] info = {
+                {"Khách hàng", customerOf(p.code())},
+                {"Mã dự án", nz(p.code())},
+                {"Trạng thái", projectStatusVi(p.status())},
+                {"PM dự án", nz(p.ownerName())},
+                {"Ngân sách", p.budget() == null ? "—" : String.format("%,d ₫", p.budget())},
+                {"Thời gian", nz(p.startDate()) + " → " + nz(p.dueDate())},
+                {"Nỗ lực (KH → TT)", (p.plannedEffortMm() == null ? "—" : trimNum(p.plannedEffortMm()) + " MM")
+                        + " → " + trimNum(p.totalEffortMM()) + " MM"},
+            };
+            for (String[] kv : info) {
+                Row row = sh.createRow(rr++);
+                put(row, 0, kv[0], ovLabel);
+                put(row, 1, kv[1], ovValue);
+                sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 1, last));
+            }
+            rr++;
+
+            // TIẾN ĐỘ & SỐ LIỆU (KHÔNG có "quá hạn")
+            merged(sh, rr++, last, "TIẾN ĐỘ & SỐ LIỆU", section, 20);
+            String[][] mets = {
+                {"Tiến độ hoàn thành", Math.round(r.completionPct()) + "%"},
+                {"Tổng công việc", String.valueOf(r.totalTasks())},
+                {"Đã hoàn thành", String.valueOf(r.doneTasks())},
+                {"Ước lượng (đã xong / tổng)", trimNum(r.doneEstimate()) + " / " + trimNum(r.totalEstimate()) + " h"},
+                {"Đã log", trimNum(r.totalSpent()) + " h"},
+                {"Thành viên", String.valueOf(p.memberCount())},
+                {"Lỗi (bug)", String.valueOf(r.bugCount())},
+            };
+            for (String[] kv : mets) {
+                Row row = sh.createRow(rr++);
+                put(row, 0, kv[0], ovLabel);
+                put(row, 1, kv[1], ovValue);
+                sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 1, last));
+            }
+            rr++;
+
+            // THỐNG KÊ THEO LOẠI (Công việc / Bug / Issue) — không có trễ hạn/người thực hiện
+            merged(sh, rr++, last, "THỐNG KÊ THEO LOẠI", section, 20);
+            String[] cols = {"Loại", "Tổng", "Hoàn thành", "Đang làm", "Kiểm thử", "Chưa làm", "Huỷ", "% HT"};
+            Row h = sh.createRow(rr++);
+            for (int c = 0; c < cols.length; c++) put(h, c, cols[c], header);
+            java.util.LinkedHashMap<String, int[]> cat = new java.util.LinkedHashMap<>(); // [total,done,doing,review,notStarted,cancel]
+            for (String k : new String[]{"Công việc", "Bug", "Issue"}) cat.put(k, new int[6]);
+            for (ProjectDto.TaskResponse t : tasks) {
+                int[] a = cat.get(catOf(t.type()));
+                a[0]++;
+                switch (t.status()) {
+                    case "DONE": a[1]++; break;
+                    case "IN_PROGRESS": a[2]++; break;
+                    case "IN_REVIEW": a[3]++; break;
+                    case "CANCELLED": a[5]++; break;
+                    default: a[4]++; break; // TODO / BACKLOG
+                }
+            }
+            for (java.util.Map.Entry<String, int[]> e : cat.entrySet()) {
+                int[] a = e.getValue();
+                int scope = a[0] - a[5]; // Huỷ ngoài phạm vi %
+                Row row = sh.createRow(rr++);
+                put(row, 0, e.getKey(), cellL);
+                put(row, 1, String.valueOf(a[0]), center);
+                put(row, 2, String.valueOf(a[1]), sst.getOrDefault("DONE", center));
+                put(row, 3, String.valueOf(a[2]), center);
+                put(row, 4, String.valueOf(a[3]), center);
+                put(row, 5, String.valueOf(a[4]), center);
+                put(row, 6, String.valueOf(a[5]), center);
+                putNum(row, 7, scope > 0 ? Math.round(a[1] * 100.0 / scope) : 0, pct);
+            }
+
+            int[] w = {5200, 2600, 3400, 3000, 3000, 3000, 2400, 3000};
+            for (int c = 0; c < cols.length; c++) sh.setColumnWidth(c, w[c]);
+            wb.write(out);
+            return out.toByteArray();
+        } catch (Exception e) {
+            throw new RuntimeException("Không xuất được Excel tổng quan", e);
+        }
+    }
+
     /** Style ô trạng thái theo màu (Hoàn thành xanh lá · Đang làm xanh dương · Kiểm thử cam · Huỷ đỏ). */
     private static java.util.Map<String, XSSFCellStyle> statusStyles(XSSFWorkbook wb) {
         java.util.Map<String, XSSFCellStyle> m = new java.util.HashMap<>();

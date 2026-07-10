@@ -428,6 +428,11 @@ export class ProjectService {
     return this.http.post(`${this.base}/${projectId}/timeline/export`, { taskIds: taskIds ?? null },
       { responseType: 'blob', withCredentials: true });
   }
+  /** Xuất Excel TỔNG QUAN dự án (báo cáo khách — không có người thực hiện & trễ hạn). */
+  exportOverview(projectId: string): Observable<Blob> {
+    return this.http.get(`${this.base}/${projectId}/overview/export`,
+      { responseType: 'blob', withCredentials: true });
+  }
   /** Kích hoạt tải Blob về máy với tên file cho trước. */
   static downloadBlob(blob: Blob, filename: string): void {
     const url = URL.createObjectURL(blob);
