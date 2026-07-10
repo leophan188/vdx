@@ -112,7 +112,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__mrow > span:not(.rpp__mname) { text-align: center; }
     .rpp__mpct { display: flex; align-items: center; gap: var(--space-2); justify-content: center; }
     .rpp__mpct-bar { flex: 1; max-width: 76px; height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
-    .rpp__mpct-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
+    .rpp__mpct-fill { display: block; height: 100%; border-radius: 999px; background: var(--status-done); }
     .rpp__mpct-val { min-width: 34px; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
     .rpp__mrow:not(.rpp__mrow--head) { background: var(--color-surface-alt); }
     .rpp__mrow--head { color: var(--color-text-muted); font-size: var(--text-xs);
@@ -128,7 +128,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__prio-name { display: inline-flex; align-items: center; gap: var(--space-2); }
     .rpp__prio-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--p-color); }
     .rpp__prio-bar { height: 10px; border-radius: var(--radius-full); background: var(--color-surface-alt); overflow: hidden; }
-    .rpp__prio-fill { height: 100%; border-radius: var(--radius-full); background: var(--p-color); }
+    .rpp__prio-fill { display: block; height: 100%; border-radius: var(--radius-full); background: var(--p-color); }
     .rpp__prio-val { text-align: right; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); }
     .rpp__empty-note { color: var(--color-text-muted); font-size: var(--text-sm); }
 
@@ -140,7 +140,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__prow > span:not(.rpp__pname) { text-align: center; }
     .rpp__ppct { display: flex; align-items: center; gap: var(--space-2); justify-content: center; }
     .rpp__ppct-bar { flex: 1; max-width: 72px; height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
-    .rpp__ppct-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
+    .rpp__ppct-fill { display: block; height: 100%; border-radius: 999px; background: var(--status-done); }
     .rpp__ppct-val { min-width: 34px; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
     .rpp__prow--head { color: var(--color-text-muted); font-size: var(--text-xs);
       font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .03em; }
