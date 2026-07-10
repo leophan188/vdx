@@ -1,4 +1,4 @@
-<div class="gantt">
+<div class="gantt" [class.is-printing]="printMode()">
   <!-- Thanh công cụ: phóng (zoom) + chú giải màu -->
   <div class="gantt__bar-toolbar">
     <div class="gantt__zoom" role="group" aria-label="Mức phóng trục thời gian">
@@ -23,6 +23,10 @@
     <button type="button" class="btn btn--secondary btn--sm" style="margin-left:auto"
             (click)="exportExcel()" [disabled]="exporting()" title="Xuất timeline (lịch trình + Gantt) ra Excel">
       {{ exporting() ? 'Đang xuất…' : '⬇ Xuất Excel' }}
+    </button>
+    <button type="button" class="btn btn--primary btn--sm"
+            (click)="openPrintPdf()" title="In / Lưu PDF đúng như hiển thị web (Gantt)">
+      🖨 In / PDF
     </button>
   </div>
 

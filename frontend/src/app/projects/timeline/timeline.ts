@@ -170,6 +170,30 @@ export class PrjTimeline implements OnInit {
     });
   }
 
+  /** Chế độ IN (giống hiển thị web) — in trực tiếp Gantt ra PDF, thu nhỏ vừa A4 ngang. */
+  readonly printMode = signal(false);
+  openPrintPdf(): void {
+    if (this.printMode()) return;
+    this.printMode.set(true);
+    const prevTitle = document.title;
+    setTimeout(() => {
+      // Tính tỉ lệ zoom để toàn bộ Gantt (danh sách + trục) vừa bề ngang trang A4 ngang.
+      const list = document.querySelector('.gantt__list') as HTMLElement | null;
+      const total = (list?.offsetWidth ?? 480) + this.canvasWidth();
+      const pagePx = 1040; // ~277mm khổ A4 ngang @96dpi (trừ lề)
+      const zoom = Math.max(0.35, Math.min(1, pagePx / Math.max(1, total)));
+      document.documentElement.style.setProperty('--gantt-print-zoom', String(zoom));
+      document.title = 'Timeline';
+      const done = () => {
+        this.printMode.set(false);
+        document.title = prevTitle;
+        window.removeEventListener('afterprint', done);
+      };
+      window.addEventListener('afterprint', done);
+      window.print();
+    }, 120);
+  }
+
   // ----- Trạng thái -----
   readonly tasks = signal<ProjectTask[]>([]);
   readonly loading = signal(true);

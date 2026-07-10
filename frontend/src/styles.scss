@@ -17,14 +17,41 @@
    Phải đặt toàn cục vì style component bị scope, không với tới body/app-root. */
 @media print {
   html, body { height: auto !important; overflow: visible !important; }
-  body * { visibility: hidden !important; }
-  .rp-overlay, .rp-overlay * { visibility: visible !important; }
-  /* QUAN TRỌNG: reset inset/height/overflow để nội dung CHẢY qua nhiều trang (không kẹp 1 trang). */
+
+  /* Chỉ "ẩn phần còn lại của app" khi đang IN báo cáo (.rp-overlay) hoặc IN Gantt (.gantt.is-printing).
+     Dùng :has() để Ctrl+P ở màn khác không bị trắng trang. */
+  body:has(.rp-overlay) *,
+  body:has(.gantt.is-printing) * { visibility: hidden !important; }
+  .rp-overlay, .rp-overlay *,
+  .gantt.is-printing, .gantt.is-printing * { visibility: visible !important; }
+
+  /* --- IN BÁO CÁO (PDF nhiều trang) --- */
   .rp-overlay {
     position: absolute !important; inset: auto !important; left: 0 !important; top: 0 !important;
     width: 100% !important; height: auto !important; overflow: visible !important;
     background: #fff !important; padding: 0 !important; display: block !important;
   }
   .rp-page { overflow: visible !important; height: auto !important; }
+
+  /* --- IN TIMELINE (Gantt giống web, thu nhỏ vừa A4 ngang) --- */
+  .gantt.is-printing {
+    position: absolute !important; inset: auto !important; left: 0 !important; top: 0 !important;
+    width: 100% !important; page: gantt-land;
+  }
+  .gantt.is-printing .gantt__zoom,
+  .gantt.is-printing .btn,
+  .gantt.is-printing .filter-bar { display: none !important; }
+  .gantt.is-printing .gantt__grid { overflow: visible !important; zoom: var(--gantt-print-zoom, 1); }
+  .gantt.is-printing .gantt__list { max-width: none !important; overflow: visible !important; }
+  .gantt.is-printing .gantt__scroll { overflow: visible !important; }
+  .gantt.is-printing .gantt__bar,
+  .gantt.is-printing .gantt__bar-progress,
+  .gantt.is-printing .gantt__swatch,
+  .gantt.is-printing .gantt__pct-fill,
+  .gantt.is-printing .gantt__today {
+    -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important;
+  }
+
   @page { size: A4 portrait; margin: 10mm; }
+  @page gantt-land { size: A4 landscape; margin: 8mm; }
 }
