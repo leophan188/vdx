@@ -9,7 +9,10 @@ import org.apache.poi.ss.usermodel.Row;
 import org.apache.poi.ss.usermodel.VerticalAlignment;
 import org.apache.poi.ss.util.CellRangeAddress;
 import org.apache.poi.xssf.usermodel.XSSFCellStyle;
+import org.apache.poi.xssf.usermodel.XSSFChart;
+import org.apache.poi.xssf.usermodel.XSSFClientAnchor;
 import org.apache.poi.xssf.usermodel.XSSFColor;
+import org.apache.poi.xssf.usermodel.XSSFDrawing;
 import org.apache.poi.xssf.usermodel.XSSFFont;
 import org.apache.poi.xssf.usermodel.XSSFSheet;
 import org.apache.poi.xssf.usermodel.XSSFWorkbook;
@@ -92,8 +95,8 @@ public class ProjectReportExportService {
         return sb.append(' ').append(p).append('%').toString();
     }
 
-    /** Đếm công việc theo TỪNG trạng thái (gộp cả 4 khối, khử trùng theo taskId) — liệt kê đủ trạng thái. */
-    private List<String[]> statusSummaryRows(ProjectDto.PeriodReportResponse r) {
+    /** Đếm công việc theo TỪNG trạng thái (gộp cả 4 khối, khử trùng theo taskId) — giữ thứ tự đủ trạng thái. */
+    private java.util.LinkedHashMap<String, Integer> statusCounts(ProjectDto.PeriodReportResponse r) {
         java.util.LinkedHashMap<String, Integer> cnt = new java.util.LinkedHashMap<>();
         for (String s : new String[]{"BACKLOG", "TODO", "IN_PROGRESS", "IN_REVIEW", "DONE", "CANCELLED"}) {
             cnt.put(s, 0);
@@ -106,8 +109,13 @@ public class ProjectReportExportService {
                 }
             }
         }
+        return cnt;
+    }
+
+    /** Bảng text label|count cho Word. */
+    private List<String[]> statusSummaryRows(ProjectDto.PeriodReportResponse r) {
         List<String[]> rows = new java.util.ArrayList<>();
-        for (java.util.Map.Entry<String, Integer> e : cnt.entrySet()) {
+        for (java.util.Map.Entry<String, Integer> e : statusCounts(r).entrySet()) {
             rows.add(new String[]{statusLabel(e.getKey()), String.valueOf(e.getValue())});
         }
         return rows;
@@ -173,14 +181,35 @@ public class ProjectReportExportService {
             }
             rr++;
 
-            // Thống kê theo TỪNG trạng thái (liệt kê đủ trạng thái).
+            // Thống kê theo TỪNG trạng thái (đủ trạng thái) + BIỂU ĐỒ DONUT bên phải.
             merged(sh, rr, last, "THỐNG KÊ THEO TRẠNG THÁI", section, 20); rr++;
-            for (String[] kv : statusSummaryRows(r)) {
+            java.util.LinkedHashMap<String, Integer> scnt = statusCounts(r);
+            int stRow0 = rr;
+            for (java.util.Map.Entry<String, Integer> e : scnt.entrySet()) {
                 Row row = sh.createRow(rr++);
-                put(row, 0, kv[0], ovLabel);
-                put(row, 1, kv[1], ovValue);
-                sh.addMergedRegion(new CellRangeAddress(row.getRowNum(), row.getRowNum(), 1, last));
+                put(row, 0, statusLabel(e.getKey()), ovLabel);      // A: nhãn
+                putNum(row, 1, e.getValue(), center);               // B: số (numeric → nguồn cho chart)
             }
+            int stRow1 = rr - 1;
+            try {
+                XSSFDrawing dr = sh.createDrawingPatriarch();
+                // Neo biểu đồ phủ cột C..H, cao ~ số dòng trạng thái + đệm.
+                XSSFClientAnchor anchor = dr.createAnchor(0, 0, 0, 0, 2, stRow0, last + 1, stRow0 + 12);
+                XSSFChart chart = dr.createChart(anchor);
+                chart.setTitleText("Phân bố theo trạng thái");
+                chart.setTitleOverlay(false);
+                org.apache.poi.xddf.usermodel.chart.XDDFChartLegend legend = chart.getOrAddLegend();
+                legend.setPosition(org.apache.poi.xddf.usermodel.chart.LegendPosition.RIGHT);
+                var cats = org.apache.poi.xddf.usermodel.chart.XDDFDataSourcesFactory
+                        .fromStringCellRange(sh, new CellRangeAddress(stRow0, stRow1, 0, 0));
+                var vals = org.apache.poi.xddf.usermodel.chart.XDDFDataSourcesFactory
+                        .fromNumericCellRange(sh, new CellRangeAddress(stRow0, stRow1, 1, 1));
+                var cdata = chart.createData(org.apache.poi.xddf.usermodel.chart.ChartTypes.DOUGHNUT, null, null);
+                cdata.setVaryColors(true);
+                cdata.addSeries(cats, vals);
+                chart.plot(cdata);
+            } catch (Exception ignore) { /* bản POI không dựng được chart → vẫn có bảng số */ }
+            rr = Math.max(rr, stRow0 + 13); // chừa chỗ cho biểu đồ
             rr++;
 
             // THEO NHÂN SỰ — tỷ lệ hoàn thành mỗi người (dùng chung data bar cột G).
@@ -233,7 +262,8 @@ public class ProjectReportExportService {
                 rr++; // trống giữa các khối
             }
 
-            int[] w = {1600, 20000, 5200, 4200, 3200, 3200, 4200};
+            // Độ rộng cột cân đối: STT · Tên(rộng vừa) · PIC · Trạng thái · Bắt đầu · Kết thúc · %
+            int[] w = {1500, 12000, 5200, 4600, 3600, 3600, 6000};
             for (int c = 0; c < COLS.length; c++) sh.setColumnWidth(c, w[c]);
 
             // THANH TIẾN TRÌNH %: data bar xanh trên cột "% HT" (G) — chỉ áp lên ô SỐ (bỏ qua header/section).
