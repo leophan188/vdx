@@ -19,7 +19,7 @@
         @case ('kanban') { <app-prj-kanban [projectId]="pid" (openTask)="openDetail($event)" /> }
         @case ('timeline') { <app-prj-timeline [projectId]="pid" /> }
         @case ('bugs') { <app-prj-bugs [projectId]="pid" /> }
-        @case ('reports-period') { <app-prj-reports-period [projectId]="pid" /> }
+        @case ('reports-period') { <app-prj-reports-period [projectId]="pid" [projectName]="project()?.name || ''" /> }
         @case ('timesheet') { <app-prj-timesheet [projectId]="pid" /> }
         @case ('log') { <app-prj-log [projectId]="pid" (openTask)="openDetail($event)" /> }
         @case ('diary') { <app-prj-diary [projectId]="pid" /> }

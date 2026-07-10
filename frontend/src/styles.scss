@@ -12,3 +12,15 @@
 @use 'styles/components';
 @use 'styles/shell';
 @use 'styles/home';
+
+/* Cách ly khi IN báo cáo (trang in .rp-overlay): ẩn toàn bộ app, chỉ in biểu mẫu.
+   Phải đặt toàn cục vì style component bị scope, không với tới body/app-root. */
+@media print {
+  body * { visibility: hidden !important; }
+  .rp-overlay, .rp-overlay * { visibility: visible !important; }
+  .rp-overlay {
+    position: absolute !important; left: 0 !important; top: 0 !important;
+    width: 100% !important; background: #fff !important; padding: 0 !important;
+  }
+  @page { size: A4 portrait; margin: 10mm; }
+}

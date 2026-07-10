@@ -284,6 +284,7 @@ export interface ReportTaskItem {
   status: TaskStatus;
   assigneeName: string | null;
   estimateHours: number;
+  startDate: string | null;      // dd/MM/yyyy (ngày bắt đầu)
   dueDate: string | null;        // dd/MM/yyyy
   progressPct: number;           // 0..100
   priority: TaskPriority | null; // ưu tiên (thống kê bug/issue theo mức ưu tiên)
@@ -304,6 +305,18 @@ export interface ReportOverview {
   bugCount: number;
 }
 
+/** Tỷ lệ hoàn thành theo nhân sự trong kỳ (khớp DTO PersonProgress backend). */
+export interface PersonProgress {
+  userId: string | null;
+  name: string;
+  total: number;
+  done: number;
+  doing: number;
+  todo: number;
+  overdue: number;
+  pct: number;                   // 0..100
+}
+
 export interface PeriodReport {
   periodLabel: string;           // vd "Hôm nay 27/06/2026" / "Tuần 22/06–28/06"
   done: ReportTaskItem[];        // DONE, cập nhật trong kỳ (updatedAt trong khoảng)
@@ -312,6 +325,7 @@ export interface PeriodReport {
   overdue: ReportTaskItem[];     // dueDate < hôm nay & chưa DONE
   overview: ReportOverview;
   epicStory: ReportTaskItem[];   // (chỉ báo cáo TUẦN) tiến độ % EPIC/Story của dự án
+  byPerson: PersonProgress[];    // tỷ lệ hoàn thành theo nhân sự (việc lá)
 }
 
 // ===== Burndown (biểu đồ cháy việc) =====

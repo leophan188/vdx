@@ -16,6 +16,7 @@
     <span class="rpp__head-spacer"></span>
     <button type="button" class="btn btn--ghost btn--sm" (click)="exportReport('xlsx')" title="Xuất Excel (.xlsx)">⬇ Excel</button>
     <button type="button" class="btn btn--ghost btn--sm" (click)="exportReport('docx')" title="Xuất Word (.docx)">⬇ Word</button>
+    <button type="button" class="btn btn--primary btn--sm" (click)="openPrint()" title="Xem trước &amp; In/PDF theo biểu mẫu">🖨 In / PDF</button>
   </div>
 
   @if (loading()) {
@@ -284,3 +285,157 @@
     </data-grid>
   }
 </app-modal>
+
+<!-- ===================== TRANG IN (HTML → PDF theo biểu mẫu) ===================== -->
+@if (printMode() && report(); as r) {
+  <div class="rp-overlay">
+    <div class="rp-bar no-print">
+      <span class="rp-bar__hint">Xem trước biểu mẫu — bấm “In / Lưu PDF”, chọn khổ A4 dọc, bỏ header/footer trình duyệt.</span>
+      <span class="rp-bar__spacer"></span>
+      <button type="button" class="btn btn--primary btn--sm" (click)="openPrint()">🖨 In / Lưu PDF</button>
+      <button type="button" class="btn btn--ghost btn--sm" (click)="closePrint()">Đóng</button>
+    </div>
+
+    <div class="rp-page">
+      <!-- Header -->
+      <header class="rp__head">
+        <div class="rp__head-title">{{ printTitle() }}</div>
+        <div class="rp__head-meta">🗓 NGÀY BÁO CÁO: {{ printDateLabel() }}</div>
+        @if (projectName()) { <div class="rp__head-proj">{{ projectName() }}</div> }
+      </header>
+
+      <!-- 3 thẻ số liệu -->
+      <section class="rp__cards">
+        <div class="rp__card rp__card--done">
+          <div class="rp__card-lbl">✔ HOÀN THÀNH</div><div class="rp__card-num">{{ r.done.length }}</div>
+        </div>
+        <div class="rp__card rp__card--doing">
+          <div class="rp__card-lbl">⚙ ĐANG LÀM</div><div class="rp__card-num">{{ r.inProgress.length }}</div>
+        </div>
+        <div class="rp__card rp__card--over">
+          <div class="rp__card-lbl">⏳ TRỄ HẠN</div><div class="rp__card-num">{{ r.overdue.length }}</div>
+        </div>
+      </section>
+
+      <!-- TỔNG QUAN -->
+      <section class="rp__block">
+        <h3 class="rp__h">TỔNG QUAN</h3>
+        <div class="rp__ov">
+          @for (o of printOverview(); track o.label) {
+            <div class="rp__ov-row">
+              <span class="rp__ov-ic">{{ o.icon }}</span>
+              <span class="rp__ov-lbl">{{ o.label }}</span>
+              <span class="rp__ov-val" [class.is-done]="o.tone==='done'" [class.is-doing]="o.tone==='doing'"
+                    [class.is-over]="o.tone==='over'">{{ o.value }}</span>
+            </div>
+          }
+        </div>
+      </section>
+
+      <!-- THỐNG KÊ THEO TRẠNG THÁI: donut + chú thích -->
+      <section class="rp__block">
+        <h3 class="rp__h">THỐNG KÊ THEO TRẠNG THÁI</h3>
+        <div class="rp__status">
+          <div class="rp__donut-wrap">
+            <div class="rp__donut" [style.background]="donutGradient()">
+              <div class="rp__donut-hole"><b>{{ allItems().length }}</b><small>việc</small></div>
+            </div>
+          </div>
+          <div class="rp__legend">
+            <div class="rp__leg-row rp__leg-row--head">
+              <span></span><span class="rp__leg-lbl">Trạng thái</span><span>SL</span><span>%</span>
+            </div>
+            @for (s of statusDist(); track s.label) {
+              <div class="rp__leg-row">
+                <i class="rp__leg-dot" [style.background]="s.color"></i>
+                <span class="rp__leg-lbl">{{ s.label }}</span>
+                <span class="rp__leg-cnt">{{ s.count }}</span>
+                <span class="rp__leg-pct">{{ s.pct }}%</span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+
+      <!-- THEO NHÂN SỰ -->
+      @if (printPeople().length) {
+        <section class="rp__block">
+          <h3 class="rp__h">THEO NHÂN SỰ — {{ printPeople().length }} người</h3>
+          <table class="rp__tbl">
+            <colgroup><col class="c-stt"><col class="c-name"><col class="c-n"><col class="c-n"><col class="c-n"><col class="c-n"><col class="c-pct"></colgroup>
+            <thead><tr>
+              <th>STT</th><th class="rp__l">Nhân sự</th><th>Tổng</th><th>Xong</th><th>Đang làm</th><th>Trễ hạn</th><th>% Hoàn thành</th>
+            </tr></thead>
+            <tbody>
+              @for (p of printPeople(); track p.name; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td class="rp__l"><span class="rp__ava">{{ initials(p.name) }}</span>{{ p.name }}</td>
+                  <td>{{ p.total }}</td><td>{{ p.done }}</td><td>{{ p.doing }}</td><td>{{ p.overdue }}</td>
+                  <td>
+                    <div class="rp__pbar"><div class="rp__pbar-fill" [style.width.%]="clampPct(p.pct)"></div>
+                      <span class="rp__pbar-val">{{ clampPct(p.pct) }}%</span></div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </section>
+      }
+
+      <!-- TIẾN ĐỘ EPIC / STORY (báo cáo tuần) -->
+      @if (printEpic().length) {
+        <section class="rp__block">
+          <h3 class="rp__h">TIẾN ĐỘ EPIC / STORY — {{ r.epicStory.length }} mục</h3>
+          <table class="rp__tbl">
+            <colgroup><col class="c-stt"><col class="c-task"><col class="c-pic"><col class="c-status"><col class="c-date"><col class="c-date"><col class="c-pct"></colgroup>
+            <thead><tr>
+              <th>STT</th><th class="rp__l">Tên công việc</th><th>PIC</th><th class="rp__l">Trạng thái</th><th>Bắt đầu</th><th>Kết thúc</th><th>%</th>
+            </tr></thead>
+            <tbody>
+              @for (t of printEpic(); track t.taskId; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td class="rp__l" [title]="t.title">{{ t.title }}</td>
+                  <td><span class="rp__ava rp__ava--sm" [title]="t.assigneeName || ''">{{ initials(t.assigneeName) }}</span></td>
+                  <td class="rp__l"><i class="rp__sdot" [style.background]="statusColor(t.status)"></i>{{ statusLabel(t.status) }}</td>
+                  <td>{{ t.startDate || '—' }}</td><td>{{ t.dueDate || '—' }}</td>
+                  <td><div class="rp__pbar"><div class="rp__pbar-fill" [style.width.%]="clampPct(t.progressPct)"></div>
+                    <span class="rp__pbar-val">{{ clampPct(t.progressPct) }}%</span></div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (printEpicMore() > 0) { <div class="rp__more">… còn {{ printEpicMore() }} mục khác</div> }
+        </section>
+      }
+
+      <!-- ĐÃ HOÀN THÀNH -->
+      @if (printDone().length) {
+        <section class="rp__block">
+          <h3 class="rp__h">ĐÃ HOÀN THÀNH ({{ r.done.length }})</h3>
+          <table class="rp__tbl">
+            <colgroup><col class="c-stt"><col class="c-task"><col class="c-pic"><col class="c-status"><col class="c-date"><col class="c-date"><col class="c-pct"></colgroup>
+            <thead><tr>
+              <th>STT</th><th class="rp__l">Tên công việc</th><th>PIC</th><th class="rp__l">Trạng thái</th><th>Bắt đầu</th><th>Kết thúc</th><th>%</th>
+            </tr></thead>
+            <tbody>
+              @for (t of printDone(); track t.taskId; let i = $index) {
+                <tr>
+                  <td>{{ i + 1 }}</td>
+                  <td class="rp__l" [title]="t.title">{{ t.title }}</td>
+                  <td><span class="rp__ava rp__ava--sm" [title]="t.assigneeName || ''">{{ initials(t.assigneeName) }}</span></td>
+                  <td class="rp__l"><i class="rp__sdot" [style.background]="statusColor(t.status)"></i>{{ statusLabel(t.status) }}</td>
+                  <td>{{ t.startDate || '—' }}</td><td>{{ t.dueDate || '—' }}</td>
+                  <td><div class="rp__pbar"><div class="rp__pbar-fill" [style.width.%]="clampPct(t.progressPct)"></div>
+                    <span class="rp__pbar-val">{{ clampPct(t.progressPct) }}%</span></div></td>
+                </tr>
+              }
+            </tbody>
+          </table>
+          @if (printDoneMore() > 0) { <div class="rp__more">… còn {{ printDoneMore() }} mục khác</div> }
+        </section>
+      }
+    </div>
+  </div>
+}

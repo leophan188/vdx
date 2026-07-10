@@ -21,14 +21,14 @@ interface ReportBlock {
   emptyText: string;
 }
 
-/** Cột trạng thái cho ma trận loại × trạng thái. */
-const STATUS_META: { key: TaskStatus; label: string }[] = [
-  { key: 'BACKLOG', label: 'Backlog' },
-  { key: 'TODO', label: 'Cần làm' },
-  { key: 'IN_PROGRESS', label: 'Đang làm' },
-  { key: 'IN_REVIEW', label: 'Kiểm thử' },
-  { key: 'DONE', label: 'Hoàn thành' },
-  { key: 'CANCELLED', label: 'Huỷ' }
+/** Cột trạng thái cho ma trận loại × trạng thái (kèm màu cho biểu đồ donut trang in). */
+const STATUS_META: { key: TaskStatus; label: string; color: string }[] = [
+  { key: 'BACKLOG', label: 'Backlog', color: '#94a3b8' },
+  { key: 'TODO', label: 'Cần làm', color: '#3b82f6' },
+  { key: 'IN_PROGRESS', label: 'Đang làm', color: '#f59e0b' },
+  { key: 'IN_REVIEW', label: 'Kiểm thử', color: '#8b5cf6' },
+  { key: 'DONE', label: 'Hoàn thành', color: '#22c55e' },
+  { key: 'CANCELLED', label: 'Huỷ', color: '#cbd5e1' }
 ];
 
 /** Mức ưu tiên (thống kê bug/issue). */
@@ -181,12 +181,107 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__type-badge { font-size: var(--text-xs); font-weight: 700; padding: 1px 7px; border-radius: 999px;
       color: var(--tb-color); background: color-mix(in srgb, var(--tb-color) 14%, transparent);
       border: 1px solid color-mix(in srgb, var(--tb-color) 36%, transparent); }
+
+    /* ===================== TRANG IN (HTML → PDF) ===================== */
+    .rp-overlay { position: fixed; inset: 0; z-index: 1000; overflow: auto;
+      background: #5b6472; padding: 20px 12px 40px; display: flex; flex-direction: column; align-items: center; }
+    .rp-bar { position: sticky; top: 0; z-index: 2; width: 210mm; max-width: 100%;
+      display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 14px;
+      background: #1f2937; color: #e5e7eb; border-radius: 8px; }
+    .rp-bar__hint { font-size: 12px; opacity: .85; }
+    .rp-bar__spacer { flex: 1; }
+
+    /* Trang A4 */
+    .rp-page { width: 210mm; max-width: 100%; min-height: 297mm; background: #fff; color: #1f2937;
+      padding: 12mm 12mm 14mm; box-shadow: 0 6px 30px rgba(0,0,0,.35);
+      font-family: system-ui, "Segoe UI", Roboto, sans-serif; font-size: 11px; line-height: 1.35; }
+
+    .rp__head { background: #1e3a5f; color: #fff; border-radius: 8px; padding: 12px 16px; text-align: center; margin-bottom: 12px; }
+    .rp__head-title { font-size: 17px; font-weight: 800; letter-spacing: .3px; }
+    .rp__head-meta { margin-top: 4px; font-size: 11px; background: rgba(255,255,255,.14); display: inline-block;
+      padding: 2px 12px; border-radius: 999px; }
+    .rp__head-proj { margin-top: 5px; font-size: 12px; opacity: .92; }
+
+    .rp__cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .rp__card { border-radius: 10px; padding: 10px 12px; text-align: center; border: 1.5px solid; }
+    .rp__card-lbl { font-size: 11px; font-weight: 800; padding: 4px 0; border-radius: 6px; color: #fff; margin: -10px -12px 8px; }
+    .rp__card-num { font-size: 30px; font-weight: 800; line-height: 1; }
+    .rp__card--done { border-color: #2ea05a; background: #eef8f1; color: #1e7e42; }
+    .rp__card--done .rp__card-lbl { background: #2ea05a; }
+    .rp__card--doing { border-color: #1e50a0; background: #eef2fb; color: #1e50a0; }
+    .rp__card--doing .rp__card-lbl { background: #1e50a0; }
+    .rp__card--over { border-color: #c0392b; background: #fdeeec; color: #c0392b; }
+    .rp__card--over .rp__card-lbl { background: #c0392b; }
+
+    .rp__block { margin-bottom: 12px; break-inside: avoid; }
+    .rp__h { background: #1e3a5f; color: #fff; font-size: 12px; font-weight: 800; letter-spacing: .3px;
+      padding: 5px 10px; border-radius: 6px 6px 0 0; margin: 0; }
+    .rp__ov { border: 1px solid #e5e7eb; border-top: 0; border-radius: 0 0 6px 6px; overflow: hidden; }
+    .rp__ov-row { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 8px;
+      padding: 5px 10px; border-top: 1px solid #eef0f2; }
+    .rp__ov-row:nth-child(odd) { background: #f8fafc; }
+    .rp__ov-ic { text-align: center; }
+    .rp__ov-lbl { color: #475569; }
+    .rp__ov-val { font-weight: 800; font-variant-numeric: tabular-nums; }
+    .rp__ov-val.is-done { color: #1e7e42; } .rp__ov-val.is-doing { color: #1e50a0; } .rp__ov-val.is-over { color: #c0392b; }
+
+    .rp__status { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: center;
+      border: 1px solid #e5e7eb; border-top: 0; border-radius: 0 0 6px 6px; padding: 12px; }
+    .rp__donut-wrap { display: flex; justify-content: center; }
+    .rp__donut { width: 120px; height: 120px; border-radius: 50%; position: relative;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .rp__donut-hole { position: absolute; inset: 26px; background: #fff; border-radius: 50%;
+      display: flex; flex-direction: column; align-items: center; justify-content: center; }
+    .rp__donut-hole b { font-size: 22px; font-weight: 800; } .rp__donut-hole small { font-size: 10px; color: #64748b; }
+    .rp__legend { display: flex; flex-direction: column; gap: 2px; }
+    .rp__leg-row { display: grid; grid-template-columns: 14px 1fr 40px 48px; align-items: center; gap: 6px;
+      padding: 3px 6px; border-radius: 4px; }
+    .rp__leg-row:nth-child(even) { background: #f8fafc; }
+    .rp__leg-row--head { background: #eef2f7 !important; font-weight: 700; color: #475569; text-transform: uppercase; font-size: 9px; }
+    .rp__leg-row--head span:last-child, .rp__leg-row--head span:nth-child(3) { text-align: right; }
+    .rp__leg-dot { width: 10px; height: 10px; border-radius: 50%; }
+    .rp__leg-cnt { text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .rp__leg-pct { text-align: right; color: #64748b; font-variant-numeric: tabular-nums; }
+
+    .rp__tbl { width: 100%; border-collapse: collapse; }
+    .rp__tbl colgroup .c-stt { width: 32px; } .rp__tbl colgroup .c-pic { width: 42px; }
+    .rp__tbl colgroup .c-n { width: 58px; } .rp__tbl colgroup .c-status { width: 92px; }
+    .rp__tbl colgroup .c-date { width: 78px; } .rp__tbl colgroup .c-pct { width: 130px; }
+    .rp__tbl th { background: #eef2f7; color: #475569; font-size: 9.5px; text-transform: uppercase; letter-spacing: .02em;
+      font-weight: 800; padding: 5px 6px; border: 1px solid #e2e8f0; text-align: center; }
+    .rp__tbl td { padding: 4px 6px; border: 1px solid #eef0f2; text-align: center; vertical-align: middle;
+      font-variant-numeric: tabular-nums; }
+    .rp__tbl tbody tr:nth-child(even) td { background: #f8fafc; }
+    .rp__l { text-align: left !important; }
+    .rp__tbl td.rp__l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
+    .rp__ava { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+      border-radius: 50%; background: #1e50a0; color: #fff; font-size: 9px; font-weight: 800; margin-right: 6px; vertical-align: middle; }
+    .rp__ava--sm { margin-right: 0; }
+    .rp__sdot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+    .rp__pbar { position: relative; height: 14px; border-radius: 999px; background: #edf0f4; overflow: hidden; }
+    .rp__pbar-fill { position: absolute; left: 0; top: 0; height: 100%; border-radius: 999px; background: #3fbf6a; }
+    .rp__pbar-val { position: relative; z-index: 1; font-size: 9px; font-weight: 700; color: #14532d;
+      line-height: 14px; padding-right: 6px; display: block; text-align: right; }
+    .rp__more { padding: 5px 8px; text-align: center; color: #64748b; font-style: italic; font-size: 10px;
+      border: 1px solid #eef0f2; border-top: 0; }
+
+    @media print {
+      .no-print { display: none !important; }
+      .rp-overlay { position: static; background: #fff; padding: 0; display: block; }
+      .rp-page { width: auto; min-height: auto; box-shadow: none; padding: 0; }
+      .rp__donut, .rp__card, .rp__card-lbl, .rp__h, .rp__head, .rp__pbar-fill, .rp__leg-dot, .rp__sdot, .rp__ava {
+        -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    }
   `]
 })
 export class PrjReportsPeriod {
   readonly projectId = input.required<string>();
+  readonly projectName = input<string>('');
 
   private svc = inject(ProjectService);
+
+  /** Bật lớp phủ "trang in" (giống biểu mẫu khách hàng) trước khi window.print(). */
+  readonly printMode = signal(false);
 
   readonly period = signal<Period>('daily');
   readonly report = signal<PeriodReport | null>(null);
@@ -385,4 +480,100 @@ export class PrjReportsPeriod {
     }
   }
   typeLabel(t: TaskType): string { return TYPE_META[t]?.short ?? t; }
+
+  // ============ TRANG IN (HTML → PDF giống biểu mẫu khách hàng) ============
+
+  /** Phân bố theo trạng thái (cho donut + chú thích). */
+  readonly statusDist = computed(() => {
+    const items = this.allItems();
+    const total = items.length || 1;
+    return STATUS_META.map((s) => {
+      const count = items.filter((i) => i.status === s.key).length;
+      return { label: s.label, color: s.color, count, pct: Math.round((count / total) * 1000) / 10 };
+    });
+  });
+
+  /** Chuỗi conic-gradient dựng donut từ statusDist. */
+  readonly donutGradient = computed(() => {
+    const d = this.statusDist();
+    const total = d.reduce((s, x) => s + x.count, 0) || 1;
+    let acc = 0;
+    const stops: string[] = [];
+    for (const x of d) {
+      const from = (acc / total) * 360;
+      acc += x.count;
+      const to = (acc / total) * 360;
+      if (x.count > 0) stops.push(`${x.color} ${from}deg ${to}deg`);
+    }
+    if (!stops.length) stops.push('var(--color-border) 0deg 360deg');
+    return `conic-gradient(${stops.join(', ')})`;
+  });
+
+  /** Số việc quá hạn (từ danh sách overdue). */
+  readonly overdueCount = computed(() => this.report()?.overdue.length ?? 0);
+
+  /** Các dòng TỔNG QUAN cho trang in (icon · nhãn · giá trị). */
+  readonly printOverview = computed(() => {
+    const o = this.report()?.overview;
+    if (!o) return [] as { icon: string; label: string; value: string; tone?: string }[];
+    const est = o.totalEstimate || 0;
+    const doneEst = o.doneEstimate || 0;
+    const estPct = est ? Math.round((doneEst / est) * 1000) / 10 : 0;
+    return [
+      { icon: '🗂️', label: 'Tổng số công việc', value: String(o.totalTasks) },
+      { icon: '✅', label: 'Đã hoàn thành', value: String(o.doneTasks), tone: 'done' },
+      { icon: '🔄', label: 'Đang làm', value: String(this.report()?.inProgress.length ?? 0), tone: 'doing' },
+      { icon: '⛔', label: 'Quá hạn', value: String(o.overdueCount), tone: 'over' },
+      { icon: '🐞', label: 'Lỗi (bug)', value: String(o.bugCount) },
+      { icon: '📊', label: 'Ước lượng (%)', value: `${estPct}% (${doneEst}/${est} h)` }
+    ];
+  });
+
+  /** Nhân sự cho trang in (dùng số liệu backend: Tổng/Xong/Đang làm/Trễ/%). */
+  readonly printPeople = computed(() => this.report()?.byPerson ?? []);
+
+  /** EPIC/Story + Đã hoàn thành: cắt bớt cho gọn trang in, ghi "… còn N mục khác". */
+  private readonly PRINT_CAP = 14;
+  readonly printEpic = computed(() => (this.report()?.epicStory ?? []).slice(0, this.PRINT_CAP));
+  readonly printEpicMore = computed(() => Math.max(0, (this.report()?.epicStory?.length ?? 0) - this.PRINT_CAP));
+  readonly printDone = computed(() => (this.report()?.done ?? []).slice(0, this.PRINT_CAP));
+  readonly printDoneMore = computed(() => Math.max(0, (this.report()?.done?.length ?? 0) - this.PRINT_CAP));
+
+  /** Tiêu đề + ngày cho header trang in. */
+  readonly printTitle = computed(() =>
+    (this.period() === 'weekly' ? 'BÁO CÁO TUẦN' : 'BÁO CÁO NGÀY') +
+    (this.report()?.periodLabel ? ' — ' + this.report()!.periodLabel : ''));
+  readonly printDateLabel = computed(() => {
+    const iso = this.reportDate();
+    const [y, m, d] = iso.split('-').map(Number);
+    if (!y) return '';
+    const dt = new Date(y, m - 1, d);
+    const wd = ['Chủ nhật', 'Thứ 2', 'Thứ 3', 'Thứ 4', 'Thứ 5', 'Thứ 6', 'Thứ 7'][dt.getDay()];
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d)}/${p(m)}/${y} · ${wd}`;
+  });
+
+  /** Mở trang in: bật lớp phủ → in → tắt. */
+  openPrint(): void {
+    this.printMode.set(true);
+    setTimeout(() => {
+      const done = () => { this.printMode.set(false); window.removeEventListener('afterprint', done); };
+      window.addEventListener('afterprint', done);
+      window.print();
+    }, 120);
+  }
+  closePrint(): void { this.printMode.set(false); }
+
+  /** Màu chấm trạng thái cho trang in. */
+  statusColor(s: TaskStatus): string {
+    return STATUS_META.find((x) => x.key === s)?.color ?? '#94a3b8';
+  }
+  /** Chữ cái đầu (avatar PIC trang in). */
+  initials(name: string | null): string {
+    if (!name) return '—';
+    const parts = name.trim().split(/\s+/);
+    const last = parts[parts.length - 1] ?? '';
+    const first = parts.length > 1 ? parts[0] : '';
+    return ((last[0] ?? '') + (first[0] ?? '')).toUpperCase() || name[0].toUpperCase();
+  }
 }
