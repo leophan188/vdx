@@ -14,6 +14,7 @@ import { PrjTimesheet } from './timesheet/timesheet';
 import { PrjLog } from './log/log';
 import { PrjDiary } from './diary/diary';
 import { PrjTaskDetail } from './task-detail/task-detail';
+import { loadPref, savePref } from '../shared/view-prefs';
 
 interface WsTab { key: string; label: string; icon: string; feature?: string; }
 
@@ -24,11 +25,36 @@ interface WsTab { key: string; label: string; icon: string; feature?: string; }
     PrjReportsPeriod, PrjTimesheet, PrjLog, PrjDiary, PrjTaskDetail],
   templateUrl: './project-workspace.html',
   styles: [`
-    .pw-tabs { display: flex; gap: 4px; flex-wrap: wrap; border-bottom: 1px solid var(--color-border); margin-bottom: var(--space-4); }
-    .pw-tabs button { border: none; background: transparent; padding: 10px 14px; cursor: pointer; color: var(--color-text-muted);
-      font: inherit; font-weight: var(--weight-medium); border-bottom: 2px solid transparent; }
-    .pw-tabs button:hover { color: var(--color-text); }
-    .pw-tabs button.active { color: var(--color-primary); border-bottom-color: var(--color-primary); font-weight: var(--weight-semibold); }
+    /* Bố cục: menu tab DỌC (trái, thu gọn được) + nội dung (phải). */
+    .pw-layout { display: grid; grid-template-columns: auto 1fr; gap: var(--space-4); align-items: start; }
+    .pw-nav { position: sticky; top: var(--space-4); display: flex; flex-direction: column; gap: 2px;
+      min-width: 210px; padding: var(--space-2); border: 1px solid var(--color-border);
+      border-radius: var(--radius-lg); background: var(--color-surface); }
+    .pw-nav.is-collapsed { min-width: 0; }
+    .pw-nav__toggle { display: flex; align-items: center; justify-content: flex-end; gap: 6px;
+      padding: 4px 8px 8px; margin-bottom: 4px; border-bottom: 1px solid var(--color-border); }
+    .pw-nav.is-collapsed .pw-nav__toggle { justify-content: center; }
+    .pw-nav__toggle button { border: 1px solid var(--color-border); background: var(--color-surface);
+      color: var(--color-text-muted); width: 26px; height: 26px; border-radius: var(--radius-md); cursor: pointer;
+      display: flex; align-items: center; justify-content: center; font-size: 14px; }
+    .pw-nav__toggle button:hover { color: var(--color-primary); border-color: var(--color-primary); }
+    .pw-nav .tab { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border: 0;
+      background: transparent; border-radius: var(--radius-md); cursor: pointer; color: var(--color-text-muted);
+      font: inherit; font-weight: var(--weight-medium); text-align: left; white-space: nowrap; width: 100%; }
+    .pw-nav .tab:hover { background: var(--color-surface-alt); color: var(--color-text); }
+    .pw-nav .tab.active { background: var(--color-primary-soft); color: var(--color-primary); font-weight: var(--weight-semibold); }
+    .pw-nav .tab-ico { flex: 0 0 auto; width: 20px; text-align: center; }
+    .pw-nav.is-collapsed .tab { justify-content: center; padding: 9px; }
+    .pw-nav.is-collapsed .tab-label { display: none; }
+    .pw-body { min-width: 0; }
+
+    /* Màn hẹp: menu thành hàng ngang cuộn được, nội dung xuống dưới. */
+    @media (max-width: 720px) {
+      .pw-layout { grid-template-columns: 1fr; }
+      .pw-nav { position: static; flex-direction: row; overflow-x: auto; min-width: 0; }
+      .pw-nav.is-collapsed .tab-label { display: inline; }
+      .pw-nav__toggle { display: none; }
+    }
   `]
 })
 export class ProjectWorkspace implements OnInit {
@@ -40,6 +66,13 @@ export class ProjectWorkspace implements OnInit {
   readonly project = signal<Project | null>(null);
   readonly tab = signal('overview');
   readonly refresh = signal(0); // tăng để buộc tab tải lại sau khi đổi từ chi tiết
+  /** Thu gọn menu tab dọc (còn icon) — lưu localStorage. */
+  readonly navCollapsed = signal<boolean>(loadPref<boolean>('bpm.pw.navCollapsed', false));
+  toggleNav(): void {
+    const v = !this.navCollapsed();
+    this.navCollapsed.set(v);
+    savePref('bpm.pw.navCollapsed', v);
+  }
 
   // Chi tiết task (mở từ Backlog/Kanban)
   readonly detailTask = signal<ProjectTask | null>(null);

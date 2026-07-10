@@ -3,12 +3,22 @@
                    [subtitle]="(project()?.code || '') + (project()?.description ? ' · ' + project()!.description : '')"
                    [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
 
-  <div class="pw-tabs">
-    @for (t of visibleTabs(); track t.key) {
-      <button type="button" [class.active]="tab() === t.key" (click)="tab.set(t.key)">{{ t.icon }} {{ t.label }}</button>
-    }
-  </div>
+  <div class="pw-layout">
+    <!-- Menu tab DỌC (thu gọn được) -->
+    <nav class="pw-nav" [class.is-collapsed]="navCollapsed()">
+      <div class="pw-nav__toggle">
+        <button type="button" (click)="toggleNav()"
+                [title]="navCollapsed() ? 'Mở rộng menu' : 'Thu gọn menu'">{{ navCollapsed() ? '»' : '«' }}</button>
+      </div>
+      @for (t of visibleTabs(); track t.key) {
+        <button type="button" class="tab" [class.active]="tab() === t.key"
+                (click)="tab.set(t.key)" [title]="t.label">
+          <span class="tab-ico">{{ t.icon }}</span><span class="tab-label">{{ t.label }}</span>
+        </button>
+      }
+    </nav>
 
+    <div class="pw-body">
   @if (id(); as pid) {
     <!-- @for keyed theo refresh() để tạo lại tab (tải lại) sau khi đổi từ chi tiết task -->
     @for (n of [refresh()]; track n) {
@@ -30,4 +40,6 @@
     <app-prj-task-detail [projectId]="pid" [task]="detailTask()" [open]="detailOpen()"
                          (closed)="closeDetail()" (changed)="onTaskChanged()" />
   }
+    </div>
+  </div>
 </section>
