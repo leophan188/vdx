@@ -143,11 +143,26 @@ export class PrjOverview {
   /** Thống kê RIÊNG BIỆT Task / Bug / Issue (tổng, xong, đang làm, chưa làm, trễ hạn, %). */
   readonly catStats = computed<CatStat[]>(() => categoryStats(this.tasks()));
 
-  /** Tiến độ % hoàn thành của từng EPIC / Story (rollup progressPct). Epic trước, giữ thứ tự backlog. */
-  readonly epicStoryRows = computed(() =>
-    this.tasks()
-      .filter((t) => t.type === 'EPIC' || t.type === 'STORY')
-      .map((t) => ({ code: t.code, title: t.title, type: t.type, pct: Math.max(0, Math.min(100, Math.round(t.progressPct ?? 0))) })));
+  /** Tiến độ % EPIC/Story theo THỨ TỰ CÂY (Story nằm dưới Epic cha) — kèm level để thụt lề. */
+  readonly epicStoryRows = computed(() => {
+    const es = this.tasks().filter((t) => t.type === 'EPIC' || t.type === 'STORY');
+    const esIds = new Set(es.map((t) => t.id));
+    const childrenOf = new Map<string, ProjectTask[]>();
+    for (const t of es) {
+      const k = t.parentId && esIds.has(t.parentId) ? t.parentId : '';
+      (childrenOf.get(k) ?? childrenOf.set(k, []).get(k)!).push(t);
+    }
+    const out: { code: string; title: string; type: string; pct: number; level: number }[] = [];
+    const walk = (parentKey: string, level: number) => {
+      for (const t of childrenOf.get(parentKey) ?? []) {
+        out.push({ code: t.code, title: t.title, type: t.type,
+          pct: Math.max(0, Math.min(100, Math.round(t.progressPct ?? 0))), level });
+        walk(t.id, level + 1);
+      }
+    };
+    walk('', 0);
+    return out;
+  });
 
   /** Bug/Issue của dự án — để kiểm soát chất lượng theo nhân sự. */
   private readonly bugList = computed(() => this.tasks().filter((t) => t.type === 'BUG' || t.type === 'ISSUE'));

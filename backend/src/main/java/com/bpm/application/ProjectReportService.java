@@ -262,11 +262,6 @@ public class ProjectReportService {
             ProjectDto.ReportTaskItem item = item(t, p.getCode(), nameCache,
                     progress.getOrDefault(t.getId(), 0.0), taskById);
 
-            // Báo cáo TUẦN: tổng quan tiến độ % của EPIC/Story (dự án). Ngày: không (focus việc trong ngày).
-            if (isWeekly && (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY)) {
-                epicStory.add(item);
-            }
-
             if (isDone) {
                 Instant upd = t.getUpdatedAt();
                 if (upd != null && !upd.isBefore(startOfPeriod) && upd.isBefore(endOfPeriod)) {
@@ -290,6 +285,38 @@ public class ProjectReportService {
         ProjectDto.ReportOverview overview = new ProjectDto.ReportOverview(
                 completionPct(tasks, parentIds), totalTasks, doneTasks,
                 round2(totalEstimate), round2(doneEstimate), overdueCount, bugCount);
+
+        // Báo cáo TUẦN: tiến độ % EPIC/Story theo THỨ TỰ CÂY (Story nằm dưới Epic cha). Ngày: bỏ.
+        if (isWeekly) {
+            java.util.Map<String, List<ProjectTask>> childrenOf = new java.util.LinkedHashMap<>();
+            for (ProjectTask t : tasks) {
+                if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) {
+                    childrenOf.computeIfAbsent(t.getParentId() == null ? "" : t.getParentId(), k -> new ArrayList<>()).add(t);
+                }
+            }
+            java.util.Set<String> esIds = new java.util.HashSet<>();
+            for (ProjectTask t : tasks) {
+                if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) esIds.add(t.getId());
+            }
+            java.util.Deque<ProjectTask> stack = new java.util.ArrayDeque<>();
+            // Gốc = Epic/Story không có cha Epic/Story (giữ thứ tự backlog).
+            List<ProjectTask> roots = new ArrayList<>();
+            for (ProjectTask t : tasks) {
+                if ((t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY)
+                        && (t.getParentId() == null || !esIds.contains(t.getParentId()))) {
+                    roots.add(t);
+                }
+            }
+            for (int i = roots.size() - 1; i >= 0; i--) stack.push(roots.get(i));
+            java.util.Set<String> seen = new java.util.HashSet<>();
+            while (!stack.isEmpty()) {
+                ProjectTask t = stack.pop();
+                if (!seen.add(t.getId())) continue;
+                epicStory.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
+                List<ProjectTask> kids = childrenOf.getOrDefault(t.getId(), List.of());
+                for (int i = kids.size() - 1; i >= 0; i--) stack.push(kids.get(i));
+            }
+        }
 
         return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory);
     }
