@@ -110,11 +110,18 @@ const DAY_MS = 86_400_000;
     /* Cột phải: vùng trục (cuộn ngang) */
     .gantt__scroll { flex: 1 1 auto; overflow-x: auto; }
     .gantt__canvas { position: relative; }
-    .gantt__axis { height: 48px; position: relative; border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
-    .gantt__tick { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--color-border);
-      display: flex; flex-direction: column; justify-content: center; padding-left: var(--space-2);
-      font-size: var(--text-xs); color: var(--color-text-muted); box-sizing: border-box; }
-    .gantt__tick-alt { font-size: 10px; opacity: 0.7; }
+    /* Header trục 3 TẦNG: Năm / Tháng / (Tuần|Ngày) — ô đơn vị ĐỀU NHAU. */
+    .gantt__axis3 { height: 48px; position: relative; border-bottom: 1px solid var(--color-border); background: var(--color-surface-alt); }
+    .gantt__tier { position: relative; height: 16px; }
+    .gantt__tcell { position: absolute; top: 0; bottom: 0; border-left: 1px solid var(--color-border); box-sizing: border-box;
+      display: flex; align-items: center; justify-content: center; font-size: 11px; color: var(--color-text-muted);
+      overflow: hidden; white-space: nowrap; }
+    .gantt__tier--year .gantt__tcell { background: color-mix(in srgb, var(--color-primary) 20%, var(--color-surface-alt));
+      color: var(--color-text); font-weight: var(--weight-semibold); }
+    .gantt__tier--month .gantt__tcell { background: color-mix(in srgb, var(--color-primary) 9%, var(--color-surface-alt));
+      color: var(--color-text); font-weight: var(--weight-medium); }
+    .gantt__tier--unit .gantt__tcell { font-size: 10px; }
+    .gantt__tcell-alt { opacity: .6; margin-left: 1px; }
 
     .gantt__lanes { position: relative; }
     .gantt__lane { height: var(--row-h); position: relative; border-bottom: 1px solid var(--color-border); }
@@ -386,59 +393,72 @@ export class PrjTimeline implements OnInit {
     return diffDays(min, today) * this.pxPerDay();
   });
 
-  // ===== Header trục: các ô nhãn theo zoom =====
-  readonly ticks = computed<AxisTick[]>(() => {
-    const { min, max } = this.range();
-    const ppd = this.pxPerDay();
-    const z = this.zoom();
-    const out: AxisTick[] = [];
-    const MAX_TICKS = 1200; // an toàn: không dựng quá nhiều ô trục (tránh treo)
-    const leftOf = (d: Date) => diffDays(min, d) * ppd;
+  // ===== Header trục 3 TẦNG: Năm / Tháng / (Tuần hoặc Ngày) =====
+  private leftOf(d: Date): number { return diffDays(this.range().min, d) * this.pxPerDay(); }
 
-    if (z === 'year') {
-      let y = min.getFullYear();
-      const endY = max.getFullYear();
-      for (; y <= endY && out.length < MAX_TICKS; y++) {
-        const start = new Date(y, 0, 1);
-        const next = new Date(y + 1, 0, 1);
-        const segStart = start < min ? min : start;
-        const segEnd = next > addDays(max, 1) ? addDays(max, 1) : next;
-        out.push({ label: String(y), left: leftOf(segStart), width: diffDays(segStart, segEnd) * ppd });
-      }
-    } else if (z === 'month') {
-      let cur = new Date(min.getFullYear(), min.getMonth(), 1);
-      while (cur <= max && out.length < MAX_TICKS) {
-        const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
-        const segStart = cur < min ? min : cur;
-        const segEnd = next > addDays(max, 1) ? addDays(max, 1) : next;
-        out.push({ label: pad2(cur.getMonth() + 1) + '/' + cur.getFullYear(), left: leftOf(segStart), width: diffDays(segStart, segEnd) * ppd });
-        cur = next;
-      }
-    } else if (z === 'week') {
-      // Tuần bắt đầu Thứ Hai.
-      let cur = startOfWeek(min);
-      let n = 1;
-      while (cur <= max && out.length < MAX_TICKS) {
-        const next = addDays(cur, 7);
-        const segStart = cur < min ? min : cur;
-        const segEnd = next > addDays(max, 1) ? addDays(max, 1) : next;
-        out.push({
-          label: 'Tuần ' + n,
-          alt: fmtShort(cur) + '–' + fmtShort(addDays(cur, 6)),
-          left: leftOf(segStart), width: diffDays(segStart, segEnd) * ppd
-        });
-        cur = next; n++;
+  /** Số tuần ISO (W##) cho nhãn tầng tuần. */
+  private isoWeek(d: Date): number {
+    const dt = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()));
+    const dayNum = (dt.getUTCDay() + 6) % 7;
+    dt.setUTCDate(dt.getUTCDate() - dayNum + 3);
+    const firstTh = new Date(Date.UTC(dt.getUTCFullYear(), 0, 4));
+    const firstDayNum = (firstTh.getUTCDay() + 6) % 7;
+    firstTh.setUTCDate(firstTh.getUTCDate() - firstDayNum + 3);
+    return 1 + Math.round((dt.getTime() - firstTh.getTime()) / (7 * 86_400_000));
+  }
+
+  /** Tầng NĂM — ô span theo từng năm trong phạm vi. */
+  readonly yearTicks = computed<AxisTick[]>(() => {
+    const { min, max } = this.range(), ppd = this.pxPerDay();
+    const out: AxisTick[] = [];
+    const endEx = addDays(max, 1);
+    for (let y = min.getFullYear(); y <= max.getFullYear() && out.length < 40; y++) {
+      const s = new Date(y, 0, 1) < min ? min : new Date(y, 0, 1);
+      const e = new Date(y + 1, 0, 1) > endEx ? endEx : new Date(y + 1, 0, 1);
+      out.push({ label: 'Năm ' + y, left: this.leftOf(s), width: diffDays(s, e) * ppd });
+    }
+    return out;
+  });
+
+  /** Tầng THÁNG — ô span theo từng tháng. */
+  readonly monthTicks = computed<AxisTick[]>(() => {
+    const { min, max } = this.range(), ppd = this.pxPerDay();
+    const out: AxisTick[] = [];
+    const endEx = addDays(max, 1);
+    let cur = new Date(min.getFullYear(), min.getMonth(), 1);
+    while (cur <= max && out.length < 200) {
+      const next = new Date(cur.getFullYear(), cur.getMonth() + 1, 1);
+      const s = cur < min ? min : cur;
+      const e = next > endEx ? endEx : next;
+      out.push({ label: 'Tháng ' + (cur.getMonth() + 1), left: this.leftOf(s), width: diffDays(s, e) * ppd });
+      cur = next;
+    }
+    return out;
+  });
+
+  /** Tầng ĐƠN VỊ (đáy) — Ngày khi zoom 'day', ngược lại Tuần; các ô ĐỀU NHAU. */
+  readonly unitTicks = computed<AxisTick[]>(() => {
+    const { min, max } = this.range(), ppd = this.pxPerDay();
+    const out: AxisTick[] = [];
+    const MAX_TICKS = 1200;
+    const endEx = addDays(max, 1);
+    if (this.zoom() === 'day') {
+      for (let cur = startOfDay(min); cur <= max && out.length < MAX_TICKS; cur = addDays(cur, 1)) {
+        out.push({ label: String(cur.getDate()), alt: pad2(cur.getMonth() + 1), left: this.leftOf(cur), width: ppd });
       }
     } else {
-      // day
-      let cur = startOfDay(min);
-      while (cur <= max && out.length < MAX_TICKS) {
-        out.push({ label: fmtShort(cur), left: leftOf(cur), width: ppd });
-        cur = addDays(cur, 1);
+      // Tuần (Thứ Hai) — mỗi ô = 7 ngày = ĐỀU NHAU.
+      for (let cur = startOfWeek(min); cur <= max && out.length < MAX_TICKS; cur = addDays(cur, 7)) {
+        const s = cur < min ? min : cur;
+        const e = addDays(cur, 7) > endEx ? endEx : addDays(cur, 7);
+        out.push({ label: 'W' + this.isoWeek(cur), left: this.leftOf(s), width: diffDays(s, e) * ppd });
       }
     }
     return out;
   });
+
+  /** Gridline theo tầng đơn vị (để làn Gantt canh cột đều). */
+  readonly ticks = computed<AxisTick[]>(() => this.unitTicks());
 
   // ===== Các hàng Gantt (cây phẳng theo parentId, giữ thứ tự orderIndex) =====
   /** Id các task LÀ CHA (được task khác trỏ parentId tới) — để nhận diện "Task cha". */

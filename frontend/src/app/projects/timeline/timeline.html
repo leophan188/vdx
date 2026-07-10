@@ -90,14 +90,25 @@
       <!-- Cột phải: trục thời gian + bar (cuộn ngang) -->
       <div class="gantt__scroll">
         <div class="gantt__canvas" [style.width.px]="canvasWidth()">
-          <!-- Header trục -->
-          <div class="gantt__axis">
-            @for (t of ticks(); track $index) {
-              <div class="gantt__tick" [style.left.px]="t.left" [style.width.px]="t.width">
-                <span>{{ t.label }}</span>
-                @if (t.alt) { <span class="gantt__tick-alt">{{ t.alt }}</span> }
-              </div>
-            }
+          <!-- Header trục 3 TẦNG: Năm / Tháng / (Tuần hoặc Ngày) -->
+          <div class="gantt__axis3">
+            <div class="gantt__tier gantt__tier--year">
+              @for (t of yearTicks(); track $index) {
+                <div class="gantt__tcell" [style.left.px]="t.left" [style.width.px]="t.width">{{ t.label }}</div>
+              }
+            </div>
+            <div class="gantt__tier gantt__tier--month">
+              @for (t of monthTicks(); track $index) {
+                <div class="gantt__tcell" [style.left.px]="t.left" [style.width.px]="t.width">{{ t.label }}</div>
+              }
+            </div>
+            <div class="gantt__tier gantt__tier--unit">
+              @for (t of unitTicks(); track $index) {
+                <div class="gantt__tcell" [style.left.px]="t.left" [style.width.px]="t.width">
+                  {{ t.label }}@if (t.alt) { <small class="gantt__tcell-alt">/{{ t.alt }}</small> }
+                </div>
+              }
+            </div>
           </div>
 
           <!-- Các làn + bar -->
