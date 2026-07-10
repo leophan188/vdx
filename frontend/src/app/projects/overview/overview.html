@@ -211,7 +211,7 @@
                 <td class="l">{{ c.icon }} {{ c.label }}</td>
                 <td>{{ c.total }}</td><td>{{ c.done }}</td><td>{{ c.doing }}</td><td>{{ c.review }}</td>
                 <td>{{ notStarted(c) }}</td><td>{{ c.cancel }}</td>
-                <td><b>{{ c.donePct }}%</b></td>
+                <td><div class="ovp__pbar"><div class="ovp__pbar-fill" [style.width.%]="c.donePct"></div><span>{{ c.donePct }}%</span></div></td>
               </tr>
             }
           </tbody>

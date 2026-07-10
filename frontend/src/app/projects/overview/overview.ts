@@ -134,6 +134,7 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ovp__cat th { background: #eef2f7; color: #475569; font-size: 10px; text-transform: uppercase; font-weight: 800; padding: 6px; border: 1px solid #e2e8f0; text-align: center; }
     .ovp__cat td { padding: 6px; border: 1px solid #eef0f2; text-align: center; }
     .ovp__cat .l { text-align: left; }
+    .ovp__cat th:last-child, .ovp__cat td:last-child { min-width: 96px; }
     .ovp__es td.l { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 0; }
     .ovp__es-tag { display: inline-block; font-size: 8px; font-weight: 800; padding: 1px 5px; border-radius: 4px;
       margin-right: 6px; background: #e3ecf9; color: #1e50a0; }

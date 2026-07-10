@@ -735,8 +735,24 @@ public class ProjectReportExportService {
                 }
             }
 
-            int[] w = {5200, 2600, 3400, 3000, 3000, 3000, 2400, 3000};
+            int[] w = {5200, 2600, 3400, 3000, 3000, 3000, 2400, 4200};
             for (int c = 0; c < cols.length; c++) sh.setColumnWidth(c, w[c]);
+
+            // THANH TIẾN TRÌNH: data bar xanh trên cột % (H) — áp lên ô SỐ (bỏ qua header/text).
+            try {
+                var scf = sh.getSheetConditionalFormatting();
+                XSSFColor barColor = new XSSFColor(new byte[]{(byte) 0x63, (byte) 0xC3, (byte) 0x84}, null);
+                var rule = scf.createConditionalFormattingRule(barColor);
+                var dbf = rule.getDataBarFormatting();
+                dbf.getMinThreshold().setRangeType(org.apache.poi.ss.usermodel.ConditionalFormattingThreshold.RangeType.NUMBER);
+                dbf.getMinThreshold().setValue(0d);
+                dbf.getMaxThreshold().setRangeType(org.apache.poi.ss.usermodel.ConditionalFormattingThreshold.RangeType.NUMBER);
+                dbf.getMaxThreshold().setValue(100d);
+                dbf.setWidthMax(90);
+                CellRangeAddress[] regions = {CellRangeAddress.valueOf("H1:H" + Math.max(1, rr))};
+                scf.addConditionalFormatting(regions, rule);
+            } catch (Exception ignore) { /* bản POI không hỗ trợ data bar → vẫn có số % */ }
+
             wb.write(out);
             return out.toByteArray();
         } catch (Exception e) {
