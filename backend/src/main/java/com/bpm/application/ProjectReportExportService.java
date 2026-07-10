@@ -108,6 +108,10 @@ public class ProjectReportExportService {
             XSSFCellStyle center = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
             XSSFCellStyle ovLabel = style(wb, true, 10, null, LABEL_BG, true, HorizontalAlignment.LEFT);
             XSSFCellStyle ovValue = style(wb, false, 10, null, null, true, HorizontalAlignment.LEFT);
+            // Cột % HT: số + hậu tố "%" → nền cho DATA BAR (thanh tiến trình) hiển thị đẹp.
+            XSSFCellStyle pct = style(wb, false, 10, null, null, true, HorizontalAlignment.CENTER);
+            pct.setDataFormat(wb.createDataFormat().getFormat("0\"%\""));
+            java.util.Map<String, XSSFCellStyle> sst = statusStyles(wb); // ô trạng thái tô màu
 
             XSSFSheet sh = wb.createSheet("Báo cáo");
             int last = COLS.length - 1;
@@ -144,7 +148,11 @@ public class ProjectReportExportService {
                 for (ProjectDto.ReportTaskItem t : r.epicStory()) {
                     Row row = sh.createRow(rr++);
                     String[] vals = rowOf(t);
-                    for (int c = 0; c < vals.length; c++) put(row, c, vals[c], (c == 1 || c == 4 || c == 6) ? center : cell);
+                    for (int c = 0; c < vals.length; c++) {
+                        if (c == 6) { putNum(row, 6, t.progressPct(), pct); }        // % HT: số → data bar
+                        else if (c == 4) { put(row, 4, vals[4], sst.getOrDefault(t.status(), center)); } // màu trạng thái
+                        else { put(row, c, vals[c], c == 1 ? center : cell); }
+                    }
                 }
                 rr++;
             }
@@ -167,13 +175,36 @@ public class ProjectReportExportService {
                 rr++; // trống giữa các khối
             }
 
-            int[] w = {3200, 3200, 16000, 14000, 4000, 3400, 2600};
+            int[] w = {3200, 2600, 16000, 12000, 4200, 3400, 4200};
             for (int c = 0; c < COLS.length; c++) sh.setColumnWidth(c, w[c]);
+
+            // THANH TIẾN TRÌNH %: data bar xanh trên cột "% HT" (G) — chỉ áp lên ô SỐ (bỏ qua header/section).
+            try {
+                var scf = sh.getSheetConditionalFormatting();
+                XSSFColor barColor = new XSSFColor(new byte[]{(byte) 0x63, (byte) 0xC3, (byte) 0x84}, null);
+                var rule = scf.createConditionalFormattingRule(barColor);
+                var dbf = rule.getDataBarFormatting();
+                dbf.getMinThreshold().setRangeType(org.apache.poi.ss.usermodel.ConditionalFormattingThreshold.RangeType.NUMBER);
+                dbf.getMinThreshold().setValue(0d);
+                dbf.getMaxThreshold().setRangeType(org.apache.poi.ss.usermodel.ConditionalFormattingThreshold.RangeType.NUMBER);
+                dbf.getMaxThreshold().setValue(100d);
+                dbf.setWidthMax(90);
+                CellRangeAddress[] regions = {CellRangeAddress.valueOf("G1:G" + Math.max(1, rr))};
+                scf.addConditionalFormatting(regions, rule);
+            } catch (Exception ignore) { /* bản POI không hỗ trợ data bar → bỏ qua, vẫn có số % */ }
+
             wb.write(out);
             return out.toByteArray();
         } catch (Exception e) {
             throw new RuntimeException("Không xuất được Excel báo cáo", e);
         }
+    }
+
+    private static Cell putNum(Row row, int col, double v, XSSFCellStyle style) {
+        Cell c = row.createCell(col);
+        c.setCellValue(v);
+        c.setCellStyle(style);
+        return c;
     }
 
     // ===================== WORD =====================
