@@ -114,6 +114,18 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .rp-page { width: 210mm; max-width: 100%; background: #fff; box-shadow: 0 6px 30px rgba(0,0,0,.35); padding: 12mm 12mm 14mm; }
     .ovp { color: #1f2937; font-family: system-ui, "Segoe UI", Roboto, sans-serif; font-size: 12px; }
     .ovp__head { background: #1e3a5f; color: #fff; border-radius: 8px; padding: 12px 16px; text-align: center; margin-bottom: 14px; }
+    /* 3 thẻ số liệu màu — đồng bộ mẫu PDF báo cáo ngày/tuần */
+    .ovp__cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+    .ovp__card { border-radius: 10px; padding: 10px 12px; text-align: center; border: 1.5px solid;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .ovp__card-lbl { font-size: 11px; font-weight: 800; padding: 4px 0; border-radius: 6px; color: #fff; margin: -10px -12px 8px; }
+    .ovp__card-num { font-size: 30px; font-weight: 800; line-height: 1; }
+    .ovp__card--done { border-color: #2ea05a; background: #eef8f1; color: #1e7e42; }
+    .ovp__card--done .ovp__card-lbl { background: #2ea05a; }
+    .ovp__card--doing { border-color: #1e50a0; background: #eef2fb; color: #1e50a0; }
+    .ovp__card--doing .ovp__card-lbl { background: #1e50a0; }
+    .ovp__card--total { border-color: #1e3a5f; background: #eef1f6; color: #1e3a5f; }
+    .ovp__card--total .ovp__card-lbl { background: #1e3a5f; }
     .ovp__title { font-size: 18px; font-weight: 800; letter-spacing: .3px; }
     .ovp__proj { margin-top: 4px; font-size: 12px; opacity: .92; }
     .ovp__progress { display: flex; align-items: center; gap: 16px; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 16px; margin-bottom: 14px; }
@@ -238,6 +250,12 @@ export class PrjOverview {
   readonly pct = computed(() =>
     Math.max(0, Math.min(100, Math.round(this.report()?.completionPct ?? this.project()?.completionPct ?? 0)))
   );
+
+  /** Đang làm = IN_PROGRESS + IN_REVIEW (cho thẻ số liệu báo cáo). */
+  readonly doingCount = computed(() => {
+    const b = (this.report()?.byStatus ?? {}) as Record<string, number>;
+    return (b['IN_PROGRESS'] || 0) + (b['IN_REVIEW'] || 0);
+  });
 
   /** Est done/tổng — làm tròn cho gọn thẻ (tránh tràn "83.45 / 948.45"). */
   readonly estValue = computed(() => {

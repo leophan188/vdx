@@ -170,6 +170,13 @@
       </header>
 
       @if (report(); as r) {
+        <!-- 3 thẻ số liệu màu (đồng bộ mẫu báo cáo ngày/tuần) -->
+        <section class="ovp__cards">
+          <div class="ovp__card ovp__card--done"><div class="ovp__card-lbl">✔ HOÀN THÀNH</div><div class="ovp__card-num">{{ r.doneTasks }}</div></div>
+          <div class="ovp__card ovp__card--doing"><div class="ovp__card-lbl">⚙ ĐANG LÀM</div><div class="ovp__card-num">{{ doingCount() }}</div></div>
+          <div class="ovp__card ovp__card--total"><div class="ovp__card-lbl">▤ TỔNG CÔNG VIỆC</div><div class="ovp__card-num">{{ r.totalTasks }}</div></div>
+        </section>
+
         <section class="ovp__progress">
           <div>
             <div class="ovp__pct">{{ pct() }}%</div>
