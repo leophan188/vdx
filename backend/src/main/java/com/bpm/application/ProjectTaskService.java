@@ -195,9 +195,9 @@ public class ProjectTaskService {
                 pct.put(t.getId(), 0.0);
                 return new double[]{0, 0, 0, 0}; // Huỷ = ngoài phạm vi, không góp vào rollup cha
             }
-            // LÁ — trọng số = giờ HIỆU LỰC (ưu tiên est; không có est → duration ngày công × 8).
+            // LÁ — trọng số = est THÔ (KHỚP % tổng ở Tổng quan/report; KHÔNG suy từ duration).
             boolean done = t.getStatus() == TaskStatus.DONE;
-            double est = t.effectiveHours();
+            double est = t.getEstimateHours();
             pct.put(t.getId(), done ? 100.0 : 0.0);
             return new double[]{est, done ? est : 0.0, 1, done ? 1 : 0};
         }

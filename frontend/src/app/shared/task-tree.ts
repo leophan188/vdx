@@ -30,7 +30,8 @@ export function subtreeLeafEstimate(taskId: string, tree: TaskTree): number {
   const kids = tree.childrenOf.get(taskId) ?? [];
   const self = tree.byId.get(taskId);
   if (kids.length === 0) {
-    return self?.estimateHours || 0;
+    // Lá Huỷ = ngoài phạm vi → không góp est (khớp % tổng + summary Backlog).
+    return self?.status === 'CANCELLED' ? 0 : (self?.estimateHours || 0);
   }
   let sum = 0;
   for (const k of kids) {
@@ -62,7 +63,8 @@ function fmtDmy(d: Date | null): string | null {
  */
 export function subtreeLeafDates(taskId: string, tree: TaskTree, kind: 'start' | 'due'): Date[] {
   const self = tree.byId.get(taskId);
-  const own = parseDmy(kind === 'start' ? self?.startDate : self?.dueDate);
+  // Node Huỷ = ngoài phạm vi → không góp ngày của chính nó (nhưng vẫn duyệt con phòng khi con còn hiệu lực).
+  const own = self?.status === 'CANCELLED' ? null : parseDmy(kind === 'start' ? self?.startDate : self?.dueDate);
   const out: Date[] = own ? [own] : [];
   for (const k of tree.childrenOf.get(taskId) ?? []) {
     out.push(...subtreeLeafDates(k.id, tree, kind));
