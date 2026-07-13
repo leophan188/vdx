@@ -21,16 +21,23 @@
       </div>
     </header>
 
-    <!-- Lưới thẻ số liệu: 2 thẻ Hoàn thành (theo est · theo task) + các thẻ khác -->
+    <!-- Lưới thẻ: 2 thẻ Hoàn thành (theo est · theo task) có thanh tiến trình + số hoàn thành/tổng -->
     @if (report(); as r) {
       <section class="ov2__stats">
-        <stat-card icon="📊" label="Hoàn thành (theo est)" [value]="pct() + '%'" tint="var(--color-primary)" />
-        <stat-card icon="🔢" label="Hoàn thành (theo task)" [value]="taskPct() + '% · ' + r.leafDoneTasks + '/' + r.leafTasks" tint="var(--color-info)" />
-        <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
-        <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
+        <div class="ov2__prog-card">
+          <div class="ov2__prog-label">Hoàn thành (theo est)</div>
+          <div class="ov2__prog-pct">{{ pct() }}%</div>
+          <div class="ov2__prog-bar"><div class="ov2__prog-fill" [style.width.%]="pct()"></div></div>
+          <div class="ov2__prog-sub">{{ r.doneEstimate }} / {{ r.totalEstimate }} h est</div>
+        </div>
+        <div class="ov2__prog-card">
+          <div class="ov2__prog-label">Hoàn thành (theo task)</div>
+          <div class="ov2__prog-pct ov2__prog-pct--alt">{{ taskPct() }}%</div>
+          <div class="ov2__prog-bar"><div class="ov2__prog-fill ov2__prog-fill--alt" [style.width.%]="taskPct()"></div></div>
+          <div class="ov2__prog-sub">{{ r.leafDoneTasks }} / {{ r.leafTasks }} task lá</div>
+        </div>
         <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="estValue()" tint="var(--status-active)" />
         <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
-        <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
         <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
       </section>
     }

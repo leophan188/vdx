@@ -45,7 +45,17 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ov2__progress-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
     .ov2__bar { height: 10px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; margin-top: var(--space-1); }
     .ov2__bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--status-active), var(--status-done)); transition: width .3s; }
-    .ov2__stats { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(155px, 1fr)); }
+    .ov2__stats { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+    /* Thẻ Hoàn thành có thanh tiến trình + số done/tổng */
+    .ov2__prog-card { padding: var(--space-4); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
+      background: var(--color-surface); box-shadow: var(--shadow-sm); display: flex; flex-direction: column; gap: 6px; }
+    .ov2__prog-label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 600; }
+    .ov2__prog-pct { font-size: 2rem; font-weight: 800; line-height: 1; color: var(--color-primary); }
+    .ov2__prog-pct--alt { color: var(--color-info, var(--status-active)); }
+    .ov2__prog-bar { height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
+    .ov2__prog-fill { height: 100%; border-radius: 999px; background: var(--color-primary); }
+    .ov2__prog-fill--alt { background: var(--color-info, var(--status-active)); }
+    .ov2__prog-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
 
     .ov2__h { margin: var(--space-2) 0 0; font-size: 1rem; font-weight: var(--weight-semibold); }
 
