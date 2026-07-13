@@ -653,7 +653,7 @@ public class ProjectReportExportService {
                 {"Hoàn thành (theo số task)", taskPct + "% (" + r.leafDoneTasks() + "/" + r.leafTasks() + " task lá)"},
                 {"Tổng công việc", String.valueOf(r.totalTasks())},
                 {"Đã hoàn thành", String.valueOf(r.doneTasks())},
-                {"Ước lượng (đã xong / tổng)", trimNum(r.doneEstimate()) + " / " + trimNum(r.totalEstimate()) + " h"},
+                {"Ước lượng (đã xong / tổng)", Math.round(r.doneEstimate()) + " / " + Math.round(r.totalEstimate()) + " h"},
                 {"Thành viên", String.valueOf(p.memberCount())},
                 {"Lỗi (bug)", String.valueOf(r.bugCount())},
             };

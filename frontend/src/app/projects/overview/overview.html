@@ -28,7 +28,7 @@
           <div class="ov2__prog-label">Hoàn thành (theo est)</div>
           <div class="ov2__prog-pct">{{ pct() }}%</div>
           <div class="ov2__prog-bar"><div class="ov2__prog-fill" [style.width.%]="pct()"></div></div>
-          <div class="ov2__prog-sub">{{ r.doneEstimate }} / {{ r.totalEstimate }} h est</div>
+          <div class="ov2__prog-sub">{{ rnd(r.doneEstimate) }} / {{ rnd(r.totalEstimate) }} h est</div>
         </div>
         <div class="ov2__prog-card">
           <div class="ov2__prog-label">Hoàn thành (theo task)</div>
@@ -178,7 +178,7 @@
           <div>
             <div class="ovp__pct">{{ pct() }}% <small style="font-size:12px;font-weight:600;color:#64748b;">theo est</small></div>
             <div class="ovp__psub">{{ r.doneTasks }}/{{ r.totalTasks }} công việc hoàn thành —
-              <b>{{ taskPct() }}%</b> theo số task · {{ r.doneEstimate }}/{{ r.totalEstimate }}h est</div>
+              <b>{{ taskPct() }}%</b> theo số task · {{ rnd(r.doneEstimate) }}/{{ rnd(r.totalEstimate) }}h est</div>
           </div>
           <div class="ovp__bar"><div class="ovp__bar-fill" [style.width.%]="pct()"></div></div>
         </section>
@@ -198,7 +198,7 @@
         <div class="ovp__stats">
           <div class="ovp__stat"><span class="ovp__stat-l">Tổng công việc</span><b>{{ r.totalTasks }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Hoàn thành</span><b>{{ r.doneTasks }}</b></div>
-          <div class="ovp__stat"><span class="ovp__stat-l">Est done / tổng (h)</span><b>{{ r.doneEstimate }} / {{ r.totalEstimate }}</b></div>
+          <div class="ovp__stat"><span class="ovp__stat-l">Est done / tổng (h)</span><b>{{ rnd(r.doneEstimate) }} / {{ rnd(r.totalEstimate) }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Thành viên</span><b>{{ p.memberCount }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Lỗi (bug)</span><b>{{ r.bugCount }}</b></div>
         </div>

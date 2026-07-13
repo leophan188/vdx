@@ -409,6 +409,9 @@ export class PrjOverview {
     return mon + ' tháng trước';
   }
 
+  /** Làm tròn số nguyên (dùng cho giờ est hiển thị). */
+  rnd(n: number | null | undefined): number { return Math.round(n ?? 0); }
+
   /** Ngân sách (VND) — phân tách hàng nghìn (helper chung), '—' nếu trống. */
   formatBudget(n: number | null | undefined): string {
     return (n == null) ? '—' : formatThousands(n) + ' ₫';

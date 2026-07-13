@@ -556,7 +556,7 @@ export class PrjBacklog implements OnInit {
       : (leafEst > 0 ? Math.round((leafDoneEst / leafEst) * 100) : Math.round((leafDone / leaves.length) * 100));
     // % theo SỐ LƯỢNG task lá (đếm) — song song với % theo est ở trên.
     const taskPct = leaves.length === 0 ? 0 : Math.round((leafDone / leaves.length) * 100);
-    return { total: ts.length, totalEst: leafEst, leaves: leaves.length, leafDone, pct, taskPct };
+    return { total: ts.length, totalEst: Math.round(leafEst), leaves: leaves.length, leafDone, pct, taskPct };
   });
 
   constructor() {
