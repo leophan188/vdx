@@ -902,7 +902,7 @@ export class PrjBacklog implements OnInit {
   hasKids(taskId: string): boolean { return hasChildren(taskId, this.tree()); }
 
   /** Est hiển thị cho task CHA = Σ est lá trong cây con (rollup, read-only). */
-  rollupEst(taskId: string): number { return subtreeLeafEstimate(taskId, this.tree()); }
+  rollupEst(taskId: string): number { return Math.round(subtreeLeafEstimate(taskId, this.tree())); }
 
   /** Task có con? (dùng trong template cho cột ngày rollup). */
   hasChildrenRow(taskId: string): boolean { return hasChildren(taskId, this.tree()); }
