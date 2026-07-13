@@ -134,7 +134,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
 
     /* Theo nhân sự */
     .rpp__people { display: grid; gap: 2px; }
-    .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(54px, 1fr)) minmax(120px, 1.3fr) minmax(66px, .9fr);
+    .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(84px, 1fr)) minmax(150px, 1.5fr);
       align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
       font-variant-numeric: tabular-nums; }
     .rpp__prow > span:not(.rpp__pname) { text-align: center; }
@@ -372,6 +372,24 @@ export class PrjReportsPeriod {
     return [...map.values()].sort((a, b) => b.total - a.total);
   });
 
+  /** Thống kê nhân sự cho BÁO CÁO: tổng CV toàn dự án + số việc xử lý/hoàn thành TRONG KỲ. */
+  readonly peopleStats = computed(() => {
+    const period = new Map(this.byPerson().map((p) => [p.userId ?? 'NONE', p]));
+    const overall = this.report()?.byPerson ?? [];
+    const rows = overall.map((ov) => {
+      const pp = period.get(ov.userId ?? 'NONE');
+      return {
+        userId: ov.userId, name: ov.name,
+        totalAll: ov.total,          // tổng công việc (toàn dự án, việc lá)
+        pctAll: ov.pct,              // % hoàn thành toàn dự án
+        inPeriod: pp?.total ?? 0,    // số việc xử lý trong Ngày/Tuần
+        doneInPeriod: pp?.done ?? 0, // số việc hoàn thành trong kỳ
+        items: pp?.items ?? [],
+      };
+    });
+    return rows.sort((a, b) => b.inPeriod - a.inPeriod || b.totalAll - a.totalAll);
+  });
+
   // ===== Bug/Issue theo nhân sự: tester đã LOG vs dev BỊ LOG (bug được TẠO trong kỳ Ngày/Tuần) =====
   readonly bugsInPeriod = computed<ReportTaskItem[]>(() => this.report()?.bugsLogged ?? []);
 
@@ -461,6 +479,10 @@ export class PrjReportsPeriod {
   catDonePct(c: TypeStatusRow): number { return c.total ? Math.round((c.byStatus['DONE'] / c.total) * 100) : 0; }
 
   openPerson(p: PersonStat): void { this.detailModal.set({ title: 'Công việc của ' + p.name, items: p.items }); }
+  /** Mở chi tiết việc TRONG KỲ của 1 người (từ bảng thống kê nhân sự). */
+  openPersonRow(p: { name: string; items: ReportTaskItem[] }): void {
+    this.detailModal.set({ title: 'Công việc trong kỳ của ' + p.name, items: p.items });
+  }
 
   typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }
 

@@ -184,29 +184,30 @@
       <button type="button" class="rpp__sec-head" (click)="toggle('people')">
         <span class="rpp__sec-caret" [class.is-collapsed]="isCollapsed('people')">▾</span>
         <span>👥 Thống kê theo nhân sự</span>
-        <span class="rpp__sec-count">{{ byPerson().length }} người</span>
+        <span class="rpp__sec-count">{{ peopleStats().length }} người</span>
       </button>
       @if (!isCollapsed('people')) {
         <div class="rpp__sec-body">
           <div class="rpp__people">
             <div class="rpp__prow rpp__prow--head">
               <span class="rpp__pname">Nhân sự</span>
-              <span>Task</span><span>Bug</span><span>Issue</span><span>Xong</span><span>% Hoàn thành</span><span>Tổng</span>
+              <span title="Tổng công việc lá toàn dự án">Tổng CV</span>
+              <span title="Số việc xử lý trong Ngày/Tuần">Xử lý trong kỳ</span>
+              <span title="Số việc hoàn thành trong kỳ">Xong (kỳ)</span>
+              <span>% HT (dự án)</span>
             </div>
-            @for (p of byPerson(); track p.name) {
-              <button type="button" class="rpp__prow" (click)="openPerson(p)" title="Xem chi tiết công việc">
+            @for (p of peopleStats(); track p.userId ?? p.name) {
+              <button type="button" class="rpp__prow" (click)="openPersonRow(p)" title="Xem chi tiết công việc trong kỳ">
                 <span class="rpp__pname">
                   @if (p.userId) { <employee-chip [name]="p.name" /> } @else { {{ p.name }} }
                 </span>
-                <span>{{ p.task }}</span>
-                <span>{{ p.bug }}</span>
-                <span>{{ p.issue }}</span>
-                <span>{{ p.done }}</span>
+                <span class="rpp__ptotal">{{ p.totalAll }}</span>
+                <span>{{ p.inPeriod }}</span>
+                <span>{{ p.doneInPeriod }}</span>
                 <span class="rpp__ppct">
-                  <span class="rpp__ppct-bar"><span class="rpp__ppct-fill" [style.width.%]="personPct(p)"></span></span>
-                  <span class="rpp__ppct-val">{{ personPct(p) }}%</span>
+                  <span class="rpp__ppct-bar"><span class="rpp__ppct-fill" [style.width.%]="clampPct(p.pctAll)"></span></span>
+                  <span class="rpp__ppct-val">{{ clampPct(p.pctAll) }}%</span>
                 </span>
-                <span class="rpp__ptotal">{{ p.total }} <span class="rpp__pchev">›</span></span>
               </button>
             }
           </div>
