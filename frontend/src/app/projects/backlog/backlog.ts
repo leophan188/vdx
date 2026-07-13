@@ -540,35 +540,23 @@ export class PrjBacklog implements OnInit {
    * progressPct của gốc đã là rollup theo est của cây con → đây là trọng số est chuẩn nhất.
    * Fallback: nếu tổng est = 0, lấy trung bình progressPct của task lá.
    */
-  /** effectiveHours: est nếu có; nếu không → số NGÀY CÔNG (T2–T6) trong [start,due] × 8. Khớp backend. */
-  private effHours(t: ProjectTask): number {
-    if ((t.estimateHours || 0) > 0) return t.estimateHours;
-    const sMs = this.dmyMs(t.startDate), dMs = this.dmyMs(t.dueDate);
-    if (sMs === null || dMs === null || dMs < sMs) return 0;
-    let workdays = 0;
-    for (const cur = new Date(sMs); cur.getTime() <= dMs; cur.setDate(cur.getDate() + 1)) {
-      const dow = cur.getDay();               // 0=CN, 6=T7
-      if (dow >= 1 && dow <= 5) workdays++;
-    }
-    return workdays * 8;
-  }
-
   readonly summary = computed(() => {
     const ts = this.tasks();
     const tr = this.tree();
-    // % HOÀN THÀNH — DÙNG CHUNG công thức với Tổng quan/backend:
-    //   task LÁ (không có con) & KHÔNG Huỷ; trọng số = effectiveHours; lá DONE=100%.
-    //   pct = Σ eff(lá DONE) / Σ eff(lá) ×100; nếu tổng eff=0 → đếm số lá DONE / số lá.
+    // % HOÀN THÀNH — KHỚP HỆT màn Tổng quan (endpoint report): task LÁ (không có con) & KHÔNG Huỷ,
+    //   trọng số = est THÔ (estimateHours). pct = Σ est(lá DONE)/Σ est(lá) ×100; est=0 → đếm số lá.
     const leaves = ts.filter((t) => !hasChildren(t.id, tr) && t.status !== 'CANCELLED');
     let leafEst = 0, leafDoneEst = 0, leafDone = 0;
     for (const t of leaves) {
-      const w = this.effHours(t);
+      const w = t.estimateHours || 0;
       leafEst += w;
       if (t.status === 'DONE') { leafDone++; leafDoneEst += w; }
     }
     const pct = leaves.length === 0 ? 0
       : (leafEst > 0 ? Math.round((leafDoneEst / leafEst) * 100) : Math.round((leafDone / leaves.length) * 100));
-    return { total: ts.length, totalEst: leafEst, leaves: leaves.length, leafDone, pct };
+    // % theo SỐ LƯỢNG task lá (đếm) — song song với % theo est ở trên.
+    const taskPct = leaves.length === 0 ? 0 : Math.round((leafDone / leaves.length) * 100);
+    return { total: ts.length, totalEst: leafEst, leaves: leaves.length, leafDone, pct, taskPct };
   });
 
   constructor() {

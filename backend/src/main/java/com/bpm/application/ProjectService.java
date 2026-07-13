@@ -483,7 +483,7 @@ public class ProjectService {
                 continue; // Huỷ = ngoài phạm vi, không tính vào % hoàn thành
             }
             leaf++;
-            double w = t.effectiveHours(); // ưu tiên est; không có est → duration ngày công × 8
+            double w = t.getEstimateHours(); // KHỚP report()/Tổng quan: dùng est THÔ (không suy từ duration)
             leafEst += w;
             if (t.getStatus() == TaskStatus.DONE) {
                 leafDone++;

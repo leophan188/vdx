@@ -246,10 +246,15 @@ export class PrjOverview {
     return [...map.values()].sort((a, b) => b.count - a.count);
   }
 
-  /** % hoàn thành ưu tiên report (chi tiết hơn), fallback Project.completionPct. */
+  /** % hoàn thành theo EST (ưu tiên report, fallback Project.completionPct). */
   readonly pct = computed(() =>
     Math.max(0, Math.min(100, Math.round(this.report()?.completionPct ?? this.project()?.completionPct ?? 0)))
   );
+  /** % hoàn thành theo SỐ LƯỢNG task lá (đếm). */
+  readonly taskPct = computed(() => {
+    const r = this.report();
+    return r && r.leafTasks ? Math.round((r.leafDoneTasks / r.leafTasks) * 100) : 0;
+  });
 
   /** Đang làm = IN_PROGRESS + IN_REVIEW (cho thẻ số liệu báo cáo). */
   readonly doingCount = computed(() => {

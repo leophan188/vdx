@@ -2,10 +2,11 @@
 <div class="bl-summary">
   <span class="badge badge--neutral">Tổng công việc: <strong>{{ summary().total }}</strong></span>
   <span class="badge badge--pending">Tổng est: <strong>{{ summary().totalEst }}</strong> giờ</span>
-  <span class="badge badge--active">Hoàn thành: <strong>{{ summary().pct }}%</strong>
-    ({{ summary().leafDone }}/{{ summary().leaves }} task lá)</span>
-  <!-- % hoàn thành chung — rollup theo est của task gốc -->
-  <span class="bl-summary__overall" [title]="'Hoàn thành chung ' + summary().pct + '%'">
+  <span class="badge badge--active" title="Trọng số theo giờ ước lượng (est) của task lá">Hoàn thành (est): <strong>{{ summary().pct }}%</strong></span>
+  <span class="badge badge--info" title="Đếm số task lá đã Hoàn thành / tổng task lá">Hoàn thành (số task): <strong>{{ summary().taskPct }}%</strong>
+    ({{ summary().leafDone }}/{{ summary().leaves }} lá)</span>
+  <!-- Thanh % theo est (khớp Tổng quan) -->
+  <span class="bl-summary__overall" [title]="'Hoàn thành theo est ' + summary().pct + '%'">
     <span class="bl-summary__track">
       <span class="bl-summary__bar" [style.width.%]="summary().pct"></span>
     </span>

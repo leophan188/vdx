@@ -25,10 +25,11 @@
     @if (report(); as r) {
       <section class="ov2__top">
         <div class="ov2__progress">
-          <span class="ov2__progress-label">Tiến độ hoàn thành</span>
+          <span class="ov2__progress-label">Tiến độ hoàn thành (theo est)</span>
           <span class="ov2__progress-pct">{{ pct() }}%</span>
           <span class="ov2__progress-sub">
-            {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc · {{ r.doneEstimate }}/{{ r.totalEstimate }}h est
+            {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc — <b>{{ taskPct() }}%</b> theo số task ·
+            {{ r.doneEstimate }}/{{ r.totalEstimate }}h est
           </span>
           <div class="ov2__bar"><div class="ov2__bar-fill" [style.width.%]="pct()"></div></div>
         </div>
@@ -178,9 +179,9 @@
 
         <section class="ovp__progress">
           <div>
-            <div class="ovp__pct">{{ pct() }}%</div>
-            <div class="ovp__psub">{{ r.doneTasks }}/{{ r.totalTasks }} công việc hoàn thành ·
-              {{ r.doneEstimate }}/{{ r.totalEstimate }}h est</div>
+            <div class="ovp__pct">{{ pct() }}% <small style="font-size:12px;font-weight:600;color:#64748b;">theo est</small></div>
+            <div class="ovp__psub">{{ r.doneTasks }}/{{ r.totalTasks }} công việc hoàn thành —
+              <b>{{ taskPct() }}%</b> theo số task · {{ r.doneEstimate }}/{{ r.totalEstimate }}h est</div>
           </div>
           <div class="ovp__bar"><div class="ovp__bar-fill" [style.width.%]="pct()"></div></div>
         </section>
