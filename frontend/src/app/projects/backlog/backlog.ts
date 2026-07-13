@@ -476,8 +476,13 @@ export class PrjBacklog implements OnInit {
 
     // Lọc KHOẢNG NGÀY: task có [bắt đầu, kết thúc] chạm [from, to] — giữ cả cấp cha.
     let dateKeep: Set<string> | null = null;
-    const fromMs = this.dateFrom() ? new Date(this.dateFrom()).getTime() : null;
-    const toMs = this.dateTo() ? new Date(this.dateTo()).getTime() + 86_400_000 - 1 : null;
+    // Parse ISO (yyyy-MM-dd) theo LOCAL để khớp với dmyMs (cũng local) — tránh lệch múi giờ loại nhầm ngày biên.
+    const isoMs = (iso: string): number | null => {
+      const m = iso.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      return m ? new Date(+m[1], +m[2] - 1, +m[3]).getTime() : null;
+    };
+    const fromMs = this.dateFrom() ? isoMs(this.dateFrom()) : null;
+    const toMs = this.dateTo() ? (isoMs(this.dateTo())! + 86_400_000 - 1) : null;
     if (fromMs !== null || toMs !== null) {
       dateKeep = new Set<string>();
       for (const t of this.tasks()) {

@@ -25,10 +25,16 @@
     @if (report(); as r) {
       <section class="ov2__stats">
         <div class="ov2__prog-card">
-          <div class="ov2__prog-label">Tiến độ hoàn thành</div>
+          <div class="ov2__prog-label">Hoàn thành (theo est)</div>
           <div class="ov2__prog-pct">{{ pct() }}%</div>
           <div class="ov2__prog-bar"><div class="ov2__prog-fill" [style.width.%]="pct()"></div></div>
-          <div class="ov2__prog-sub">{{ r.doneTasks }}/{{ r.totalTasks }} task · {{ rnd(r.doneEstimate) }}/{{ rnd(r.totalEstimate) }} h est</div>
+          <div class="ov2__prog-sub">{{ rnd(r.doneEstimate) }}/{{ rnd(r.totalEstimate) }} h est</div>
+        </div>
+        <div class="ov2__prog-card">
+          <div class="ov2__prog-label">Hoàn thành (theo task)</div>
+          <div class="ov2__prog-pct ov2__prog-pct--alt">{{ taskPct() }}%</div>
+          <div class="ov2__prog-bar"><div class="ov2__prog-fill ov2__prog-fill--alt" [style.width.%]="taskPct()"></div></div>
+          <div class="ov2__prog-sub">{{ r.leafDoneTasks }}/{{ r.leafTasks }} task lá</div>
         </div>
         <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
         <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
