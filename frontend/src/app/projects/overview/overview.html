@@ -36,7 +36,6 @@
           <div class="ov2__prog-bar"><div class="ov2__prog-fill ov2__prog-fill--alt" [style.width.%]="taskPct()"></div></div>
           <div class="ov2__prog-sub">{{ r.leafDoneTasks }} / {{ r.leafTasks }} task lá</div>
         </div>
-        <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="estValue()" tint="var(--status-active)" />
         <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
         <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
       </section>
