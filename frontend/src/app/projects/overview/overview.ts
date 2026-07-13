@@ -41,11 +41,7 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ov2__progress { padding: var(--space-5); border: 1px solid var(--color-border); border-radius: var(--radius-lg);
       background: var(--color-surface); display: flex; flex-direction: column; gap: var(--space-2); justify-content: center; }
     .ov2__progress-label { font-size: var(--text-sm); color: var(--color-text-muted); font-weight: 600; }
-    .ov2__progress-two { display: flex; gap: var(--space-4); align-items: flex-end; }
-    .ov2__progress-metric { display: flex; flex-direction: column; }
-    .ov2__progress-pct { font-size: 2rem; font-weight: 800; color: var(--color-primary); line-height: 1; }
-    .ov2__progress-pct--alt { color: var(--color-info, var(--status-active)); }
-    .ov2__progress-cap { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+    .ov2__progress-pct { font-size: 2.4rem; font-weight: 800; color: var(--color-primary); line-height: 1; }
     .ov2__progress-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
     .ov2__bar { height: 10px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; margin-top: var(--space-1); }
     .ov2__bar-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--status-active), var(--status-done)); transition: width .3s; }
