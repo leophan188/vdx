@@ -148,6 +148,9 @@ export class DataGrid {
     return this.sortDir() === 'asc' ? '▲' : this.sortDir() === 'desc' ? '▼' : '';
   }
 
+  /** Khoá track hàng: ưu tiên id ổn định (tránh tái dùng DOM/ô select sai khi list đổi/lọc); fallback vị trí. */
+  rowKey(row: any, i: number): unknown { return row && row.id != null ? row.id : i; }
+
   isExpanded(i: number): boolean {
     return this.expandedKeys().has(this.absoluteIndex(i));
   }

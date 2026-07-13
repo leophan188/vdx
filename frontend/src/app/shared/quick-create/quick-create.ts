@@ -85,6 +85,7 @@ export class QuickCreate {
   readonly assigneeUserId = signal('');
   readonly testerUserId = signal('');
   readonly estimateHours = signal('');
+  readonly startIso = signal('');
   readonly dueIso = signal('');
   // ===== Chi tiết lỗi (chỉ BUG/ISSUE) =====
   readonly severity = signal<BugSeverity | ''>('');
@@ -208,8 +209,9 @@ export class QuickCreate {
     this.priority.set('MEDIUM');
     this.assigneeUserId.set('');
     this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
-    // Log nhanh: mặc định est = 4 giờ, hạn (deadline) = hôm nay (vẫn cho sửa).
+    // Tạo nhanh: KHÔNG bắt buộc — mặc định est = 4 giờ, từ ngày & đến ngày = hôm nay (vẫn cho sửa).
     this.estimateHours.set('4');
+    this.startIso.set(this.todayIso());
     this.dueIso.set(this.todayIso());
     this.severity.set('');
     this.screen.set('');
@@ -321,6 +323,7 @@ export class QuickCreate {
       assigneeUserId: this.assigneeUserId() || null,
       testerUserId: this.testerUserId() || null,
       estimateHours: est || null,
+      startDate: this.startIso() || null,
       dueDate: this.dueIso() || null,
       parentId: allow ? (this.parentId() || null) : null,
       // Chi tiết lỗi — chỉ gửi khi BUG/ISSUE (loại khác gửi null).

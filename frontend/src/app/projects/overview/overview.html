@@ -82,26 +82,6 @@
       </section>
     }
 
-    <!-- Thông tin dự án (dữ liệu hiện có) -->
-    <section class="ov2__panel">
-      <h3 class="ov2__panel-h">Thông tin dự án</h3>
-      <div class="ov2__info">
-        <div><div class="ov2__info-k">Khách hàng</div><div class="ov2__info-v">{{ customer() }}</div></div>
-        <div><div class="ov2__info-k">Trạng thái</div>
-          <div class="ov2__info-v"><span class="badge" [class]="statusBadge(p.status)">{{ statusLabel(p.status) }}</span></div></div>
-        <div><div class="ov2__info-k">PM dự án</div><div class="ov2__info-v">{{ p.ownerName || '—' }}</div></div>
-        <div><div class="ov2__info-k">Ngân sách</div><div class="ov2__info-v">{{ formatBudget(p.budget) }}</div></div>
-        <div><div class="ov2__info-k">Ngày bắt đầu</div><div class="ov2__info-v">{{ p.startDate || '—' }}</div></div>
-        <div><div class="ov2__info-k">Ngày kết thúc</div><div class="ov2__info-v">{{ p.dueDate || '—' }}</div></div>
-      </div>
-      @if (p.description) {
-        <div style="margin-top: var(--space-4);">
-          <div class="ov2__info-k">Mô tả</div>
-          <div style="margin-top:4px; line-height:1.6; white-space:pre-wrap;">{{ p.description }}</div>
-        </div>
-      }
-    </section>
-
     <!-- Hoạt động gần đây | Thành viên dự án -->
     <section class="ov2__two">
       <div class="ov2__panel">

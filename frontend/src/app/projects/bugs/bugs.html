@@ -90,6 +90,11 @@
                            (valueChange)="f.priority = $any($event)" placeholder="Ưu tiên" />
       </div>
       <div class="field">
+        <label>Trạng thái</label>
+        <searchable-select [options]="statusSel" [value]="f.status || 'BACKLOG'"
+                           (valueChange)="f.status = $any($event)" placeholder="Trạng thái" />
+      </div>
+      <div class="field">
         <label>Mức độ nghiêm trọng</label>
         <searchable-select [options]="severitySel" [value]="f.severity || ''"
                            (valueChange)="f.severity = $any($event) || null"

@@ -231,11 +231,12 @@ public class MeTaskService {
         String cleanTitle = requireTitle(req.title());
         String priority = blank(req.priority()) ? "MEDIUM" : req.priority().trim().toUpperCase();
         double est = req.estimateHours() == null ? 0.0 : req.estimateHours();
+        String startDate = req.startDate() == null ? null : toDmy(req.startDate());
         String dueDate = req.dueDate() == null ? null : toDmy(req.dueDate());
 
         ProjectDto.TaskRequest taskReq = new ProjectDto.TaskRequest(
                 blankToNull(req.parentId()), cleanTitle, blankToNull(req.description()), type, "TODO", priority,
-                blankToNull(req.assigneeUserId()), est, null, dueDate,
+                blankToNull(req.assigneeUserId()), est, startDate, dueDate,
                 null, blankToNull(req.screen()),
                 blankToNull(req.severity()), blankToNull(req.stepsToReproduce()), blankToNull(req.expectedResult()),
                 blankToNull(req.actualResult()), blankToNull(req.environment()),

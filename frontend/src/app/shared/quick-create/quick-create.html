@@ -64,9 +64,14 @@
     </div>
 
     <div class="qc__row2">
-      <!-- Deadline -->
+      <!-- Từ ngày (mặc định hôm nay, không bắt buộc) -->
       <div class="field">
-        <label>Deadline</label>
+        <label>Từ ngày</label>
+        <input type="date" [value]="startIso()" (input)="startIso.set($any($event.target).value)" />
+      </div>
+      <!-- Đến ngày (deadline) -->
+      <div class="field">
+        <label>Đến ngày</label>
         <input type="date" [value]="dueIso()" (input)="onDue($event)" />
       </div>
       <!-- Người thực hiện (PIC) — từ members của dự án đã chọn -->

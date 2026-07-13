@@ -38,7 +38,7 @@
         @if (loading()) {
           <tr><td [attr.colspan]="colspan()"><div class="grid__loading">Đang tải…</div></td></tr>
         } @else {
-          @for (row of pageRows(); track $index) {
+          @for (row of pageRows(); track rowKey(row, $index)) {
             <tr [class.is-expanded]="expandable() && isExpanded($index)">
               @if (expandable()) {
                 <td class="grid__expander-col">
