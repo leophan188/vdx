@@ -647,10 +647,8 @@ public class ProjectReportExportService {
 
             // TIẾN ĐỘ & SỐ LIỆU (KHÔNG có "quá hạn")
             merged(sh, rr++, last, "TIẾN ĐỘ & SỐ LIỆU", section, 20);
-            long taskPct = r.leafTasks() > 0 ? Math.round(r.leafDoneTasks() * 100.0 / r.leafTasks()) : 0;
             String[][] mets = {
-                {"Hoàn thành (theo est)", Math.round(r.completionPct()) + "%"},
-                {"Hoàn thành (theo số task)", taskPct + "% (" + r.leafDoneTasks() + "/" + r.leafTasks() + " task lá)"},
+                {"Tiến độ hoàn thành", Math.round(r.completionPct()) + "%"},
                 {"Tổng công việc", String.valueOf(r.totalTasks())},
                 {"Đã hoàn thành", String.valueOf(r.doneTasks())},
                 {"Ước lượng (đã xong / tổng)", Math.round(r.doneEstimate()) + " / " + Math.round(r.totalEstimate()) + " h"},
