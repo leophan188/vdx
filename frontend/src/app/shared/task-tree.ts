@@ -73,16 +73,16 @@ export function subtreeLeafDates(taskId: string, tree: TaskTree, kind: 'start' |
   for (const k of kids) out.push(...subtreeLeafDates(k.id, tree, kind));
   return out;
 }
-/** Ngày bắt đầu hiệu lực: lá → của nó; cha → MIN ngày các LÁ con (không dùng ngày riêng cha).
- *  Chỉ fallback ngày riêng cha khi KHÔNG lá nào có ngày (vd task chỉ gắn Bug không ngày). */
+/** Ngày bắt đầu hiệu lực: lá → của nó; cha → MIN ngày các LÁ con. ÉP tổng hợp thuần:
+ *  cha KHÔNG dùng ngày riêng — con chưa có ngày thì cha = null (hiện "—"). */
 export function effectiveStart(task: ProjectTask, tree: TaskTree): string | null {
   if (!hasChildren(task.id, tree)) return task.startDate ?? null;
   const ds = subtreeLeafDates(task.id, tree, 'start');
-  return ds.length ? fmtDmy(new Date(Math.min(...ds.map((d) => d.getTime())))) : (task.startDate ?? null);
+  return ds.length ? fmtDmy(new Date(Math.min(...ds.map((d) => d.getTime())))) : null;
 }
-/** Ngày kết thúc hiệu lực: lá → của nó; cha → MAX ngày các LÁ con (không dùng ngày riêng cha). */
+/** Ngày kết thúc hiệu lực: lá → của nó; cha → MAX ngày các LÁ con (ép tổng hợp thuần, không dùng ngày riêng cha). */
 export function effectiveDue(task: ProjectTask, tree: TaskTree): string | null {
   if (!hasChildren(task.id, tree)) return task.dueDate ?? null;
   const ds = subtreeLeafDates(task.id, tree, 'due');
-  return ds.length ? fmtDmy(new Date(Math.max(...ds.map((d) => d.getTime())))) : (task.dueDate ?? null);
+  return ds.length ? fmtDmy(new Date(Math.max(...ds.map((d) => d.getTime())))) : null;
 }
