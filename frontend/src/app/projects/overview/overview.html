@@ -21,24 +21,17 @@
       </div>
     </header>
 
-    <!-- Panel trên: tiến độ (trái) + lưới thẻ số liệu (phải) -->
+    <!-- Lưới thẻ số liệu: 2 thẻ Hoàn thành (theo est · theo task) + các thẻ khác -->
     @if (report(); as r) {
-      <section class="ov2__top">
-        <div class="ov2__progress">
-          <span class="ov2__progress-label">Tiến độ hoàn thành <b>(theo est)</b></span>
-          <span class="ov2__progress-pct">{{ pct() }}%</span>
-          <span class="ov2__progress-sub">{{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc lá hoàn thành</span>
-          <div class="ov2__bar"><div class="ov2__bar-fill" [style.width.%]="pct()"></div></div>
-        </div>
-        <div class="ov2__stats">
-          <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
-          <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
-          <stat-card icon="🔢" label="Hoàn thành (số task)" [value]="taskPct() + '%'" tint="var(--color-info)" />
-          <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="estValue()" tint="var(--status-active)" />
-          <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
-          <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
-          <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
-        </div>
+      <section class="ov2__stats">
+        <stat-card icon="📊" label="Hoàn thành (theo est)" [value]="pct() + '%'" tint="var(--color-primary)" />
+        <stat-card icon="🔢" label="Hoàn thành (theo task)" [value]="taskPct() + '% · ' + r.leafDoneTasks + '/' + r.leafTasks" tint="var(--color-info)" />
+        <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
+        <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
+        <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="estValue()" tint="var(--status-active)" />
+        <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
+        <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
+        <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
       </section>
     }
 
