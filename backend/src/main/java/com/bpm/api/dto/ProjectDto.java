@@ -319,7 +319,8 @@ public final class ProjectDto {
             List<ReportTaskItem> upcoming, List<ReportTaskItem> overdue,
             ReportOverview overview,
             List<ReportTaskItem> epicStory,
-            List<PersonProgress> byPerson) {
+            List<PersonProgress> byPerson,
+            List<ReportTaskItem> bugsLogged) {
     }
 
     // ===== Burndown (req: biểu đồ cháy việc) =====

@@ -98,6 +98,16 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ov2__act-main b { font-weight: 600; }
     .ov2__act-time { color: var(--color-text-muted); font-size: var(--text-xs); }
 
+    /* Bug/Issue theo nhân sự (thay panel Thành viên) */
+    .ov2__bugcols { display: grid; gap: var(--space-4); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); }
+    .ov2__bugcol-title { margin: 0 0 var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .ov2__bugrow { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2);
+      padding: 5px 10px; border-radius: var(--radius-md); background: var(--color-surface-alt); margin-bottom: 3px; font-size: var(--text-sm); }
+    .ov2__bugrank { color: var(--color-text-muted); font-size: var(--text-xs); margin-right: 2px; }
+    .ov2__bugcount { font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; min-width: 26px; text-align: center;
+      background: color-mix(in srgb, var(--overdue, #e5484d) 15%, transparent); color: var(--overdue, #e5484d);
+      padding: 0 8px; border-radius: 999px; font-size: var(--text-xs); }
+
     .ov2__mem { display: flex; flex-direction: column; }
     .ov2__mem-row { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--color-border); }
     .ov2__mem-row:last-child { border-bottom: 0; }

@@ -119,21 +119,26 @@
       </div>
 
       <div class="ov2__panel">
-        <h3 class="ov2__panel-h">Thành viên dự án ({{ members().length }})</h3>
-        <div class="ov2__mem">
-          @for (m of members(); track m.id) {
-            <div class="ov2__mem-row">
-              <employee-chip [name]="m.name" [code]="m.empCode" [position]="m.jobPosition" [title]="m.title" [dept]="m.deptCode" />
-              <span class="ov2__mem-role">
-                <span class="badge" [class]="m.roleInProject === 'PM' ? 'badge--active' : (m.roleInProject === 'LEAD' ? 'badge--pending' : 'badge--neutral')">
-                  {{ m.roleInProject === 'PM' ? 'PM' : (m.roleInProject === 'LEAD' ? 'Lead' : 'Thành viên') }}
-                </span>
-              </span>
-              <span class="ov2__mem-md">{{ m.manday }} md</span>
-            </div>
-          } @empty {
-            <div class="ov2__empty">Chưa có thành viên.</div>
-          }
+        <h3 class="ov2__panel-h">Bug / Issue theo nhân sự ({{ bugCount() }})</h3>
+        <div class="ov2__bugcols">
+          <div>
+            <h4 class="ov2__bugcol-title">🔎 Tester đã log bug (ai báo nhiều)</h4>
+            @for (b of bugByReporter(); track b.name; let i = $index) {
+              <div class="ov2__bugrow">
+                <span><span class="ov2__bugrank">{{ i + 1 }}.</span> {{ b.name }}</span>
+                <span class="ov2__bugcount">{{ b.count }}</span>
+              </div>
+            } @empty { <div class="ov2__empty">Chưa có bug/issue.</div> }
+          </div>
+          <div>
+            <h4 class="ov2__bugcol-title">🐞 Dev bị log bug (ai bị nhiều)</h4>
+            @for (b of bugByAssignee(); track b.name; let i = $index) {
+              <div class="ov2__bugrow">
+                <span><span class="ov2__bugrank">{{ i + 1 }}.</span> {{ b.name }}</span>
+                <span class="ov2__bugcount">{{ b.count }}</span>
+              </div>
+            } @empty { <div class="ov2__empty">Chưa có bug/issue.</div> }
+          </div>
         </div>
       </div>
     </section>

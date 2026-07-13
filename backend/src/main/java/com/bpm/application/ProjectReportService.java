@@ -347,7 +347,17 @@ public class ProjectReportService {
         }
         byPerson.sort((x, y) -> Integer.compare(y.total(), x.total()));
 
-        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory, byPerson);
+        // Bug/Issue được LOG (tạo) TRONG KỲ — thống kê tester log / dev bị log theo ĐÚNG kỳ Ngày/Tuần.
+        List<ProjectDto.ReportTaskItem> bugsLogged = new ArrayList<>();
+        for (ProjectTask t : tasks) {
+            if (t.getType() != TaskType.BUG && t.getType() != TaskType.ISSUE) continue;
+            Instant c = t.getCreatedAt();
+            if (c != null && !c.isBefore(startOfPeriod) && c.isBefore(endOfPeriod)) {
+                bugsLogged.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
+            }
+        }
+
+        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory, byPerson, bugsLogged);
     }
 
     private ProjectDto.ReportTaskItem item(ProjectTask t, String projectCode,

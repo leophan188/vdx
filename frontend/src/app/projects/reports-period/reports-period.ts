@@ -372,9 +372,8 @@ export class PrjReportsPeriod {
     return [...map.values()].sort((a, b) => b.total - a.total);
   });
 
-  // ===== Bug/Issue theo nhân sự: tester đã LOG vs dev BỊ LOG =====
-  readonly bugsInPeriod = computed<ReportTaskItem[]>(() =>
-    this.allItems().filter((i) => i.type === 'BUG' || i.type === 'ISSUE'));
+  // ===== Bug/Issue theo nhân sự: tester đã LOG vs dev BỊ LOG (bug được TẠO trong kỳ Ngày/Tuần) =====
+  readonly bugsInPeriod = computed<ReportTaskItem[]>(() => this.report()?.bugsLogged ?? []);
 
   /** Tester ĐÃ log bug (nhóm theo người tạo/report). */
   readonly bugByReporter = computed<BugPerson[]>(() => this.groupBugs('reporter'));
