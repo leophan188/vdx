@@ -63,10 +63,14 @@ function fmtDmy(d: Date | null): string | null {
  */
 export function subtreeLeafDates(taskId: string, tree: TaskTree, kind: 'start' | 'due'): Date[] {
   const self = tree.byId.get(taskId);
-  // Node Huỷ = ngoài phạm vi → không góp ngày của chính nó (nhưng vẫn duyệt con phòng khi con còn hiệu lực).
-  const own = self?.status === 'CANCELLED' ? null : parseDmy(kind === 'start' ? self?.startDate : self?.dueDate);
+  const kids = tree.childrenOf.get(taskId) ?? [];
+  // EPIC/STORY CÓ CON = khung chứa → KHÔNG lấy ngày RIÊNG của nó (tránh ngày dự án/seed lọt vào rollup);
+  // chỉ gộp ngày từ task THẬT (Task/Sub-task/Bug). Node Huỷ cũng bỏ ngày riêng.
+  const isContainer = kids.length > 0 && (self?.type === 'EPIC' || self?.type === 'STORY');
+  const own = (self?.status === 'CANCELLED' || isContainer)
+    ? null : parseDmy(kind === 'start' ? self?.startDate : self?.dueDate);
   const out: Date[] = own ? [own] : [];
-  for (const k of tree.childrenOf.get(taskId) ?? []) {
+  for (const k of kids) {
     out.push(...subtreeLeafDates(k.id, tree, kind));
   }
   return out;
