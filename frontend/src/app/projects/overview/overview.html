@@ -28,7 +28,7 @@
           <span class="ov2__progress-label">Tiến độ hoàn thành</span>
           <span class="ov2__progress-pct">{{ pct() }}%</span>
           <span class="ov2__progress-sub">
-            {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc · {{ r.doneEstimate }}/{{ r.totalEstimate }}h est · đã log {{ r.totalSpent }}h
+            {{ r.leafDoneTasks }}/{{ r.leafTasks }} công việc · {{ r.doneEstimate }}/{{ r.totalEstimate }}h est
           </span>
           <div class="ov2__bar"><div class="ov2__bar-fill" [style.width.%]="pct()"></div></div>
         </div>
@@ -36,7 +36,6 @@
           <stat-card icon="📋" label="Tổng task" [value]="r.totalTasks" tint="var(--color-primary)" />
           <stat-card icon="✅" label="Hoàn thành" [value]="r.doneTasks" tint="var(--status-done)" />
           <stat-card icon="⏱️" label="Est done / tổng (h)" [value]="estValue()" tint="var(--status-active)" />
-          <stat-card icon="🧾" label="Đã log (h)" [value]="r.totalSpent" tint="var(--color-info)" />
           <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
           <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.bugCount" tint="var(--status-cancel)" />
           <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
@@ -181,7 +180,7 @@
           <div>
             <div class="ovp__pct">{{ pct() }}%</div>
             <div class="ovp__psub">{{ r.doneTasks }}/{{ r.totalTasks }} công việc hoàn thành ·
-              {{ r.doneEstimate }}/{{ r.totalEstimate }}h est · đã log {{ r.totalSpent }}h</div>
+              {{ r.doneEstimate }}/{{ r.totalEstimate }}h est</div>
           </div>
           <div class="ovp__bar"><div class="ovp__bar-fill" [style.width.%]="pct()"></div></div>
         </section>
@@ -202,7 +201,6 @@
           <div class="ovp__stat"><span class="ovp__stat-l">Tổng công việc</span><b>{{ r.totalTasks }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Hoàn thành</span><b>{{ r.doneTasks }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Est done / tổng (h)</span><b>{{ r.doneEstimate }} / {{ r.totalEstimate }}</b></div>
-          <div class="ovp__stat"><span class="ovp__stat-l">Đã log (h)</span><b>{{ r.totalSpent }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Thành viên</span><b>{{ p.memberCount }}</b></div>
           <div class="ovp__stat"><span class="ovp__stat-l">Lỗi (bug)</span><b>{{ r.bugCount }}</b></div>
         </div>

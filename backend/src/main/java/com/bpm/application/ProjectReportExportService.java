@@ -652,7 +652,6 @@ public class ProjectReportExportService {
                 {"Tổng công việc", String.valueOf(r.totalTasks())},
                 {"Đã hoàn thành", String.valueOf(r.doneTasks())},
                 {"Ước lượng (đã xong / tổng)", trimNum(r.doneEstimate()) + " / " + trimNum(r.totalEstimate()) + " h"},
-                {"Đã log", trimNum(r.totalSpent()) + " h"},
                 {"Thành viên", String.valueOf(p.memberCount())},
                 {"Lỗi (bug)", String.valueOf(r.bugCount())},
             };
