@@ -427,6 +427,10 @@ public class ProjectReportExportService {
 
             Row h = sh.createRow(rr++);
             for (int c = 0; c < BL_COLS.length; c++) put(h, c, BL_COLS[c], header);
+            // Bản đồ cây để TỰ TỔNG HỢP est/ngày cho task CHA (khớp web: cha = rollup từ LÁ con, bỏ Huỷ).
+            java.util.Map<String, java.util.List<ProjectDto.TaskResponse>> childrenOf = new java.util.HashMap<>();
+            for (ProjectDto.TaskResponse t : tasks) childrenOf.computeIfAbsent(t.parentId(), k -> new java.util.ArrayList<>()).add(t);
+            java.time.format.DateTimeFormatter DMY = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
             for (Node n : nodes) {
                 ProjectDto.TaskResponse t = n.t();
                 boolean grp = !t.leaf();
@@ -434,14 +438,19 @@ public class ProjectReportExportService {
                 // Thò thụt cây: mỗi cấp thêm khoảng thụt + "› " cho nhóm để nhìn rõ cha–con như web.
                 String indent = "    ".repeat(Math.min(n.level(), 6));
                 String name = indent + (grp && n.level() > 0 ? "› " : "") + nz(t.title());
+                // Cha → est/ngày TỰ TỔNG HỢP từ lá con (bỏ Huỷ); lá → dùng giá trị riêng.
+                double estVal = grp ? rollupEstT(t, childrenOf) : t.estimateHours();
+                java.time.LocalDate rs, re;
+                if (grp) { java.time.LocalDate[] rng = rollupRangeT(t, childrenOf); rs = rng[0]; re = rng[1]; }
+                else { rs = parse(t.startDate()); re = parse(t.dueDate()); }
                 put(row, 0, typeLabel(t.type()), grp ? epicC : center);
                 put(row, 1, name, grp ? epic : cell);
                 put(row, 2, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
                 put(row, 3, nz(t.assigneeName()), grp ? epic : cell);
-                put(row, 4, t.estimateHours() > 0 ? trimNum(t.estimateHours()) : "", grp ? epicC : center);
+                put(row, 4, estVal > 0 ? trimNum(estVal) : "", grp ? epicC : center);
                 put(row, 5, Math.round(t.progressPct()) + "%", grp ? epicC : center);
-                put(row, 6, nz(t.startDate()), grp ? epicC : center);
-                put(row, 7, nz(t.dueDate()), grp ? epicC : center);
+                put(row, 6, rs != null ? rs.format(DMY) : "", grp ? epicC : center);
+                put(row, 7, re != null ? re.format(DMY) : "", grp ? epicC : center);
                 put(row, 8, priorityVi(t.priority()), grp ? epicC : center);
             }
             int[] w = {2600, 18000, 3800, 4800, 2200, 2200, 3000, 3000, 3000};
@@ -776,6 +785,31 @@ public class ProjectReportExportService {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** Est TỰ TỔNG HỢP: Σ est các LÁ con (bỏ Huỷ) — khớp rollup web. */
+    private double rollupEstT(ProjectDto.TaskResponse t, java.util.Map<String, java.util.List<ProjectDto.TaskResponse>> ch) {
+        java.util.List<ProjectDto.TaskResponse> kids = ch.get(t.id());
+        if (kids == null || kids.isEmpty()) return "CANCELLED".equals(t.status()) ? 0 : t.estimateHours();
+        double s = 0;
+        for (ProjectDto.TaskResponse k : kids) s += rollupEstT(k, ch);
+        return Math.round(s * 100) / 100.0;
+    }
+
+    /** Ngày TỰ TỔNG HỢP: [min bắt đầu, max kết thúc] của các LÁ con (bỏ Huỷ); null nếu không lá nào có ngày. */
+    private java.time.LocalDate[] rollupRangeT(ProjectDto.TaskResponse t, java.util.Map<String, java.util.List<ProjectDto.TaskResponse>> ch) {
+        java.util.List<ProjectDto.TaskResponse> kids = ch.get(t.id());
+        if (kids == null || kids.isEmpty()) {
+            if ("CANCELLED".equals(t.status())) return new java.time.LocalDate[]{null, null};
+            return new java.time.LocalDate[]{parse(t.startDate()), parse(t.dueDate())};
+        }
+        java.time.LocalDate min = null, max = null;
+        for (ProjectDto.TaskResponse k : kids) {
+            java.time.LocalDate[] r = rollupRangeT(k, ch);
+            if (r[0] != null && (min == null || r[0].isBefore(min))) min = r[0];
+            if (r[1] != null && (max == null || r[1].isAfter(max))) max = r[1];
+        }
+        return new java.time.LocalDate[]{min, max};
     }
     private static String trimNum(double d) {
         return d == Math.floor(d) ? String.valueOf((long) d) : String.valueOf(d);
