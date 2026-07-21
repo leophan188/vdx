@@ -60,12 +60,18 @@
   <ng-template gridCell="est" let-t>{{ t.estimateHours || 0 }}</ng-template>
   <ng-template gridCell="act" let-t>
     <button type="button" class="bug-edit" title="Sửa lỗi" (click)="openEdit(t)">✏️</button>
+    <button type="button" class="bug-edit" title="Copy — tạo lỗi mới từ lỗi này"
+            (click)="openCopy(t)">⧉</button>
   </ng-template>
 </data-grid>
 
 <!-- Modal báo lỗi / sửa lỗi (đầy đủ kiểu Jira) -->
 <app-modal [open]="modalOpen()" [wide]="true" [title]="modalTitle()" (closed)="modalOpen.set(false)">
   <form id="bug-form" class="bug-form" (ngSubmit)="save()">
+    @if (copiedFrom()) {
+      <p class="hint">⧉ Đang chép từ <strong>{{ copiedFrom() }}</strong> — trạng thái đặt lại Backlog,
+        ngày để trống, <strong>ảnh đính kèm không được chép</strong>. Sửa lại tiêu đề/mô tả cho đúng lỗi mới.</p>
+    }
     <div class="field">
       <label>Task cha *</label>
       <searchable-select [options]="parentSel()" [value]="f.parentId || ''"
@@ -151,7 +157,7 @@
   <div modalFooter>
     <button type="button" class="btn btn--ghost" (click)="modalOpen.set(false)">Hủy</button>
     <button type="submit" form="bug-form" class="btn btn--primary" [disabled]="saving()">
-      {{ saving() ? 'Đang lưu…' : (editingId() ? '💾 Lưu thay đổi' : '💾 Báo lỗi') }}
+      {{ saving() ? 'Đang lưu…' : (editingId() ? '💾 Lưu thay đổi' : (copiedFrom() ? '⧉ Tạo lỗi mới' : '💾 Báo lỗi')) }}
     </button>
   </div>
 </app-modal>

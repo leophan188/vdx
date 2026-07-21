@@ -78,21 +78,28 @@ const CATEGORIES: Category[] = [
     .dg-form label { font-size: var(--text-sm); font-weight: 600; }
     .dg-form textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
     .dg-form textarea.dg-form__tall { min-height: 220px; }
-    /* Danh sách nhân sự: LIST DỌC 1 cột, 1 dòng/người — lưới nhiều cột làm tên dài bị cắt ("Phan Tuấn …"). */
-    .dg-form__members { display: block; max-height: 200px; overflow-y: auto;
-      border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-1, 4px); }
-    .dg-form__mrow { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm);
-      cursor: pointer; padding: 5px var(--space-2); border-radius: var(--radius-sm, 6px); line-height: 1.3; }
+    /*
+     * Danh sách nhân sự: LIST DỌC 1 cột, dòng GỌN.
+     * Dòng là <label> nên bị .dg-form label (nhãn field) áp vào → phải ghi đè rõ ràng
+     * (font-weight/margin/line-height), nếu không mỗi dòng cao ~46px, chỉ thấy 4 người.
+     */
+    .dg-form__members { display: block; max-height: 220px; overflow-y: auto;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: 2px; }
+    .dg-form .dg-form__mrow { display: flex; align-items: center; gap: var(--space-2);
+      font-size: var(--text-sm); font-weight: 400; cursor: pointer;
+      margin: 0; padding: 2px var(--space-2); min-height: 26px; line-height: 1.2;
+      border-radius: var(--radius-sm, 6px); }
     .dg-form__mrow:hover { background: var(--color-surface-alt); }
     .dg-form__mrow.is-checked { background: var(--color-primary-soft); }
     .dg-form__mrow input { width: auto; flex: none; margin: 0; }
     .dg-form__mcode { font-size: var(--text-xs); color: var(--color-text-muted);
-      font-variant-numeric: tabular-nums; flex: none; min-width: 46px; }
-    /* KHÔNG cắt tên: cho xuống dòng nếu quá dài thay vì ellipsis. */
+      font-variant-numeric: tabular-nums; flex: none; min-width: 42px; }
+    /* Tên KHÔNG bị cắt; chức danh chỉ hiện khi còn chỗ (màn hẹp thì ẩn cho gọn). */
     .dg-form__mname { flex: 1 1 auto; overflow-wrap: anywhere; }
     .dg-form__mpos { font-size: var(--text-xs); color: var(--color-text-muted); }
+    @media (max-width: 720px) { .dg-form__mpos { display: none; } }
     .dg-form__mdept { font-size: var(--text-xs); color: var(--color-text-muted); flex: none;
-      background: var(--color-surface-alt); padding: 1px var(--space-2); border-radius: var(--radius-full); }
+      background: var(--color-surface-alt); padding: 0 var(--space-2); border-radius: var(--radius-full); }
     .dg-form__mhead { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
     .dg-form__mfilter { flex: 1 1 200px; height: var(--control-h-sm); padding: 0 var(--space-2);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);

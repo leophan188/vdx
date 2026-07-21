@@ -151,7 +151,13 @@ export class PrjBugs implements OnInit {
   readonly saving = signal(false);
   /** id bug đang sửa; null = đang tạo mới. */
   readonly editingId = signal<string | null>(null);
-  readonly modalTitle = computed(() => (this.editingId() ? 'Sửa lỗi' : 'Báo lỗi'));
+  /** Mã lỗi nguồn khi đang COPY (null = báo lỗi mới / sửa) — để nhắc người dùng đang chép từ đâu. */
+  readonly copiedFrom = signal<string | null>(null);
+  readonly modalTitle = computed(() => {
+    if (this.editingId()) return 'Sửa lỗi';
+    const src = this.copiedFrom();
+    return src ? `Copy lỗi từ ${src}` : 'Báo lỗi';
+  });
   f: TaskRequest = this.emptyForm();
 
   // ----- Chi tiết task (Jira) -----
@@ -249,6 +255,7 @@ export class PrjBugs implements OnInit {
   // ----- Modal -----
   openReport(): void {
     this.editingId.set(null);
+    this.copiedFrom.set(null);
     this.f = this.emptyForm();
     this.clearQueued();
     this.modalOpen.set(true);
@@ -257,6 +264,7 @@ export class PrjBugs implements OnInit {
   /** Mở modal ở chế độ SỬA — đổ dữ liệu bug vào form. */
   openEdit(t: ProjectTask): void {
     this.editingId.set(t.id);
+    this.copiedFrom.set(null);
     this.f = {
       parentId: t.parentId, title: t.title,
       // Gộp Bước/Kết quả cũ (nếu có) vào Mô tả để không mất dữ liệu.
@@ -267,6 +275,32 @@ export class PrjBugs implements OnInit {
       severity: t.severity, stepsToReproduce: '', expectedResult: '', actualResult: '',
       environment: t.environment ?? ''
     };
+    this.modalOpen.set(true);
+  }
+
+  /**
+   * COPY — mở modal TẠO MỚI với dữ liệu chép từ một lỗi có sẵn (lỗi lặp lại ở màn khác,
+   * lỗi tương tự trên nhiều môi trường… đỡ phải gõ lại mô tả/các bước).
+   * GIỮ: task cha, loại, mô tả, mức độ, ưu tiên, môi trường, người thực hiện/kiểm thử, est.
+   * ĐẶT LẠI: tiêu đề thêm "(Copy)", trạng thái về Backlog, ngày để trống — vì đây là lỗi MỚI.
+   * Ảnh đính kèm KHÔNG chép (dán/chọn ảnh mới nếu cần).
+   */
+  openCopy(t: ProjectTask): void {
+    this.editingId.set(null);
+    this.copiedFrom.set(t.code);
+    this.f = {
+      parentId: t.parentId,
+      title: `${t.title} (Copy)`,
+      description: mergeBugFieldsIntoDescription(t),
+      type: t.type, status: 'BACKLOG', priority: t.priority,
+      assigneeUserId: t.assigneeUserId,
+      testerUserId: t.testerUserId ?? this.auth.currentUser()?.userId ?? null,
+      estimateHours: t.estimateHours || 4,
+      startDate: null, dueDate: null,
+      severity: t.severity, stepsToReproduce: '', expectedResult: '', actualResult: '',
+      environment: t.environment ?? ''
+    };
+    this.clearQueued();
     this.modalOpen.set(true);
   }
 
