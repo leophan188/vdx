@@ -261,19 +261,25 @@ public class ProjectDiaryService {
     }
 
     /**
-     * VAI TRÒ lấy TỪ HỆ THỐNG cho người phía đơn vị thực hiện (in vào biên bản họp):
-     * ưu tiên vai trò trong dự án, không có thì lấy chức danh nhân sự, cuối cùng là chức vụ.
+     * VAI TRÒ in vào biên bản họp cho người phía đơn vị thực hiện.
+     * Lấy theo CHỨC DANH trong DANH SÁCH NHÂN SỰ (vd "Lập trình viên", "Nhân viên Phân tích Nghiệp vụ")
+     * — KHÔNG dùng vai trò trong dự án (PM/Trưởng nhóm/Thành viên) vì biên bản cần chức danh thật.
+     * Chỉ khi nhân sự chưa có chức danh mới lùi về vai trò dự án để không bỏ trống.
      */
     private String roleOf(String projectId, String userId) {
-        ProjectMember m = memberRepo.findByProjectIdAndUserId(projectId, userId).orElse(null);
-        if (m != null && m.getRoleInProject() != null) {
-            return roleLabel(m.getRoleInProject());
-        }
         Employee emp = employeeRepo.findByUserAccountId(userId).orElse(null);
-        if (emp == null) {
-            return null;
+        if (emp != null) {
+            String jobPosition = blankToNull(emp.getJobPosition());
+            if (jobPosition != null) {
+                return jobPosition;
+            }
+            String title = blankToNull(emp.getTitle());
+            if (title != null) {
+                return title;
+            }
         }
-        return blankToNull(emp.getJobPosition()) != null ? emp.getJobPosition() : blankToNull(emp.getTitle());
+        ProjectMember m = memberRepo.findByProjectIdAndUserId(projectId, userId).orElse(null);
+        return m == null || m.getRoleInProject() == null ? null : roleLabel(m.getRoleInProject());
     }
 
     /** Nhãn tiếng Việt của vai trò trong dự án (đồng bộ màn Thành viên). */
