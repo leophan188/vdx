@@ -78,33 +78,28 @@ const CATEGORIES: Category[] = [
     .dg-form label { font-size: var(--text-sm); font-weight: 600; }
     .dg-form textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
     .dg-form textarea.dg-form__tall { min-height: 220px; }
-    /* Danh sách nhân sự: list checkbox GỌN (1 dòng/người) — chip đầy đủ làm khối phình 2 dòng, tốn diện tích. */
-    .dg-form__members { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
-      gap: 0 var(--space-3); max-height: 168px; overflow: auto; border: 1px solid var(--color-border);
-      border-radius: var(--radius-md); padding: var(--space-2); }
+    /* Danh sách nhân sự: LIST DỌC 1 cột, 1 dòng/người — lưới nhiều cột làm tên dài bị cắt ("Phan Tuấn …"). */
+    .dg-form__members { display: block; max-height: 200px; overflow-y: auto;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-1, 4px); }
     .dg-form__mrow { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm);
-      cursor: pointer; padding: 3px var(--space-2); border-radius: var(--radius-sm, 6px); line-height: 1.3; }
+      cursor: pointer; padding: 5px var(--space-2); border-radius: var(--radius-sm, 6px); line-height: 1.3; }
     .dg-form__mrow:hover { background: var(--color-surface-alt); }
+    .dg-form__mrow.is-checked { background: var(--color-primary-soft); }
     .dg-form__mrow input { width: auto; flex: none; margin: 0; }
     .dg-form__mcode { font-size: var(--text-xs); color: var(--color-text-muted);
-      font-variant-numeric: tabular-nums; flex: none; }
-    .dg-form__mname { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .dg-form__mdept { font-size: var(--text-xs); color: var(--color-text-muted); flex: none; }
+      font-variant-numeric: tabular-nums; flex: none; min-width: 46px; }
+    /* KHÔNG cắt tên: cho xuống dòng nếu quá dài thay vì ellipsis. */
+    .dg-form__mname { flex: 1 1 auto; overflow-wrap: anywhere; }
+    .dg-form__mpos { font-size: var(--text-xs); color: var(--color-text-muted); }
+    .dg-form__mdept { font-size: var(--text-xs); color: var(--color-text-muted); flex: none;
+      background: var(--color-surface-alt); padding: 1px var(--space-2); border-radius: var(--radius-full); }
     .dg-form__mhead { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
     .dg-form__mfilter { flex: 1 1 200px; height: var(--control-h-sm); padding: 0 var(--space-2);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
       background: var(--color-surface); color: var(--color-text); font-size: var(--text-xs); }
 
-    /* Bảng soạn Next action */
-    .dg-act { display: grid; gap: var(--space-2); }
-    .dg-act__row { display: grid; grid-template-columns: 1fr 150px 140px 120px 32px; gap: var(--space-2);
-      align-items: center; }
-    .dg-act__row input, .dg-act__row select { width: 100%; }
-    .dg-act__head { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-semibold); }
-    @media (max-width: 760px) { .dg-act__row { grid-template-columns: 1fr 1fr; } .dg-act__head { display: none; } }
-    .dg-act__empty { font-size: var(--text-sm); color: var(--color-text-muted); }
-
     /* Next action hiển thị trên card */
+    .dg__act-no { color: var(--color-text-muted); font-variant-numeric: tabular-nums; flex: none; }
     .dg__acts { display: grid; gap: 4px; }
     .dg__act { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); flex-wrap: wrap; }
     .dg__act-st { font-size: var(--text-xs); padding: 1px var(--space-2); border-radius: var(--radius-full);
@@ -164,18 +159,20 @@ export class PrjDiary {
   fLocation = '';
   fStart = '';           // HH:mm
   fEnd = '';             // HH:mm
-  /** Next action đang soạn — mỗi phần tử 1 dòng của bảng trong biên bản. */
-  fActions = signal<DiaryAction[]>([]);
+  /** Next action: ô text tự do, MỖI DÒNG = 1 việc (biên bản in thành bảng đánh số). */
+  fNextText = '';
   /** Lọc nhanh danh sách nhân sự trong form (danh sách dài). */
   readonly memberFilter = signal('');
 
-  readonly statusOptions: { value: DiaryActionStatus; label: string }[] = [
-    { value: 'NEW', label: 'Mới' },
-    { value: 'DOING', label: 'Đang làm' },
-    { value: 'DONE', label: 'Hoàn thành' }
-  ];
+  private readonly statusLabels: Record<string, string> = {
+    NEW: 'Mới', DOING: 'Đang làm', DONE: 'Hoàn thành'
+  };
   statusLabel(s: string | null): string {
-    return this.statusOptions.find((o) => o.value === s)?.label ?? 'Mới';
+    return this.statusLabels[s ?? 'NEW'] ?? 'Mới';
+  }
+  /** Việc này có thông tin ngoài nội dung không (phụ trách/hạn/đã đổi trạng thái)? */
+  hasActionMeta(a: DiaryAction): boolean {
+    return !!(a.owner || a.dueDate || (a.status && a.status !== 'NEW'));
   }
 
   /** Nhân sự khớp từ khoá lọc (mã / tên / phòng ban). */
@@ -187,20 +184,18 @@ export class PrjDiary {
       .some((v) => (v || '').toLowerCase().includes(q)));
   });
 
-  // ===== Next action (bảng soạn trong modal) =====
-  addAction(): void {
-    this.fActions.update((xs) => [...xs, { content: '', owner: '', dueDate: '', status: 'NEW' }]);
+  // ===== Next action: text nhiều dòng ⇄ danh sách việc =====
+  /** Mỗi dòng không rỗng → 1 việc. */
+  private actionsFromText(text: string): DiaryAction[] {
+    return text.split('\n').map((l) => l.trim()).filter(Boolean)
+      .map((content) => ({ content, owner: null, dueDate: null, status: 'NEW' as DiaryActionStatus }));
   }
-  removeAction(i: number): void {
-    this.fActions.update((xs) => xs.filter((_, idx) => idx !== i));
-  }
-  /** Cập nhật 1 ô của dòng next action (giữ signal bất biến để Angular nhận thay đổi). */
-  patchAction(i: number, patch: Partial<DiaryAction>): void {
-    this.fActions.update((xs) => xs.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
-  }
-  /** Hạn của dòng i ở dạng yyyy-MM-dd để đổ vào input date. */
-  actionDueIso(a: DiaryAction): string {
-    return this.fromDmy(a.dueDate);
+  /** Danh sách việc → text để sửa. Giữ phụ trách/hạn ở cuối dòng nếu bản ghi cũ có. */
+  private textFromActions(actions: DiaryAction[] | null | undefined): string {
+    return (actions ?? []).map((a) => {
+      const extra = [a.owner, a.dueDate].filter(Boolean).join(' – ');
+      return (a.content ?? '') + (extra ? ` (${extra})` : '');
+    }).join('\n');
   }
 
   /** Tải biên bản họp (.docx) của bản ghi — mở anchor để trình duyệt tự tải kèm cookie phiên. */
@@ -251,7 +246,7 @@ export class PrjDiary {
     this.fLocation = '';
     this.fStart = '';
     this.fEnd = '';
-    this.fActions.set([]);
+    this.fNextText = '';
     this.memberFilter.set('');
     this.modalOpen.set(true);
   }
@@ -267,7 +262,7 @@ export class PrjDiary {
     this.fLocation = e.location ?? '';
     this.fStart = e.startTime ?? '';
     this.fEnd = e.endTime ?? '';
-    this.fActions.set((e.nextActions ?? []).map((a) => ({ ...a })));
+    this.fNextText = this.textFromActions(e.nextActions);
     this.memberFilter.set('');
     this.modalOpen.set(true);
   }
@@ -286,8 +281,7 @@ export class PrjDiary {
       location: this.fLocation || null,
       startTime: this.fStart || null,
       endTime: this.fEnd || null,
-      // Bỏ dòng next action trống nội dung (người dùng thêm rồi không nhập).
-      nextActions: this.fActions().filter((a) => (a.content ?? '').trim())
+      nextActions: this.actionsFromText(this.fNextText)
     };
     const done = (verb: string) => () => {
       this.saving.set(false);

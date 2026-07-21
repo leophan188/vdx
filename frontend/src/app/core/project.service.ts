@@ -356,6 +356,7 @@ export interface DiaryEntry {
   category: string | null;        // Demo/Khảo sát/UAT/…
   teamUserIds: string[];          // userId nhân sự team tham gia
   teamNames: string[];            // tên đã resolve từ teamUserIds
+  team: DiaryPerson[];            // tên + vai trò lấy từ hệ thống (in vào biên bản họp)
   clientContacts: string | null;  // người phía khách hàng (text tự do)
   content: string | null;
   conclusion: string | null;
@@ -367,6 +368,12 @@ export interface DiaryEntry {
   createdByName: string | null;
   createdAt: string | null;       // ISO Instant
   canEdit: boolean;               // creator/admin/PM/owner
+}
+
+/** Người tham dự trong biên bản họp: họ tên + vai trò. */
+export interface DiaryPerson {
+  name: string | null;
+  role: string | null;
 }
 
 /** Trạng thái một việc cần làm tiếp. */

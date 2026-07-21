@@ -130,14 +130,18 @@ public class ProjectDiaryService {
                                         Map<String, String> nameCache) {
         List<String> ids = splitIds(d.getTeamUserIds());
         List<String> names = new ArrayList<>();
+        List<ProjectDto.DiaryPerson> team = new ArrayList<>();
         for (String uid : ids) {
-            names.add(nameCache.computeIfAbsent(uid, this::displayNameOf));
+            String name = nameCache.computeIfAbsent(uid, this::displayNameOf);
+            names.add(name);
+            team.add(new ProjectDto.DiaryPerson(name, roleOf(d.getProjectId(), uid)));
         }
         boolean canEdit = canManage
                 || (actorUserId != null && actorUserId.equals(d.getCreatedBy()));
         return new ProjectDto.DiaryEntry(d.getId(),
                 d.getWorkDate() == null ? null : d.getWorkDate().format(DMY),
-                d.getCategory(), ids, names, d.getClientContacts(), d.getContent(), d.getConclusion(),
+                d.getCategory(), ids, names, team,
+                d.getClientContacts(), d.getContent(), d.getConclusion(),
                 d.getLocation(), d.getStartTime(), d.getEndTime(), readActions(d.getNextActions()),
                 d.getCreatedBy(), d.getCreatedByName(),
                 d.getCreatedAt() == null ? null : d.getCreatedAt().toString(), canEdit);
@@ -254,6 +258,31 @@ public class ProjectDiaryService {
             throw new IllegalArgumentException("Bản ghi nhật ký không thuộc dự án này");
         }
         return d;
+    }
+
+    /**
+     * VAI TRÒ lấy TỪ HỆ THỐNG cho người phía đơn vị thực hiện (in vào biên bản họp):
+     * ưu tiên vai trò trong dự án, không có thì lấy chức danh nhân sự, cuối cùng là chức vụ.
+     */
+    private String roleOf(String projectId, String userId) {
+        ProjectMember m = memberRepo.findByProjectIdAndUserId(projectId, userId).orElse(null);
+        if (m != null && m.getRoleInProject() != null) {
+            return roleLabel(m.getRoleInProject());
+        }
+        Employee emp = employeeRepo.findByUserAccountId(userId).orElse(null);
+        if (emp == null) {
+            return null;
+        }
+        return blankToNull(emp.getJobPosition()) != null ? emp.getJobPosition() : blankToNull(emp.getTitle());
+    }
+
+    /** Nhãn tiếng Việt của vai trò trong dự án (đồng bộ màn Thành viên). */
+    private static String roleLabel(ProjectRoleInProject r) {
+        switch (r) {
+            case PM: return "Quản lý dự án";
+            case LEAD: return "Trưởng nhóm";
+            default: return "Thành viên";
+        }
     }
 
     /** Tên hiển thị của một userId (ưu tiên hồ sơ nhân sự, rồi tài khoản). */

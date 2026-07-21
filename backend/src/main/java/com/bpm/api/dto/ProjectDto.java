@@ -349,7 +349,7 @@ public final class ProjectDto {
      */
     public record DiaryEntry(
             String id, String workDate, String category,
-            List<String> teamUserIds, List<String> teamNames,
+            List<String> teamUserIds, List<String> teamNames, List<DiaryPerson> team,
             String clientContacts, String content, String conclusion,
             String location, String startTime, String endTime, List<DiaryAction> nextActions,
             String createdBy, String createdByName, String createdAt, boolean canEdit) {
@@ -368,5 +368,13 @@ public final class ProjectDto {
      * {@code dueDate} dd/MM/yyyy; {@code status} = NEW | DOING | DONE.
      */
     public record DiaryAction(String content, String owner, String dueDate, String status) {
+    }
+
+    /**
+     * Một người tham dự trong biên bản họp: họ tên + vai trò.
+     * Phía đơn vị thực hiện lấy vai trò TỪ HỆ THỐNG (vai trò trong dự án, fallback chức danh nhân sự);
+     * phía khách hàng tách từ text tự do dạng "Nguyễn Văn A (Trưởng phòng)".
+     */
+    public record DiaryPerson(String name, String role) {
     }
 }

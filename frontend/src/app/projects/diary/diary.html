@@ -77,12 +77,17 @@
             <div class="dg__meta">
               <span class="dg__label">Next action ({{ e.nextActions.length }})</span>
               <div class="dg__acts">
-                @for (a of e.nextActions; track $index) {
+                @for (a of e.nextActions; track $index; let i = $index) {
                   <div class="dg__act">
-                    <span class="dg__act-st" [class]="'dg__act-st--' + (a.status || 'NEW')">{{ statusLabel(a.status) }}</span>
+                    <span class="dg__act-no">{{ i + 1 }}.</span>
                     <span>{{ a.content }}</span>
-                    @if (a.owner) { <span class="dg__act-meta">· 👤 {{ a.owner }}</span> }
-                    @if (a.dueDate) { <span class="dg__act-meta">· ⏰ {{ a.dueDate }}</span> }
+                    @if (hasActionMeta(a)) {
+                      @if (a.owner) { <span class="dg__act-meta">· 👤 {{ a.owner }}</span> }
+                      @if (a.dueDate) { <span class="dg__act-meta">· ⏰ {{ a.dueDate }}</span> }
+                      @if (a.status && a.status !== 'NEW') {
+                        <span class="dg__act-st" [class]="'dg__act-st--' + a.status">{{ statusLabel(a.status) }}</span>
+                      }
+                    }
                   </div>
                 }
               </div>
@@ -147,10 +152,13 @@
       @if (members().length) {
         <div class="dg-form__members">
           @for (m of membersShown(); track m.userId) {
-            <label class="dg-form__mrow" [title]="m.name + (m.jobPosition ? ' · ' + m.jobPosition : '')">
+            <label class="dg-form__mrow" [class.is-checked]="memberChecked(m.userId)">
               <input type="checkbox" [checked]="memberChecked(m.userId)" (change)="toggleMember(m.userId)" />
               <span class="dg-form__mcode">{{ m.empCode }}</span>
-              <span class="dg-form__mname">{{ m.name }}</span>
+              <span class="dg-form__mname">
+                {{ m.name }}
+                @if (m.jobPosition) { <span class="dg-form__mpos">· {{ m.jobPosition }}</span> }
+              </span>
               @if (m.deptCode) { <span class="dg-form__mdept">{{ m.deptCode }}</span> }
             </label>
           }
@@ -180,39 +188,10 @@
     </div>
 
     <div class="field">
-      <div class="dg-form__mhead">
-        <label>Next action — việc cần làm tiếp</label>
-        <span class="dg__count">{{ fActions().length }}</span>
-        <button type="button" class="btn btn--ghost btn--sm" (click)="addAction()">＋ Thêm việc</button>
-      </div>
-      <div class="dg-act">
-        @if (fActions().length) {
-          <div class="dg-act__row dg-act__head">
-            <span>Nội dung công việc</span><span>Người phụ trách</span><span>Hạn hoàn thành</span>
-            <span>Trạng thái</span><span></span>
-          </div>
-        } @else {
-          <p class="dg-act__empty">Chưa có việc nào — bấm "Thêm việc" để ghi việc cần làm sau buổi họp.</p>
-        }
-        @for (a of fActions(); track $index) {
-          <div class="dg-act__row">
-            <input type="text" placeholder="VD: Sửa lỗi đăng nhập SSO" [value]="a.content || ''"
-                   (input)="patchAction($index, { content: $any($event.target).value })" />
-            <input type="text" placeholder="Người phụ trách" [value]="a.owner || ''"
-                   (input)="patchAction($index, { owner: $any($event.target).value })" />
-            <input type="date" [value]="actionDueIso(a)"
-                   (change)="patchAction($index, { dueDate: $any($event.target).value })" />
-            <select [value]="a.status || 'NEW'"
-                    (change)="patchAction($index, { status: $any($event.target).value })">
-              @for (s of statusOptions; track s.value) {
-                <option [value]="s.value" [selected]="(a.status || 'NEW') === s.value">{{ s.label }}</option>
-              }
-            </select>
-            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá việc"
-                    (click)="removeAction($index)">🗑</button>
-          </div>
-        }
-      </div>
+      <label>Next action — việc cần làm tiếp</label>
+      <textarea [(ngModel)]="fNextText" name="dgnext"
+                placeholder="Mỗi dòng một việc, VD:&#10;Sửa lỗi đăng nhập SSO&#10;Gửi bản demo v2 cho khách"></textarea>
+      <p class="hint">Mỗi dòng là một việc — biên bản họp sẽ in thành bảng đánh số.</p>
     </div>
   </div>
 
