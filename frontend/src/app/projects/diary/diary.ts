@@ -100,6 +100,23 @@ const CATEGORIES: Category[] = [
     @media (max-width: 720px) { .dg-form__mpos { display: none; } }
     .dg-form__mdept { font-size: var(--text-xs); color: var(--color-text-muted); flex: none;
       background: var(--color-surface-alt); padding: 0 var(--space-2); border-radius: var(--radius-full); }
+    /*
+     * Dropdown chọn nhiều người. Panel bung TRONG DÒNG (không position:absolute) vì
+     * .modal__body có overflow:auto → panel nổi sẽ bị CẮT khi vượt đáy modal.
+     */
+    .dg-pick { display: grid; gap: var(--space-2); }
+    .dg-pick__trigger { display: flex; align-items: center; gap: var(--space-2); width: 100%;
+      min-height: var(--control-h-sm, 34px); padding: 4px var(--space-3); font: inherit; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); color: var(--color-text); box-sizing: border-box; }
+    .dg-pick__trigger:hover, .dg-pick__trigger.is-open { border-color: var(--color-primary); }
+    .dg-pick__val { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dg-pick__val--empty { color: var(--color-text-muted); }
+    .dg-pick__caret { color: var(--color-text-muted); flex: none; }
+    .dg-pick__panel { display: grid; gap: var(--space-2); padding: var(--space-2);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-surface-alt); }
+    .dg-pick__bar { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+    .dg-pick__done { justify-self: end; }
     .dg-form__mhead { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
     .dg-form__mfilter { flex: 1 1 200px; height: var(--control-h-sm); padding: 0 var(--space-2);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -170,6 +187,20 @@ export class PrjDiary {
   fNextText = '';
   /** Lọc nhanh danh sách nhân sự trong form (danh sách dài). */
   readonly memberFilter = signal('');
+  /** Dropdown chọn nhân sự: thu gọn mặc định để form đỡ tốn diện tích. */
+  readonly pickerOpen = signal(false);
+
+  /** Tóm tắt hiển thị trên nút dropdown: "Chọn nhân sự…" / "3 người · A, B, +1". */
+  readonly teamSummary = computed<string>(() => {
+    const ids = this.fTeam();
+    if (!ids.size) return 'Chọn nhân sự tham gia…';
+    const names = this.members().filter((m) => ids.has(m.userId)).map((m) => m.name);
+    const head = names.slice(0, 2).join(', ');
+    const rest = names.length - 2;
+    return `${ids.size} người · ${head}${rest > 0 ? ` +${rest}` : ''}`;
+  });
+
+  clearTeam(): void { this.fTeam.set(new Set()); }
 
   private readonly statusLabels: Record<string, string> = {
     NEW: 'Mới', DOING: 'Đang làm', DONE: 'Hoàn thành'

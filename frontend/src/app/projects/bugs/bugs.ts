@@ -125,9 +125,20 @@ export class PrjBugs implements OnInit {
     { key: 'act', header: '', width: '70px', align: 'center' }
   ];
 
-  /** Toàn bộ bug/issue (chưa lọc). */
+  /**
+   * Toàn bộ bug/issue (chưa lọc), MỚI LOG NHẤT LÊN ĐẦU.
+   * Ưu tiên createdAt; bản ghi cũ thiếu createdAt thì lùi về seq (seq tăng dần theo thứ tự tạo).
+   */
   readonly bugs = computed<ProjectTask[]>(() =>
-    this.tasks().filter((t) => t.type === 'BUG' || t.type === 'ISSUE'));
+    this.tasks()
+      .filter((t) => t.type === 'BUG' || t.type === 'ISSUE')
+      .slice()
+      .sort((a, b) => {
+        const ta = a.createdAt ? Date.parse(a.createdAt) : NaN;
+        const tb = b.createdAt ? Date.parse(b.createdAt) : NaN;
+        if (!isNaN(ta) && !isNaN(tb) && ta !== tb) return tb - ta;
+        return b.seq - a.seq;
+      }));
 
   /** Mọi task — để gắn bug vào task cha (parentId). Badge loại + chuỗi cha (đồng bộ Backlog/Tạo nhanh). */
   readonly parentSel = computed<SelectOption[]>(() => buildParentOptions(this.tasks(), this.tasks()));
