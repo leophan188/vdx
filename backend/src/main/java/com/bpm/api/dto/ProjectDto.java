@@ -325,7 +325,9 @@ public final class ProjectDto {
             ReportOverview overview,
             List<ReportTaskItem> epicStory,
             List<PersonProgress> byPerson,
-            List<ReportTaskItem> bugsLogged) {
+            List<ReportTaskItem> bugsLogged,
+            /** Việc XỬ LÝ TRONG KỲ (có thay đổi trong kỳ) — nguồn cho popup chi tiết theo nhân sự. */
+            List<ReportTaskItem> periodItems) {
     }
 
     // ===== Burndown (req: biểu đồ cháy việc) =====

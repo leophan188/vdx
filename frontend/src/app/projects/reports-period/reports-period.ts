@@ -378,15 +378,23 @@ export class PrjReportsPeriod {
    * done/inProgress/upcoming/overdue nữa vì 3 nhóm sau không lọc kỳ → ra toàn bộ việc đang mở.
    */
   readonly peopleStats = computed(() => {
-    const period = new Map(this.byPerson().map((p) => [p.userId ?? 'NONE', p]));
     const overall = this.report()?.byPerson ?? [];
+    // Danh sách chi tiết lấy TỪ CÙNG nguồn với con số (periodItems của backend) → bấm vào
+    // luôn thấy đúng số việc đã đếm, không còn cảnh "1 việc nhưng popup trống".
+    const items = this.report()?.periodItems ?? [];
+    const byUser = new Map<string, ReportTaskItem[]>();
+    for (const it of items) {
+      const key = it.assigneeUserId ?? 'NONE';
+      const list = byUser.get(key);
+      if (list) list.push(it); else byUser.set(key, [it]);
+    }
     return overall.map((ov) => ({
       userId: ov.userId, name: ov.name,
       totalAll: ov.total,               // tổng công việc (toàn dự án, việc lá)
       pctAll: ov.pct,                   // % hoàn thành toàn dự án
       inPeriod: ov.inPeriod,            // việc CÓ THAY ĐỔI trong Ngày/Tuần
       doneInPeriod: ov.donePeriod,      // việc hoàn thành trong kỳ
-      items: period.get(ov.userId ?? 'NONE')?.items ?? [], // danh sách cho popup chi tiết
+      items: byUser.get(ov.userId ?? 'NONE') ?? [],
     }));
   });
 
@@ -437,14 +445,19 @@ export class PrjReportsPeriod {
     { key: 'progressPct', header: '% hoàn thành', width: '170px', sortable: true }
   ];
 
-  /** Cột cho popup chi tiết theo nhân sự (thêm Loại + Trạng thái). */
+  /**
+   * Cột cho popup chi tiết theo nhân sự (thêm Loại + Trạng thái).
+   * KHÔNG đặt width cho "Công việc" → cột này hưởng toàn bộ chỗ còn lại.
+   * Trước đây 5 cột cố định chiếm 562px trong modal ~660px, chừa tiêu đề ~100px
+   * nên mỗi dòng vỡ thành 5-6 dòng chữ. Modal cũng chuyển sang xwide cho rộng.
+   */
   readonly personCols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '90px', sortable: true },
-    { key: 'type', header: 'Loại', width: '92px' },
+    { key: 'code', header: 'Mã', width: '70px', sortable: true },
+    { key: 'type', header: 'Loại', width: '78px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'status', header: 'Trạng thái', width: '120px' },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '110px', sortable: true },
-    { key: 'progressPct', header: '% HT', width: '150px', sortable: true }
+    { key: 'status', header: 'Trạng thái', width: '104px' },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '92px', sortable: true },
+    { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
   ];
 
   constructor() {

@@ -330,6 +330,7 @@ export interface PeriodReport {
   epicStory: ReportTaskItem[];   // (chỉ báo cáo TUẦN) tiến độ % EPIC/Story của dự án
   byPerson: PersonProgress[];    // tỷ lệ hoàn thành theo nhân sự (việc lá)
   bugsLogged: ReportTaskItem[];  // Bug/Issue được LOG (tạo) TRONG KỲ — cho thống kê tester/dev theo kỳ
+  periodItems: ReportTaskItem[]; // Việc XỬ LÝ TRONG KỲ — nguồn popup chi tiết theo nhân sự
 }
 
 // ===== Burndown (biểu đồ cháy việc) =====

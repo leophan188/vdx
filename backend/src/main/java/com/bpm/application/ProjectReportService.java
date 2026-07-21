@@ -359,6 +359,19 @@ public class ProjectReportService {
                 ? Integer.compare(y.inPeriod(), x.inPeriod())
                 : Integer.compare(y.total(), x.total()));
 
+        // Danh sách việc XỬ LÝ TRONG KỲ — CÙNG điều kiện với bộ đếm inPeriod ở trên, để popup chi tiết
+        // và con số trong bảng LUÔN khớp nhau (trước đây popup lấy từ 4 nhóm done/inProgress/upcoming/
+        // overdue nên có người đếm ra 1 việc mà bấm vào lại trống).
+        List<ProjectDto.ReportTaskItem> periodItems = new ArrayList<>();
+        for (ProjectTask t : tasks) {
+            if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
+            if (t.getStatus() == TaskStatus.CANCELLED) continue;
+            Instant upd = t.getUpdatedAt();
+            if (upd != null && !upd.isBefore(startOfPeriod) && upd.isBefore(endOfPeriod)) {
+                periodItems.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
+            }
+        }
+
         // Bug/Issue được LOG (tạo) TRONG KỲ — thống kê tester log / dev bị log theo ĐÚNG kỳ Ngày/Tuần.
         List<ProjectDto.ReportTaskItem> bugsLogged = new ArrayList<>();
         for (ProjectTask t : tasks) {
@@ -369,7 +382,8 @@ public class ProjectReportService {
             }
         }
 
-        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview, epicStory, byPerson, bugsLogged);
+        return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview,
+                epicStory, byPerson, bugsLogged, periodItems);
     }
 
     private ProjectDto.ReportTaskItem item(ProjectTask t, String projectCode,
