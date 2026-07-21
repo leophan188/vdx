@@ -13,6 +13,8 @@ import com.bpm.infrastructure.ProjectDiaryRepository;
 import com.bpm.infrastructure.ProjectMemberRepository;
 import com.bpm.infrastructure.ProjectRepository;
 import com.bpm.infrastructure.UserAccountRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -33,6 +35,8 @@ public class ProjectDiaryService {
 
     private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE; // yyyy-MM-dd
+    /** Chỉ dùng cho cột next_actions (JSON) — nội bộ service, không phụ thuộc cấu hình web. */
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final ProjectDiaryRepository diaryRepo;
     private final ProjectRepository projectRepo;
@@ -65,6 +69,15 @@ public class ProjectDiaryService {
         return out;
     }
 
+    /** Một bản ghi nhật ký (dùng cho xuất biên bản họp). */
+    @Transactional(readOnly = true)
+    public ProjectDto.DiaryEntry get(String projectId, String entryId, String actor, boolean isAdmin) {
+        requireProject(projectId);
+        ProjectDiary d = requireEntry(projectId, entryId);
+        String actorUserId = userIdOf(actor);
+        return toDto(d, actorUserId, canManage(projectId, actorUserId, isAdmin), new HashMap<>());
+    }
+
     @Transactional
     public ProjectDto.DiaryEntry create(String projectId, ProjectDto.DiaryRequest req, String actor) {
         requireProject(projectId);
@@ -73,6 +86,7 @@ public class ProjectDiaryService {
                 blankToNull(req.category()), joinIds(req.teamUserIds()),
                 blankToNull(req.clientContacts()), blankToNull(req.content()), blankToNull(req.conclusion()),
                 u.getId(), displayNameOf(u.getId()));
+        applyMeetingFields(d, req);
         ProjectDiary saved = diaryRepo.save(d);
         auditPort.record("PROJECT_DIARY_CREATED", "ProjectDiary", saved.getId(), actor,
                 "projectId=" + projectId + ", category=" + saved.getCategory());
@@ -92,6 +106,7 @@ public class ProjectDiaryService {
         d.setClientContacts(blankToNull(req.clientContacts()));
         d.setContent(blankToNull(req.content()));
         d.setConclusion(blankToNull(req.conclusion()));
+        applyMeetingFields(d, req);
         d.touch();
         ProjectDiary saved = diaryRepo.save(d);
         auditPort.record("PROJECT_DIARY_UPDATED", "ProjectDiary", saved.getId(), actor,
@@ -123,8 +138,80 @@ public class ProjectDiaryService {
         return new ProjectDto.DiaryEntry(d.getId(),
                 d.getWorkDate() == null ? null : d.getWorkDate().format(DMY),
                 d.getCategory(), ids, names, d.getClientContacts(), d.getContent(), d.getConclusion(),
+                d.getLocation(), d.getStartTime(), d.getEndTime(), readActions(d.getNextActions()),
                 d.getCreatedBy(), d.getCreatedByName(),
                 d.getCreatedAt() == null ? null : d.getCreatedAt().toString(), canEdit);
+    }
+
+    /** Ghi các trường phục vụ BIÊN BẢN HỌP (địa điểm, giờ, next action) — dùng chung cho tạo & sửa. */
+    private void applyMeetingFields(ProjectDiary d, ProjectDto.DiaryRequest req) {
+        d.setLocation(blankToNull(req.location()));
+        d.setStartTime(parseTime(req.startTime()));
+        d.setEndTime(parseTime(req.endTime()));
+        d.setNextActions(writeActions(req.nextActions()));
+    }
+
+    /** "HH:mm" hợp lệ → giữ nguyên; trống/sai định dạng → null (giờ họp không bắt buộc). */
+    private static String parseTime(String v) {
+        String s = blankToNull(v);
+        if (s == null) {
+            return null;
+        }
+        return s.matches("^([01]\\d|2[0-3]):[0-5]\\d$") ? s : null;
+    }
+
+    /** Danh sách next action → JSON. Bỏ dòng trống nội dung; chuẩn hoá hạn & trạng thái. Rỗng → null. */
+    private String writeActions(List<ProjectDto.DiaryAction> actions) {
+        if (actions == null || actions.isEmpty()) {
+            return null;
+        }
+        List<ProjectDto.DiaryAction> clean = new ArrayList<>();
+        for (ProjectDto.DiaryAction a : actions) {
+            if (a == null || blankToNull(a.content()) == null) {
+                continue; // dòng trống — người dùng thêm rồi bỏ
+            }
+            LocalDate due = parseDateSafe(a.dueDate());
+            clean.add(new ProjectDto.DiaryAction(blankToNull(a.content()), blankToNull(a.owner()),
+                    due == null ? null : due.format(DMY), normalizeStatus(a.status())));
+        }
+        if (clean.isEmpty()) {
+            return null;
+        }
+        try {
+            return JSON.writeValueAsString(clean);
+        } catch (Exception e) {
+            throw new IllegalArgumentException("Không lưu được danh sách next action");
+        }
+    }
+
+    /** JSON → danh sách next action. Dữ liệu cũ/null/hỏng → danh sách rỗng (không làm vỡ màn hình). */
+    private List<ProjectDto.DiaryAction> readActions(String json) {
+        if (json == null || json.isBlank()) {
+            return List.of();
+        }
+        try {
+            return JSON.readValue(json, new TypeReference<List<ProjectDto.DiaryAction>>() { });
+        } catch (Exception e) {
+            return List.of();
+        }
+    }
+
+    /** NEW | DOING | DONE — giá trị lạ/trống → NEW. */
+    private static String normalizeStatus(String s) {
+        if (s == null) {
+            return "NEW";
+        }
+        String v = s.trim().toUpperCase();
+        return ("DOING".equals(v) || "DONE".equals(v)) ? v : "NEW";
+    }
+
+    /** Như {@link #parseDate} nhưng KHÔNG ném lỗi — hạn next action sai định dạng thì bỏ trống. */
+    private static LocalDate parseDateSafe(String v) {
+        try {
+            return parseDate(v);
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /** Chỉ người tạo hoặc admin/PM/owner được sửa/xoá. */

@@ -279,12 +279,12 @@ public final class ProjectDto {
 
     public record AttachmentResponse(
             String id, String taskId, String fileName, String contentType, long size,
-            String uploadedBy, String uploadedAt, String url) {
+            String uploadedBy, String uploadedAt, String url, String commentId) {
 
         public static AttachmentResponse of(com.bpm.domain.project.TaskAttachment a, String url) {
             return new AttachmentResponse(a.getId(), a.getTaskId(), a.getFileName(), a.getContentType(),
                     a.getSize(), a.getUploadedBy(),
-                    a.getUploadedAt() == null ? null : a.getUploadedAt().toString(), url);
+                    a.getUploadedAt() == null ? null : a.getUploadedAt().toString(), url, a.getCommentId());
         }
     }
 
@@ -351,12 +351,22 @@ public final class ProjectDto {
             String id, String workDate, String category,
             List<String> teamUserIds, List<String> teamNames,
             String clientContacts, String content, String conclusion,
+            String location, String startTime, String endTime, List<DiaryAction> nextActions,
             String createdBy, String createdByName, String createdAt, boolean canEdit) {
     }
 
     /** Tạo/sửa nhật ký. {@code workDate} chấp nhận dd/MM/yyyy hoặc yyyy-MM-dd. */
     public record DiaryRequest(
             String workDate, String category, List<String> teamUserIds,
-            String clientContacts, String content, String conclusion) {
+            String clientContacts, String content, String conclusion,
+            String location, String startTime, String endTime, List<DiaryAction> nextActions) {
+    }
+
+    /**
+     * Một việc cần làm tiếp (next action) của buổi làm việc — in thành bảng trong biên bản họp.
+     * {@code owner} là TEXT tự do (có thể là người phía khách hàng, không có trong hệ thống).
+     * {@code dueDate} dd/MM/yyyy; {@code status} = NEW | DOING | DONE.
+     */
+    public record DiaryAction(String content, String owner, String dueDate, String status) {
     }
 }

@@ -4,7 +4,7 @@ import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { ToastService } from '../../shared/toast/toast.service';
-import { ProjectService, ProjectMember, DiaryEntry, DiaryRequest } from '../../core/project.service';
+import { ProjectService, ProjectMember, DiaryEntry, DiaryRequest, DiaryAction, DiaryActionStatus } from '../../core/project.service';
 
 /** Phân loại buổi làm việc — value LƯU nguyên chuỗi (tự do phía backend); badge màu theo token. */
 interface Category { value: string; badge: string; }
@@ -78,11 +78,40 @@ const CATEGORIES: Category[] = [
     .dg-form label { font-size: var(--text-sm); font-weight: 600; }
     .dg-form textarea { min-height: 150px; resize: vertical; line-height: 1.5; }
     .dg-form textarea.dg-form__tall { min-height: 220px; }
-    .dg-form__members { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-      gap: var(--space-2); max-height: 220px; overflow: auto; border: 1px solid var(--color-border);
+    /* Danh sách nhân sự: list checkbox GỌN (1 dòng/người) — chip đầy đủ làm khối phình 2 dòng, tốn diện tích. */
+    .dg-form__members { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+      gap: 0 var(--space-3); max-height: 168px; overflow: auto; border: 1px solid var(--color-border);
       border-radius: var(--radius-md); padding: var(--space-2); }
-    .dg-form__mrow { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); cursor: pointer; }
-    .dg-form__mrow input { width: auto; }
+    .dg-form__mrow { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm);
+      cursor: pointer; padding: 3px var(--space-2); border-radius: var(--radius-sm, 6px); line-height: 1.3; }
+    .dg-form__mrow:hover { background: var(--color-surface-alt); }
+    .dg-form__mrow input { width: auto; flex: none; margin: 0; }
+    .dg-form__mcode { font-size: var(--text-xs); color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums; flex: none; }
+    .dg-form__mname { flex: 1 1 auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dg-form__mdept { font-size: var(--text-xs); color: var(--color-text-muted); flex: none; }
+    .dg-form__mhead { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+    .dg-form__mfilter { flex: 1 1 200px; height: var(--control-h-sm); padding: 0 var(--space-2);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); color: var(--color-text); font-size: var(--text-xs); }
+
+    /* Bảng soạn Next action */
+    .dg-act { display: grid; gap: var(--space-2); }
+    .dg-act__row { display: grid; grid-template-columns: 1fr 150px 140px 120px 32px; gap: var(--space-2);
+      align-items: center; }
+    .dg-act__row input, .dg-act__row select { width: 100%; }
+    .dg-act__head { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-semibold); }
+    @media (max-width: 760px) { .dg-act__row { grid-template-columns: 1fr 1fr; } .dg-act__head { display: none; } }
+    .dg-act__empty { font-size: var(--text-sm); color: var(--color-text-muted); }
+
+    /* Next action hiển thị trên card */
+    .dg__acts { display: grid; gap: 4px; }
+    .dg__act { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); flex-wrap: wrap; }
+    .dg__act-st { font-size: var(--text-xs); padding: 1px var(--space-2); border-radius: var(--radius-full);
+      background: var(--color-surface-alt); color: var(--color-text-muted); flex: none; }
+    .dg__act-st--DOING { color: var(--color-primary); background: var(--color-primary-soft); }
+    .dg__act-st--DONE { color: var(--color-success, var(--color-primary)); background: var(--color-success-soft, var(--color-primary-soft)); }
+    .dg__act-meta { font-size: var(--text-xs); color: var(--color-text-muted); }
   `]
 })
 export class PrjDiary {
@@ -132,6 +161,52 @@ export class PrjDiary {
   fClient = '';
   fContent = '';
   fConclusion = '';
+  fLocation = '';
+  fStart = '';           // HH:mm
+  fEnd = '';             // HH:mm
+  /** Next action đang soạn — mỗi phần tử 1 dòng của bảng trong biên bản. */
+  fActions = signal<DiaryAction[]>([]);
+  /** Lọc nhanh danh sách nhân sự trong form (danh sách dài). */
+  readonly memberFilter = signal('');
+
+  readonly statusOptions: { value: DiaryActionStatus; label: string }[] = [
+    { value: 'NEW', label: 'Mới' },
+    { value: 'DOING', label: 'Đang làm' },
+    { value: 'DONE', label: 'Hoàn thành' }
+  ];
+  statusLabel(s: string | null): string {
+    return this.statusOptions.find((o) => o.value === s)?.label ?? 'Mới';
+  }
+
+  /** Nhân sự khớp từ khoá lọc (mã / tên / phòng ban). */
+  readonly membersShown = computed<ProjectMember[]>(() => {
+    const q = this.memberFilter().trim().toLowerCase();
+    const all = this.members();
+    if (!q) return all;
+    return all.filter((m) => [m.empCode, m.name, m.deptCode, m.jobPosition]
+      .some((v) => (v || '').toLowerCase().includes(q)));
+  });
+
+  // ===== Next action (bảng soạn trong modal) =====
+  addAction(): void {
+    this.fActions.update((xs) => [...xs, { content: '', owner: '', dueDate: '', status: 'NEW' }]);
+  }
+  removeAction(i: number): void {
+    this.fActions.update((xs) => xs.filter((_, idx) => idx !== i));
+  }
+  /** Cập nhật 1 ô của dòng next action (giữ signal bất biến để Angular nhận thay đổi). */
+  patchAction(i: number, patch: Partial<DiaryAction>): void {
+    this.fActions.update((xs) => xs.map((a, idx) => (idx === i ? { ...a, ...patch } : a)));
+  }
+  /** Hạn của dòng i ở dạng yyyy-MM-dd để đổ vào input date. */
+  actionDueIso(a: DiaryAction): string {
+    return this.fromDmy(a.dueDate);
+  }
+
+  /** Tải biên bản họp (.docx) của bản ghi — mở anchor để trình duyệt tự tải kèm cookie phiên. */
+  exportMinutes(e: DiaryEntry): void {
+    window.open(this.svc.diaryMinutesUrl(this.projectId(), e.id), '_blank');
+  }
 
   constructor() {
     effect(() => {
@@ -173,6 +248,11 @@ export class PrjDiary {
     this.fClient = '';
     this.fContent = '';
     this.fConclusion = '';
+    this.fLocation = '';
+    this.fStart = '';
+    this.fEnd = '';
+    this.fActions.set([]);
+    this.memberFilter.set('');
     this.modalOpen.set(true);
   }
 
@@ -184,6 +264,11 @@ export class PrjDiary {
     this.fClient = e.clientContacts ?? '';
     this.fContent = e.content ?? '';
     this.fConclusion = e.conclusion ?? '';
+    this.fLocation = e.location ?? '';
+    this.fStart = e.startTime ?? '';
+    this.fEnd = e.endTime ?? '';
+    this.fActions.set((e.nextActions ?? []).map((a) => ({ ...a })));
+    this.memberFilter.set('');
     this.modalOpen.set(true);
   }
 
@@ -197,7 +282,12 @@ export class PrjDiary {
       teamUserIds: Array.from(this.fTeam()),
       clientContacts: this.fClient || null,
       content: this.fContent || null,
-      conclusion: this.fConclusion || null
+      conclusion: this.fConclusion || null,
+      location: this.fLocation || null,
+      startTime: this.fStart || null,
+      endTime: this.fEnd || null,
+      // Bỏ dòng next action trống nội dung (người dùng thêm rồi không nhập).
+      nextActions: this.fActions().filter((a) => (a.content ?? '').trim())
     };
     const done = (verb: string) => () => {
       this.saving.set(false);

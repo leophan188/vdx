@@ -41,6 +41,13 @@ public class TaskAttachment {
     @Column(name = "storage_key", length = 36, nullable = false)
     private String storageKey;
 
+    /**
+     * Ảnh này thuộc BÌNH LUẬN nào (null = ảnh đính kèm chung của task).
+     * NULLABLE để bản ghi cũ vẫn hợp lệ dưới ddl-update.
+     */
+    @Column(name = "comment_id", length = 36)
+    private String commentId;
+
     @Column(name = "uploaded_by", length = 100)
     private String uploadedBy;
 
@@ -70,4 +77,6 @@ public class TaskAttachment {
     public String getStorageKey() { return storageKey; }
     public String getUploadedBy() { return uploadedBy; }
     public Instant getUploadedAt() { return uploadedAt; }
+    public String getCommentId() { return commentId; }
+    public void setCommentId(String commentId) { this.commentId = commentId; }
 }

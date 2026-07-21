@@ -54,6 +54,28 @@ public class ProjectDiary {
     @Column(name = "conclusion", length = 100_000)
     private String conclusion;
 
+    // ===== Bổ sung cho BIÊN BẢN HỌP (đều NULLABLE — bản ghi cũ không có vẫn chạy) =====
+
+    /** Địa điểm / hình thức: "Phòng họp A" hoặc "Online (Google Meet)". */
+    @Column(name = "location", length = 300)
+    private String location;
+
+    /** Giờ bắt đầu dạng "HH:mm" — để chuỗi cho khớp &lt;input type=time&gt;, tránh lệch múi giờ. */
+    @Column(name = "start_time", length = 5)
+    private String startTime;
+
+    /** Giờ kết thúc dạng "HH:mm". */
+    @Column(name = "end_time", length = 5)
+    private String endTime;
+
+    /**
+     * Next action — JSON mảng {@code [{content, owner, dueDate, status}]}.
+     * Lưu JSON trong 1 cột (không tạo bảng con) theo đúng lối {@code teamUserIds} dùng CSV.
+     * KHÔNG @Lob — xem ghi chú đầu lớp.
+     */
+    @Column(name = "next_actions", length = 100_000)
+    private String nextActions;
+
     @Column(name = "created_by", length = 36)
     private String createdBy;
 
@@ -99,6 +121,10 @@ public class ProjectDiary {
     public String getClientContacts() { return clientContacts; }
     public String getContent() { return content; }
     public String getConclusion() { return conclusion; }
+    public String getLocation() { return location; }
+    public String getStartTime() { return startTime; }
+    public String getEndTime() { return endTime; }
+    public String getNextActions() { return nextActions; }
     public String getCreatedBy() { return createdBy; }
     public String getCreatedByName() { return createdByName; }
     public Instant getCreatedAt() { return createdAt; }
@@ -110,4 +136,8 @@ public class ProjectDiary {
     public void setClientContacts(String clientContacts) { this.clientContacts = clientContacts; }
     public void setContent(String content) { this.content = content; }
     public void setConclusion(String conclusion) { this.conclusion = conclusion; }
+    public void setLocation(String location) { this.location = location; }
+    public void setStartTime(String startTime) { this.startTime = startTime; }
+    public void setEndTime(String endTime) { this.endTime = endTime; }
+    public void setNextActions(String nextActions) { this.nextActions = nextActions; }
 }

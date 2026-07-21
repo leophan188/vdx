@@ -9,6 +9,7 @@ import { memberPersonOptions } from '../person-options';
 import { ToastService } from '../toast/toast.service';
 import { AuthService } from '../../core/auth.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
+import { QuickCreatePrefsService } from '../../core/quick-create-prefs';
 import { ProjectService, ProjectMember, ProjectTask, TaskType, TaskPriority, BugSeverity } from '../../core/project.service';
 
 /** Ảnh chờ đính kèm: file gốc + URL preview (blob) để hiển thị + thu hồi. */
@@ -62,6 +63,10 @@ export class QuickCreate {
   private projectApi = inject(ProjectService);
   private toast = inject(ToastService);
   private auth = inject(AuthService);
+  private prefs = inject(QuickCreatePrefsService);
+
+  /** Cha muốn khôi phục từ lựa chọn đã nhớ — áp sau khi listTasks trả về (chỉ khi còn hợp lệ). */
+  private pendingParentId: string | null = null;
 
   readonly open = input(false);
   /** Loại preset khi mở (nút ＋Task / ＋Bug). Vẫn cho đổi sang loại bất kỳ. */
@@ -165,6 +170,7 @@ export class QuickCreate {
         this.type.set(preset);
         if (preset === 'BUG' || preset === 'ISSUE') this.description.set(BUG_DESCRIPTION_TEMPLATE);
         this.loadProjects();
+        this.restorePrefs(); // nhớ dự án + task cha lần trước → user không phải chọn lại
       });
     });
   }
@@ -255,7 +261,28 @@ export class QuickCreate {
     });
   }
 
-  onProject(id: string): void {
+  /** Khôi phục dự án + task cha đã nhớ của user đăng nhập (bỏ qua nếu chưa từng tạo). */
+  private restorePrefs(): void {
+    const saved = this.prefs.load();
+    if (!saved?.projectId) return;
+    this.selectProject(saved.projectId, saved.parentByType[this.type()] ?? null);
+  }
+
+  /** Áp cha đã nhớ SAU khi có danh sách task — bỏ qua nếu task đã xoá hoặc sai loại cha. */
+  private applyPendingParent(): void {
+    const want = this.pendingParentId;
+    this.pendingParentId = null;
+    if (!want) return;
+    const allow = this.parentTypeOf(this.type());
+    if (!allow) return;
+    if (this.tasks().some((t) => t.id === want && allow.includes(t.type))) this.parentId.set(want);
+  }
+
+  onProject(id: string): void { this.selectProject(id, null); }
+
+  /** Chọn dự án + nạp members/tasks. wantParent != null → thử khôi phục cha đã nhớ. */
+  private selectProject(id: string, wantParent: string | null): void {
+    this.pendingParentId = wantParent;
     this.projectId.set(id || '');
     this.parentId.set('');
     this.assigneeUserId.set('');
@@ -268,8 +295,8 @@ export class QuickCreate {
       error: () => this.members.set([])
     });
     this.projectApi.listTasks(id).subscribe({
-      next: (r) => this.tasks.set(r),
-      error: () => this.tasks.set([])
+      next: (r) => { this.tasks.set(r); this.applyPendingParent(); },
+      error: () => { this.tasks.set([]); this.pendingParentId = null; }
     });
   }
 
@@ -283,7 +310,15 @@ export class QuickCreate {
     const allow = this.parentTypeOf(t);
     if (!allow) { this.parentId.set(''); return; }
     const ok = this.tasks().some((tk) => tk.id === this.parentId() && allow.includes(tk.type));
-    if (!ok) this.parentId.set('');
+    if (!ok) {
+      // Cha hiện tại sai loại → thử cha đã nhớ RIÊNG cho loại vừa chọn (cùng dự án).
+      this.parentId.set('');
+      const saved = this.prefs.load();
+      if (saved && saved.projectId === this.projectId()) {
+        this.pendingParentId = saved.parentByType[t] ?? null;
+        this.applyPendingParent();
+      }
+    }
     // rời SUB-TASK vẫn giữ est; vào SUB-TASK mà est > 4 → cắt về 4 cho khớp max.
     if (t === 'SUBTASK' && Number(this.estimateHours()) > 4) this.estimateHours.set('4');
   }
@@ -337,6 +372,8 @@ export class QuickCreate {
     };
     this.meBug.quickCreate(body).subscribe({
       next: (r) => {
+        // Tạo OK → nhớ dự án + cha cho lần sau (theo user đăng nhập).
+        this.prefs.save(this.type(), this.projectId(), body.parentId ?? null);
         const imgs = this.previews();
         const taskId = r.projectTaskId; // backend trả projectTaskId (id task dự án)
         // Không có ảnh → xong ngay.

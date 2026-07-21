@@ -374,10 +374,11 @@ export class PrjKanban {
     this.tasks.set(cur.map((t) => (t.id === taskId ? { ...t, status } : t)));
     this.svc.updateTaskStatus(this.projectId(), taskId, status).subscribe({
       next: () => this.reload(),
-      error: () => {
+      error: (e) => {
         // Hoàn tác khi lỗi.
         this.tasks.set(this.tasks().map((t) => (t.id === taskId ? { ...t, status: prev } : t)));
-        this.toast.error('Không cập nhật được trạng thái công việc');
+        // Hiện message BE (vd "Cần nhập Ước lượng (est)…") thay vì toast chung — user biết phải làm gì.
+        this.toast.error('Không cập nhật được trạng thái công việc', e?.error?.message ?? '');
       }
     });
   }

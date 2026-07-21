@@ -156,6 +156,12 @@ public class ProjectCollabService {
         if (!isAdmin && !c.getAuthorId().equals(u.getId())) {
             throw new IllegalArgumentException("Chỉ tác giả hoặc quản trị viên mới xoá được bình luận");
         }
+        // Xoá kèm ảnh THUỘC bình luận này — nếu không sẽ mồ côi (không còn chỗ nào hiển thị).
+        for (TaskAttachment a : attachmentRepo.findByTaskIdOrderByUploadedAtDesc(taskId)) {
+            if (commentId.equals(a.getCommentId())) {
+                attachmentRepo.delete(a);
+            }
+        }
         commentRepo.delete(c);
         audit.record("PROJECT_TASK_COMMENT_DELETED", "ProjectTask", taskId, actor, "comment=" + commentId);
     }
@@ -175,6 +181,16 @@ public class ProjectCollabService {
     @Transactional
     public ProjectDto.AttachmentResponse uploadAttachment(String projectId, String taskId,
                                                           MultipartFile file, String actor) {
+        return uploadAttachment(projectId, taskId, file, null, actor);
+    }
+
+    /**
+     * Tải ảnh lên cho task. {@code commentId} != null → ảnh THUỘC bình luận đó (hiển thị ngay dưới
+     * bình luận, không nằm ở khối "Ảnh đính kèm" chung của task).
+     */
+    @Transactional
+    public ProjectDto.AttachmentResponse uploadAttachment(String projectId, String taskId,
+                                                          MultipartFile file, String commentId, String actor) {
         requireTask(projectId, taskId);
         String ct = file == null || file.getContentType() == null
                 ? "" : file.getContentType().toLowerCase(Locale.ROOT);
@@ -183,12 +199,20 @@ public class ProjectCollabService {
         }
         // Tái dùng MediaStorageService: validate loại/dung lượng (≤10MB) + magic bytes + lưu lên đĩa.
         PostMedia media = mediaStorage.store(file, actor);
-        TaskAttachment a = attachmentRepo.save(new TaskAttachment(taskId, media.getOriginalName(),
-                media.getContentType(), media.getSizeBytes(), media.getId(), actor));
+        TaskAttachment att = new TaskAttachment(taskId, media.getOriginalName(),
+                media.getContentType(), media.getSizeBytes(), media.getId(), actor);
+        if (commentId != null && !commentId.isBlank()) {
+            requireComment(taskId, commentId); // chỉ gắn được vào bình luận của CHÍNH task này
+            att.setCommentId(commentId.trim());
+        }
+        TaskAttachment a = attachmentRepo.save(att);
         audit.record("PROJECT_TASK_ATTACHMENT_ADDED", "ProjectTask", taskId, actor,
                 "attachment=" + a.getId() + ", media=" + media.getId());
-        activityRepo.save(new TaskActivity(taskId, projectId, actorName(actor),
-                TaskActivity.ATTACH, "Đính kèm " + a.getFileName()));
+        // Ảnh trong bình luận KHÔNG ghi dòng nhật ký riêng (bình luận đã có dòng của nó) — tránh trùng.
+        if (a.getCommentId() == null) {
+            activityRepo.save(new TaskActivity(taskId, projectId, actorName(actor),
+                    TaskActivity.ATTACH, "Đính kèm " + a.getFileName()));
+        }
         return ProjectDto.AttachmentResponse.of(a, contentUrl(projectId, taskId, a.getId()));
     }
 

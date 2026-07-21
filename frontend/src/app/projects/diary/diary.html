@@ -25,7 +25,11 @@
           <div class="dg__row1">
             <span class="dg__date">📅 {{ e.workDate || '—' }}</span>
             @if (e.category) { <span class="dg-cat" [class]="catBadge(e.category)">{{ e.category }}</span> }
+            @if (e.startTime) { <span class="dg__act-meta">🕒 {{ e.startTime }}{{ e.endTime ? ' – ' + e.endTime : '' }}</span> }
+            @if (e.location) { <span class="dg__act-meta">📍 {{ e.location }}</span> }
             <span class="dg__spacer"></span>
+            <button type="button" class="btn btn--icon" title="Tải biên bản họp (.docx)"
+                    (click)="exportMinutes(e)">🖨</button>
             @if (e.canEdit) {
               <button type="button" class="btn btn--icon" title="Sửa nhật ký" (click)="openEdit(e)">✎</button>
               <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá nhật ký" (click)="remove(e)">🗑</button>
@@ -69,6 +73,22 @@
             </div>
           }
 
+          @if (e.nextActions?.length) {
+            <div class="dg__meta">
+              <span class="dg__label">Next action ({{ e.nextActions.length }})</span>
+              <div class="dg__acts">
+                @for (a of e.nextActions; track $index) {
+                  <div class="dg__act">
+                    <span class="dg__act-st" [class]="'dg__act-st--' + (a.status || 'NEW')">{{ statusLabel(a.status) }}</span>
+                    <span>{{ a.content }}</span>
+                    @if (a.owner) { <span class="dg__act-meta">· 👤 {{ a.owner }}</span> }
+                    @if (a.dueDate) { <span class="dg__act-meta">· ⏰ {{ a.dueDate }}</span> }
+                  </div>
+                }
+              </div>
+            </div>
+          }
+
           @if (isLong(e)) {
             <button type="button" class="dg__more" (click)="toggleExpand(e.id)">
               {{ isExpanded(e.id) ? 'Thu gọn ▴' : 'Xem thêm ▾' }}
@@ -103,15 +123,39 @@
       </div>
     </div>
 
+    <div class="form-2col">
+      <div class="field">
+        <label>Giờ bắt đầu – kết thúc</label>
+        <div class="form-2col">
+          <input type="time" [(ngModel)]="fStart" name="dgstart" />
+          <input type="time" [(ngModel)]="fEnd" name="dgend" />
+        </div>
+      </div>
+      <div class="field">
+        <label>Địa điểm / hình thức</label>
+        <input type="text" [(ngModel)]="fLocation" name="dgloc" placeholder="VD: Phòng họp A · Online (Google Meet)" />
+      </div>
+    </div>
+
     <div class="field">
-      <label>Nhân sự team tham gia</label>
+      <div class="dg-form__mhead">
+        <label>Nhân sự team tham gia</label>
+        <span class="dg__count">{{ fTeam().size }} đã chọn</span>
+        <input type="search" class="dg-form__mfilter" placeholder="Lọc mã / tên / phòng ban…"
+               [value]="memberFilter()" (input)="memberFilter.set($any($event.target).value)" />
+      </div>
       @if (members().length) {
         <div class="dg-form__members">
-          @for (m of members(); track m.userId) {
-            <label class="dg-form__mrow">
+          @for (m of membersShown(); track m.userId) {
+            <label class="dg-form__mrow" [title]="m.name + (m.jobPosition ? ' · ' + m.jobPosition : '')">
               <input type="checkbox" [checked]="memberChecked(m.userId)" (change)="toggleMember(m.userId)" />
-              <employee-chip [code]="m.empCode" [name]="m.name" [dept]="m.deptCode" />
+              <span class="dg-form__mcode">{{ m.empCode }}</span>
+              <span class="dg-form__mname">{{ m.name }}</span>
+              @if (m.deptCode) { <span class="dg-form__mdept">{{ m.deptCode }}</span> }
             </label>
+          }
+          @if (!membersShown().length) {
+            <p class="hint">Không có nhân sự khớp "{{ memberFilter() }}".</p>
           }
         </div>
       } @else {
@@ -132,7 +176,43 @@
 
     <div class="field">
       <label>Kết luận</label>
-      <textarea [(ngModel)]="fConclusion" name="dgconcl" placeholder="Kết luận / việc tiếp theo…"></textarea>
+      <textarea [(ngModel)]="fConclusion" name="dgconcl" placeholder="Kết luận buổi làm việc…"></textarea>
+    </div>
+
+    <div class="field">
+      <div class="dg-form__mhead">
+        <label>Next action — việc cần làm tiếp</label>
+        <span class="dg__count">{{ fActions().length }}</span>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="addAction()">＋ Thêm việc</button>
+      </div>
+      <div class="dg-act">
+        @if (fActions().length) {
+          <div class="dg-act__row dg-act__head">
+            <span>Nội dung công việc</span><span>Người phụ trách</span><span>Hạn hoàn thành</span>
+            <span>Trạng thái</span><span></span>
+          </div>
+        } @else {
+          <p class="dg-act__empty">Chưa có việc nào — bấm "Thêm việc" để ghi việc cần làm sau buổi họp.</p>
+        }
+        @for (a of fActions(); track $index) {
+          <div class="dg-act__row">
+            <input type="text" placeholder="VD: Sửa lỗi đăng nhập SSO" [value]="a.content || ''"
+                   (input)="patchAction($index, { content: $any($event.target).value })" />
+            <input type="text" placeholder="Người phụ trách" [value]="a.owner || ''"
+                   (input)="patchAction($index, { owner: $any($event.target).value })" />
+            <input type="date" [value]="actionDueIso(a)"
+                   (change)="patchAction($index, { dueDate: $any($event.target).value })" />
+            <select [value]="a.status || 'NEW'"
+                    (change)="patchAction($index, { status: $any($event.target).value })">
+              @for (s of statusOptions; track s.value) {
+                <option [value]="s.value" [selected]="(a.status || 'NEW') === s.value">{{ s.label }}</option>
+              }
+            </select>
+            <button type="button" class="btn btn--icon btn--icon-danger" title="Xoá việc"
+                    (click)="removeAction($index)">🗑</button>
+          </div>
+        }
+      </div>
     </div>
   </div>
 

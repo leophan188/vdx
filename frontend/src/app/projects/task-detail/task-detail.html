@@ -45,12 +45,14 @@
             </div>
             @if (pickStartOpen()) {
               <div class="td__life-pick">
-                <label class="td__life-hint">Bắt buộc nhập Ước lượng &amp; Ngày hoàn thành trước khi Đang làm</label>
+                <label class="td__life-hint">Bắt buộc nhập Ước lượng, Ngày bắt đầu &amp; Ngày hoàn thành trước khi Đang làm</label>
                 <div class="td__life-pickrow">
                   <input type="number" min="0.5" step="0.5" class="td__life-input"
                          [value]="startEst()" (input)="startEst.set($any($event.target).value)"
                          placeholder="Est (giờ)" />
-                  <input type="date" class="td__life-input"
+                  <input type="date" class="td__life-input" title="Ngày bắt đầu"
+                         [value]="startFromIso()" (change)="startFromIso.set($any($event.target).value)" />
+                  <input type="date" class="td__life-input" title="Ngày hoàn thành"
                          [value]="startDueIso()" (change)="startDueIso.set($any($event.target).value)" />
                   <button type="button" class="btn btn--primary btn--sm"
                           [disabled]="busyLifecycle()" (click)="confirmStart()">▶ Bắt đầu</button>
@@ -241,10 +243,10 @@
           <!-- Cột phải: ảnh đính kèm -->
           <div class="td__info">
             <div class="td__sec">
-              <h4>Ảnh đính kèm ({{ attachments().length }})</h4>
-              @if (attachments().length) {
+              <h4>Ảnh đính kèm ({{ taskAttachments().length }})</h4>
+              @if (taskAttachments().length) {
                 <div class="td__atts">
-                  @for (a of attachments(); track a.id; let i = $index) {
+                  @for (a of taskAttachments(); track a.id; let i = $index) {
                     <div class="att">
                       <img [src]="attUrl(a)" [alt]="a.fileName" (click)="openLightbox(i)" loading="lazy" />
                       <button type="button" class="att__del" title="Xoá ảnh" (click)="deleteAttachment(a)">✕</button>
@@ -288,6 +290,15 @@
                     @if (c.edited) { <span class="cmt__edited">(đã sửa)</span> }
                   </div>
                   <div class="cmt__body">{{ c.body }}</div>
+                  @if (commentImages(c).length) {
+                    <div class="cmt__imgs">
+                      @for (a of commentImages(c); track a.id) {
+                        <a [href]="attUrl(a)" target="_blank" rel="noopener" [title]="a.fileName">
+                          <img [src]="attUrl(a)" [alt]="a.fileName" loading="lazy" />
+                        </a>
+                      }
+                    </div>
+                  }
                   @if (c.mine) {
                     <div class="cmt__acts">
                       <button type="button" class="linkbtn" (click)="startEdit(c)">Sửa</button>
@@ -301,11 +312,28 @@
             }
           </div>
           <div class="td__newcmt">
-            <textarea rows="2" placeholder="Viết bình luận… (Enter để gửi)"
+            <textarea rows="2" placeholder="Viết bình luận… (Enter để gửi · Ctrl+V để dán ảnh)"
                       [value]="draft()" (input)="draft.set($any($event.target).value)"
                       (keydown)="onCommentKey($event)"></textarea>
-            <button type="button" class="btn btn--primary btn--sm" (click)="submitComment()">Gửi</button>
+            <label class="btn btn--ghost btn--sm" title="Đính ảnh vào bình luận">
+              🖼
+              <input type="file" accept="image/*" multiple hidden (change)="onCmtFilesPicked($event)" />
+            </label>
+            <button type="button" class="btn btn--primary btn--sm"
+                    [disabled]="sendingComment()" (click)="submitComment()">
+              {{ sendingComment() ? 'Đang gửi…' : 'Gửi' }}
+            </button>
           </div>
+          @if (cmtImages().length) {
+            <div class="cmt__pending">
+              @for (p of cmtImages(); track p.url; let i = $index) {
+                <div class="cmt__pend">
+                  <img [src]="p.url" alt="Ảnh chờ gửi" />
+                  <button type="button" class="cmt__pend-del" title="Bỏ ảnh" (click)="removeCmtImage(i)">✕</button>
+                </div>
+              }
+            </div>
+          }
         </div>
       }
 

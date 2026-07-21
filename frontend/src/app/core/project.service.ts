@@ -248,6 +248,7 @@ export interface TaskAttachment {
   uploadedBy: string | null;
   uploadedAt: string | null;     // ISO Instant
   url: string;                   // đường dẫn nội dung ảnh (có phiên)
+  commentId: string | null;      // != null → ảnh thuộc bình luận, hiện dưới bình luận đó
 }
 
 // ===== Lịch sử / hoạt động task (kiểu Jira) =====
@@ -358,10 +359,25 @@ export interface DiaryEntry {
   clientContacts: string | null;  // người phía khách hàng (text tự do)
   content: string | null;
   conclusion: string | null;
+  location: string | null;        // địa điểm / hình thức (Online…)
+  startTime: string | null;       // HH:mm
+  endTime: string | null;         // HH:mm
+  nextActions: DiaryAction[];     // việc cần làm tiếp
   createdBy: string | null;
   createdByName: string | null;
   createdAt: string | null;       // ISO Instant
   canEdit: boolean;               // creator/admin/PM/owner
+}
+
+/** Trạng thái một việc cần làm tiếp. */
+export type DiaryActionStatus = 'NEW' | 'DOING' | 'DONE';
+
+/** Một việc cần làm tiếp (next action) — in thành bảng trong biên bản họp. */
+export interface DiaryAction {
+  content: string | null;
+  owner: string | null;           // text tự do (có thể là người phía khách hàng)
+  dueDate: string | null;         // dd/MM/yyyy
+  status: DiaryActionStatus | null;
 }
 
 /** Tạo/sửa nhật ký. workDate chấp nhận dd/MM/yyyy hoặc yyyy-MM-dd. */
@@ -372,6 +388,10 @@ export interface DiaryRequest {
   clientContacts?: string | null;
   content?: string | null;
   conclusion?: string | null;
+  location?: string | null;
+  startTime?: string | null;
+  endTime?: string | null;
+  nextActions?: DiaryAction[];
 }
 
 @Injectable({ providedIn: 'root' })
@@ -496,9 +516,11 @@ export class ProjectService {
     return this.http.get<TaskAttachment[]>(`${this.base}/${projectId}/tasks/${taskId}/attachments`, this.opts);
   }
   /** Upload 1 ảnh (multipart field "file"; chỉ ảnh, ≤10MB — kiểm ở backend). */
-  uploadAttachment(projectId: string, taskId: string, file: File): Observable<TaskAttachment> {
+  /** commentId != null → ảnh gắn vào bình luận đó (hiện dưới bình luận, không vào khối ảnh chung). */
+  uploadAttachment(projectId: string, taskId: string, file: File, commentId?: string): Observable<TaskAttachment> {
     const form = new FormData();
     form.append('file', file);
+    if (commentId) form.append('commentId', commentId);
     return this.http.post<TaskAttachment>(`${this.base}/${projectId}/tasks/${taskId}/attachments`, form, this.opts);
   }
   deleteAttachment(projectId: string, taskId: string, attId: string): Observable<void> {
@@ -543,6 +565,10 @@ export class ProjectService {
   }
   deleteDiary(projectId: string, id: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${projectId}/diary/${id}`, this.opts);
+  }
+  /** URL tải BIÊN BẢN HỌP (.docx) của một bản ghi nhật ký — mở bằng anchor để dùng cookie phiên. */
+  diaryMinutesUrl(projectId: string, id: string): string {
+    return `${this.base}/${projectId}/diary/${id}/minutes`;
   }
 
   // ===== People (chọn thành viên / assignee) =====

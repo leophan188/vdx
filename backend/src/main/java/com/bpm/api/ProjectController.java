@@ -5,6 +5,7 @@ import com.bpm.application.ProjectCollabService;
 import com.bpm.application.ProjectReportService;
 import com.bpm.application.ProjectReportExportService;
 import com.bpm.application.ProjectDiaryService;
+import com.bpm.application.MeetingMinutesExportService;
 import com.bpm.application.ProjectService;
 import com.bpm.application.ProjectTaskService;
 import com.bpm.application.MediaStorageService;
@@ -47,18 +48,22 @@ public class ProjectController {
     private final ProjectReportService reportService;
     private final ProjectReportExportService reportExportService;
     private final ProjectDiaryService diaryService;
+    private final MeetingMinutesExportService minutesExportService;
     private final MediaStorageService mediaStorage;
 
     public ProjectController(ProjectService projectService, ProjectTaskService taskService,
                              ProjectCollabService collabService, ProjectReportService reportService,
                              ProjectReportExportService reportExportService,
-                             ProjectDiaryService diaryService, MediaStorageService mediaStorage) {
+                             ProjectDiaryService diaryService,
+                             MeetingMinutesExportService minutesExportService,
+                             MediaStorageService mediaStorage) {
         this.projectService = projectService;
         this.taskService = taskService;
         this.collabService = collabService;
         this.reportService = reportService;
         this.reportExportService = reportExportService;
         this.diaryService = diaryService;
+        this.minutesExportService = minutesExportService;
         this.mediaStorage = mediaStorage;
     }
 
@@ -345,9 +350,10 @@ public class ProjectController {
     @PostMapping("/{id}/tasks/{taskId}/attachments")
     public ProjectDto.AttachmentResponse uploadAttachment(@PathVariable String id, @PathVariable String taskId,
                                                           @RequestParam("file") MultipartFile file,
+                                                          @RequestParam(required = false) String commentId,
                                                           Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
-        return collabService.uploadAttachment(id, taskId, file, actor(auth));
+        return collabService.uploadAttachment(id, taskId, file, commentId, actor(auth));
     }
 
     @GetMapping("/{id}/tasks/{taskId}/attachments/{attId}/content")
@@ -459,6 +465,22 @@ public class ProjectController {
     public void deleteDiary(@PathVariable String id, @PathVariable String entryId, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
         diaryService.delete(id, entryId, actor(auth), isAdmin(auth));
+    }
+
+    /** Xuất BIÊN BẢN HỌP (.docx) từ một bản ghi nhật ký. */
+    @GetMapping("/{id}/diary/{entryId}/minutes")
+    public ResponseEntity<byte[]> exportDiaryMinutes(@PathVariable String id, @PathVariable String entryId,
+                                                     Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        ProjectDto.DiaryEntry e = diaryService.get(id, entryId, actor(auth), isAdmin(auth));
+        ProjectDto.ProjectResponse p = projectService.detail(id);
+        byte[] bytes = minutesExportService.toDocx(e, "[" + p.code() + "] " + p.name(), null);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + minutesExportService.fileName(e) + "\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"))
+                .body(bytes);
     }
 
     // ===== People (chọn thành viên / assignee) =====

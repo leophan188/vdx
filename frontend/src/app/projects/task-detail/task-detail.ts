@@ -1,4 +1,6 @@
 import { Component, HostListener, computed, effect, inject, input, output, signal } from '@angular/core';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { Modal } from '../../shared/modal/modal';
 import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
@@ -139,6 +141,18 @@ type SubTab = 'info' | 'comments' | 'activity';
     .cmt__time { font-size: .72rem; color: var(--color-text-muted); }
     .cmt__edited { font-size: .72rem; font-style: italic; color: var(--color-text-muted); }
     .cmt__body { font-size: .88rem; white-space: pre-wrap; line-height: 1.4; }
+    /* Ảnh ĐÃ gửi kèm bình luận */
+    .cmt__imgs { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+    .cmt__imgs img { width: 96px; height: 96px; object-fit: cover; border-radius: 8px;
+      border: 1px solid var(--color-border); display: block; cursor: zoom-in; }
+    /* Ảnh CHỜ gửi (chưa upload) */
+    .cmt__pending { display: flex; flex-wrap: wrap; gap: 8px; margin-top: var(--space-2); }
+    .cmt__pend { position: relative; width: 72px; height: 72px; border-radius: 8px; overflow: hidden;
+      border: 1px dashed var(--color-border); }
+    .cmt__pend img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .cmt__pend-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0;
+      border: none; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem;
+      line-height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
     .cmt__acts { display: flex; gap: 8px; }
     .linkbtn { background: none; border: none; padding: 0; cursor: pointer; color: var(--color-primary); font-size: .75rem; }
     .linkbtn--danger { color: var(--color-error); }
@@ -189,11 +203,18 @@ export class PrjTaskDetail {
   readonly attachments = signal<TaskAttachment[]>([]);
   readonly activities = signal<TaskActivity[]>([]);
 
-  /** Ảnh đính kèm → phần tử cho lightbox chung (zoom được). */
+  /** Ảnh ĐÍNH KÈM CHUNG của task (ảnh của bình luận hiện dưới bình luận, không lẫn vào đây). */
+  readonly taskAttachments = computed<TaskAttachment[]>(() =>
+    this.attachments().filter((a) => !a.commentId));
+
+  /** Ảnh đính kèm chung → phần tử cho lightbox chung (zoom được). Index khớp taskAttachments(). */
   readonly lightboxItems = computed<LightboxItem[]>(() =>
-    this.attachments().map((a) => ({ url: this.attUrl(a), name: a.fileName, kind: 'IMAGE' as const })));
+    this.taskAttachments().map((a) => ({ url: this.attUrl(a), name: a.fileName, kind: 'IMAGE' as const })));
 
   readonly draft = signal('');
+  /** Ảnh CHỜ trong ô soạn bình luận — upload sau khi bấm Gửi (cần commentId). */
+  readonly cmtImages = signal<{ file: File; url: string }[]>([]);
+  readonly sendingComment = signal(false);
   readonly editingId = signal<string | null>(null);
   readonly editDraft = signal('');
   readonly busyStatus = signal(false);
@@ -208,6 +229,7 @@ export class PrjTaskDetail {
   // Bắt đầu Đang làm: bắt buộc nhập est + ngày hoàn thành nếu còn thiếu.
   readonly pickStartOpen = signal(false);
   readonly startEst = signal<string>('');
+  readonly startFromIso = signal<string>('');
   readonly startDueIso = signal<string>('');
 
   // Sub-tab đang xem.
@@ -317,8 +339,8 @@ export class PrjTaskDetail {
   setStatus(s: TaskStatus): void {
     const t = this.current();
     if (!t || t.status === s || this.busyStatus()) return;
-    // Chuyển ĐANG LÀM mà thiếu est/hạn → mở form nhập (thay vì để BE báo lỗi).
-    if (s === 'IN_PROGRESS' && !(t.estimateHours > 0 && t.dueDate) && t.leaf) { this.openStart(t); return; }
+    // Chuyển ĐANG LÀM mà thiếu est/ngày → mở form nhập (thay vì để BE báo lỗi).
+    if (s === 'IN_PROGRESS' && this.needsStartInfo(t)) { this.openStart(t); return; }
     this.busyStatus.set(true);
     this.svc.updateTaskStatus(this.projectId(), t.id, s).subscribe({
       next: (u) => {
@@ -368,12 +390,21 @@ export class PrjTaskDetail {
   }
 
   // ===== Vòng đời (thao tác nhanh theo status) =====
-  /** TODO → IN_PROGRESS: bắt đầu làm. THIẾU est/hạn → mở form nhập bắt buộc. */
+  /** TODO → IN_PROGRESS: bắt đầu làm. THIẾU est/ngày → mở form nhập bắt buộc. */
   startProgress(): void {
     const t = this.current();
     if (!t || this.busyLifecycle()) return;
-    if (t.estimateHours > 0 && t.dueDate) { this.doStart(t); return; }
+    if (!this.needsStartInfo(t)) { this.doStart(t); return; }
     this.openStart(t);
+  }
+  /**
+   * Có phải nhập est + từ ngày → đến ngày trước khi Đang làm không? (khớp rule BE)
+   * MIỄN: task cha (rollup tự tính) và Reopen từ Kiểm thử/Hoàn thành/Huỷ (việc của dev, đã ước lượng trước).
+   */
+  private needsStartInfo(t: ProjectTask): boolean {
+    if (!t.leaf) return false;
+    if (t.status === 'IN_REVIEW' || t.status === 'DONE' || t.status === 'CANCELLED') return false;
+    return !(t.estimateHours > 0 && t.startDate && t.dueDate);
   }
   /** Thực hiện chuyển IN_PROGRESS (đã đủ điều kiện). */
   private doStart(t: ProjectTask): void {
@@ -392,8 +423,15 @@ export class PrjTaskDetail {
   }
   openStart(t: ProjectTask): void {
     this.startEst.set(t.estimateHours ? String(t.estimateHours) : '');
+    // Ngày bắt đầu trống → gợi ý hôm nay (bắt đầu làm = hôm nay).
+    this.startFromIso.set(this.isoFromDmy(t.startDate) || this.todayIso());
     this.startDueIso.set(this.isoFromDmy(t.dueDate));
     this.pickStartOpen.set(true);
+  }
+  /** Hôm nay dạng yyyy-MM-dd (local) cho &lt;input type=date&gt;. */
+  private todayIso(): string {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   }
   cancelStart(): void { this.pickStartOpen.set(false); }
   /** Lưu est + ngày hoàn thành rồi chuyển Đang làm. */
@@ -402,9 +440,15 @@ export class PrjTaskDetail {
     if (!t || this.busyLifecycle()) return;
     const est = Number(this.startEst());
     if (!(est > 0)) { this.toast.warning('Nhập Ước lượng (est) lớn hơn 0'); return; }
+    if (!this.startFromIso()) { this.toast.warning('Chọn Ngày bắt đầu'); return; }
     if (!this.startDueIso()) { this.toast.warning('Chọn Ngày hoàn thành'); return; }
+    if (this.startFromIso() > this.startDueIso()) { this.toast.warning('Ngày bắt đầu phải trước hoặc bằng Ngày hoàn thành'); return; }
     this.busyLifecycle.set(true);
-    const body = this.buildRequest(t, { estimateHours: est, dueDate: this.dmyFromIso(this.startDueIso()) });
+    const body = this.buildRequest(t, {
+      estimateHours: est,
+      startDate: this.dmyFromIso(this.startFromIso()),
+      dueDate: this.dmyFromIso(this.startDueIso())
+    });
     this.svc.updateTask(this.projectId(), t.id, body).subscribe({
       next: (u) => { this.model.set(u); this.doStart(u); },
       error: (e) => { this.busyLifecycle.set(false); this.toast.error('Không lưu được est/hạn', e?.error?.message ?? ''); }
@@ -609,14 +653,65 @@ export class PrjTaskDetail {
   setTab(t: SubTab): void { this.tab.set(t); }
 
   // ===== Bình luận =====
+  /**
+   * Gửi bình luận. Có ảnh chờ → TẠO bình luận trước để lấy id, RỒI upload từng ảnh kèm commentId
+   * (ảnh chỉ tồn tại khi bình luận tồn tại — cùng lối với form Tạo nhanh).
+   */
   submitComment(): void {
     const t = this.current();
     const body = this.draft().trim();
-    if (!t || !body) return;
-    this.svc.addComment(this.projectId(), t.id, body).subscribe({
-      next: (c) => { this.comments.update((cs) => [...cs, c]); this.draft.set(''); this.loadActivity(t.id); },
-      error: () => this.toast.error('Không gửi được bình luận')
+    const imgs = this.cmtImages();
+    if (!t || (!body && !imgs.length)) return;
+    if (this.sendingComment()) return;
+    this.sendingComment.set(true);
+    this.svc.addComment(this.projectId(), t.id, body || '(ảnh)').subscribe({
+      next: (c) => {
+        this.comments.update((cs) => [...cs, c]);
+        this.draft.set('');
+        if (!imgs.length) { this.finishComment(t.id); return; }
+        const ups = imgs.map((p) =>
+          this.svc.uploadAttachment(this.projectId(), t.id, p.file, c.id).pipe(catchError(() => of(null))));
+        forkJoin(ups).subscribe((res) => {
+          const ok = res.filter((x): x is TaskAttachment => x !== null);
+          const failed = res.length - ok.length;
+          this.attachments.update((xs) => [...xs, ...ok]);
+          if (failed) this.toast.warning(`Đã gửi bình luận; ${failed}/${res.length} ảnh tải lỗi`);
+          this.clearCmtImages();
+          this.finishComment(t.id);
+        });
+      },
+      error: () => { this.sendingComment.set(false); this.toast.error('Không gửi được bình luận'); }
     });
+  }
+  private finishComment(taskId: string): void {
+    this.sendingComment.set(false);
+    this.loadActivity(taskId);
+  }
+
+  /** Ảnh của một bình luận (đã upload) — lấy từ danh sách đính kèm theo commentId. */
+  commentImages(c: TaskComment): TaskAttachment[] {
+    return this.attachments().filter((a) => a.commentId === c.id);
+  }
+
+  // ===== Ảnh chờ trong ô soạn bình luận =====
+  /** Thêm ảnh vào hàng chờ của ô bình luận (dán hoặc chọn file) — upload sau khi bấm Gửi. */
+  private addCmtImages(files: File[]): void {
+    if (!files.length) return;
+    this.cmtImages.update((xs) => [...xs, ...files.map((file) => ({ file, url: URL.createObjectURL(file) }))]);
+  }
+  onCmtFilesPicked(e: Event): void {
+    const input = e.target as HTMLInputElement;
+    this.addCmtImages(Array.from(input.files ?? []).filter((f) => f.type.startsWith('image/')));
+    input.value = ''; // cho phép chọn lại cùng file
+  }
+  removeCmtImage(i: number): void {
+    const list = this.cmtImages();
+    if (list[i]) URL.revokeObjectURL(list[i].url);
+    this.cmtImages.set(list.filter((_, idx) => idx !== i));
+  }
+  private clearCmtImages(): void {
+    for (const p of this.cmtImages()) URL.revokeObjectURL(p.url);
+    this.cmtImages.set([]);
   }
   onCommentKey(e: KeyboardEvent): void {
     if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitComment(); }
@@ -656,7 +751,13 @@ export class PrjTaskDetail {
       error: (err) => { input.value = ''; this.toast.error('Không tải được ảnh', err?.error?.message ?? ''); }
     });
   }
-  /** Dán ảnh (Ctrl/Cmd+V) khi đang mở chi tiết task → TỰ UPLOAD ngay (không cần đính kèm). */
+  /**
+   * Dán ảnh (Ctrl/Cmd+V) khi đang mở chi tiết task.
+   * - Con trỏ đang ở Ô SOẠN BÌNH LUẬN → xếp vào hàng chờ của bình luận đó (gửi cùng bình luận).
+   * - Ngược lại → upload ngay thành ảnh đính kèm chung của task (hành vi cũ).
+   * Trước đây mọi thao tác dán đều rơi vào nhánh 2, nên dán trong ô bình luận thì ảnh
+   * "biến mất" sang tab Chi tiết — đúng lỗi người dùng gặp.
+   */
   @HostListener('document:paste', ['$event'])
   onPasteUpload(ev: ClipboardEvent): void {
     if (!this.open()) return;
@@ -677,12 +778,24 @@ export class PrjTaskDetail {
     }
     if (!files.length) return;
     ev.preventDefault();
+    if (this.pastingIntoComment(ev)) {
+      this.addCmtImages(files);
+      this.toast.success('Đã dán ảnh vào bình luận', 'Bấm Gửi để đăng');
+      return;
+    }
     for (const file of files) {
       this.svc.uploadAttachment(this.projectId(), t.id, file).subscribe({
         next: (a) => { this.attachments.update((xs) => [...xs, a]); this.toast.success('Đã dán & tải ảnh lên'); this.loadActivity(t.id); },
         error: (err) => this.toast.error('Không tải được ảnh dán', err?.error?.message ?? '')
       });
     }
+  }
+
+  /** Đích của thao tác dán có nằm trong ô soạn bình luận không (tab Bình luận + focus textarea)? */
+  private pastingIntoComment(ev: ClipboardEvent): boolean {
+    if (this.tab() !== 'comments') return false;
+    const el = ev.target as HTMLElement | null;
+    return !!el?.closest?.('.td__newcmt');
   }
 
   deleteAttachment(a: TaskAttachment): void {

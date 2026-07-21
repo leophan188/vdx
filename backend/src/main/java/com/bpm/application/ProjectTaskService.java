@@ -235,6 +235,7 @@ public class ProjectTaskService {
         ProjectTask t = new ProjectTask(projectId, p.nextSeq(), require(req.title(), "tiêu đề"), actor);
         applyFields(t, req, parentId);
         requireValidParent(t.getType(), parentId, projectId); // ràng buộc: Story/Task/Sub-task/Bug/Issue phải có cha đúng loại
+        requireReadyForProgress(t, null, t.getStatus(), projectId, null); // tạo thẳng ở Đang làm cũng phải đủ est + ngày
         t.setReporterUserId(userIdOf(actor)); // người LOG = actor (UserAccount id); dùng cho auto-reassign bug
         // Người kiểm thử MẶC ĐỊNH = người LOG khi tạo Bug/Issue chưa chọn — đồng bộ mọi màn (Tạo nhanh/Backlog/Bug/my-bugs).
         if ((t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE)
@@ -272,6 +273,7 @@ public class ProjectTaskService {
         String oldAssignee = t.getAssigneeUserId();
         TaskStatus oldStatus = t.getStatus();
         applyFields(t, req, parentId);
+        requireReadyForProgress(t, oldStatus, t.getStatus(), projectId, taskId); // PUT cũng không lách được rule Đang làm
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_UPDATED", "ProjectTask", saved.getId(), actor,
                 "projectId=" + projectId + ", code=" + saved.getSeq());
@@ -301,16 +303,7 @@ public class ProjectTaskService {
         ProjectTask t = requireSameProjectTask(projectId, taskId);
         TaskStatus oldStatus = t.getStatus();
         TaskStatus newStatus = parseStatus(status);
-        // Chuyển sang ĐANG LÀM (task lá) BẮT BUỘC có Ước lượng (est) + Ngày hoàn thành (hạn).
-        // Rollup của task cha KHÔNG đi qua đây nên không bị ràng buộc.
-        if (newStatus == TaskStatus.IN_PROGRESS && oldStatus != TaskStatus.IN_PROGRESS && isLeaf(projectId, taskId)) {
-            if (t.getEstimateHours() <= 0) {
-                throw new IllegalArgumentException("Cần nhập Ước lượng (est) trước khi chuyển sang Đang làm");
-            }
-            if (t.getDueDate() == null) {
-                throw new IllegalArgumentException("Cần nhập Ngày hoàn thành trước khi chuyển sang Đang làm");
-            }
-        }
+        requireReadyForProgress(t, oldStatus, newStatus, projectId, taskId);
         t.setStatus(newStatus);
         t.touch();
         // KHÔNG đổi assignee: người thực hiện (lập trình) + người kiểm thử (tester) + người log (reporter)
@@ -716,6 +709,41 @@ public class ProjectTaskService {
     }
 
     // ===== helpers =====
+
+    /**
+     * Chuyển sang ĐANG LÀM (task lá) BẮT BUỘC: Ước lượng (est) + Ngày bắt đầu + Ngày hoàn thành,
+     * và Ngày bắt đầu ≤ Ngày hoàn thành. Áp cho MỌI đường: PATCH status, PUT sửa task, POST tạo mới.
+     * MIỄN trong 2 trường hợp:
+     * - Reopen (Kiểm thử/Hoàn thành/Huỷ → Đang làm): việc của dev, task đã ước lượng từ trước.
+     * - Task CHA (không phải lá): trạng thái do rollup tự tính, không nhập tay.
+     *
+     * @param taskId null khi TẠO MỚI (task mới luôn là lá)
+     * @param oldStatus null khi TẠO MỚI
+     */
+    private void requireReadyForProgress(ProjectTask t, TaskStatus oldStatus, TaskStatus newStatus,
+                                         String projectId, String taskId) {
+        if (newStatus != TaskStatus.IN_PROGRESS || oldStatus == TaskStatus.IN_PROGRESS) {
+            return;
+        }
+        if (oldStatus == TaskStatus.IN_REVIEW || oldStatus == TaskStatus.DONE || oldStatus == TaskStatus.CANCELLED) {
+            return; // Reopen — không bắt nhập lại
+        }
+        if (taskId != null && !isLeaf(projectId, taskId)) {
+            return; // task cha: rollup tự đặt trạng thái
+        }
+        if (t.getEstimateHours() <= 0) {
+            throw new IllegalArgumentException("Cần nhập Ước lượng (est) trước khi chuyển sang Đang làm");
+        }
+        if (t.getStartDate() == null) {
+            throw new IllegalArgumentException("Cần nhập Ngày bắt đầu trước khi chuyển sang Đang làm");
+        }
+        if (t.getDueDate() == null) {
+            throw new IllegalArgumentException("Cần nhập Ngày hoàn thành trước khi chuyển sang Đang làm");
+        }
+        if (t.getStartDate().isAfter(t.getDueDate())) {
+            throw new IllegalArgumentException("Ngày bắt đầu phải trước hoặc bằng Ngày hoàn thành");
+        }
+    }
 
     private void applyFields(ProjectTask t, ProjectDto.TaskRequest req, String parentId) {
         TaskType type = parseType(req.type());
