@@ -316,6 +316,8 @@ export interface PersonProgress {
   todo: number;
   overdue: number;
   pct: number;                   // 0..100
+  inPeriod: number;              // việc CÓ THAY ĐỔI trong kỳ Ngày/Tuần đang xem
+  donePeriod: number;            // việc hoàn thành trong kỳ
 }
 
 export interface PeriodReport {

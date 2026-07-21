@@ -372,22 +372,22 @@ export class PrjReportsPeriod {
     return [...map.values()].sort((a, b) => b.total - a.total);
   });
 
-  /** Thống kê nhân sự cho BÁO CÁO: tổng CV toàn dự án + số việc xử lý/hoàn thành TRONG KỲ. */
+  /**
+   * Thống kê nhân sự cho BÁO CÁO: tổng CV toàn dự án + số việc xử lý/hoàn thành TRONG KỲ.
+   * Số TRONG KỲ lấy THẲNG từ backend (đã lọc theo kỳ). KHÔNG tự suy từ các nhóm
+   * done/inProgress/upcoming/overdue nữa vì 3 nhóm sau không lọc kỳ → ra toàn bộ việc đang mở.
+   */
   readonly peopleStats = computed(() => {
     const period = new Map(this.byPerson().map((p) => [p.userId ?? 'NONE', p]));
     const overall = this.report()?.byPerson ?? [];
-    const rows = overall.map((ov) => {
-      const pp = period.get(ov.userId ?? 'NONE');
-      return {
-        userId: ov.userId, name: ov.name,
-        totalAll: ov.total,          // tổng công việc (toàn dự án, việc lá)
-        pctAll: ov.pct,              // % hoàn thành toàn dự án
-        inPeriod: pp?.total ?? 0,    // số việc xử lý trong Ngày/Tuần
-        doneInPeriod: pp?.done ?? 0, // số việc hoàn thành trong kỳ
-        items: pp?.items ?? [],
-      };
-    });
-    return rows.sort((a, b) => b.inPeriod - a.inPeriod || b.totalAll - a.totalAll);
+    return overall.map((ov) => ({
+      userId: ov.userId, name: ov.name,
+      totalAll: ov.total,               // tổng công việc (toàn dự án, việc lá)
+      pctAll: ov.pct,                   // % hoàn thành toàn dự án
+      inPeriod: ov.inPeriod,            // việc CÓ THAY ĐỔI trong Ngày/Tuần
+      doneInPeriod: ov.donePeriod,      // việc hoàn thành trong kỳ
+      items: period.get(ov.userId ?? 'NONE')?.items ?? [], // danh sách cho popup chi tiết
+    }));
   });
 
   // ===== Bug/Issue theo nhân sự: tester đã LOG vs dev BỊ LOG (bug được TẠO trong kỳ Ngày/Tuần) =====

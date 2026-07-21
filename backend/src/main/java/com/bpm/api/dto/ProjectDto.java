@@ -308,8 +308,13 @@ public final class ProjectDto {
     }
 
     /** Tỷ lệ hoàn thành theo nhân sự trong kỳ báo cáo. */
+    /**
+     * Thống kê theo nhân sự. {@code total/done/doing/todo/overdue/pct} là TOÀN DỰ ÁN;
+     * {@code inPeriod/donePeriod} chỉ tính việc CÓ THAY ĐỔI trong kỳ Ngày/Tuần đang xem.
+     */
     public record PersonProgress(String userId, String name,
-                                 int total, int done, int doing, int todo, int overdue, double pct) {
+                                 int total, int done, int doing, int todo, int overdue, double pct,
+                                 int inPeriod, int donePeriod) {
     }
 
     /** Báo cáo ngày/tuần: nhãn kỳ + 4 nhóm task + tổng quan. */

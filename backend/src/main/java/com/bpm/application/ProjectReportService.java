@@ -318,8 +318,9 @@ public class ProjectReportService {
             }
         }
 
-        // Tỷ lệ hoàn thành THEO NHÂN SỰ (chỉ việc lá: bỏ EPIC/STORY & việc Huỷ)
-        java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue]
+        // Tỷ lệ hoàn thành THEO NHÂN SỰ (chỉ việc lá: bỏ EPIC/STORY & việc Huỷ).
+        // [0..4] = TOÀN DỰ ÁN; [5],[6] = TRONG KỲ (việc có updatedAt rơi vào kỳ đang xem).
+        java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue,inPeriod,donePeriod]
         java.util.Map<String, String> pName = new java.util.LinkedHashMap<>(); // key -> tên hiển thị
         for (ProjectTask t : tasks) {
             if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
@@ -329,13 +330,21 @@ public class ProjectReportService {
             String nm = uid == null ? "(chưa gán)"
                     : nameCache.computeIfAbsent(uid, x -> userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
             pName.putIfAbsent(key, nm);
-            int[] a = pAgg.computeIfAbsent(key, x -> new int[5]);
+            int[] a = pAgg.computeIfAbsent(key, x -> new int[7]);
             a[0]++;
             boolean d = t.getStatus() == TaskStatus.DONE;
             if (d) a[1]++;
             else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) a[2]++;
             else a[3]++; // TODO / BACKLOG
             if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !d) a[4]++;
+            // TRONG KỲ = việc CÓ THAY ĐỔI trong kỳ (đổi trạng thái/sửa). Trước đây FE tự suy từ các
+            // nhóm done/inProgress/upcoming/overdue — mà 3 nhóm sau KHÔNG lọc kỳ, nên "xử lý trong kỳ"
+            // hoá ra là toàn bộ việc đang mở của người đó (vd 41 việc "trong ngày").
+            Instant upd = t.getUpdatedAt();
+            if (upd != null && !upd.isBefore(startOfPeriod) && upd.isBefore(endOfPeriod)) {
+                a[5]++;
+                if (d) a[6]++;
+            }
         }
         List<ProjectDto.PersonProgress> byPerson = new ArrayList<>();
         for (var e : pAgg.entrySet()) {
@@ -343,9 +352,12 @@ public class ProjectReportService {
             double pct = a[0] == 0 ? 0 : Math.round(a[1] * 1000.0 / a[0]) / 10.0;
             byPerson.add(new ProjectDto.PersonProgress(
                     e.getKey().isEmpty() ? null : e.getKey(), pName.get(e.getKey()),
-                    a[0], a[1], a[2], a[3], a[4], pct));
+                    a[0], a[1], a[2], a[3], a[4], pct, a[5], a[6]));
         }
-        byPerson.sort((x, y) -> Integer.compare(y.total(), x.total()));
+        // Ai làm nhiều TRONG KỲ lên trước (báo cáo kỳ), rồi mới đến tổng công việc.
+        byPerson.sort((x, y) -> y.inPeriod() != x.inPeriod()
+                ? Integer.compare(y.inPeriod(), x.inPeriod())
+                : Integer.compare(y.total(), x.total()));
 
         // Bug/Issue được LOG (tạo) TRONG KỲ — thống kê tester log / dev bị log theo ĐÚNG kỳ Ngày/Tuần.
         List<ProjectDto.ReportTaskItem> bugsLogged = new ArrayList<>();
