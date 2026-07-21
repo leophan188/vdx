@@ -42,13 +42,16 @@ public class ProjectReportService {
     private final ProjectTaskRepository taskRepo;
     private final UserAccountRepository userRepo;
     private final ProjectMemberRepository memberRepo;
+    private final com.bpm.infrastructure.TaskActivityRepository activityRepo;
 
     public ProjectReportService(ProjectRepository projectRepo, ProjectTaskRepository taskRepo,
-                                UserAccountRepository userRepo, ProjectMemberRepository memberRepo) {
+                                UserAccountRepository userRepo, ProjectMemberRepository memberRepo,
+                                com.bpm.infrastructure.TaskActivityRepository activityRepo) {
         this.projectRepo = projectRepo;
         this.taskRepo = taskRepo;
         this.userRepo = userRepo;
         this.memberRepo = memberRepo;
+        this.activityRepo = activityRepo;
     }
 
     @Transactional(readOnly = true)
@@ -318,6 +321,19 @@ public class ProjectReportService {
             }
         }
 
+        // ===== XỬ LÝ TRONG KỲ: dựa trên NHẬT KÝ HOẠT ĐỘNG, không dựa updated_at =====
+        // Lúc TẠO task thì updated_at = created_at → việc vừa log (chưa ai đụng) cũng bị tính là
+        // "đã xử lý" (vd 2 Issue log lúc 09:02/09:14 vẫn ở Cần làm mà vẫn đếm). Nên chỉ tính task
+        // có hoạt động THỰC SỰ LÀM trong kỳ: mọi loại TRỪ CREATED (tạo mới không phải là xử lý).
+        java.util.Set<String> workedInPeriod = new java.util.HashSet<>();
+        for (com.bpm.domain.project.TaskActivity act
+                : activityRepo.findByProjectIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
+                        projectId, startOfPeriod, endOfPeriod)) {
+            if (!com.bpm.domain.project.TaskActivity.CREATED.equals(act.getAction())) {
+                workedInPeriod.add(act.getTaskId());
+            }
+        }
+
         // Tỷ lệ hoàn thành THEO NHÂN SỰ (chỉ việc lá: bỏ EPIC/STORY & việc Huỷ).
         // [0..4] = TOÀN DỰ ÁN; [5],[6] = TRONG KỲ (việc có updatedAt rơi vào kỳ đang xem).
         java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue,inPeriod,donePeriod]
@@ -337,11 +353,7 @@ public class ProjectReportService {
             else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) a[2]++;
             else a[3]++; // TODO / BACKLOG
             if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !d) a[4]++;
-            // TRONG KỲ = việc CÓ THAY ĐỔI trong kỳ (đổi trạng thái/sửa). Trước đây FE tự suy từ các
-            // nhóm done/inProgress/upcoming/overdue — mà 3 nhóm sau KHÔNG lọc kỳ, nên "xử lý trong kỳ"
-            // hoá ra là toàn bộ việc đang mở của người đó (vd 41 việc "trong ngày").
-            Instant upd = t.getUpdatedAt();
-            if (upd != null && !upd.isBefore(startOfPeriod) && upd.isBefore(endOfPeriod)) {
+            if (workedInPeriod.contains(t.getId())) {
                 a[5]++;
                 if (d) a[6]++;
             }
@@ -366,8 +378,7 @@ public class ProjectReportService {
         for (ProjectTask t : tasks) {
             if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
             if (t.getStatus() == TaskStatus.CANCELLED) continue;
-            Instant upd = t.getUpdatedAt();
-            if (upd != null && !upd.isBefore(startOfPeriod) && upd.isBefore(endOfPeriod)) {
+            if (workedInPeriod.contains(t.getId())) {
                 periodItems.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
             }
         }
