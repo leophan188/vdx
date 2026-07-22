@@ -212,7 +212,8 @@ public class ProjectReportService {
     /**
      * @param periodStart  đầu kỳ (bao gồm) — dùng cho "done trong kỳ" (updatedAt)
      * @param periodEnd    cuối kỳ (bao gồm) — dùng cho "done trong kỳ"
-     * @param upcomingTo   biên trên cửa sổ "sắp tới" (loại trừ): daily=+1 ngày, weekly=+7 ngày
+     * @param upcomingTo   KHÔNG CÒN DÙNG — "Sắp làm" nay xét theo HẠN 1–3 ngày tới và chỉ có ở
+     *                     báo cáo NGÀY. Giữ tham số để không phải đổi chữ ký ở các nơi gọi.
      */
     private ProjectDto.PeriodReportResponse build(String projectId, LocalDate periodStart, LocalDate periodEnd,
                                                   LocalDate upcomingTo, String label, LocalDate refToday, boolean isWeekly) {
@@ -321,10 +322,13 @@ public class ProjectReportService {
                 }
             } else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) {
                 inProgress.add(item);
-            } else if (!isCancelled) { // TODO / BACKLOG (bỏ qua việc đã Huỷ)
-                LocalDate start = effStart;
-                boolean within = start == null || (!start.isBefore(today) && start.isBefore(upcomingTo));
-                if (within) {
+            } else if (!isCancelled && !isWeekly) {
+                // SẮP LÀM — CHỈ có ở báo cáo NGÀY (báo cáo tuần bỏ hẳn khối này).
+                // Tiêu chí: việc chưa khởi động (Cần làm/Backlog) có HẠN rơi vào 1–3 NGÀY TỚI,
+                // tức [hôm nay+1, hôm nay+3]. Trước đây xét theo NGÀY BẮT ĐẦU nên ra danh sách
+                // không phản ánh việc sắp đến hạn.
+                if (effDue != null
+                        && !effDue.isBefore(today.plusDays(1)) && !effDue.isAfter(today.plusDays(3))) {
                     upcoming.add(item);
                 }
             }

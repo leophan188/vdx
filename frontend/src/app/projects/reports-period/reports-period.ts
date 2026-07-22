@@ -425,14 +425,21 @@ export class PrjReportsPeriod {
   }
 
   // ===== (3) 4 khối trạng thái =====
+  /** Báo cáo TUẦN bỏ hẳn khối "Sắp làm"; báo cáo NGÀY hiện việc đến hạn 1–3 ngày tới. */
+  readonly showUpcoming = computed<boolean>(() => this.period() === 'daily');
+
   readonly blocks = computed<ReportBlock[]>(() => {
     const r = this.report();
-    return [
+    const list: ReportBlock[] = [
       { key: 'done', icon: '✅', title: 'Đã hoàn thành', rows: r?.done ?? [], emptyText: 'Chưa có công việc nào hoàn thành trong kỳ.' },
       { key: 'overdue', icon: '⛔', title: 'Trễ hạn', rows: r?.overdue ?? [], emptyText: 'Không có công việc trễ hạn. 🎉' },
-      { key: 'inProgress', icon: '🔄', title: 'Đang làm', rows: r?.inProgress ?? [], emptyText: 'Không có công việc đang làm.' },
-      { key: 'upcoming', icon: '📋', title: 'Sắp làm', rows: r?.upcoming ?? [], emptyText: 'Không có công việc sắp tới.' }
+      { key: 'inProgress', icon: '🔄', title: 'Đang làm', rows: r?.inProgress ?? [], emptyText: 'Không có công việc đang làm.' }
     ];
+    if (this.showUpcoming()) {
+      list.push({ key: 'upcoming', icon: '📋', title: 'Sắp làm (đến hạn 1–3 ngày tới)',
+        rows: r?.upcoming ?? [], emptyText: 'Không có việc nào đến hạn trong 1–3 ngày tới.' });
+    }
+    return list;
   });
 
   /** Cột cho lưới danh sách task (khối trạng thái). */
