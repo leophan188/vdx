@@ -243,16 +243,37 @@ public class ProjectReportService {
         List<ProjectDto.ReportTaskItem> overdue = new ArrayList<>();
         List<ProjectDto.ReportTaskItem> epicStory = new ArrayList<>(); // tiến độ % EPIC/Story (tổng quan)
 
+        // Est/ngày của task CHA phải TỰ TỔNG HỢP từ LÁ con (khớp web & Backlog Excel).
+        // Trước đây báo cáo lấy est/ngày RIÊNG của cha → cha hiện 06/07–06/07 thay vì khoảng thật
+        // của các lá, và tổng est cộng trùng cả cha lẫn con.
+        Map<String, List<ProjectTask>> childrenOf = new HashMap<>();
+        for (ProjectTask t : tasks) {
+            if (t.getParentId() != null) {
+                childrenOf.computeIfAbsent(t.getParentId(), k -> new ArrayList<>()).add(t);
+            }
+        }
+        Map<String, Double> rollEst = new HashMap<>();
+        Map<String, LocalDate[]> rollRange = new HashMap<>();
+        for (ProjectTask t : tasks) {
+            computeRollup(t, childrenOf, rollEst, rollRange, new java.util.HashSet<>());
+        }
+
         int totalTasks = tasks.size(), doneTasks = 0, overdueCount = 0, bugCount = 0;
         double totalEstimate = 0, doneEstimate = 0;
 
         for (ProjectTask t : tasks) {
             boolean isDone = t.getStatus() == TaskStatus.DONE;
             boolean isCancelled = t.getStatus() == TaskStatus.CANCELLED; // Huỷ = ngoài phạm vi
-            totalEstimate += t.getEstimateHours();
+            // Tổng est chỉ cộng LÁ (bỏ Huỷ) — cộng cả cha sẽ tính trùng phần của con.
+            boolean isLeaf = !childrenOf.containsKey(t.getId());
+            if (isLeaf && !isCancelled) {
+                totalEstimate += t.getEstimateHours();
+                if (isDone) {
+                    doneEstimate += t.getEstimateHours();
+                }
+            }
             if (isDone) {
                 doneTasks++;
-                doneEstimate += t.getEstimateHours();
             }
             if (t.getType() == TaskType.BUG) {
                 bugCount++;
@@ -262,8 +283,7 @@ public class ProjectReportService {
                 overdueCount++;
             }
 
-            ProjectDto.ReportTaskItem item = item(t, p.getCode(), nameCache,
-                    progress.getOrDefault(t.getId(), 0.0), taskById);
+            ProjectDto.ReportTaskItem item = item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange);
 
             if (isDone) {
                 Instant upd = t.getUpdatedAt();
@@ -291,10 +311,11 @@ public class ProjectReportService {
 
         // Báo cáo TUẦN: tiến độ % EPIC/Story theo THỨ TỰ CÂY (Story nằm dưới Epic cha). Ngày: bỏ.
         if (isWeekly) {
-            java.util.Map<String, List<ProjectTask>> childrenOf = new java.util.LinkedHashMap<>();
+            // Cây CHỈ gồm Epic/Story (khác childrenOf ở trên vốn gồm mọi task để rollup est/ngày).
+            java.util.Map<String, List<ProjectTask>> esChildrenOf = new java.util.LinkedHashMap<>();
             for (ProjectTask t : tasks) {
                 if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) {
-                    childrenOf.computeIfAbsent(t.getParentId() == null ? "" : t.getParentId(), k -> new ArrayList<>()).add(t);
+                    esChildrenOf.computeIfAbsent(t.getParentId() == null ? "" : t.getParentId(), k -> new ArrayList<>()).add(t);
                 }
             }
             java.util.Set<String> esIds = new java.util.HashSet<>();
@@ -315,8 +336,8 @@ public class ProjectReportService {
             while (!stack.isEmpty()) {
                 ProjectTask t = stack.pop();
                 if (!seen.add(t.getId())) continue;
-                epicStory.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
-                List<ProjectTask> kids = childrenOf.getOrDefault(t.getId(), List.of());
+                epicStory.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange));
+                List<ProjectTask> kids = esChildrenOf.getOrDefault(t.getId(), List.of());
                 for (int i = kids.size() - 1; i >= 0; i--) stack.push(kids.get(i));
             }
         }
@@ -379,7 +400,7 @@ public class ProjectReportService {
             if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
             if (t.getStatus() == TaskStatus.CANCELLED) continue;
             if (workedInPeriod.contains(t.getId())) {
-                periodItems.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
+                periodItems.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange));
             }
         }
 
@@ -389,7 +410,7 @@ public class ProjectReportService {
             if (t.getType() != TaskType.BUG && t.getType() != TaskType.ISSUE) continue;
             Instant c = t.getCreatedAt();
             if (c != null && !c.isBefore(startOfPeriod) && c.isBefore(endOfPeriod)) {
-                bugsLogged.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById));
+                bugsLogged.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange));
             }
         }
 
@@ -397,9 +418,42 @@ public class ProjectReportService {
                 epicStory, byPerson, bugsLogged, periodItems);
     }
 
+    /**
+     * Est/khoảng ngày TỰ TỔNG HỢP cho task CHA: Σ est các LÁ con và [min bắt đầu, max kết thúc]
+     * của lá (bỏ việc Huỷ). Lá thì lấy giá trị của chính nó. Ghi nhớ vào map để không tính lại.
+     * {@code guard} chặn vòng cha-con lỗi dữ liệu (nếu có) khỏi đệ quy vô hạn.
+     */
+    private static void computeRollup(ProjectTask t, Map<String, List<ProjectTask>> childrenOf,
+                                      Map<String, Double> est, Map<String, LocalDate[]> range,
+                                      java.util.Set<String> guard) {
+        if (est.containsKey(t.getId()) || !guard.add(t.getId())) {
+            return;
+        }
+        List<ProjectTask> kids = childrenOf.get(t.getId());
+        if (kids == null || kids.isEmpty()) {
+            boolean cancelled = t.getStatus() == TaskStatus.CANCELLED;
+            est.put(t.getId(), cancelled ? 0.0 : t.getEstimateHours());
+            range.put(t.getId(), cancelled ? new LocalDate[]{null, null}
+                    : new LocalDate[]{t.getStartDate(), t.getDueDate()});
+            return;
+        }
+        double sum = 0;
+        LocalDate min = null, max = null;
+        for (ProjectTask k : kids) {
+            computeRollup(k, childrenOf, est, range, guard);
+            sum += est.getOrDefault(k.getId(), 0.0);
+            LocalDate[] r = range.getOrDefault(k.getId(), new LocalDate[]{null, null});
+            if (r[0] != null && (min == null || r[0].isBefore(min))) min = r[0];
+            if (r[1] != null && (max == null || r[1].isAfter(max))) max = r[1];
+        }
+        est.put(t.getId(), Math.round(sum * 100) / 100.0);
+        range.put(t.getId(), new LocalDate[]{min, max});
+    }
+
     private ProjectDto.ReportTaskItem item(ProjectTask t, String projectCode,
                                            Map<String, String> nameCache, double progressPct,
-                                           Map<String, ProjectTask> taskById) {
+                                           Map<String, ProjectTask> taskById,
+                                           Map<String, Double> rollEst, Map<String, LocalDate[]> rollRange) {
         String assignee = null;
         if (t.getAssigneeUserId() != null) {
             assignee = nameCache.computeIfAbsent(t.getAssigneeUserId(), uid ->
@@ -410,10 +464,14 @@ public class ProjectReportService {
             reporter = nameCache.computeIfAbsent(t.getReporterUserId(), uid ->
                     userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
         }
+        // Cha: est/ngày lấy từ rollup (lá con); lá: chính giá trị của nó.
+        double est = rollEst.getOrDefault(t.getId(), t.getEstimateHours());
+        LocalDate[] range = rollRange.getOrDefault(t.getId(),
+                new LocalDate[]{t.getStartDate(), t.getDueDate()});
         return new ProjectDto.ReportTaskItem(t.getId(), String.valueOf(t.getSeq()), t.getTitle(),
-                t.getType().name(), t.getStatus().name(), assignee, t.getEstimateHours(),
-                t.getStartDate() == null ? null : t.getStartDate().format(DMY),
-                t.getDueDate() == null ? null : t.getDueDate().format(DMY), progressPct,
+                t.getType().name(), t.getStatus().name(), assignee, est,
+                range[0] == null ? null : range[0].format(DMY),
+                range[1] == null ? null : range[1].format(DMY), progressPct,
                 t.getPriority() == null ? null : t.getPriority().name(),
                 t.getSeverity() == null ? null : t.getSeverity().name(),
                 t.getAssigneeUserId(), parentPath(t, taskById),
