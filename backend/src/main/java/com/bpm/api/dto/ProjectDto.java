@@ -327,7 +327,13 @@ public final class ProjectDto {
             List<PersonProgress> byPerson,
             List<ReportTaskItem> bugsLogged,
             /** Việc XỬ LÝ TRONG KỲ (có thay đổi trong kỳ) — nguồn cho popup chi tiết theo nhân sự. */
-            List<ReportTaskItem> periodItems) {
+            List<ReportTaskItem> periodItems,
+            /**
+             * CẦN LÀM — đã đến hạn TRONG KỲ nhưng trạng thái vẫn Cần làm/Backlog (chưa ai khởi động).
+             * Ngày: hạn đúng hôm nay. Tuần: hạn nằm trong tuần đang xem.
+             * Khác "Trễ hạn" (hạn đã QUA) và khác "Sắp làm" (hạn còn ở phía trước).
+             */
+            List<ReportTaskItem> todo) {
     }
 
     // ===== Burndown (req: biểu đồ cháy việc) =====

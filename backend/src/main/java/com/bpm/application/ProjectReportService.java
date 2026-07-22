@@ -241,6 +241,7 @@ public class ProjectReportService {
         List<ProjectDto.ReportTaskItem> done = new ArrayList<>();
         List<ProjectDto.ReportTaskItem> inProgress = new ArrayList<>();
         List<ProjectDto.ReportTaskItem> upcoming = new ArrayList<>();
+        List<ProjectDto.ReportTaskItem> todo = new ArrayList<>(); // CẦN LÀM: hạn đã đến trong kỳ mà chưa khởi động
         List<ProjectDto.ReportTaskItem> overdue = new ArrayList<>();
         List<ProjectDto.ReportTaskItem> epicStory = new ArrayList<>(); // tiến độ % EPIC/Story (tổng quan)
 
@@ -323,14 +324,20 @@ public class ProjectReportService {
             } else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) {
                 inProgress.add(item);
             } else if (!isCancelled) {
-                // DANH SÁCH CẦN LÀM — việc chưa khởi động (Cần làm/Backlog), lọc theo HẠN:
-                //  · Báo cáo NGÀY  → "Sắp làm": hạn trong 1–3 NGÀY TỚI [hôm nay+1, hôm nay+3].
-                //  · Báo cáo TUẦN  → "Công việc tuần tiếp theo": hạn nằm trong TUẦN SAU
-                //    [cuối kỳ+1, cuối kỳ+7] (kỳ tuần kết thúc Chủ nhật nên đây đúng là T2→CN tuần sau).
-                // Trước đây xét theo NGÀY BẮT ĐẦU nên không phản ánh việc sắp đến hạn.
-                LocalDate from = isWeekly ? periodEnd.plusDays(1) : today.plusDays(1);
-                LocalDate to = isWeekly ? periodEnd.plusDays(7) : today.plusDays(3);
-                if (effDue != null && !effDue.isBefore(from) && !effDue.isAfter(to)) {
+                // Việc CHƯA KHỞI ĐỘNG (Cần làm/Backlog) — chia 2 nhóm theo HẠN:
+                //  · CẦN LÀM: hạn đã đến TRONG KỲ mà vẫn chưa ai bắt tay vào
+                //    (ngày = đúng hôm nay; tuần = trong tuần đang xem). Trước đây nhóm này
+                //    RƠI VÀO KHOẢNG TRỐNG — không nằm ở Trễ hạn (chưa quá hạn) cũng không
+                //    ở Sắp làm (hạn không còn ở phía trước) nên biến mất khỏi báo cáo.
+                //  · SẮP LÀM / TUẦN TIẾP THEO: hạn còn ở phía trước
+                //    (ngày = 1–3 ngày tới; tuần = tuần kế tiếp).
+                LocalDate todoFrom = isWeekly ? periodStart : today;
+                LocalDate todoTo = isWeekly ? periodEnd : today;
+                LocalDate nextFrom = isWeekly ? periodEnd.plusDays(1) : today.plusDays(1);
+                LocalDate nextTo = isWeekly ? periodEnd.plusDays(7) : today.plusDays(3);
+                if (effDue != null && !effDue.isBefore(todoFrom) && !effDue.isAfter(todoTo)) {
+                    todo.add(item);
+                } else if (effDue != null && !effDue.isBefore(nextFrom) && !effDue.isAfter(nextTo)) {
                     upcoming.add(item);
                 }
             }
@@ -450,7 +457,7 @@ public class ProjectReportService {
         }
 
         return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview,
-                epicStory, byPerson, bugsLogged, periodItems);
+                epicStory, byPerson, bugsLogged, periodItems, todo);
     }
 
     /**

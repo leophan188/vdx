@@ -331,6 +331,7 @@ export interface PeriodReport {
   byPerson: PersonProgress[];    // tỷ lệ hoàn thành theo nhân sự (việc lá)
   bugsLogged: ReportTaskItem[];  // Bug/Issue được LOG (tạo) TRONG KỲ — cho thống kê tester/dev theo kỳ
   periodItems: ReportTaskItem[]; // Việc XỬ LÝ TRONG KỲ — nguồn popup chi tiết theo nhân sự
+  todo: ReportTaskItem[];        // CẦN LÀM — đã đến hạn trong kỳ nhưng vẫn Cần làm/Backlog
 }
 
 // ===== Burndown (biểu đồ cháy việc) =====

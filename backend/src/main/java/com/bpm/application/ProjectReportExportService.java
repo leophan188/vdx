@@ -68,10 +68,13 @@ public class ProjectReportExportService {
      * Vẫn in kể cả rỗng ("— Không có —") để người đọc biết là KHÔNG có việc, chứ không
      * tưởng bản xuất bị thiếu mục.
      */
-    private List<Section> sections(ProjectDto.PeriodReportResponse r, String upcomingTitle) {
+    private List<Section> sections(ProjectDto.PeriodReportResponse r, String todoTitle, String upcomingTitle) {
         List<Section> out = new java.util.ArrayList<>();
         out.add(new Section("✅ ĐÃ HOÀN THÀNH", r.done(), GREEN));
         out.add(new Section("🔄 ĐANG LÀM", r.inProgress(), BLUE));
+        if (todoTitle != null) {
+            out.add(new Section(todoTitle, r.todo(), RED));
+        }
         if (upcomingTitle != null) {
             out.add(new Section(upcomingTitle, r.upcoming(), BRAND));
         }
@@ -111,7 +114,7 @@ public class ProjectReportExportService {
             cnt.put(s, 0);
         }
         java.util.Set<String> seen = new java.util.HashSet<>();
-        for (List<ProjectDto.ReportTaskItem> list : List.of(r.done(), r.overdue(), r.inProgress(), r.upcoming())) {
+        for (List<ProjectDto.ReportTaskItem> list : List.of(r.done(), r.overdue(), r.inProgress(), r.upcoming(), r.todo())) {
             for (ProjectDto.ReportTaskItem t : list) {
                 if (seen.add(t.taskId()) && cnt.containsKey(t.status())) {
                     cnt.merge(t.status(), 1, Integer::sum);
@@ -142,7 +145,7 @@ public class ProjectReportExportService {
     }
 
     // ===================== EXCEL =====================
-    public byte[] toXlsx(ProjectDto.PeriodReportResponse r, String projectName, String upcomingTitle) {
+    public byte[] toXlsx(ProjectDto.PeriodReportResponse r, String projectName, String todoTitle, String upcomingTitle) {
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
             XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
@@ -234,7 +237,7 @@ public class ProjectReportExportService {
                 rr++;
             }
 
-            for (Section sec : sections(r, upcomingTitle)) {
+            for (Section sec : sections(r, todoTitle, upcomingTitle)) {
                 XSSFCellStyle secStyle = style(wb, true, 12, WHITE, sec.color(), false, HorizontalAlignment.LEFT);
                 merged(sh, rr, last, sec.title() + " (" + sec.rows().size() + ")", secStyle, 20); rr++;
                 Row h = sh.createRow(rr++);
@@ -301,7 +304,7 @@ public class ProjectReportExportService {
     }
 
     // ===================== WORD =====================
-    public byte[] toDocx(ProjectDto.PeriodReportResponse r, String projectName, String upcomingTitle) {
+    public byte[] toDocx(ProjectDto.PeriodReportResponse r, String projectName, String todoTitle, String upcomingTitle) {
         try (XWPFDocument doc = new XWPFDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             landscape(doc);
             centerRun(doc, "BÁO CÁO DỰ ÁN", true, 18, BRAND_HEX);
@@ -348,7 +351,7 @@ public class ProjectReportExportService {
                 blank(doc);
             }
 
-            for (Section sec : sections(r, upcomingTitle)) {
+            for (Section sec : sections(r, todoTitle, upcomingTitle)) {
                 heading(doc, sec.title() + " (" + sec.rows().size() + ")");
                 XWPFTable tbl = doc.createTable();
                 tbl.setWidth("100%");

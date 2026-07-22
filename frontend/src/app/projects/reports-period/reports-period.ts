@@ -14,7 +14,7 @@ type Period = 'daily' | 'weekly';
 
 /** Một khối danh sách task (Đã xong / Đang làm / Sắp làm / Trễ hạn). */
 interface ReportBlock {
-  key: 'done' | 'inProgress' | 'upcoming' | 'overdue';
+  key: 'done' | 'inProgress' | 'upcoming' | 'overdue' | 'todo';
   icon: string;
   title: string;
   rows: ReportTaskItem[];
@@ -325,7 +325,7 @@ export class PrjReportsPeriod {
     const r = this.report();
     if (!r) return [];
     const map = new Map<string, ReportTaskItem>();
-    for (const it of [...r.done, ...r.inProgress, ...r.upcoming, ...r.overdue]) map.set(it.taskId, it);
+    for (const it of [...r.done, ...r.inProgress, ...r.todo, ...r.upcoming, ...r.overdue]) map.set(it.taskId, it);
     return [...map.values()];
   });
 
@@ -425,18 +425,23 @@ export class PrjReportsPeriod {
   }
 
   // ===== (3) 4 khối trạng thái =====
-  /** Nhãn khối "cần làm" theo kỳ: ngày = hạn 1–3 ngày tới; tuần = việc của tuần sau. */
+  /** Nhãn khối "sắp làm" theo kỳ: ngày = hạn 1–3 ngày tới; tuần = việc của tuần sau. */
   readonly upcomingTitle = computed<string>(() =>
     this.period() === 'weekly' ? 'Công việc tuần tiếp theo' : 'Sắp làm (đến hạn 1–3 ngày tới)');
   readonly upcomingEmpty = computed<string>(() =>
     this.period() === 'weekly' ? 'Không có công việc nào đến hạn trong tuần tiếp theo.'
       : 'Không có việc nào đến hạn trong 1–3 ngày tới.');
+  /** Nhãn khối "cần làm": đã đến hạn trong kỳ nhưng vẫn Cần làm/Backlog. */
+  readonly todoTitle = computed<string>(() =>
+    this.period() === 'weekly' ? 'Cần làm (đến hạn trong tuần)' : 'Cần làm (đến hạn hôm nay)');
 
   readonly blocks = computed<ReportBlock[]>(() => {
     const r = this.report();
     return [
       { key: 'done', icon: '✅', title: 'Đã hoàn thành', rows: r?.done ?? [], emptyText: 'Chưa có công việc nào hoàn thành trong kỳ.' },
       { key: 'overdue', icon: '⛔', title: 'Trễ hạn', rows: r?.overdue ?? [], emptyText: 'Không có công việc trễ hạn. 🎉' },
+      { key: 'todo', icon: '📌', title: this.todoTitle(), rows: r?.todo ?? [],
+        emptyText: 'Không có việc nào đến hạn mà chưa khởi động.' },
       { key: 'inProgress', icon: '🔄', title: 'Đang làm', rows: r?.inProgress ?? [], emptyText: 'Không có công việc đang làm.' },
       { key: 'upcoming', icon: '📋', title: this.upcomingTitle(), rows: r?.upcoming ?? [], emptyText: this.upcomingEmpty() }
     ];
