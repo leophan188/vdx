@@ -258,10 +258,12 @@ public class ProjectReportService {
             computeRollup(t, childrenOf, rollEst, rollRange, new java.util.HashSet<>());
         }
 
-        // Tổng số công việc = số việc LÁ (đồng bộ với danh sách & bảng theo nhân sự, vốn cũng chỉ lá).
+        // Tổng số công việc = số VIỆC THỰC THI (lá, không tính Epic/Story kể cả Epic/Story rỗng)
+        // — đồng bộ với danh sách bên dưới và bảng thống kê theo nhân sự.
         int totalTasks = 0, doneTasks = 0, overdueCount = 0, bugCount = 0;
         for (ProjectTask t : tasks) {
-            if (!childrenOf.containsKey(t.getId())) {
+            if (!childrenOf.containsKey(t.getId())
+                    && t.getType() != TaskType.EPIC && t.getType() != TaskType.STORY) {
                 totalTasks++;
             }
         }
@@ -272,6 +274,9 @@ public class ProjectReportService {
             boolean isCancelled = t.getStatus() == TaskStatus.CANCELLED; // Huỷ = ngoài phạm vi
             // Tổng est chỉ cộng LÁ (bỏ Huỷ) — cộng cả cha sẽ tính trùng phần của con.
             boolean isLeaf = !childrenOf.containsKey(t.getId());
+            // "Việc làm được" = lá VÀ không phải Epic/Story. Epic/Story RỖNG (chưa có task con) vẫn
+            // là lá về mặt cây nhưng không phải công việc thực thi → không đưa vào danh sách/đếm.
+            boolean isWorkItem = isLeaf && t.getType() != TaskType.EPIC && t.getType() != TaskType.STORY;
             if (isLeaf && !isCancelled) {
                 totalEstimate += t.getEstimateHours();
                 if (isDone) {
@@ -280,7 +285,7 @@ public class ProjectReportService {
             }
             // Chỉ đếm việc LÁ để khớp với các DANH SÁCH bên dưới (cũng chỉ liệt kê lá) — nếu đếm cả
             // Epic/Story thì con số tổng quan lại không khớp số dòng, đúng kiểu lỗi đã gặp nhiều lần.
-            if (isLeaf) {
+            if (isWorkItem) {
                 if (isDone) {
                     doneTasks++;
                 }
@@ -296,14 +301,14 @@ public class ProjectReportService {
             LocalDate effStart = effRange[0], effDue = effRange[1];
 
             boolean isOverdue = effDue != null && effDue.isBefore(today) && !isDone && !isCancelled;
-            if (isOverdue && isLeaf) {
+            if (isOverdue && isWorkItem) {
                 overdueCount++;
             }
 
             // DANH SÁCH CÔNG VIỆC CHỈ GỒM TASK NHỎ NHẤT (lá). Epic/Story không liệt kê thành dòng
             // riêng — ngữ cảnh cha đã nằm trong parentPath ("Epic: … › Story: …") của từng dòng lá.
             // Tiến độ Epic/Story vẫn có khối riêng (epicStory) ở báo cáo tuần.
-            if (!isLeaf) {
+            if (!isWorkItem) {
                 continue;
             }
 
