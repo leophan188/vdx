@@ -63,17 +63,17 @@ public class ProjectReportExportService {
     private record Section(String title, List<ProjectDto.ReportTaskItem> rows, byte[] color) {}
 
     /**
-     * Các khối danh sách của bản xuất. "SẮP LÀM" chỉ có ở báo cáo NGÀY (việc đến hạn trong 1–3 ngày
-     * tới); báo cáo TUẦN bỏ hẳn khối này nên backend trả upcoming rỗng → không in ra khối trống.
+     * Các khối danh sách của bản xuất. Khối "cần làm" đổi tên theo kỳ:
+     * ngày → "SẮP LÀM (đến hạn 1–3 ngày tới)", tuần → "CÔNG VIỆC TUẦN TIẾP THEO".
+     * Vẫn in kể cả rỗng ("— Không có —") để người đọc biết là KHÔNG có việc, chứ không
+     * tưởng bản xuất bị thiếu mục.
      */
-    private List<Section> sections(ProjectDto.PeriodReportResponse r, boolean showUpcoming) {
+    private List<Section> sections(ProjectDto.PeriodReportResponse r, String upcomingTitle) {
         List<Section> out = new java.util.ArrayList<>();
         out.add(new Section("✅ ĐÃ HOÀN THÀNH", r.done(), GREEN));
         out.add(new Section("🔄 ĐANG LÀM", r.inProgress(), BLUE));
-        if (showUpcoming) {
-            // Vẫn in kể cả rỗng ("— Không có —") để người đọc biết là KHÔNG có việc gấp,
-            // chứ không tưởng bản xuất bị thiếu mục.
-            out.add(new Section("🗒️ SẮP LÀM (đến hạn 1–3 ngày tới)", r.upcoming(), BRAND));
+        if (upcomingTitle != null) {
+            out.add(new Section(upcomingTitle, r.upcoming(), BRAND));
         }
         return out;
     }
@@ -142,7 +142,7 @@ public class ProjectReportExportService {
     }
 
     // ===================== EXCEL =====================
-    public byte[] toXlsx(ProjectDto.PeriodReportResponse r, String projectName, boolean showUpcoming) {
+    public byte[] toXlsx(ProjectDto.PeriodReportResponse r, String projectName, String upcomingTitle) {
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
             XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
@@ -234,7 +234,7 @@ public class ProjectReportExportService {
                 rr++;
             }
 
-            for (Section sec : sections(r, showUpcoming)) {
+            for (Section sec : sections(r, upcomingTitle)) {
                 XSSFCellStyle secStyle = style(wb, true, 12, WHITE, sec.color(), false, HorizontalAlignment.LEFT);
                 merged(sh, rr, last, sec.title() + " (" + sec.rows().size() + ")", secStyle, 20); rr++;
                 Row h = sh.createRow(rr++);
@@ -301,7 +301,7 @@ public class ProjectReportExportService {
     }
 
     // ===================== WORD =====================
-    public byte[] toDocx(ProjectDto.PeriodReportResponse r, String projectName, boolean showUpcoming) {
+    public byte[] toDocx(ProjectDto.PeriodReportResponse r, String projectName, String upcomingTitle) {
         try (XWPFDocument doc = new XWPFDocument(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             landscape(doc);
             centerRun(doc, "BÁO CÁO DỰ ÁN", true, 18, BRAND_HEX);
@@ -348,7 +348,7 @@ public class ProjectReportExportService {
                 blank(doc);
             }
 
-            for (Section sec : sections(r, showUpcoming)) {
+            for (Section sec : sections(r, upcomingTitle)) {
                 heading(doc, sec.title() + " (" + sec.rows().size() + ")");
                 XWPFTable tbl = doc.createTable();
                 tbl.setWidth("100%");

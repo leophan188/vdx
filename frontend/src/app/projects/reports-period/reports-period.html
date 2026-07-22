@@ -48,7 +48,7 @@
       <section class="rpp__stats">
         <stat-card icon="✅" label="Hoàn thành trong ngày" [value]="r.done.length" tint="var(--status-done)" />
         <stat-card icon="🔄" label="Đang làm" [value]="r.inProgress.length" tint="var(--status-active)" />
-        <stat-card icon="🗒️" label="Sắp làm (hạn 1–3 ngày tới)" [value]="r.upcoming.length" tint="var(--status-pending)" />
+        <stat-card icon="🗒️" [label]="upcomingTitle()" [value]="r.upcoming.length" tint="var(--status-pending)" />
         <stat-card icon="⛔" label="Trễ hạn" [value]="r.overdue.length" tint="var(--overdue)" />
       </section>
     }
@@ -442,7 +442,7 @@
       <!-- SẮP LÀM -->
       @if (printUpcoming().length) {
         <section class="rp__block">
-          <h3 class="rp__h">SẮP LÀM — ĐẾN HẠN 1–3 NGÀY TỚI ({{ r.upcoming.length }})</h3>
+          <h3 class="rp__h">{{ upcomingTitle().toUpperCase() }} ({{ r.upcoming.length }})</h3>
           <table class="rp__tbl">
             <colgroup><col class="c-stt"><col class="c-task"><col class="c-status"><col class="c-date"><col class="c-date"><col class="c-pct"></colgroup>
             <thead><tr>

@@ -322,13 +322,15 @@ public class ProjectReportService {
                 }
             } else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) {
                 inProgress.add(item);
-            } else if (!isCancelled && !isWeekly) {
-                // SẮP LÀM — CHỈ có ở báo cáo NGÀY (báo cáo tuần bỏ hẳn khối này).
-                // Tiêu chí: việc chưa khởi động (Cần làm/Backlog) có HẠN rơi vào 1–3 NGÀY TỚI,
-                // tức [hôm nay+1, hôm nay+3]. Trước đây xét theo NGÀY BẮT ĐẦU nên ra danh sách
-                // không phản ánh việc sắp đến hạn.
-                if (effDue != null
-                        && !effDue.isBefore(today.plusDays(1)) && !effDue.isAfter(today.plusDays(3))) {
+            } else if (!isCancelled) {
+                // DANH SÁCH CẦN LÀM — việc chưa khởi động (Cần làm/Backlog), lọc theo HẠN:
+                //  · Báo cáo NGÀY  → "Sắp làm": hạn trong 1–3 NGÀY TỚI [hôm nay+1, hôm nay+3].
+                //  · Báo cáo TUẦN  → "Công việc tuần tiếp theo": hạn nằm trong TUẦN SAU
+                //    [cuối kỳ+1, cuối kỳ+7] (kỳ tuần kết thúc Chủ nhật nên đây đúng là T2→CN tuần sau).
+                // Trước đây xét theo NGÀY BẮT ĐẦU nên không phản ánh việc sắp đến hạn.
+                LocalDate from = isWeekly ? periodEnd.plusDays(1) : today.plusDays(1);
+                LocalDate to = isWeekly ? periodEnd.plusDays(7) : today.plusDays(3);
+                if (effDue != null && !effDue.isBefore(from) && !effDue.isAfter(to)) {
                     upcoming.add(item);
                 }
             }

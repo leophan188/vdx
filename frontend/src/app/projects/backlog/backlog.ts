@@ -528,11 +528,25 @@ export class PrjBacklog implements OnInit {
     });
   });
 
-  /** Ẩn thêm dòng có tổ tiên đang GẬP (trên nền đã lọc) — dùng để HIỂN THỊ trên màn. */
+  /** Có đang bật bộ lọc phụ nào không (tìm/ngày/người/chips)? */
+  readonly hasActiveFilter = computed<boolean>(() =>
+    !!(this.search().trim() || this.dateFrom() || this.dateTo()
+      || this.filterAssignee() || this.quickFlags().size));
+
+  /**
+   * Ẩn thêm dòng có tổ tiên đang GẬP (trên nền đã lọc) — dùng để HIỂN THỊ trên màn.
+   * KHI ĐANG LỌC thì BỎ QUA trạng thái gập: nếu không, task khớp nằm dưới một cấp cha
+   * người dùng đã gập tay sẽ bị ẩn và trông như "lọc không ra kết quả".
+   * Lọc xong phải thấy ĐỦ các cấp cha dẫn tới task khớp.
+   */
   readonly visible = computed<TreeRow[]>(() => {
+    const rows = this.filteredRows();
+    if (this.hasActiveFilter()) {
+      return rows;
+    }
     const col = this.collapsed();
     const byId = new Map(this.tasks().map((t) => [t.id, t]));
-    return this.filteredRows().filter((r) => {
+    return rows.filter((r) => {
       let p = r.task.parentId;
       while (p) {
         if (col.has(p)) return false;

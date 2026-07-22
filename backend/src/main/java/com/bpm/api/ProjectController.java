@@ -415,10 +415,11 @@ public class ProjectController {
         ProjectDto.ProjectResponse p = projectService.detail(id);
         String projectName = "[" + p.code() + "] " + p.name();
         boolean docx = "docx".equalsIgnoreCase(format);
-        // "Sắp làm" (việc đến hạn 1–3 ngày tới) CHỈ có ở báo cáo ngày; báo cáo tuần bỏ hẳn khối này.
-        boolean showUpcoming = !"weekly".equalsIgnoreCase(period);
-        byte[] bytes = docx ? reportExportService.toDocx(rep, projectName, showUpcoming)
-                : reportExportService.toXlsx(rep, projectName, showUpcoming);
+        // Khối "cần làm" đổi tên theo kỳ: ngày = việc đến hạn 1–3 ngày tới; tuần = việc của tuần sau.
+        String upcomingTitle = "weekly".equalsIgnoreCase(period)
+                ? "🗒️ CÔNG VIỆC TUẦN TIẾP THEO" : "🗒️ SẮP LÀM (đến hạn 1–3 ngày tới)";
+        byte[] bytes = docx ? reportExportService.toDocx(rep, projectName, upcomingTitle)
+                : reportExportService.toXlsx(rep, projectName, upcomingTitle);
         String ext = docx ? "docx" : "xlsx";
         String ct = docx ? "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
                 : "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";

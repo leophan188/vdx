@@ -425,21 +425,21 @@ export class PrjReportsPeriod {
   }
 
   // ===== (3) 4 khối trạng thái =====
-  /** Báo cáo TUẦN bỏ hẳn khối "Sắp làm"; báo cáo NGÀY hiện việc đến hạn 1–3 ngày tới. */
-  readonly showUpcoming = computed<boolean>(() => this.period() === 'daily');
+  /** Nhãn khối "cần làm" theo kỳ: ngày = hạn 1–3 ngày tới; tuần = việc của tuần sau. */
+  readonly upcomingTitle = computed<string>(() =>
+    this.period() === 'weekly' ? 'Công việc tuần tiếp theo' : 'Sắp làm (đến hạn 1–3 ngày tới)');
+  readonly upcomingEmpty = computed<string>(() =>
+    this.period() === 'weekly' ? 'Không có công việc nào đến hạn trong tuần tiếp theo.'
+      : 'Không có việc nào đến hạn trong 1–3 ngày tới.');
 
   readonly blocks = computed<ReportBlock[]>(() => {
     const r = this.report();
-    const list: ReportBlock[] = [
+    return [
       { key: 'done', icon: '✅', title: 'Đã hoàn thành', rows: r?.done ?? [], emptyText: 'Chưa có công việc nào hoàn thành trong kỳ.' },
       { key: 'overdue', icon: '⛔', title: 'Trễ hạn', rows: r?.overdue ?? [], emptyText: 'Không có công việc trễ hạn. 🎉' },
-      { key: 'inProgress', icon: '🔄', title: 'Đang làm', rows: r?.inProgress ?? [], emptyText: 'Không có công việc đang làm.' }
+      { key: 'inProgress', icon: '🔄', title: 'Đang làm', rows: r?.inProgress ?? [], emptyText: 'Không có công việc đang làm.' },
+      { key: 'upcoming', icon: '📋', title: this.upcomingTitle(), rows: r?.upcoming ?? [], emptyText: this.upcomingEmpty() }
     ];
-    if (this.showUpcoming()) {
-      list.push({ key: 'upcoming', icon: '📋', title: 'Sắp làm (đến hạn 1–3 ngày tới)',
-        rows: r?.upcoming ?? [], emptyText: 'Không có việc nào đến hạn trong 1–3 ngày tới.' });
-    }
-    return list;
   });
 
   /** Cột cho lưới danh sách task (khối trạng thái). */
