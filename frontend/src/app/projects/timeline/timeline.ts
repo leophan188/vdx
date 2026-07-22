@@ -187,7 +187,8 @@ export class PrjTimeline implements OnInit {
     const prevTitle = document.title;
     // Ép khổ A4 NGANG cho lần in này (chèn động — tin cậy hơn named page trên Chrome).
     const pageStyle = document.createElement('style');
-    pageStyle.textContent = '@page { size: A4 landscape !important; margin: 8mm !important; }';
+    // margin 0 → Chrome bỏ header/footer (URL, ngày, số trang); lề bù bằng padding .gantt.is-printing.
+    pageStyle.textContent = '@page { size: A4 landscape !important; margin: 0 !important; }';
     document.head.appendChild(pageStyle);
     setTimeout(() => {
       // Tính tỉ lệ zoom để toàn bộ Gantt (danh sách + trục) vừa bề ngang trang A4 ngang.

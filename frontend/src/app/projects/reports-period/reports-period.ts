@@ -273,7 +273,8 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
 
     @media print {
       .no-print { display: none !important; }
-      .rp-overlay { position: static; background: #fff; padding: 0; display: block; }
+      /* padding = lề giấy (do @page margin phải = 0 để Chrome bỏ header/footer URL) */
+      .rp-overlay { position: static; background: #fff; padding: 10mm; box-sizing: border-box; display: block; }
       .rp-page { width: auto; min-height: auto; box-shadow: none; padding: 0; }
       .rp__donut, .rp__card, .rp__card-lbl, .rp__h, .rp__head, .rp__pbar-fill, .rp__leg-dot, .rp__sdot, .rp__ava {
         -webkit-print-color-adjust: exact; print-color-adjust: exact; }
