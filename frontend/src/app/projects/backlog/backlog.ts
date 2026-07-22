@@ -486,7 +486,10 @@ export class PrjBacklog implements OnInit {
     if (fromMs !== null || toMs !== null) {
       dateKeep = new Set<string>();
       for (const t of this.tasks()) {
-        const s = this.dmyMs(t.startDate), d = this.dmyMs(t.dueDate);
+        // Dùng ngày HIỂN THỊ (startOf/dueOf = tổng hợp từ con) chứ KHÔNG dùng ngày thô:
+        // task cha thường không có ngày riêng (VCB26118: 19/56 cha) nên lọc bằng ngày thô
+        // sẽ loại chúng dù trên lưới vẫn hiện khoảng ngày → người dùng thấy "lọc không ăn".
+        const s = this.dmyMs(this.startOf(t)), d = this.dmyMs(this.dueOf(t));
         const ts = s ?? d, te = d ?? s;
         if (ts === null && te === null) continue;      // không có lịch → loại khi đang lọc ngày
         if (fromMs !== null && (te === null || te < fromMs)) continue;

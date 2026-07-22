@@ -469,6 +469,10 @@ public class ProjectReportExportService {
 
     /** Xuất TIMELINE ra Excel: bảng lịch trình + biểu đồ Gantt theo tuần (header 3 tầng Năm/Tháng/Tuần).
      *  clampFrom/clampTo = khung ngày theo bộ lọc màn hình (null = tự vừa theo công việc). */
+    /** Định dạng ngày in ra timeline (ngày đã tổng hợp nên phải tự format lại). */
+    private static final java.time.format.DateTimeFormatter TL_DMY =
+            java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+
     public byte[] timelineXlsx(String projectName, List<ProjectDto.TaskResponse> tasks,
                                java.time.LocalDate clampFrom, java.time.LocalDate clampTo) {
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
@@ -482,13 +486,27 @@ public class ProjectReportExportService {
             XSSFCellStyle barDone = style(wb, false, 10, null, new byte[]{(byte) 0x16, (byte) 0xA3, (byte) 0x4A}, true, HorizontalAlignment.CENTER);
             java.util.Map<String, XSSFCellStyle> sst = statusStyles(wb);
 
+            // Ngày TỰ TỔNG HỢP cho task CHA (khớp web/Backlog Excel): cha thường không có ngày riêng
+            // nên nếu xét ngày thô thì Epic/Story bị loại khỏi timeline dù các lá con đều có lịch.
+            java.util.Map<String, java.util.List<ProjectDto.TaskResponse>> tlChildren = new java.util.HashMap<>();
+            for (ProjectDto.TaskResponse t : tasks) {
+                if (t.parentId() != null) {
+                    tlChildren.computeIfAbsent(t.parentId(), k -> new java.util.ArrayList<>()).add(t);
+                }
+            }
+            java.util.Map<String, java.time.LocalDate[]> tlRange = new java.util.HashMap<>();
+            for (ProjectDto.TaskResponse t : tasks) {
+                tlRange.put(t.id(), rollupRangeT(t, tlChildren));
+            }
+
             // Chỉ task có lịch (bắt đầu + kết thúc), sắp theo ngày bắt đầu.
             List<ProjectDto.TaskResponse> sched = new java.util.ArrayList<>();
             for (ProjectDto.TaskResponse t : tasks) {
-                if (parse(t.startDate()) != null && parse(t.dueDate()) != null) sched.add(t);
+                java.time.LocalDate[] r = tlRange.get(t.id());
+                if (r != null && r[0] != null && r[1] != null) sched.add(t);
             }
-            sched.sort(java.util.Comparator.comparing((ProjectDto.TaskResponse t) -> parse(t.startDate()))
-                    .thenComparing(t -> parse(t.dueDate())));
+            sched.sort(java.util.Comparator.comparing((ProjectDto.TaskResponse t) -> tlRange.get(t.id())[0])
+                    .thenComparing(t -> tlRange.get(t.id())[1]));
 
             // ===== SHEET 1: Lịch trình (bảng) — cột cân đối, KHÔNG có Mã =====
             XSSFSheet sh = wb.createSheet("Lịch trình");
@@ -501,13 +519,14 @@ public class ProjectReportExportService {
             Row h = sh.createRow(rr++);
             for (int c = 0; c < TL_COLS.length; c++) put(h, c, TL_COLS[c], header);
             for (ProjectDto.TaskResponse t : sched) {
-                java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
+                java.time.LocalDate[] rg = tlRange.get(t.id());
+                java.time.LocalDate s = rg[0], d = rg[1];
                 long days = java.time.temporal.ChronoUnit.DAYS.between(s, d) + 1;
                 Row row = sh.createRow(rr++);
                 put(row, 0, nz(t.title()), cell);
                 put(row, 1, nz(t.assigneeName()), cell);
-                put(row, 2, nz(t.startDate()), center);
-                put(row, 3, nz(t.dueDate()), center);
+                put(row, 2, s.format(TL_DMY), center);
+                put(row, 3, d.format(TL_DMY), center);
                 put(row, 4, String.valueOf(days), center);
                 put(row, 5, statusVi(t.status()), sst.getOrDefault(t.status(), center));
                 put(row, 6, Math.round(t.progressPct()) + "%", center);
@@ -519,8 +538,8 @@ public class ProjectReportExportService {
             // ===== SHEET 2: Gantt (theo tuần) — header 3 TẦNG Năm/Tháng/Tuần, theo khung ngày lọc =====
             if (!sched.isEmpty()) {
                 XSSFSheet gs = wb.createSheet("Gantt");
-                java.time.LocalDate dataMin = sched.stream().map(t -> parse(t.startDate())).min(java.time.LocalDate::compareTo).get();
-                java.time.LocalDate dataMax = sched.stream().map(t -> parse(t.dueDate())).max(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate dataMin = sched.stream().map(t -> tlRange.get(t.id())[0]).min(java.time.LocalDate::compareTo).get();
+                java.time.LocalDate dataMax = sched.stream().map(t -> tlRange.get(t.id())[1]).max(java.time.LocalDate::compareTo).get();
                 java.time.LocalDate min = clampFrom != null ? clampFrom : dataMin;
                 java.time.LocalDate max = clampTo != null ? clampTo : dataMax;
                 if (max.isBefore(min)) { java.time.LocalDate tmp = min; min = max; max = tmp; }
@@ -566,7 +585,8 @@ public class ProjectReportExportService {
                 gr = wRow + 1;
 
                 for (ProjectDto.TaskResponse t : sched) {
-                    java.time.LocalDate s = parse(t.startDate()), d = parse(t.dueDate());
+                    java.time.LocalDate[] rg = tlRange.get(t.id());
+                    java.time.LocalDate s = rg[0], d = rg[1];
                     if (d.isBefore(w0) || s.isAfter(w0.plusWeeks(weeks))) continue; // ngoài khung → bỏ
                     Row row = gs.createRow(gr++);
                     put(row, 0, nz(t.title()), cell);

@@ -258,7 +258,13 @@ public class ProjectReportService {
             computeRollup(t, childrenOf, rollEst, rollRange, new java.util.HashSet<>());
         }
 
-        int totalTasks = tasks.size(), doneTasks = 0, overdueCount = 0, bugCount = 0;
+        // Tổng số công việc = số việc LÁ (đồng bộ với danh sách & bảng theo nhân sự, vốn cũng chỉ lá).
+        int totalTasks = 0, doneTasks = 0, overdueCount = 0, bugCount = 0;
+        for (ProjectTask t : tasks) {
+            if (!childrenOf.containsKey(t.getId())) {
+                totalTasks++;
+            }
+        }
         double totalEstimate = 0, doneEstimate = 0;
 
         for (ProjectTask t : tasks) {
@@ -272,11 +278,15 @@ public class ProjectReportService {
                     doneEstimate += t.getEstimateHours();
                 }
             }
-            if (isDone) {
-                doneTasks++;
-            }
-            if (t.getType() == TaskType.BUG) {
-                bugCount++;
+            // Chỉ đếm việc LÁ để khớp với các DANH SÁCH bên dưới (cũng chỉ liệt kê lá) — nếu đếm cả
+            // Epic/Story thì con số tổng quan lại không khớp số dòng, đúng kiểu lỗi đã gặp nhiều lần.
+            if (isLeaf) {
+                if (isDone) {
+                    doneTasks++;
+                }
+                if (t.getType() == TaskType.BUG) {
+                    bugCount++;
+                }
             }
             // Ngày HIỆU LỰC = ngày đã tổng hợp từ lá con (lá thì là ngày của chính nó).
             // PHẢI dùng đúng ngày đang HIỂN THỊ để xét trễ hạn/sắp tới; nếu xét bằng ngày riêng của
@@ -286,8 +296,15 @@ public class ProjectReportService {
             LocalDate effStart = effRange[0], effDue = effRange[1];
 
             boolean isOverdue = effDue != null && effDue.isBefore(today) && !isDone && !isCancelled;
-            if (isOverdue) {
+            if (isOverdue && isLeaf) {
                 overdueCount++;
+            }
+
+            // DANH SÁCH CÔNG VIỆC CHỈ GỒM TASK NHỎ NHẤT (lá). Epic/Story không liệt kê thành dòng
+            // riêng — ngữ cảnh cha đã nằm trong parentPath ("Epic: … › Story: …") của từng dòng lá.
+            // Tiến độ Epic/Story vẫn có khối riêng (epicStory) ở báo cáo tuần.
+            if (!isLeaf) {
+                continue;
             }
 
             ProjectDto.ReportTaskItem item = item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange);
