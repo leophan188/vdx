@@ -48,8 +48,9 @@ public class ProjectReportExportService {
     private static final String HEADER_HEX = "DCE6F7";
     private static final String LABEL_HEX = "F0F3F7";
 
+    // Báo cáo ngày/tuần xuất ra KHÔNG có cột PIC (theo yêu cầu) — bản in tập trung vào tiến độ việc.
     private static final String[] COLS =
-            {"STT", "Tên công việc", "PIC", "Trạng thái", "Bắt đầu", "Kết thúc", "%"};
+            {"STT", "Tên công việc", "Trạng thái", "Bắt đầu", "Kết thúc", "%"};
 
     // Màu khối/thẻ theo trạng thái (RGB).
     private static final byte[] GREEN = {(byte) 0x2E, (byte) 0xA0, (byte) 0x5A};
@@ -76,12 +77,12 @@ public class ProjectReportExportService {
         return (int) t.parentPath().chars().filter(c -> c == '›').count() + 1;
     }
 
-    /** Một dòng dữ liệu công việc (STT · Tên thụt lề · PIC · Trạng thái · Bắt đầu · Kết thúc · %). */
+    /** Một dòng dữ liệu công việc (STT · Tên thụt lề · Trạng thái · Bắt đầu · Kết thúc · %). */
     private String[] rowOf(ProjectDto.ReportTaskItem t, int stt) {
         int lvl = level(t);
         String name = "    ".repeat(lvl) + (lvl > 0 ? "└ " : "") + nz(t.title());
         return new String[]{
-                String.valueOf(stt), name, nz(t.assigneeName()), statusLabel(t.status()),
+                String.valueOf(stt), name, statusLabel(t.status()),
                 nz(t.startDate()), nz(t.dueDate()), Math.round(t.progressPct()) + "%"};
     }
 
@@ -155,7 +156,8 @@ public class ProjectReportExportService {
             rr++; // dòng trống
 
             // ===== 3 THẺ SỐ LIỆU: Hoàn thành (xanh) · Đang làm (xanh dương) · Trễ hạn (đỏ) =====
-            int[][] cardCols = {{0, 1}, {2, 4}, {5, 6}};
+            // Chia đều 3 thẻ trên toàn bộ bề rộng bảng (tự co theo số cột, tránh gắn cứng như trước).
+            int[][] cardCols = {{0, 1}, {2, Math.max(2, last - 2)}, {Math.max(3, last - 1), last}};
             String[] cardLabel = {"✅ HOÀN THÀNH", "🔄 ĐANG LÀM", "⛔ TRỄ HẠN"};
             int[] cardVal = {r.done().size(), r.inProgress().size(), r.overdue().size()};
             byte[][] cardColor = {GREEN, BLUE, RED};
@@ -241,11 +243,11 @@ public class ProjectReportExportService {
                 rr++; // trống giữa các khối
             }
 
-            // Độ rộng cột cân đối: STT · Tên(rộng vừa) · PIC · Trạng thái · Bắt đầu · Kết thúc · %
-            int[] w = {1500, 12000, 5200, 4600, 3600, 3600, 6000};
+            // Độ rộng cột cân đối: STT · Tên(rộng) · Trạng thái · Bắt đầu · Kết thúc · %
+            int[] w = {1500, 17000, 4600, 3600, 3600, 6000};
             for (int c = 0; c < COLS.length; c++) sh.setColumnWidth(c, w[c]);
 
-            // THANH TIẾN TRÌNH %: data bar xanh trên cột "% HT" (G) — chỉ áp lên ô SỐ (bỏ qua header/section).
+            // THANH TIẾN TRÌNH %: data bar xanh trên cột "%" (F sau khi bỏ cột PIC) — chỉ áp ô SỐ.
             try {
                 var scf = sh.getSheetConditionalFormatting();
                 XSSFColor barColor = new XSSFColor(new byte[]{(byte) 0x63, (byte) 0xC3, (byte) 0x84}, null);
@@ -256,7 +258,10 @@ public class ProjectReportExportService {
                 dbf.getMaxThreshold().setRangeType(org.apache.poi.ss.usermodel.ConditionalFormattingThreshold.RangeType.NUMBER);
                 dbf.getMaxThreshold().setValue(100d);
                 dbf.setWidthMax(90);
-                CellRangeAddress[] regions = {CellRangeAddress.valueOf("G1:G" + Math.max(1, rr))};
+                // Cột cuối = cột "%": suy từ COLS để đổi số cột không phải sửa tay lần nữa.
+                String pctCol = String.valueOf((char) ('A' + COLS.length - 1));
+                CellRangeAddress[] regions = {
+                        CellRangeAddress.valueOf(pctCol + "1:" + pctCol + Math.max(1, rr))};
                 scf.addConditionalFormatting(regions, rule);
             } catch (Exception ignore) { /* bản POI không hỗ trợ data bar → bỏ qua, vẫn có số % */ }
 
@@ -280,11 +285,10 @@ public class ProjectReportExportService {
                               java.util.Map<String, XSSFCellStyle> sst) {
         put(row, 0, vals[0], center);   // STT
         put(row, 1, vals[1], cell);     // Tên (thụt lề)
-        put(row, 2, vals[2], cell);     // PIC
-        put(row, 3, vals[3], sst.getOrDefault(t.status(), center)); // Trạng thái (màu)
-        put(row, 4, vals[4], center);   // Bắt đầu
-        put(row, 5, vals[5], center);   // Kết thúc
-        putNum(row, 6, t.progressPct(), pct); // %
+        put(row, 2, vals[2], sst.getOrDefault(t.status(), center)); // Trạng thái (màu)
+        put(row, 3, vals[3], center);   // Bắt đầu
+        put(row, 4, vals[4], center);   // Kết thúc
+        putNum(row, 5, t.progressPct(), pct); // %
     }
 
     // ===================== WORD =====================
