@@ -278,7 +278,14 @@ public class ProjectReportService {
             if (t.getType() == TaskType.BUG) {
                 bugCount++;
             }
-            boolean isOverdue = t.getDueDate() != null && t.getDueDate().isBefore(today) && !isDone && !isCancelled;
+            // Ngày HIỆU LỰC = ngày đã tổng hợp từ lá con (lá thì là ngày của chính nó).
+            // PHẢI dùng đúng ngày đang HIỂN THỊ để xét trễ hạn/sắp tới; nếu xét bằng ngày riêng của
+            // cha thì cha có hạn riêng 06/07 (đã qua) bị báo "trễ hạn" trong khi bảng hiện 31/07.
+            LocalDate[] effRange = rollRange.getOrDefault(t.getId(),
+                    new LocalDate[]{t.getStartDate(), t.getDueDate()});
+            LocalDate effStart = effRange[0], effDue = effRange[1];
+
+            boolean isOverdue = effDue != null && effDue.isBefore(today) && !isDone && !isCancelled;
             if (isOverdue) {
                 overdueCount++;
             }
@@ -293,7 +300,7 @@ public class ProjectReportService {
             } else if (t.getStatus() == TaskStatus.IN_PROGRESS || t.getStatus() == TaskStatus.IN_REVIEW) {
                 inProgress.add(item);
             } else if (!isCancelled) { // TODO / BACKLOG (bỏ qua việc đã Huỷ)
-                LocalDate start = t.getStartDate();
+                LocalDate start = effStart;
                 boolean within = start == null || (!start.isBefore(today) && start.isBefore(upcomingTo));
                 if (within) {
                     upcoming.add(item);
