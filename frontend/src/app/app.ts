@@ -8,6 +8,7 @@ import { ThemeService } from './shared/theme.service';
 import { ToastHost } from './shared/toast/toast-host';
 import { NotificationBell } from './shared/notification-bell/notification-bell';
 import { QuickCreate } from './shared/quick-create/quick-create';
+import { BrandMark } from './shared/brand-mark/brand-mark';
 import { QuickCreateType } from './core/me-bug.service';
 import { loadPref, savePref } from './shared/view-prefs';
 import { PROJECT_TABS, PrjTabGroup, groupPrjTabs } from './projects/project-tabs';
@@ -77,7 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
 
 @Component({
   selector: 'app-root',
-  imports: [RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, QuickCreate],
+  imports: [BrandMark, RouterOutlet, RouterLink, RouterLinkActive, UpperCasePipe, ToastHost, NotificationBell, QuickCreate],
   templateUrl: './app.html',
   styleUrl: './app.scss'
 })
@@ -189,11 +190,11 @@ export class App {
     }
   }
 
-  /** Map URL → tiêu đề theo tiền tố (bỏ query/fragment); mặc định "VMO DX". */
+  /** Map URL → tiêu đề theo tiền tố (bỏ query/fragment); mặc định "Plan X". */
   private titleFor(url: string): string {
     const path = (url || '').split(/[?#]/)[0];
     const hit = PAGE_TITLES.find(([prefix]) => path === prefix || path.startsWith(prefix + '/'));
-    return hit ? hit[1] : 'VMO DX';
+    return hit ? hit[1] : 'Plan X';
   }
 
   /** Phiên bản avatar (cache-bust ảnh đại diện ở topbar). */

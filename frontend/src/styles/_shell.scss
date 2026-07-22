@@ -113,6 +113,14 @@
   font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--sidebar-fg);
 }
 .sidebar__brand-text strong .vmo-v { color: var(--color-primary); font-weight: 800; }
+/* Chữ X của wordmark "Plan X" — gradient xanh dương → xanh ngọc theo bộ nhận diện. */
+.brand-x {
+  background: linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%);
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: #3B82F6;
+  font-weight: 800;
+}
+
 .sidebar__brand-text strong em { font-style: normal; font-weight: 600; color: var(--sidebar-fg-muted); }
 .sidebar__brand-text small { font-size: 11px; color: var(--sidebar-fg-muted); }
 

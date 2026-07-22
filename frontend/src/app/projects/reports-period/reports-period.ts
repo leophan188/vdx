@@ -609,7 +609,7 @@ export class PrjReportsPeriod {
     return `${p(d)}/${p(m)}/${y} · ${wd}`;
   });
 
-  /** Mở trang in: bật lớp phủ → đổi tiêu đề tài liệu (tránh "VMO DX — Hệ thống nội bộ" lọt vào header PDF) → in → khôi phục. */
+  /** Mở trang in: bật lớp phủ → đổi tiêu đề tài liệu (tránh tiêu đề trang lọt vào header PDF) → in → khôi phục. */
   openPrint(): void {
     this.printMode.set(true);
     const prevTitle = document.title;

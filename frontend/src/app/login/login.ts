@@ -1,12 +1,13 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { BrandMark } from '../shared/brand-mark/brand-mark';
 import { Router } from '@angular/router';
 import { AuthService } from '../core/auth.service';
 import { ThemeService } from '../shared/theme.service';
 
 @Component({
   selector: 'app-login',
-  imports: [FormsModule],
+  imports: [FormsModule, BrandMark],
   templateUrl: './login.html',
   styleUrl: './login.scss'
 })

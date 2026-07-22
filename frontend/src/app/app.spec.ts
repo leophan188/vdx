@@ -23,7 +23,7 @@ describe('App', () => {
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.sidebar__brand')?.textContent).toContain('VMO');
+    expect(compiled.querySelector('.sidebar__brand')?.textContent).toContain('Plan X');
   });
 
   it('không render shell khi chưa đăng nhập', () => {

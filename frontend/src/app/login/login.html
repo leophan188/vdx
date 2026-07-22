@@ -1,4 +1,4 @@
-<!-- Màn đăng nhập VMO DX — Hệ thống nội bộ. 2 cột: brand (trái) + form (phải).
+<!-- Màn đăng nhập Plan X — Plan · Execute · Deliver. 2 cột: brand (trái) + form (phải).
      Style scoped: login.scss. Logic form GIỮ NGUYÊN (username/password/submit/auth.login). -->
 <div class="auth">
   <!-- Chuyển chế độ Sáng / Tối (góc trên phải) -->
@@ -11,31 +11,24 @@
 
   <div class="auth__body">
 
-    <!-- ============ TRÁI: thương hiệu VMO DX ============ -->
+    <!-- ============ TRÁI: thương hiệu Plan X ============ -->
     <section class="auth__brand">
       <div class="brand__deco brand__deco--1" aria-hidden="true"></div>
       <div class="brand__deco brand__deco--2" aria-hidden="true"></div>
 
       <div class="brand__inner">
 
-        <!-- Logo VMO: mark quỹ đạo + wordmark + tagline -->
+        <!-- Logo Plan X: mark chữ X + wordmark + tagline -->
         <div class="brand__logo">
-          <span class="vmo-mark vmo-mark--lg" aria-hidden="true">
-            <svg viewBox="0 0 48 48">
-              <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
-              <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
-              <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
-            </svg>
-          </span>
+          <brand-mark size="lg" />
           <span class="brand__word">
-            <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
-            <small class="vmo-tagline">AN ALTEN COMPANY</small>
-            <small class="vmo-sysname">Hệ thống nội bộ</small>
+            <strong>Plan <span class="brand-x">X</span></strong>
+            <small class="vmo-tagline">Plan · Execute · Deliver</small>
           </span>
         </div>
 
         <!-- Tiêu đề -->
-        <h1 class="brand__title">Chào mừng đến với<br /><span>VMO DX</span></h1>
+        <h1 class="brand__title">Chào mừng đến với<br /><span>Plan X</span></h1>
         <p class="brand__sub">
           Hệ thống nội bộ hợp nhất — làm việc, kết nối<br />
           và quản lý mọi thứ ở một nơi.
@@ -100,16 +93,10 @@
 
         <!-- Logo gọn cho mobile (ẩn ở desktop) -->
         <div class="loginbox__brand">
-          <span class="vmo-mark vmo-mark--sm" aria-hidden="true">
-            <svg viewBox="0 0 48 48">
-              <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
-              <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
-              <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
-            </svg>
-          </span>
+          <brand-mark size="sm" />
           <span class="brand__word">
-            <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
-            <small class="vmo-sysname">Hệ thống nội bộ</small>
+            <strong>Plan <span class="brand-x">X</span></strong>
+            <small class="vmo-sysname">Plan · Execute · Deliver</small>
           </span>
         </div>
 
@@ -167,6 +154,6 @@
 
   <!-- ============ Footer ============ -->
   <footer class="auth__footer">
-    <span>© 2024 VMO DX. All rights reserved.</span>
+    <span>© 2026 Plan X. All rights reserved.</span>
   </footer>
 </div>

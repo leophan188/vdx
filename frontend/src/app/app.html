@@ -8,16 +8,10 @@
     <!-- SIDEBAR DỌC: chức năng con của MODULE đang chọn -->
     <aside class="sidebar">
       <div class="sidebar__brand">
-        <span class="sidebar__logo vmo-mark" aria-hidden="true">
-          <svg viewBox="0 0 48 48">
-            <path class="vmo-mark__arc1" d="M40 16.5A19 19 0 0 0 8 16.5" />
-            <path class="vmo-mark__arc2" d="M8 31.5A19 19 0 0 0 40 31.5" />
-            <circle class="vmo-mark__core" cx="24" cy="24" r="4.5" />
-          </svg>
-        </span>
+        <brand-mark class="sidebar__logo" />
         <span class="sidebar__brand-text">
-          <strong><span class="vmo-v">V</span>MO <em>DX</em></strong>
-          <small>Hệ thống nội bộ</small>
+          <strong>Plan <span class="brand-x">X</span></strong>
+          <small>Plan · Execute · Deliver</small>
         </span>
       </div>
       <nav class="main-nav" aria-label="Chức năng" (click)="closeMobileNav()">
@@ -48,7 +42,7 @@
         <div class="sidebar__foot-card sidebar__foot-card--static">
           <span class="nav-ico">🛡️</span>
           <span class="sidebar__foot-meta">
-            <span>VMO DX</span>
+            <span>Plan X</span>
             <span class="sidebar__foot-ver">Phiên bản 2.0.0</span>
           </span>
         </div>
