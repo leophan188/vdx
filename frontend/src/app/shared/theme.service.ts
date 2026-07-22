@@ -32,9 +32,9 @@ const def = (
   topbar: string
 ): AccentDef => ({ key, label, sidebar, accent, topbar, swatch: accent });
 
-/** 12 SKIN có tên — mặc định 'vmo'. Mỗi skin theme cả sidebar + topbar + accent. */
+/** 12 SKIN có tên — mặc định 'navy' (khớp nhận diện Plan X). Mỗi skin theme cả sidebar + topbar + accent. */
 export const ACCENTS: readonly AccentDef[] = [
-  def('vmo', 'Cam VMO', '#2a1c10', '#ee6c1e', '#ffffff'),
+  def('orange', 'Cam', '#2a1c10', '#ee6c1e', '#ffffff'),
   def('minimal', 'Tối giản', '#ffffff', '#2563eb', '#ffffff'),
   def('navy', 'Navy', '#0f172a', '#3b82f6', '#ffffff'),
   def('slate', 'Slate', '#1e293b', '#94a3b8', '#ffffff'),
@@ -48,7 +48,16 @@ export const ACCENTS: readonly AccentDef[] = [
   def('midnight', 'Nửa đêm', '#020617', '#818cf8', '#ffffff')
 ];
 
-const DEFAULT_ACCENT = 'vmo';
+const DEFAULT_ACCENT = 'navy';
+
+/**
+ * Ánh xạ KEY skin cũ → mới (đổi tên khi bỏ thương hiệu cũ).
+ * Người dùng đã lưu 'vmo' trong localStorage hoặc cột theme_accent vẫn giữ đúng bộ màu cam,
+ * không bị rơi về mặc định.
+ */
+const LEGACY_ACCENTS: Record<string, string> = { vmo: 'orange' };
+const normalizeAccent = (key: string | null | undefined): string | null =>
+  key ? (LEGACY_ACCENTS[key] ?? key) : null;
 const ACCENT_KEYS = new Set(ACCENTS.map((a) => a.key));
 
 /**
@@ -81,7 +90,7 @@ export class ThemeService {
       } else if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) {
         initialTheme = 'dark';
       }
-      const savedAccent = localStorage.getItem(ACCENT_KEY);
+      const savedAccent = normalizeAccent(localStorage.getItem(ACCENT_KEY));
       if (savedAccent && ACCENT_KEYS.has(savedAccent)) {
         initialAccent = savedAccent;
       }
@@ -98,8 +107,9 @@ export class ThemeService {
       const user = this.auth.currentUser();
       if (!user) return;
       untracked(() => {
-        if (user.themeAccent && ACCENT_KEYS.has(user.themeAccent) && user.themeAccent !== this.accent()) {
-          this.applyAccent(user.themeAccent);
+        const fromServer = normalizeAccent(user.themeAccent);
+        if (fromServer && ACCENT_KEYS.has(fromServer) && fromServer !== this.accent()) {
+          this.applyAccent(fromServer);
         }
         if ((user.themeMode === 'light' || user.themeMode === 'dark') && user.themeMode !== this.theme()) {
           this.applyMode(user.themeMode);

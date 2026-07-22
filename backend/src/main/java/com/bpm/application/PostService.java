@@ -97,7 +97,7 @@ public class PostService {
     /**
      * Tạo TIN HỆ THỐNG nổi bật (ghim) — dùng cho tin tự động (chúc mừng sinh nhật / onboard).
      * Idempotent theo {@code marker} ẩn cuối body: nếu đã có bài chứa marker → KHÔNG tạo lại (trả false).
-     * Tác giả = tài khoản admin truyền vào (authorId/authorName); hiển thị tên hệ thống "VMO DX".
+     * Tác giả = tài khoản admin truyền vào (authorId/authorName); hiển thị tên hệ thống "Plan X".
      * {@code subjectUserId} = nhân sự được chúc (để FE nhúng ảnh đại diện vào nội dung); null nếu không có.
      * KHÔNG phát thông báo hàng loạt (tránh spam khi endpoint highlights được gọi lặp).
      *
@@ -114,7 +114,7 @@ public class PostService {
         }
         String cat = Post.normalizeCategory(category);
         String fullBody = body + marker;
-        Post p = new Post(authorId, authorName == null ? "VMO DX" : authorName, fullBody,
+        Post p = new Post(authorId, authorName == null ? "Plan X" : authorName, fullBody,
                 "[]", "ALL", null, null, "", cat);
         p.setPinned(true);
         p.setSubjectUserId(subjectUserId);

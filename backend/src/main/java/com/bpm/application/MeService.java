@@ -84,7 +84,8 @@ public class MeService {
         auditPort.record("ME_PASSWORD_CHANGED", "UserAccount", acc.getId(), username, "self-service");
     }
 
-    /** Bộ THEME PRESET hợp lệ (skin: màu menu+toolbar+nhấn); giá trị khác → rơi về 'vmo' (mặc định). */
+    /** Bộ THEME PRESET hợp lệ (skin: màu menu+toolbar+nhấn). Giữ 'vmo' để KHÔNG loại bỏ giá trị cũ
+     * đã lưu của người dùng — FE tự ánh xạ 'vmo' → 'orange' khi hiển thị. */
     private static final java.util.Set<String> ACCENTS = java.util.Set.of(
             "vmo", "orange", "loop", "minimal", "navy", "slate", "indigo", "ocean",
             "teal", "emerald", "rose", "violet", "amber", "midnight",

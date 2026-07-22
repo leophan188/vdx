@@ -67,7 +67,7 @@ public class UserAccount {
 
     /**
      * Bộ màu accent giao diện đã chọn (orange/blue/green/purple/teal/rose).
-     * NULLABLE (quy ước H2): null → FE dùng mặc định orange VMO.
+     * NULLABLE (quy ước H2): null → FE dùng skin mặc định.
      */
     @Column(name = "theme_accent", length = 20)
     private String themeAccent;

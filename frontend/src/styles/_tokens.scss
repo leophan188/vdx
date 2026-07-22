@@ -151,14 +151,14 @@
      light/dark → topbar TỰ NHUỐM màu theme theo --color-primary của skin (sáng lẫn tối).
    ========================================================================= */
 
-/* ---- vmo (Cam VMO — MẶC ĐỊNH): sidebar nâu đậm, accent cam, topbar nền sáng ---- */
-:root[data-accent='vmo'] {
+/* ---- orange (Cam): sidebar nâu đậm, accent cam, topbar nền sáng ---- */
+:root[data-accent='orange'] {
   --color-primary: #ee6c1e; --color-primary-hover: #d65f15; --color-primary-soft: #fdeee2;
   --sidebar-bg: #2a1c10; --sidebar-fg: #ffffff; --sidebar-fg-muted: #c4ab95; --sidebar-section: #8a7257;
   --sidebar-hover-bg: rgba(255, 255, 255, 0.07);
-  /* --topbar-bg thừa kế công thức tint (primary 12% trên surface) — tự nhuốm cam VMO. */
+  /* --topbar-bg thừa kế công thức tint (primary 12% trên surface) — tự nhuốm sắc cam. */
 }
-:root[data-theme='dark'][data-accent='vmo'] {
+:root[data-theme='dark'][data-accent='orange'] {
   --color-primary: #f47e2c; --color-primary-hover: #ee6c1e; --color-primary-soft: #3a2415;
 }
 

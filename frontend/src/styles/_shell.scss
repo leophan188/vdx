@@ -100,19 +100,11 @@
   white-space: nowrap;
 }
 .sidebar__logo { flex: none; height: 34px; width: 34px; }
-/* Mark quỹ đạo VMO: 2 cung cam xoáy + tâm */
-.sidebar__logo.vmo-mark svg { width: 100%; height: 100%; display: block; }
-.sidebar__logo.vmo-mark .vmo-mark__arc1,
-.sidebar__logo.vmo-mark .vmo-mark__arc2 {
-  fill: none; stroke: var(--color-primary); stroke-width: 5; stroke-linecap: round;
-}
-.sidebar__logo.vmo-mark .vmo-mark__core { fill: var(--color-primary); }
 .sidebar__brand-text { flex: 1; display: flex; flex-direction: column; line-height: 1.15; min-width: 0; }
 .sidebar__brand-text strong {
   font-family: 'Sora', var(--font-sans);
   font-size: var(--text-base); font-weight: var(--weight-semibold); color: var(--sidebar-fg);
 }
-.sidebar__brand-text strong .vmo-v { color: var(--color-primary); font-weight: 800; }
 /* Chữ X của wordmark "Plan X" — gradient xanh dương → xanh ngọc theo bộ nhận diện. */
 .brand-x {
   background: linear-gradient(135deg, #3B82F6 0%, #2DD4BF 100%);

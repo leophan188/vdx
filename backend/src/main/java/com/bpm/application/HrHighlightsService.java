@@ -158,7 +158,7 @@ public class HrHighlightsService {
     /**
      * Tự tạo 1 tin NỔI BẬT (ghim, category EVENT) chúc mừng sinh nhật khi HÔM NAY đúng ngày.
      * Idempotent theo marker ngày: mỗi nhân sự/ngày chỉ 1 bài.
-     * Tác giả = HỆ THỐNG (admin, hiển thị "VMO DX"); nội dung NHÚNG ảnh nhân sự qua subjectUserId.
+     * Tác giả = HỆ THỐNG (admin, hiển thị "Plan X"); nội dung NHÚNG ảnh nhân sự qua subjectUserId.
      * Không có admin → bỏ qua (không lỗi).
      */
     private void maybeCelebrateBirthday(Employee e, LocalDate today) {
@@ -170,10 +170,10 @@ public class HrHighlightsService {
         String dept = e.getDeptCode() == null || e.getDeptCode().isBlank() ? "" : " — " + e.getDeptCode();
         String body = "🎂 Chúc mừng sinh nhật " + e.getFullName() + dept + "! "
                 + "Chúc bạn một tuổi mới thật nhiều sức khoẻ, niềm vui và thành công. "
-                + "Cả nhà VMO DX cùng gửi lời chúc tốt đẹp nhất tới bạn! 🎉🎈";
+                + "Cả nhà Plan X cùng gửi lời chúc tốt đẹp nhất tới bạn! 🎉🎈";
         try {
             // subjectUserId = nhân sự được chúc (null nếu không có tài khoản — vẫn tạo bài, chỉ không có ảnh)
-            postService.createSystemPinned(admin.getId(), "VMO DX", body, "EVENT",
+            postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
                     blankToNull(e.getUserAccountId()), marker);
         } catch (Exception ex) {
             log.warn("[HrHighlights] Không tạo được tin sinh nhật cho {}: {}", e.getEmpCode(), ex.toString());
@@ -192,10 +192,10 @@ public class HrHighlightsService {
         String marker = "​#celebrate-ob-" + e.getEmpCode() + "-" + today;
         String dept = e.getDeptCode() == null || e.getDeptCode().isBlank() ? "công ty" : e.getDeptCode();
         String body = "🎉 Chào mừng " + e.getFullName() + " gia nhập " + dept + "! "
-                + "Rất vui được đón thêm một thành viên mới vào đại gia đình VMO DX. "
+                + "Rất vui được đón thêm một thành viên mới vào đại gia đình Plan X. "
                 + "Chúc bạn nhanh chóng hoà nhập và gặt hái nhiều thành công cùng đội ngũ! 🤝✨";
         try {
-            postService.createSystemPinned(admin.getId(), "VMO DX", body, "EVENT",
+            postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
                     blankToNull(e.getUserAccountId()), marker);
         } catch (Exception ex) {
             log.warn("[HrHighlights] Không tạo được tin chào mừng cho {}: {}", e.getEmpCode(), ex.toString());
