@@ -30,7 +30,10 @@ COPY --from=build /app/dist/frontend/browser/ /usr/share/nginx/html/
 EXPOSE 80
 
 # nginx:alpine có sẵn wget cho healthcheck.
+# Dùng 127.0.0.1 chứ KHÔNG dùng localhost: trong container localhost phân giải ra IPv6 ::1,
+# mà nginx chỉ "listen 80" (IPv4) → wget bị "Connection refused" và container luôn unhealthy
+# dù vẫn phục vụ người dùng bình thường (trạng thái sai làm che mất sự cố thật).
 HEALTHCHECK --interval=15s --timeout=5s --start-period=10s --retries=5 \
-  CMD wget -q -O /dev/null http://localhost/ || exit 1
+  CMD wget -q -O /dev/null http://127.0.0.1/ || exit 1
 
 CMD ["nginx", "-g", "daemon off;"]
