@@ -7,7 +7,7 @@ import { Modal } from '../../shared/modal/modal';
 import {
   ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority
 } from '../../core/project.service';
-import { WORK_CATS, catOf, WorkCat, TYPE_META } from '../work-stats';
+import { WORK_CATS, catOf, WorkCat, TYPE_META, STATUS_META } from '../work-stats';
 
 /** Kỳ báo cáo đang xem. */
 type Period = 'daily' | 'weekly';
@@ -20,16 +20,6 @@ interface ReportBlock {
   rows: ReportTaskItem[];
   emptyText: string;
 }
-
-/** Cột trạng thái cho ma trận loại × trạng thái (kèm màu cho biểu đồ donut trang in). */
-const STATUS_META: { key: TaskStatus; label: string; color: string }[] = [
-  { key: 'BACKLOG', label: 'Backlog', color: '#94a3b8' },
-  { key: 'TODO', label: 'Cần làm', color: '#3b82f6' },
-  { key: 'IN_PROGRESS', label: 'Đang làm', color: '#f59e0b' },
-  { key: 'IN_REVIEW', label: 'Kiểm thử', color: '#8b5cf6' },
-  { key: 'DONE', label: 'Hoàn thành', color: '#22c55e' },
-  { key: 'CANCELLED', label: 'Huỷ', color: '#cbd5e1' }
-];
 
 /** Mức ưu tiên (thống kê bug/issue). */
 const PRIORITY_META: { key: TaskPriority; label: string; color: string }[] = [

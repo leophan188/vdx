@@ -41,25 +41,34 @@
       </section>
     }
 
-    <!-- Thống kê theo loại: 3 thẻ (Công việc / Bug / Issue) -->
-    <h3 class="ov2__h">Thống kê theo loại</h3>
+    <!-- Thống kê theo loại: 3 thẻ (Công việc / Bug / Issue) — bấm số để xem danh sách -->
+    <h3 class="ov2__h">Thống kê theo loại <span class="ov2__hint">— bấm vào số để xem danh sách công việc</span></h3>
     <section class="ov2__cats">
       @for (c of catStats(); track c.key) {
         <div class="ov2__cat" [style.--cat]="c.color">
           <div class="ov2__cat-head">
             <span class="ov2__cat-ico">{{ c.icon }}</span>
             <span class="ov2__cat-name">{{ c.label }}</span>
-            <span class="ov2__cat-total">{{ c.total }}</span>
+            <button type="button" class="ov2__cat-total-btn" [disabled]="!c.total"
+                    [title]="'Xem toàn bộ ' + c.label" (click)="openDetail(c.label, c.items)">{{ c.total }}</button>
           </div>
           <div class="ov2__cat-bar"><div class="ov2__cat-fill" [style.width.%]="c.donePct"></div></div>
           <div class="ov2__cat-sub">{{ c.done }}/{{ c.total }} hoàn thành · {{ c.donePct }}%</div>
           <ul class="ov2__cat-list">
-            <li><span>✅ Hoàn thành</span><b>{{ c.done }}</b></li>
-            <li><span>🔄 Đang làm</span><b>{{ c.doing }}</b></li>
-            <li><span>🔍 Kiểm thử</span><b>{{ c.review }}</b></li>
-            <li><span>🗒️ Cần làm</span><b>{{ c.todo }}</b></li>
-            <li><span>📋 Backlog</span><b>{{ c.backlog }}</b></li>
-            <li><span>🚫 Huỷ</span><b>{{ c.cancel }}</b></li>
+            @for (s of catListMeta; track s.key) {
+              <li>
+                <button type="button" class="ov2__cat-btn" [disabled]="!c.byStatus[s.key].length"
+                        (click)="openDetail(c.label + ' · ' + s.label, c.byStatus[s.key])">
+                  <span>{{ s.icon }} {{ s.label }}</span><b>{{ c.byStatus[s.key].length }}</b>
+                </button>
+              </li>
+            }
+            <li>
+              <button type="button" class="ov2__cat-btn" [disabled]="!c.overdueItems.length"
+                      (click)="openDetail(c.label + ' · Trễ hạn', c.overdueItems)">
+                <span>⛔ Trễ hạn</span><b [class.ov2__num--overdue]="c.overdueItems.length">{{ c.overdueItems.length }}</b>
+              </button>
+            </li>
           </ul>
           <button type="button" class="ov2__cat-link"
                   (click)="openTab.emit(c.key === 'TASK' ? 'kanban' : 'bugs')">Xem chi tiết →</button>
@@ -67,14 +76,112 @@
       }
     </section>
 
-    <!-- Tiến độ % EPIC / Story (thứ tự cây, Story thụt dưới Epic) -->
-    @if (epicStoryRows().length) {
-      <h3 class="ov2__h">Tiến độ EPIC / Story — {{ epicStoryRows().length }} mục</h3>
+    <!-- Bảng tổng hợp công việc theo NHÂN SỰ × loại × trạng thái — mọi ô số đều mở popup -->
+    @if (personRows().length) {
+      <h3 class="ov2__h">Tổng hợp công việc theo nhân sự — {{ personRows().length }} người
+        <span class="ov2__hint">— bấm vào số để xem danh sách công việc</span></h3>
       <section class="ov2__panel">
-        @for (e of epicStoryRows(); track e.code) {
-          <div class="ov2__es-row" [style.padding-left.px]="e.level * 22">
-            <span class="badge" [class]="e.type === 'EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type === 'EPIC' ? 'Epic' : 'Story' }}</span>
-            <span class="ov2__es-title" [title]="e.title">{{ e.title }}</span>
+        <div class="ov2__mx">
+          <div class="ov2__mx-inner">
+            <!-- Hàng nhóm cột: Theo loại | Theo trạng thái -->
+            <div class="ov2__mrow ov2__mrow--head ov2__mrow--group">
+              <span></span>
+              <span class="ov2__mgrp" style="grid-column: span 3">Theo loại</span>
+              <span class="ov2__mgrp" style="grid-column: span 6">Theo trạng thái</span>
+              <span></span><span></span>
+            </div>
+            <div class="ov2__mrow ov2__mrow--head">
+              <span class="ov2__mname">Nhân sự</span>
+              @for (c of workCats; track c.key) { <span [title]="c.label">{{ c.icon }} {{ c.label }}</span> }
+              @for (s of statusMetaAll; track s.key) { <span class="ov2__msep">{{ s.label }}</span> }
+              <span class="ov2__msep">Tổng</span>
+              <span>% HT</span>
+            </div>
+
+            @for (p of personRows(); track p.key) {
+              <div class="ov2__mrow ov2__mrow--body">
+                <span class="ov2__mname">
+                  @if (p.userId) { <employee-chip [name]="p.name" /> } @else { <span>{{ p.name }}</span> }
+                </span>
+                @for (c of workCats; track c.key) {
+                  @if (p.byType[c.key].length) {
+                    <span><button type="button" class="ov2__num"
+                            (click)="openDetail(p.name + ' · ' + c.label, p.byType[c.key])">{{ p.byType[c.key].length }}</button></span>
+                  } @else { <span class="ov2__zero">0</span> }
+                }
+                @for (s of statusMetaAll; track s.key) {
+                  @if (p.byStatus[s.key].length) {
+                    <span class="ov2__msep"><button type="button" class="ov2__num"
+                            (click)="openDetail(p.name + ' · ' + s.label, p.byStatus[s.key])">{{ p.byStatus[s.key].length }}</button></span>
+                  } @else { <span class="ov2__msep ov2__zero">0</span> }
+                }
+                <span class="ov2__msep"><button type="button" class="ov2__num"
+                        (click)="openDetail('Công việc của ' + p.name, p.items)">{{ p.total }}</button></span>
+                <span class="ov2__mpct">
+                  <span class="ov2__mpct-bar"><span class="ov2__mpct-fill" [style.width.%]="p.donePct"></span></span>
+                  <span class="ov2__mpct-val">{{ p.donePct }}%</span>
+                </span>
+              </div>
+            }
+
+            <!-- Tổng cộng -->
+            @if (personTotal(); as tt) {
+              <div class="ov2__mrow ov2__mrow--sum">
+                <span class="ov2__mname"><span>Σ {{ tt.name }}</span></span>
+                @for (c of workCats; track c.key) {
+                  @if (tt.byType[c.key].length) {
+                    <span><button type="button" class="ov2__num"
+                            (click)="openDetail('Toàn dự án · ' + c.label, tt.byType[c.key])">{{ tt.byType[c.key].length }}</button></span>
+                  } @else { <span class="ov2__zero">0</span> }
+                }
+                @for (s of statusMetaAll; track s.key) {
+                  @if (tt.byStatus[s.key].length) {
+                    <span class="ov2__msep"><button type="button" class="ov2__num"
+                            (click)="openDetail('Toàn dự án · ' + s.label, tt.byStatus[s.key])">{{ tt.byStatus[s.key].length }}</button></span>
+                  } @else { <span class="ov2__msep ov2__zero">0</span> }
+                }
+                <span class="ov2__msep"><button type="button" class="ov2__num"
+                        (click)="openDetail('Toàn bộ công việc dự án', tt.items)">{{ tt.total }}</button></span>
+                <span class="ov2__mpct">
+                  <span class="ov2__mpct-bar"><span class="ov2__mpct-fill" [style.width.%]="tt.donePct"></span></span>
+                  <span class="ov2__mpct-val">{{ tt.donePct }}%</span>
+                </span>
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+    }
+
+    <!-- Tiến độ % EPIC / Story (thứ tự cây, Story thụt dưới Epic) + số việc xong / chưa xong -->
+    @if (epicStoryRows().length) {
+      <h3 class="ov2__h">Tiến độ EPIC / Story — {{ epicStoryRows().length }} mục
+        <span class="ov2__hint">— bấm vào số để xem danh sách công việc</span></h3>
+      <section class="ov2__panel">
+        <div class="ov2__es-row ov2__es-row--head">
+          <span class="ov2__es-title">Hạng mục</span>
+          <span class="ov2__es-nums">
+            <span class="ov2__es-lbl" title="Số việc con đã hoàn thành">✅ Xong</span>
+            <span class="ov2__es-lbl" title="Số việc con chưa hoàn thành (không tính Huỷ)">⏳ Chưa xong</span>
+          </span>
+          <span class="ov2__es-bar-head">Tiến độ</span>
+        </div>
+        @for (e of epicStoryRows(); track e.id) {
+          <div class="ov2__es-row">
+            <span class="ov2__es-title" [style.padding-left.px]="e.level * 22">
+              <span class="badge" [class]="e.type === 'EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type === 'EPIC' ? 'Epic' : 'Story' }}</span>
+              <span class="ov2__es-name" [title]="e.title">{{ e.title }}</span>
+            </span>
+            <span class="ov2__es-nums">
+              @if (e.doneItems.length) {
+                <button type="button" class="ov2__num ov2__num--done"
+                        (click)="openDetail(e.title + ' · Đã hoàn thành', e.doneItems)">{{ e.doneItems.length }}</button>
+              } @else { <span class="ov2__zero">0</span> }
+              @if (e.openItems.length) {
+                <button type="button" class="ov2__num ov2__num--open"
+                        (click)="openDetail(e.title + ' · Chưa hoàn thành', e.openItems)">{{ e.openItems.length }}</button>
+              } @else { <span class="ov2__zero">0</span> }
+            </span>
             <div class="ov2__es-bar"><div class="ov2__es-fill" [style.width.%]="e.pct"></div></div>
             <b class="ov2__es-pct">{{ e.pct }}%</b>
           </div>
@@ -134,6 +241,40 @@
     {{ loading() ? 'Đang tải tổng quan…' : 'Không tải được dữ liệu dự án.' }}
   </div>
 }
+
+<!-- Popup: danh sách công việc đằng sau một ô số (theo loại / nhân sự / Epic-Story) -->
+<app-modal [open]="!!detailModal()" [title]="detailModal()?.title || ''"
+           [xwide]="true" (closed)="detailModal.set(null)">
+  @if (detailModal(); as d) {
+    <data-grid [columns]="detailCols" [rows]="d.items" [exportName]="d.title"
+               [pageSize]="50" [pageSizes]="[50, 100, 200]" searchPlaceholder="Tìm công việc…">
+      <ng-template gridCell="code" let-t>
+        <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ t.code }}</span>
+      </ng-template>
+      <ng-template gridCell="type" let-t>
+        <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
+      </ng-template>
+      <ng-template gridCell="title" let-t>
+        <div [title]="t.title">{{ t.title }}</div>
+        @if (parentPath(t)) { <div class="ov2__d-parent" [title]="parentPath(t)">↳ {{ parentPath(t) }}</div> }
+      </ng-template>
+      <ng-template gridCell="assigneeName" let-t>
+        @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
+        @else { <span class="ov2__d-val">— Chưa gán —</span> }
+      </ng-template>
+      <ng-template gridCell="status" let-t>
+        <span class="badge" [class]="taskStatusBadge(t.status)">{{ taskStatusLabel(t.status) }}</span>
+      </ng-template>
+      <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
+      <ng-template gridCell="progressPct" let-t>
+        <div class="ov2__d-pct">
+          <div class="ov2__d-bar"><div class="ov2__d-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
+          <span class="ov2__d-val">{{ clampPct(t.progressPct) }}%</span>
+        </div>
+      </ng-template>
+    </data-grid>
+  }
+</app-modal>
 
 <!-- ===== TRANG IN / PDF (báo cáo khách — KHÔNG có người thực hiện & trễ hạn) ===== -->
 @if (printMode() && project(); as p) {
@@ -208,15 +349,17 @@
         @if (epicStoryRows().length) {
           <h3 class="ovp__h">Tiến độ EPIC / Story</h3>
           <table class="ovp__cat ovp__es">
-            <colgroup><col><col style="width:150px"></colgroup>
-            <thead><tr><th class="l">Hạng mục</th><th>% Hoàn thành</th></tr></thead>
+            <colgroup><col><col style="width:56px"><col style="width:74px"><col style="width:150px"></colgroup>
+            <thead><tr><th class="l">Hạng mục</th><th>Xong</th><th>Chưa xong</th><th>% Hoàn thành</th></tr></thead>
             <tbody>
-              @for (e of epicStoryRows(); track e.code) {
+              @for (e of epicStoryRows(); track e.id) {
                 <tr>
                   <td class="l" [style.padding-left.px]="8 + e.level * 16">
                     <span class="ovp__es-tag" [class.ovp__es-tag--epic]="e.type === 'EPIC'">{{ e.type === 'EPIC' ? 'EPIC' : 'Story' }}</span>
                     {{ e.title }}
                   </td>
+                  <td>{{ e.doneItems.length }}</td>
+                  <td>{{ e.openItems.length }}</td>
                   <td>
                     <div class="ovp__pbar"><div class="ovp__pbar-fill" [style.width.%]="e.pct"></div><span>{{ e.pct }}%</span></div>
                   </td>

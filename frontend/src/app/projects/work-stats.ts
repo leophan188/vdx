@@ -10,6 +10,19 @@ export const WORK_CATS: { key: WorkCat; label: string; icon: string; color: stri
   { key: 'ISSUE', label: 'Issue', icon: '⚠️', color: 'var(--status-pending, #f5a623)' }
 ];
 
+/**
+ * Cột TRẠNG THÁI dùng chung cho mọi ma trận "loại/nhân sự × trạng thái"
+ * (báo cáo kỳ, tổng quan dự án). Thứ tự cố định: Backlog → Huỷ.
+ */
+export const STATUS_META: { key: TaskStatus; label: string; color: string; icon: string }[] = [
+  { key: 'BACKLOG', label: 'Backlog', color: '#94a3b8', icon: '📋' },
+  { key: 'TODO', label: 'Cần làm', color: '#3b82f6', icon: '🗒️' },
+  { key: 'IN_PROGRESS', label: 'Đang làm', color: '#f59e0b', icon: '🔄' },
+  { key: 'IN_REVIEW', label: 'Kiểm thử', color: '#8b5cf6', icon: '🔍' },
+  { key: 'DONE', label: 'Hoàn thành', color: '#22c55e', icon: '✅' },
+  { key: 'CANCELLED', label: 'Huỷ', color: '#cbd5e1', icon: '🚫' }
+];
+
 /** Nhãn NGẮN + màu pill theo LOẠI công việc (dùng cho badge ở dropdown chọn cha). */
 export const TYPE_META: Record<TaskType, { short: string; color: string }> = {
   EPIC:    { short: 'Epic',     color: 'var(--type-epic, #7c3aed)' },
@@ -70,7 +83,7 @@ export interface CatStat {
 }
 
 /** dueDate "dd/MM/yyyy" đã quá hôm nay (mốc 00:00) chưa? */
-function isOverdue(dueDate: string | null, status: TaskStatus): boolean {
+export function isOverdue(dueDate: string | null, status: TaskStatus): boolean {
   if (!dueDate || status === 'DONE' || status === 'CANCELLED') return false;
   const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(dueDate);
   if (!m) return false;

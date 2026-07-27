@@ -1,8 +1,11 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { StatCard } from '../../shared/stat-card/stat-card';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
+import { Modal } from '../../shared/modal/modal';
+import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
+import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { formatThousands } from '../../shared/format';
-import { categoryStats, CatStat } from '../work-stats';
+import { categoryStats, CatStat, catOf, isOverdue, STATUS_META, TYPE_META, WORK_CATS, WorkCat } from '../work-stats';
 import {
   ProjectService, Project, ProjectReport, ProjectStatus, TaskStatus, TaskType, ProjectTask,
   ProjectMember, ProjectActivityItem
@@ -10,6 +13,55 @@ import {
 
 interface StatusBar { status: TaskStatus; label: string; color: string; count: number; pct: number; }
 interface TypeStat { type: TaskType; label: string; badge: string; count: number; }
+
+/** Nhóm công việc theo trạng thái — giữ luôn DANH SÁCH để bấm số là mở popup chi tiết. */
+type StatusBuckets = Record<TaskStatus, ProjectTask[]>;
+/** Nhóm công việc theo loại (Công việc / Bug / Issue). */
+type TypeBuckets = Record<WorkCat, ProjectTask[]>;
+
+/** Một dòng "Thống kê theo loại" kèm danh sách công việc của từng ô số. */
+interface CatRow extends CatStat {
+  items: ProjectTask[];
+  byStatus: StatusBuckets;
+  overdueItems: ProjectTask[];
+}
+
+/** Một dòng bảng tổng hợp theo NHÂN SỰ (loại × trạng thái), mọi ô đều mở được popup. */
+interface PersonRow {
+  key: string;
+  userId: string | null;
+  name: string;
+  unassigned: boolean;
+  items: ProjectTask[];
+  byType: TypeBuckets;
+  byStatus: StatusBuckets;
+  overdueItems: ProjectTask[];
+  total: number;
+  done: number;
+  donePct: number;
+}
+
+/** Một dòng tiến độ EPIC / Story kèm số việc con xong / chưa xong. */
+interface EpicStoryRow {
+  id: string;
+  code: string;
+  title: string;
+  type: TaskType;
+  pct: number;
+  level: number;
+  items: ProjectTask[];
+  doneItems: ProjectTask[];
+  openItems: ProjectTask[];
+}
+
+/** Buckets rỗng cho 6 trạng thái. */
+function emptyStatusBuckets(): StatusBuckets {
+  return { BACKLOG: [], TODO: [], IN_PROGRESS: [], IN_REVIEW: [], DONE: [], CANCELLED: [] };
+}
+/** Buckets rỗng cho 3 loại công việc. */
+function emptyTypeBuckets(): TypeBuckets {
+  return { TASK: [], BUG: [], ISSUE: [] };
+}
 
 /**
  * Tab "Tổng quan" HỢP NHẤT (selector app-prj-overview).
@@ -20,7 +72,7 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
 @Component({
   selector: 'app-prj-overview',
   standalone: true,
-  imports: [StatCard, EmployeeChip],
+  imports: [StatCard, EmployeeChip, Modal, DataGrid, GridCellDirective],
   templateUrl: './overview.html',
   styles: [`
     .ov2 { display: grid; gap: var(--space-4); }
@@ -71,8 +123,7 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     .ov2__cat-fill { height: 100%; border-radius: 999px; background: var(--cat, var(--status-done)); }
     .ov2__cat-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
     .ov2__cat-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-    .ov2__cat-list li { display: flex; align-items: center; justify-content: space-between; padding: 5px 10px;
-      border-radius: var(--radius-md); background: var(--color-surface-alt); font-size: var(--text-sm); }
+    .ov2__cat-list li { display: block; }
     .ov2__cat-list b { font-variant-numeric: tabular-nums; }
     .ov2__cat-link { align-self: flex-start; margin-top: 2px; border: 0; background: none; color: var(--color-primary);
       cursor: pointer; font: inherit; font-size: var(--text-sm); font-weight: 600; padding: 0; }
@@ -121,10 +172,72 @@ interface TypeStat { type: TaskType; label: string; badge: string; count: number
     /* Tiến độ EPIC / Story */
     .ov2__es-row { display: flex; align-items: center; gap: var(--space-3); padding: 6px 0; border-bottom: 1px solid var(--color-border); }
     .ov2__es-row:last-child { border-bottom: 0; }
-    .ov2__es-title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ov2__es-row--head { color: var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--weight-semibold);
+      text-transform: uppercase; letter-spacing: .02em; }
+    .ov2__es-title { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--space-2); }
+    .ov2__es-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ov2__es-bar { width: 160px; flex: 0 0 auto; height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
     .ov2__es-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
     .ov2__es-pct { flex: 0 0 auto; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
+    .ov2__es-nums { flex: 0 0 auto; display: flex; align-items: center; }
+    .ov2__es-nums > * { flex: 0 0 78px; text-align: center; }
+    .ov2__es-lbl { text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ov2__es-bar-head { flex: 0 0 auto; width: 216px; text-align: right; }
+    .ov2__hint { font-size: var(--text-xs); font-weight: var(--weight-regular, 400); color: var(--color-text-muted); }
+
+    /* ===== Ô SỐ bấm được → popup danh sách công việc ===== */
+    .ov2__num { border: 0; background: none; padding: 1px 6px; border-radius: var(--radius-sm); cursor: pointer;
+      font: inherit; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; color: var(--color-primary); }
+    .ov2__num:hover { background: var(--color-primary-soft, var(--color-surface-alt)); text-decoration: underline; }
+    .ov2__num--done { color: var(--status-done); }
+    .ov2__num--open { color: var(--status-pending); }
+    .ov2__num--overdue { color: var(--overdue, #e5484d); }
+    .ov2__zero { padding: 1px 6px; color: var(--color-text-muted); opacity: .5; font-variant-numeric: tabular-nums; }
+
+    /* ===== Bảng tổng hợp theo nhân sự (nhân sự × loại × trạng thái) ===== */
+    .ov2__mx { overflow-x: auto; }
+    .ov2__mx-inner { display: grid; gap: 2px; min-width: 940px; }
+    .ov2__mrow { display: grid;
+      grid-template-columns: minmax(180px, 1.8fr) repeat(9, minmax(56px, .85fr)) minmax(56px, .7fr) minmax(112px, 1.1fr);
+      align-items: center; gap: var(--space-1); padding: 5px var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); }
+    .ov2__mrow > span:not(.ov2__mname) { text-align: center; }
+    .ov2__mrow--body { background: var(--color-surface-alt); }
+    .ov2__mrow--head { color: var(--color-text-muted); font-size: var(--text-xs);
+      font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .02em; }
+    .ov2__mrow--group { padding-bottom: 0; }
+    .ov2__mrow--group span { border-radius: var(--radius-sm); }
+    .ov2__mrow--group .ov2__mgrp { background: var(--color-surface-alt); padding: 2px 0; }
+    .ov2__mrow--sum { background: var(--color-primary-soft, var(--color-surface-alt)); font-weight: var(--weight-semibold); }
+    .ov2__mname { display: inline-flex; align-items: center; gap: var(--space-2); min-width: 0;
+      font-weight: var(--weight-medium); overflow: hidden; }
+    .ov2__mname span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ov2__msep { border-left: 1px solid var(--color-border); }
+    .ov2__mpct { display: flex; align-items: center; gap: var(--space-2); justify-content: center; }
+    .ov2__mpct-bar { flex: 1; max-width: 70px; height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+    .ov2__mpct-fill { display: block; height: 100%; border-radius: 999px; background: var(--status-done); }
+    .ov2__mpct-val { min-width: 34px; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
+
+    /* Danh sách trạng thái trong thẻ theo loại — cả dòng bấm được */
+    .ov2__cat-btn { display: flex; align-items: center; justify-content: space-between; width: 100%; gap: var(--space-2);
+      padding: 5px 10px; border: 0; border-radius: var(--radius-md); background: var(--color-surface-alt);
+      font: inherit; font-size: var(--text-sm); color: inherit; text-align: left; cursor: pointer; }
+    .ov2__cat-btn:hover:not(:disabled) { background: var(--color-primary-soft, var(--color-border)); }
+    .ov2__cat-btn:disabled { cursor: default; opacity: .65; }
+    .ov2__cat-btn b { font-variant-numeric: tabular-nums; }
+    .ov2__cat-total-btn { margin-left: auto; border: 0; background: none; padding: 0; cursor: pointer;
+      font: inherit; font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--cat, var(--color-primary));
+      font-variant-numeric: tabular-nums; }
+    .ov2__cat-total-btn:hover { text-decoration: underline; }
+
+    /* Ô chi tiết trong popup */
+    .ov2__d-type { font-size: var(--text-xs); font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
+      color: var(--tb-color, var(--color-primary)); background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
+    .ov2__d-parent { font-size: var(--text-xs); color: var(--color-text-muted); overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    .ov2__d-pct { display: flex; align-items: center; gap: var(--space-2); }
+    .ov2__d-bar { flex: 1; min-width: 48px; height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
+    .ov2__d-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
+    .ov2__d-val { font-size: var(--text-xs); color: var(--color-text-muted); min-width: 32px; text-align: right; }
 
     /* ===== TRANG IN / PDF Tổng quan (báo cáo khách) ===== */
     .rp-overlay { position: fixed; inset: 0; z-index: 1000; overflow: auto; background: #5b6472;
@@ -222,29 +335,170 @@ export class PrjOverview {
     return m ? m[0].toUpperCase() : '—';
   });
 
-  /** Thống kê RIÊNG BIỆT Task / Bug / Issue (tổng, xong, đang làm, chưa làm, trễ hạn, %). */
-  readonly catStats = computed<CatStat[]>(() => categoryStats(this.tasks()));
+  // ===================== SỐ LIỆU BẤM ĐƯỢC (popup chi tiết) =====================
 
-  /** Tiến độ % EPIC/Story theo THỨ TỰ CÂY (Story nằm dưới Epic cha) — kèm level để thụt lề. */
-  readonly epicStoryRows = computed(() => {
-    const es = this.tasks().filter((t) => t.type === 'EPIC' || t.type === 'STORY');
+  /** Cột trạng thái / loại dùng chung cho các bảng tổng hợp. */
+  readonly statusMetaAll = STATUS_META;
+  readonly workCats = WORK_CATS;
+  /** Thứ tự hiển thị trong thẻ theo loại: xong trước, huỷ cuối. */
+  readonly catListMeta = (['DONE', 'IN_PROGRESS', 'IN_REVIEW', 'TODO', 'BACKLOG', 'CANCELLED'] as TaskStatus[])
+    .map((k) => STATUS_META.find((m) => m.key === k)!);
+
+  /** Công việc THỰC (Task/Sub-task/Bug/Issue) — nền cho mọi bảng thống kê; bỏ Epic/Story (cấp nhóm). */
+  readonly workItems = computed(() => this.tasks().filter((t) => catOf(t.type) !== null));
+
+  /** Popup danh sách công việc chi tiết — mở khi bấm vào một ô số. */
+  readonly detailModal = signal<{ title: string; items: ProjectTask[] } | null>(null);
+  /** Mở popup; bỏ qua nếu ô số bằng 0 (không có gì để xem). */
+  openDetail(title: string, items: ProjectTask[]): void {
+    if (!items.length) return;
+    this.detailModal.set({ title: `${title} — ${items.length} việc`, items });
+  }
+
+  /** Thống kê RIÊNG BIỆT Task / Bug / Issue — kèm danh sách từng ô để mở popup. */
+  readonly catStats = computed<CatRow[]>(() => {
+    const items = this.tasks();
+    return categoryStats(items).map((c) => {
+      const list = items.filter((t) => catOf(t.type) === c.key);
+      const byStatus = emptyStatusBuckets();
+      for (const t of list) byStatus[t.status].push(t);
+      return { ...c, items: list, byStatus, overdueItems: list.filter((t) => isOverdue(t.dueDate, t.status)) };
+    });
+  });
+
+  /**
+   * Bảng tổng hợp theo NHÂN SỰ: mỗi người × loại công việc × trạng thái.
+   * Người chưa gán gom về một dòng và luôn xếp cuối.
+   */
+  readonly personRows = computed<PersonRow[]>(() => {
+    const map = new Map<string, PersonRow>();
+    for (const t of this.workItems()) {
+      const key = t.assigneeUserId || t.assigneeName || '__none__';
+      let row = map.get(key);
+      if (!row) {
+        row = {
+          key, userId: t.assigneeUserId, name: t.assigneeName || '— Chưa gán —',
+          unassigned: !t.assigneeUserId && !t.assigneeName,
+          items: [], byType: emptyTypeBuckets(), byStatus: emptyStatusBuckets(), overdueItems: [],
+          total: 0, done: 0, donePct: 0
+        };
+        map.set(key, row);
+      }
+      row.items.push(t);
+      const c = catOf(t.type);
+      if (c) row.byType[c].push(t);
+      row.byStatus[t.status].push(t);
+      if (isOverdue(t.dueDate, t.status)) row.overdueItems.push(t);
+    }
+    const rows = [...map.values()];
+    for (const r of rows) {
+      r.total = r.items.length;
+      r.done = r.byStatus.DONE.length;
+      const scope = r.total - r.byStatus.CANCELLED.length; // Huỷ ngoài phạm vi % hoàn thành
+      r.donePct = scope > 0 ? Math.round((r.done / scope) * 100) : 0;
+    }
+    return rows.sort((a, b) =>
+      (a.unassigned ? 1 : 0) - (b.unassigned ? 1 : 0) || b.total - a.total || a.name.localeCompare(b.name, 'vi')
+    );
+  });
+
+  /** Dòng "Tổng cộng" của bảng nhân sự (gộp mọi người). */
+  readonly personTotal = computed<PersonRow>(() => {
+    const all = this.workItems();
+    const byType = emptyTypeBuckets();
+    const byStatus = emptyStatusBuckets();
+    for (const t of all) {
+      const c = catOf(t.type);
+      if (c) byType[c].push(t);
+      byStatus[t.status].push(t);
+    }
+    const total = all.length;
+    const scope = total - byStatus.CANCELLED.length;
+    return {
+      key: '__total__', userId: null, name: 'Tổng cộng', unassigned: false,
+      items: all, byType, byStatus, overdueItems: all.filter((t) => isOverdue(t.dueDate, t.status)),
+      total, done: byStatus.DONE.length,
+      donePct: scope > 0 ? Math.round((byStatus.DONE.length / scope) * 100) : 0
+    };
+  });
+
+  /**
+   * Tiến độ % EPIC/Story theo THỨ TỰ CÂY (Story nằm dưới Epic cha) — kèm level để thụt lề
+   * và số việc con XONG / CHƯA XONG (đếm mọi hậu duệ là Task/Sub-task/Bug/Issue).
+   */
+  readonly epicStoryRows = computed<EpicStoryRow[]>(() => {
+    const all = this.tasks();
+    // Con trực tiếp của MỌI task — để gom hậu duệ là công việc thực.
+    const kids = new Map<string, ProjectTask[]>();
+    for (const t of all) {
+      const k = t.parentId ?? '';
+      const arr = kids.get(k);
+      arr ? arr.push(t) : kids.set(k, [t]);
+    }
+    const descWork = (id: string): ProjectTask[] => {
+      const out: ProjectTask[] = [];
+      const stack = [...(kids.get(id) ?? [])];
+      let guard = 0;
+      while (stack.length && guard++ < 5000) {
+        const n = stack.pop()!;
+        if (catOf(n.type)) out.push(n);
+        stack.push(...(kids.get(n.id) ?? []));
+      }
+      return out;
+    };
+
+    const es = all.filter((t) => t.type === 'EPIC' || t.type === 'STORY');
     const esIds = new Set(es.map((t) => t.id));
     const childrenOf = new Map<string, ProjectTask[]>();
     for (const t of es) {
       const k = t.parentId && esIds.has(t.parentId) ? t.parentId : '';
       (childrenOf.get(k) ?? childrenOf.set(k, []).get(k)!).push(t);
     }
-    const out: { code: string; title: string; type: string; pct: number; level: number }[] = [];
+    const out: EpicStoryRow[] = [];
     const walk = (parentKey: string, level: number) => {
       for (const t of childrenOf.get(parentKey) ?? []) {
-        out.push({ code: t.code, title: t.title, type: t.type,
-          pct: Math.max(0, Math.min(100, Math.round(t.progressPct ?? 0))), level });
+        const items = descWork(t.id);
+        out.push({
+          id: t.id, code: t.code, title: t.title, type: t.type,
+          pct: Math.max(0, Math.min(100, Math.round(t.progressPct ?? 0))), level,
+          items,
+          doneItems: items.filter((i) => i.status === 'DONE'),
+          openItems: items.filter((i) => i.status !== 'DONE' && i.status !== 'CANCELLED')
+        });
         walk(t.id, level + 1);
       }
     };
     walk('', 0);
     return out;
   });
+
+  /** Nhãn/màu cho popup + bảng. */
+  readonly detailCols: GridColumn[] = [
+    { key: 'code', header: 'Mã', width: '84px', sortable: true },
+    { key: 'type', header: 'Loại', width: '82px' },
+    { key: 'title', header: 'Công việc', sortable: true },
+    { key: 'assigneeName', header: 'Người làm', width: '160px' },
+    { key: 'status', header: 'Trạng thái', width: '108px' },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '96px', sortable: true },
+    { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
+  ];
+  typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }
+  typeLabel(t: TaskType): string { return TYPE_META[t]?.short ?? t; }
+  clampPct(v: number | null | undefined): number { return Math.max(0, Math.min(100, Math.round(v ?? 0))); }
+  /** Chuỗi cha (Epic › Story › Task cha) để hiện dưới tiêu đề trong popup. */
+  parentPath(t: ProjectTask): string { return (t.parentChain ?? []).map((p) => p.title).join(' › '); }
+  taskStatusLabel(s: TaskStatus): string { return STATUS_META.find((m) => m.key === s)?.label ?? s; }
+  taskStatusBadge(s: TaskStatus): string {
+    switch (s) {
+      case 'BACKLOG': return 'badge--neutral';
+      case 'TODO': return 'badge--pending';
+      case 'IN_PROGRESS': return 'badge--active';
+      case 'IN_REVIEW': return 'badge--info';
+      case 'DONE': return 'badge--done';
+      case 'CANCELLED': return 'badge--cancel';
+      default: return 'badge--neutral';
+    }
+  }
 
   /** Bug/Issue của dự án — để kiểm soát chất lượng theo nhân sự. */
   private readonly bugList = computed(() => this.tasks().filter((t) => t.type === 'BUG' || t.type === 'ISSUE'));
