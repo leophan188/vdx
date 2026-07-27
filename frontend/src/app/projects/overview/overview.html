@@ -106,17 +106,17 @@
                 @for (c of workCats; track c.key) {
                   @if (p.byType[c.key].length) {
                     <span><button type="button" class="ov2__num"
-                            (click)="openDetail(p.name + ' · ' + c.label, p.byType[c.key])">{{ p.byType[c.key].length }}</button></span>
+                            (click)="openDetail(p.name + ' · ' + c.label, p.byType[c.key], true)">{{ p.byType[c.key].length }}</button></span>
                   } @else { <span class="ov2__zero">0</span> }
                 }
                 @for (s of statusMetaAll; track s.key) {
                   @if (p.byStatus[s.key].length) {
                     <span class="ov2__msep"><button type="button" class="ov2__num"
-                            (click)="openDetail(p.name + ' · ' + s.label, p.byStatus[s.key])">{{ p.byStatus[s.key].length }}</button></span>
+                            (click)="openDetail(p.name + ' · ' + s.label, p.byStatus[s.key], true)">{{ p.byStatus[s.key].length }}</button></span>
                   } @else { <span class="ov2__msep ov2__zero">0</span> }
                 }
                 <span class="ov2__msep"><button type="button" class="ov2__num"
-                        (click)="openDetail('Công việc của ' + p.name, p.items)">{{ p.total }}</button></span>
+                        (click)="openDetail('Công việc của ' + p.name, p.items, true)">{{ p.total }}</button></span>
                 <span class="ov2__mpct">
                   <span class="ov2__mpct-bar"><span class="ov2__mpct-fill" [style.width.%]="p.donePct"></span></span>
                   <span class="ov2__mpct-val">{{ p.donePct }}%</span>
@@ -244,10 +244,22 @@
 
 <!-- Popup: danh sách công việc đằng sau một ô số (theo loại / nhân sự / Epic-Story) -->
 <app-modal [open]="!!detailModal()" [title]="detailModal()?.title || ''"
-           [xwide]="true" (closed)="detailModal.set(null)">
+           [xwide]="true" (closed)="closeDetail()">
   @if (detailModal(); as d) {
-    <data-grid [columns]="detailCols" [rows]="d.items" [exportName]="d.title"
+    <data-grid [columns]="detailColsShown()" [rows]="detailRows()" [exportName]="d.title"
                [pageSize]="50" [pageSizes]="[50, 100, 200]" searchPlaceholder="Tìm công việc…">
+      <!-- Lọc theo loại công việc (chỉ hiện khi danh sách có từ 2 loại trở lên) -->
+      @if (detailTypeChips().length) {
+        <div gridFilters class="ov2__d-filters">
+          <span class="ov2__d-filters-lbl">Loại:</span>
+          @for (c of detailTypeChips(); track c.key) {
+            <button type="button" class="ov2__d-chip" [class.is-active]="detailType() === c.key"
+                    [style.--tb-color]="c.color" (click)="detailType.set(c.key)">
+              {{ c.label }} <b>{{ c.count }}</b>
+            </button>
+          }
+        </div>
+      }
       <ng-template gridCell="code" let-t>
         <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ t.code }}</span>
       </ng-template>

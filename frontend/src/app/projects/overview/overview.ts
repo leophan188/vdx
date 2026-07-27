@@ -229,6 +229,17 @@ function emptyTypeBuckets(): TypeBuckets {
       font-variant-numeric: tabular-nums; }
     .ov2__cat-total-btn:hover { text-decoration: underline; }
 
+    /* Bộ lọc LOẠI công việc trong popup */
+    .ov2__d-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .ov2__d-filters-lbl { font-size: var(--text-xs); color: var(--color-text-muted); margin-right: 2px; }
+    .ov2__d-chip { border: 1px solid var(--color-border); background: var(--color-surface); cursor: pointer;
+      font: inherit; font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted);
+      padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .ov2__d-chip b { font-variant-numeric: tabular-nums; opacity: .75; }
+    .ov2__d-chip:hover { border-color: var(--tb-color, var(--color-primary)); color: var(--tb-color, var(--color-primary)); }
+    .ov2__d-chip.is-active { border-color: var(--tb-color, var(--color-primary)); color: var(--tb-color, var(--color-primary));
+      background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 12%, transparent); }
+
     /* Ô chi tiết trong popup */
     .ov2__d-type { font-size: var(--text-xs); font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
       color: var(--tb-color, var(--color-primary)); background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
@@ -347,13 +358,48 @@ export class PrjOverview {
   /** Công việc THỰC (Task/Sub-task/Bug/Issue) — nền cho mọi bảng thống kê; bỏ Epic/Story (cấp nhóm). */
   readonly workItems = computed(() => this.tasks().filter((t) => catOf(t.type) !== null));
 
-  /** Popup danh sách công việc chi tiết — mở khi bấm vào một ô số. */
-  readonly detailModal = signal<{ title: string; items: ProjectTask[] } | null>(null);
+  /**
+   * Popup danh sách công việc chi tiết — mở khi bấm vào một ô số.
+   * `byPerson` = popup đã lọc sẵn theo 1 nhân sự → ẩn cột "Người làm" cho đỡ thừa.
+   */
+  readonly detailModal = signal<{ title: string; items: ProjectTask[]; byPerson: boolean } | null>(null);
+  /** Loại công việc đang lọc trong popup ('ALL' = tất cả). */
+  readonly detailType = signal<TaskType | 'ALL'>('ALL');
+
   /** Mở popup; bỏ qua nếu ô số bằng 0 (không có gì để xem). */
-  openDetail(title: string, items: ProjectTask[]): void {
+  openDetail(title: string, items: ProjectTask[], byPerson = false): void {
     if (!items.length) return;
-    this.detailModal.set({ title: `${title} — ${items.length} việc`, items });
+    this.detailType.set('ALL'); // mỗi lần mở là lọc lại từ đầu
+    this.detailModal.set({ title: `${title} — ${items.length} việc`, items, byPerson });
   }
+  closeDetail(): void { this.detailModal.set(null); this.detailType.set('ALL'); }
+
+  /** Chip lọc theo loại trong popup: chỉ hiện những loại THỰC SỰ có trong danh sách, kèm số đếm. */
+  readonly detailTypeChips = computed<{ key: TaskType | 'ALL'; label: string; count: number; color: string }[]>(() => {
+    const items = this.detailModal()?.items ?? [];
+    if (!items.length) return [];
+    const order: TaskType[] = ['EPIC', 'STORY', 'TASK', 'SUBTASK', 'BUG', 'ISSUE'];
+    const chips = order
+      .map((t) => ({ key: t as TaskType | 'ALL', label: this.typeLabel(t), color: this.typeColor(t),
+        count: items.filter((i) => i.type === t).length }))
+      .filter((c) => c.count > 0);
+    // Chỉ 1 loại → không cần bộ lọc.
+    return chips.length > 1
+      ? [{ key: 'ALL' as const, label: 'Tất cả', count: items.length, color: 'var(--color-primary)' }, ...chips]
+      : [];
+  });
+
+  /** Danh sách đưa vào lưới sau khi lọc loại. */
+  readonly detailRows = computed<ProjectTask[]>(() => {
+    const items = this.detailModal()?.items ?? [];
+    const t = this.detailType();
+    return t === 'ALL' ? items : items.filter((i) => i.type === t);
+  });
+
+  /** Cột hiển thị: bỏ "Người làm" khi popup đã lọc theo đúng người đó. */
+  readonly detailColsShown = computed<GridColumn[]>(() =>
+    this.detailModal()?.byPerson ? this.detailCols.filter((c) => c.key !== 'assigneeName') : this.detailCols
+  );
 
   /** Thống kê RIÊNG BIỆT Task / Bug / Issue — kèm danh sách từng ô để mở popup. */
   readonly catStats = computed<CatRow[]>(() => {
