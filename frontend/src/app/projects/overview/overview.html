@@ -80,6 +80,9 @@
     @if (personRows().length) {
       <h3 class="ov2__h">Tổng hợp công việc theo nhân sự — {{ personRows().length }} người
         <span class="ov2__hint">— bấm vào số để xem danh sách công việc</span></h3>
+      <p class="ov2__note">Tính theo <b>người đang giữ việc</b>: việc ở <b>Kiểm thử</b> tính cho người kiểm thử
+        (bug/issue tính cho người log để verify), các trạng thái còn lại tính cho người thực hiện.
+        Mỗi việc chỉ thuộc một người tại một thời điểm nên cộng các dòng lại đúng bằng tổng công việc dự án.</p>
       <section class="ov2__panel">
         <div class="ov2__mx">
           <div class="ov2__mx-inner">

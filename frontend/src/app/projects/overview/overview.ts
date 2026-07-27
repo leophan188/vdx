@@ -55,6 +55,28 @@ interface EpicStoryRow {
   openItems: ProjectTask[];
 }
 
+/**
+ * CHỦ HIỆN TẠI của một công việc — ai đang thực sự giữ việc tại trạng thái này.
+ * Hệ thống giữ 3 vai RIÊNG BIỆT và không đổi khi chuyển trạng thái (người thực hiện /
+ * người kiểm thử / người log), nên phải suy chủ theo trạng thái:
+ *  - Kiểm thử + task thường → NGƯỜI KIỂM THỬ (bắt buộc chọn trước khi chuyển).
+ *  - Kiểm thử + bug/issue   → NGƯỜI LOG (hệ thống bàn giao ngầm để verify).
+ *  - Các trạng thái khác    → NGƯỜI THỰC HIỆN.
+ * Thiếu vai tương ứng thì lùi về người thực hiện để không có việc nào rơi ra ngoài bảng.
+ */
+function ownerOf(t: ProjectTask): { id: string | null; name: string | null } {
+  if (t.status === 'IN_REVIEW') {
+    if (t.type === 'BUG' || t.type === 'ISSUE') {
+      if (t.reporterUserId || t.reporterName) {
+        return { id: t.reporterUserId ?? null, name: t.reporterName ?? null };
+      }
+    } else if (t.testerUserId || t.testerName) {
+      return { id: t.testerUserId ?? null, name: t.testerName ?? null };
+    }
+  }
+  return { id: t.assigneeUserId, name: t.assigneeName };
+}
+
 /** Buckets rỗng cho 6 trạng thái. */
 function emptyStatusBuckets(): StatusBuckets {
   return { BACKLOG: [], TODO: [], IN_PROGRESS: [], IN_REVIEW: [], DONE: [], CANCELLED: [] };
@@ -188,6 +210,8 @@ function emptyTypeBuckets(): TypeBuckets {
       background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
     .ov2__es-bar-head { flex: 0 0 auto; width: 216px; text-align: right; }
     .ov2__hint { font-size: var(--text-xs); font-weight: var(--weight-regular, 400); color: var(--color-text-muted); }
+    .ov2__note { margin: calc(var(--space-2) * -1) 0 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
+    .ov2__note b { color: var(--color-text); font-weight: 600; }
 
     /* ===== Ô SỐ bấm được → popup danh sách công việc ===== */
     .ov2__num { border: 0; background: none; padding: 1px 6px; border-radius: var(--radius-sm); cursor: pointer;
@@ -403,10 +427,18 @@ export class PrjOverview {
     return t === 'ALL' ? items : items.filter((i) => i.type === t);
   });
 
-  /** Cột hiển thị: bỏ "Người làm" khi popup đã lọc theo đúng người đó. */
-  readonly detailColsShown = computed<GridColumn[]>(() =>
-    this.detailModal()?.byPerson ? this.detailCols.filter((c) => c.key !== 'assigneeName') : this.detailCols
-  );
+  /**
+   * Cột hiển thị: bỏ "Người làm" khi popup lọc theo người VÀ mọi dòng đều do đúng người đó thực hiện.
+   * Ô "Kiểm thử" gom theo người kiểm thử/người log nên assignee là các dev khác nhau —
+   * lúc đó phải GIỮ cột để còn biết ai đã làm việc đang chờ verify.
+   */
+  readonly detailColsShown = computed<GridColumn[]>(() => {
+    const d = this.detailModal();
+    if (!d?.byPerson) return this.detailCols;
+    const first = d.items[0]?.assigneeUserId ?? null;
+    const sameAssignee = d.items.every((i) => (i.assigneeUserId ?? null) === first);
+    return sameAssignee ? this.detailCols.filter((c) => c.key !== 'assigneeName') : this.detailCols;
+  });
 
   // ----- Chi tiết công việc (mở chồng lên popup danh sách) -----
   readonly taskDetail = signal<ProjectTask | null>(null);
@@ -436,17 +468,21 @@ export class PrjOverview {
 
   /**
    * Bảng tổng hợp theo NHÂN SỰ: mỗi người × loại công việc × trạng thái.
+   * Gom theo CHỦ HIỆN TẠI (xem ownerOf): việc ở Kiểm thử tính cho người kiểm thử /
+   * người log, chứ không nằm mãi ở dev đã bàn giao. Mỗi việc chỉ thuộc ĐÚNG MỘT người
+   * tại một thời điểm → cộng các dòng lại vẫn đúng bằng tổng công việc dự án.
    * Người chưa gán gom về một dòng và luôn xếp cuối.
    */
   readonly personRows = computed<PersonRow[]>(() => {
     const map = new Map<string, PersonRow>();
     for (const t of this.workItems()) {
-      const key = t.assigneeUserId || t.assigneeName || '__none__';
+      const own = ownerOf(t);
+      const key = own.id || own.name || '__none__';
       let row = map.get(key);
       if (!row) {
         row = {
-          key, userId: t.assigneeUserId, name: t.assigneeName || '— Chưa gán —',
-          unassigned: !t.assigneeUserId && !t.assigneeName,
+          key, userId: own.id, name: own.name || '— Chưa gán —',
+          unassigned: !own.id && !own.name,
           items: [], byType: emptyTypeBuckets(), byStatus: emptyStatusBuckets(), overdueItems: [],
           total: 0, done: 0, donePct: 0
         };
