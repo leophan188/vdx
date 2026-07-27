@@ -399,12 +399,15 @@ public class ProjectReportService {
 
         // Tỷ lệ hoàn thành THEO NHÂN SỰ (chỉ việc lá: bỏ EPIC/STORY & việc Huỷ).
         // [0..4] = TOÀN DỰ ÁN; [5],[6] = TRONG KỲ (việc có updatedAt rơi vào kỳ đang xem).
+        // Gom theo CHỦ HIỆN TẠI (xem ownerUserId): việc ở Kiểm thử tính cho người kiểm thử /
+        // người log chứ không nằm mãi ở dev đã bàn giao. Mỗi việc chỉ thuộc ĐÚNG MỘT người
+        // tại một thời điểm nên cộng các dòng lại vẫn đúng bằng tổng công việc.
         java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue,inPeriod,donePeriod]
         java.util.Map<String, String> pName = new java.util.LinkedHashMap<>(); // key -> tên hiển thị
         for (ProjectTask t : tasks) {
             if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
             if (t.getStatus() == TaskStatus.CANCELLED) continue;
-            String uid = t.getAssigneeUserId();
+            String uid = ownerUserId(t);
             String key = uid == null ? "" : uid;
             String nm = uid == null ? "(chưa gán)"
                     : nameCache.computeIfAbsent(uid, x -> userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
@@ -510,6 +513,12 @@ public class ProjectReportService {
         double est = rollEst.getOrDefault(t.getId(), t.getEstimateHours());
         LocalDate[] range = rollRange.getOrDefault(t.getId(),
                 new LocalDate[]{t.getStartDate(), t.getDueDate()});
+        String ownerId = ownerUserId(t);
+        String owner = null;
+        if (ownerId != null) {
+            owner = nameCache.computeIfAbsent(ownerId, uid ->
+                    userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
+        }
         return new ProjectDto.ReportTaskItem(t.getId(), String.valueOf(t.getSeq()), t.getTitle(),
                 t.getType().name(), t.getStatus().name(), assignee, est,
                 range[0] == null ? null : range[0].format(DMY),
@@ -517,7 +526,31 @@ public class ProjectReportService {
                 t.getPriority() == null ? null : t.getPriority().name(),
                 t.getSeverity() == null ? null : t.getSeverity().name(),
                 t.getAssigneeUserId(), parentPath(t, taskById),
-                t.getReporterUserId(), reporter);
+                t.getReporterUserId(), reporter, ownerId, owner);
+    }
+
+    /**
+     * CHỦ HIỆN TẠI của một công việc — ai đang thực sự giữ việc tại trạng thái này.
+     * Hệ thống giữ 3 vai RIÊNG BIỆT và KHÔNG đổi assignee khi chuyển trạng thái
+     * (người thực hiện / người kiểm thử / người log), nên phải suy chủ theo trạng thái:
+     * <ul>
+     *   <li>Kiểm thử + task thường → NGƯỜI KIỂM THỬ (bắt buộc chọn trước khi chuyển).</li>
+     *   <li>Kiểm thử + bug/issue   → NGƯỜI LOG (hệ thống bàn giao ngầm để verify).</li>
+     *   <li>Các trạng thái khác    → NGƯỜI THỰC HIỆN.</li>
+     * </ul>
+     * Thiếu vai tương ứng thì lùi về người thực hiện để không việc nào rơi ra ngoài thống kê.
+     */
+    static String ownerUserId(ProjectTask t) {
+        if (t.getStatus() == TaskStatus.IN_REVIEW) {
+            if (t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE) {
+                if (t.getReporterUserId() != null) {
+                    return t.getReporterUserId();
+                }
+            } else if (t.getTesterUserId() != null) {
+                return t.getTesterUserId();
+            }
+        }
+        return t.getAssigneeUserId();
     }
 
     /** Chuỗi cha "Epic: … › Story: …" (gốc→gần); null nếu không có cha. */

@@ -298,7 +298,13 @@ public final class ProjectDto {
             /** Chuỗi cha "Epic: … › Story: …" (null nếu là gốc) — làm rõ ngữ cảnh công việc. */
             String parentPath,
             /** Người LOG (tester tạo bug/việc) — để thống kê "tester log nhiều bug". */
-            String reporterUserId, String reporterName) {
+            String reporterUserId, String reporterName,
+            /**
+             * CHỦ HIỆN TẠI — ai đang thực sự giữ việc ở trạng thái này (xem
+             * {@code ProjectReportService.ownerUserId}). Thống kê theo nhân sự gom theo
+             * field này để việc đã bàn giao sang Kiểm thử không còn bị đếm cho dev.
+             */
+            String ownerUserId, String ownerName) {
     }
 
     /** Số liệu tổng quan của kỳ báo cáo. */

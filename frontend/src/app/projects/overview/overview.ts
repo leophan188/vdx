@@ -6,7 +6,7 @@ import { PrjTaskDetail } from '../task-detail/task-detail';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { formatThousands } from '../../shared/format';
-import { categoryStats, CatStat, catOf, isOverdue, STATUS_META, TYPE_META, WORK_CATS, WorkCat } from '../work-stats';
+import { categoryStats, CatStat, catOf, isOverdue, ownerOf, STATUS_META, TYPE_META, WORK_CATS, WorkCat } from '../work-stats';
 import {
   ProjectService, Project, ProjectReport, ProjectStatus, TaskStatus, TaskType, ProjectTask,
   ProjectMember, ProjectActivityItem
@@ -53,28 +53,6 @@ interface EpicStoryRow {
   items: ProjectTask[];
   doneItems: ProjectTask[];
   openItems: ProjectTask[];
-}
-
-/**
- * CHỦ HIỆN TẠI của một công việc — ai đang thực sự giữ việc tại trạng thái này.
- * Hệ thống giữ 3 vai RIÊNG BIỆT và không đổi khi chuyển trạng thái (người thực hiện /
- * người kiểm thử / người log), nên phải suy chủ theo trạng thái:
- *  - Kiểm thử + task thường → NGƯỜI KIỂM THỬ (bắt buộc chọn trước khi chuyển).
- *  - Kiểm thử + bug/issue   → NGƯỜI LOG (hệ thống bàn giao ngầm để verify).
- *  - Các trạng thái khác    → NGƯỜI THỰC HIỆN.
- * Thiếu vai tương ứng thì lùi về người thực hiện để không có việc nào rơi ra ngoài bảng.
- */
-function ownerOf(t: ProjectTask): { id: string | null; name: string | null } {
-  if (t.status === 'IN_REVIEW') {
-    if (t.type === 'BUG' || t.type === 'ISSUE') {
-      if (t.reporterUserId || t.reporterName) {
-        return { id: t.reporterUserId ?? null, name: t.reporterName ?? null };
-      }
-    } else if (t.testerUserId || t.testerName) {
-      return { id: t.testerUserId ?? null, name: t.testerName ?? null };
-    }
-  }
-  return { id: t.assigneeUserId, name: t.assigneeName };
 }
 
 /** Buckets rỗng cho 6 trạng thái. */

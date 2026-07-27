@@ -8,7 +8,7 @@ import { PrjTaskDetail } from '../task-detail/task-detail';
 import {
   ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority, ProjectTask
 } from '../../core/project.service';
-import { WORK_CATS, catOf, WorkCat, TYPE_META, STATUS_META, isOverdue } from '../work-stats';
+import { WORK_CATS, catOf, WorkCat, TYPE_META, STATUS_META, isOverdue, ownerOf } from '../work-stats';
 
 /** Kỳ báo cáo đang xem. */
 type Period = 'daily' | 'weekly';
@@ -167,6 +167,8 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__empty-note { color: var(--color-text-muted); font-size: var(--text-sm); }
 
     /* Theo nhân sự */
+    .rpp__note { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
+    .rpp__note b { color: var(--color-text); font-weight: 600; }
     .rpp__people { display: grid; gap: 2px; }
     .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(84px, 1fr)) minmax(150px, 1.5fr);
       align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
@@ -405,7 +407,9 @@ export class PrjReportsPeriod {
 
   /** ProjectTask → dòng hiển thị giống ReportTaskItem, để mọi popup dùng chung một kiểu dữ liệu. */
   private toItem(t: ProjectTask): ReportTaskItem {
+    const own = ownerOf(t);
     return {
+      ownerUserId: own.id, ownerName: own.name,
       taskId: t.id, code: t.code, title: t.title, type: t.type, status: t.status,
       assigneeName: t.assigneeName, estimateHours: t.estimateHours,
       startDate: t.startDate, dueDate: t.dueDate, progressPct: t.progressPct,
@@ -540,16 +544,18 @@ export class PrjReportsPeriod {
     const items = this.report()?.periodItems ?? [];
     const byUser = new Map<string, ReportTaskItem[]>();
     for (const it of items) {
-      const key = it.assigneeUserId ?? 'NONE';
+      // Gom theo CHỦ HIỆN TẠI — backend đếm inPeriod/donePeriod theo ownerUserId,
+      // nhóm theo assignee ở đây sẽ khiến popup lệch con số.
+      const key = it.ownerUserId ?? 'NONE';
       const list = byUser.get(key);
       if (list) list.push(it); else byUser.set(key, [it]);
     }
     // Danh sách TOÀN DỰ ÁN của từng người — dựng lại ĐÚNG bộ lọc backend dùng cho cột "Tổng CV"
-    // (bỏ Epic/Story và việc Huỷ; KHÔNG lọc lá) để bấm vào số ra đúng chừng đó việc.
+    // (bỏ Epic/Story và việc Huỷ; KHÔNG lọc lá; gom theo CHỦ HIỆN TẠI) để bấm vào số ra đúng chừng đó việc.
     const allByUser = new Map<string, ReportTaskItem[]>();
     for (const t of this.tasks()) {
       if (t.type === 'EPIC' || t.type === 'STORY' || t.status === 'CANCELLED') continue;
-      const key = t.assigneeUserId ?? 'NONE';
+      const key = ownerOf(t).id ?? 'NONE';
       const list = allByUser.get(key);
       if (list) list.push(this.toItem(t)); else allByUser.set(key, [this.toItem(t)]);
     }
@@ -643,10 +649,18 @@ export class PrjReportsPeriod {
     { key: 'dueDate', header: 'Hạn', align: 'center', width: '92px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
   ];
-  /** Cột hiển thị: bỏ "Người làm" khi popup đã lọc theo đúng người đó. */
-  readonly detailColsShown = computed<GridColumn[]>(() =>
-    this.detailModal()?.byPerson ? this.personCols.filter((c) => c.key !== 'assigneeName') : this.personCols
-  );
+  /**
+   * Cột hiển thị: bỏ "Người làm" khi popup lọc theo người VÀ mọi dòng đều do đúng người đó thực hiện.
+   * Việc ở Kiểm thử gom theo người kiểm thử/người log nên assignee là các dev khác nhau —
+   * lúc đó phải GIỮ cột để còn biết ai đã làm việc đang chờ verify.
+   */
+  readonly detailColsShown = computed<GridColumn[]>(() => {
+    const d = this.detailModal();
+    if (!d?.byPerson) return this.personCols;
+    const first = d.items[0]?.assigneeUserId ?? null;
+    const sameAssignee = d.items.every((i) => (i.assigneeUserId ?? null) === first);
+    return sameAssignee ? this.personCols.filter((c) => c.key !== 'assigneeName') : this.personCols;
+  });
 
   constructor() {
     effect(() => {

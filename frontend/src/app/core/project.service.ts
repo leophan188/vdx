@@ -294,6 +294,13 @@ export interface ReportTaskItem {
   parentPath: string | null;     // "Epic: … › Story: …" (ngữ cảnh cha)
   reporterUserId: string | null; // người LOG (tester tạo bug/việc)
   reporterName: string | null;
+  /**
+   * CHỦ HIỆN TẠI — ai đang thực sự giữ việc ở trạng thái này (Kiểm thử → người kiểm thử,
+   * bug/issue Kiểm thử → người log, còn lại → người thực hiện). Backend đã gom thống kê
+   * nhân sự theo field này nên FE phải nhóm theo đúng nó thì popup mới khớp con số.
+   */
+  ownerUserId: string | null;
+  ownerName: string | null;
 }
 
 export interface ReportOverview {

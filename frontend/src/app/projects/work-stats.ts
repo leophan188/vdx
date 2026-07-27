@@ -66,6 +66,36 @@ export function buildParentOptions(all: ProjectTask[], filtered: ProjectTask[]):
   return filtered.map((t) => parentOptionOf(t, byId));
 }
 
+/** Phần tối thiểu để suy CHỦ HIỆN TẠI (khớp cả ProjectTask lẫn dữ liệu báo cáo). */
+export interface OwnableTask {
+  type: TaskType; status: TaskStatus;
+  assigneeUserId: string | null; assigneeName: string | null;
+  testerUserId?: string | null; testerName?: string | null;
+  reporterUserId?: string | null; reporterName?: string | null;
+}
+
+/**
+ * CHỦ HIỆN TẠI của một công việc — ai đang thực sự giữ việc tại trạng thái này.
+ * Hệ thống giữ 3 vai RIÊNG BIỆT và không đổi khi chuyển trạng thái (người thực hiện /
+ * người kiểm thử / người log), nên phải suy chủ theo trạng thái:
+ *  - Kiểm thử + task thường → NGƯỜI KIỂM THỬ (bắt buộc chọn trước khi chuyển).
+ *  - Kiểm thử + bug/issue   → NGƯỜI LOG (hệ thống bàn giao ngầm để verify).
+ *  - Các trạng thái khác    → NGƯỜI THỰC HIỆN.
+ * Thiếu vai tương ứng thì lùi về người thực hiện để không việc nào rơi ra ngoài bảng.
+ * PHẢI khớp với ProjectReportService.ownerUserId ở backend.
+ */
+export function ownerOf(t: OwnableTask): { id: string | null; name: string | null } {
+  // Chỉ xét theo ID (không xét tên) để khớp TỪNG TRƯỜNG HỢP với backend.
+  if (t.status === 'IN_REVIEW') {
+    if (t.type === 'BUG' || t.type === 'ISSUE') {
+      if (t.reporterUserId) return { id: t.reporterUserId, name: t.reporterName ?? null };
+    } else if (t.testerUserId) {
+      return { id: t.testerUserId, name: t.testerName ?? null };
+    }
+  }
+  return { id: t.assigneeUserId, name: t.assigneeName };
+}
+
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
 export function catOf(type: TaskType): WorkCat | null {
   if (type === 'TASK' || type === 'SUBTASK') return 'TASK';
