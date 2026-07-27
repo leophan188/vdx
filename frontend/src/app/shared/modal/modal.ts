@@ -1,4 +1,11 @@
-import { Component, ElementRef, HostListener, effect, inject, input, output, signal } from '@angular/core';
+import { Component, DestroyRef, ElementRef, HostListener, effect, inject, input, output, signal } from '@angular/core';
+
+/**
+ * Ngăn xếp modal ĐANG MỞ (theo thứ tự mở). Khi popup chồng popup (vd: danh sách công việc →
+ * chi tiết task), Esc chỉ được đóng cái TRÊN CÙNG — không đóng luôn cái nền phía dưới.
+ * Cả hai đều nghe 'document:keydown.escape' nên stopPropagation() không chặn được nhau.
+ */
+const OPEN_MODALS: Modal[] = [];
 
 /**
  * Modal/Dialog dùng chung cho popup CRUD (DESIGN-SYSTEM §3).
@@ -59,11 +66,23 @@ export class Modal {
   readonly askClose = signal(false);
 
   constructor() {
-    // Mỗi lần mở lại → bỏ trạng thái hỏi cũ.
     effect(() => {
-      if (!this.open()) this.askClose.set(false);
+      if (this.open()) {
+        if (!OPEN_MODALS.includes(this)) OPEN_MODALS.push(this);
+      } else {
+        this.askClose.set(false); // mỗi lần mở lại → bỏ trạng thái hỏi cũ
+        this.unstack();
+      }
     });
+    inject(DestroyRef).onDestroy(() => this.unstack());
   }
+
+  private unstack(): void {
+    const i = OPEN_MODALS.indexOf(this);
+    if (i >= 0) OPEN_MODALS.splice(i, 1);
+  }
+  /** Modal này có đang nằm trên cùng không (chỉ nó được nhận phím Esc). */
+  private isTopmost(): boolean { return OPEN_MODALS[OPEN_MODALS.length - 1] === this; }
 
   onBackdrop(e: MouseEvent): void {
     if ((e.target as HTMLElement).classList.contains('modal-backdrop')) {
@@ -73,7 +92,7 @@ export class Modal {
 
   @HostListener('document:keydown.escape', ['$event'])
   onEsc(e: Event): void {
-    if (!this.open()) {
+    if (!this.open() || !this.isTopmost()) {
       return;
     }
     // Nếu đang hỏi xác nhận → Esc = tiếp tục nhập (đóng hộp hỏi).

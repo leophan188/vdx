@@ -2,6 +2,7 @@ import { Component, computed, effect, inject, input, output, signal } from '@ang
 import { StatCard } from '../../shared/stat-card/stat-card';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { Modal } from '../../shared/modal/modal';
+import { PrjTaskDetail } from '../task-detail/task-detail';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { formatThousands } from '../../shared/format';
@@ -72,7 +73,7 @@ function emptyTypeBuckets(): TypeBuckets {
 @Component({
   selector: 'app-prj-overview',
   standalone: true,
-  imports: [StatCard, EmployeeChip, Modal, DataGrid, GridCellDirective],
+  imports: [StatCard, EmployeeChip, Modal, DataGrid, GridCellDirective, PrjTaskDetail],
   templateUrl: './overview.html',
   styles: [`
     .ov2 { display: grid; gap: var(--space-4); }
@@ -243,6 +244,12 @@ function emptyTypeBuckets(): TypeBuckets {
     /* Ô chi tiết trong popup */
     .ov2__d-type { font-size: var(--text-xs); font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
       color: var(--tb-color, var(--color-primary)); background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
+    .ov2__d-code { border: 0; cursor: pointer; font: inherit; font-size: var(--text-xs); font-weight: 700; }
+    .ov2__d-code:hover { text-decoration: underline; }
+    /* Tiêu đề công việc — bấm để mở chi tiết */
+    .ov2__d-open { display: block; width: 100%; border: 0; background: none; padding: 0; cursor: pointer;
+      font: inherit; color: inherit; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ov2__d-open:hover { color: var(--color-primary); text-decoration: underline; }
     .ov2__d-parent { font-size: var(--text-xs); color: var(--color-text-muted); overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; }
     .ov2__d-pct { display: flex; align-items: center; gap: var(--space-2); }
@@ -374,7 +381,7 @@ export class PrjOverview {
   }
   closeDetail(): void { this.detailModal.set(null); this.detailType.set('ALL'); }
 
-  /** Chip lọc theo loại trong popup: chỉ hiện những loại THỰC SỰ có trong danh sách, kèm số đếm. */
+  /** Chip lọc theo loại trong popup: chỉ liệt kê những loại THỰC SỰ có trong danh sách, kèm số đếm. */
   readonly detailTypeChips = computed<{ key: TaskType | 'ALL'; label: string; count: number; color: string }[]>(() => {
     const items = this.detailModal()?.items ?? [];
     if (!items.length) return [];
@@ -383,10 +390,7 @@ export class PrjOverview {
       .map((t) => ({ key: t as TaskType | 'ALL', label: this.typeLabel(t), color: this.typeColor(t),
         count: items.filter((i) => i.type === t).length }))
       .filter((c) => c.count > 0);
-    // Chỉ 1 loại → không cần bộ lọc.
-    return chips.length > 1
-      ? [{ key: 'ALL' as const, label: 'Tất cả', count: items.length, color: 'var(--color-primary)' }, ...chips]
-      : [];
+    return [{ key: 'ALL' as const, label: 'Tất cả', count: items.length, color: 'var(--color-primary)' }, ...chips];
   });
 
   /** Danh sách đưa vào lưới sau khi lọc loại. */
@@ -400,6 +404,21 @@ export class PrjOverview {
   readonly detailColsShown = computed<GridColumn[]>(() =>
     this.detailModal()?.byPerson ? this.detailCols.filter((c) => c.key !== 'assigneeName') : this.detailCols
   );
+
+  // ----- Chi tiết công việc (mở chồng lên popup danh sách) -----
+  readonly taskDetail = signal<ProjectTask | null>(null);
+  readonly taskDetailOpen = signal(false);
+  /** Bấm 1 dòng trong popup danh sách → mở chi tiết task/bug kiểu Jira. */
+  openTask(t: ProjectTask): void {
+    this.taskDetail.set(t);
+    this.taskDetailOpen.set(true);
+  }
+  closeTask(): void {
+    this.taskDetailOpen.set(false);
+    this.taskDetail.set(null);
+  }
+  /** Sửa task trong popup chi tiết → tải lại số liệu tổng quan. */
+  onTaskChanged(): void { this.load(this.projectId()); }
 
   /** Thống kê RIÊNG BIỆT Task / Bug / Issue — kèm danh sách từng ô để mở popup. */
   readonly catStats = computed<CatRow[]>(() => {
@@ -662,7 +681,7 @@ export class PrjOverview {
       error: () => { this.report.set(null); this.loading.set(false); }
     });
     this.svc.listTasks(id).subscribe({
-      next: (t) => this.tasks.set(t ?? []),
+      next: (t) => { this.tasks.set(t ?? []); this.syncOpenPopups(); },
       error: () => this.tasks.set([])
     });
     this.svc.listMembers(id).subscribe({
@@ -673,6 +692,22 @@ export class PrjOverview {
       next: (a) => this.activity.set(a ?? []),
       error: () => this.activity.set([])
     });
+  }
+
+  /**
+   * Sau khi tải lại danh sách task: đồng bộ dữ liệu MỚI vào các popup đang mở
+   * (danh sách chi tiết + chi tiết công việc) để không hiện số liệu cũ.
+   * Giữ nguyên TẬP việc đang xem — việc vừa đổi trạng thái vẫn nằm lại cho dễ theo dõi.
+   */
+  private syncOpenPopups(): void {
+    const byId = new Map(this.tasks().map((t) => [t.id, t]));
+    const d = this.detailModal();
+    if (d) this.detailModal.set({ ...d, items: d.items.map((i) => byId.get(i.id) ?? i) });
+    const cur = this.taskDetail();
+    if (cur) {
+      const fresh = byId.get(cur.id);
+      if (fresh) this.taskDetail.set(fresh);
+    }
   }
 
   /** Nhãn hành động cho dòng hoạt động (nhận cả DIARY từ nhật ký dự án). */

@@ -261,13 +261,15 @@
         </div>
       }
       <ng-template gridCell="code" let-t>
-        <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ t.code }}</span>
+        <button type="button" class="ov2__d-type ov2__d-code" [style.--tb-color]="typeColor(t.type)"
+                title="Mở chi tiết công việc" (click)="openTask(t)">{{ t.code }}</button>
       </ng-template>
       <ng-template gridCell="type" let-t>
         <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
       </ng-template>
       <ng-template gridCell="title" let-t>
-        <div [title]="t.title">{{ t.title }}</div>
+        <button type="button" class="ov2__d-open" [title]="t.title + ' — bấm để mở chi tiết'"
+                (click)="openTask(t)">{{ t.title }}</button>
         @if (parentPath(t)) { <div class="ov2__d-parent" [title]="parentPath(t)">↳ {{ parentPath(t) }}</div> }
       </ng-template>
       <ng-template gridCell="assigneeName" let-t>
@@ -287,6 +289,10 @@
     </data-grid>
   }
 </app-modal>
+
+<!-- Chi tiết công việc kiểu Jira — mở CHỒNG lên popup danh sách, đóng lại là về danh sách -->
+<app-prj-task-detail [projectId]="projectId()" [task]="taskDetail()" [open]="taskDetailOpen()"
+                     (closed)="closeTask()" (changed)="onTaskChanged()" />
 
 <!-- ===== TRANG IN / PDF (báo cáo khách — KHÔNG có người thực hiện & trễ hạn) ===== -->
 @if (printMode() && project(); as p) {
