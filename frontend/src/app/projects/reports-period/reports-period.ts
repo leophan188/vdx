@@ -4,10 +4,11 @@ import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { StatCard } from '../../shared/stat-card/stat-card';
 import { Modal } from '../../shared/modal/modal';
+import { PrjTaskDetail } from '../task-detail/task-detail';
 import {
-  ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority
+  ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority, ProjectTask
 } from '../../core/project.service';
-import { WORK_CATS, catOf, WorkCat, TYPE_META, STATUS_META } from '../work-stats';
+import { WORK_CATS, catOf, WorkCat, TYPE_META, STATUS_META, isOverdue } from '../work-stats';
 
 /** Kỳ báo cáo đang xem. */
 type Period = 'daily' | 'weekly';
@@ -31,9 +32,12 @@ const PRIORITY_META: { key: TaskPriority; label: string; color: string }[] = [
 
 interface TypeStatusRow {
   key: WorkCat; label: string; icon: string; color: string;
-  byStatus: Record<string, number>; total: number;
+  byStatus: Record<string, number>; itemsByStatus: Record<string, ReportTaskItem[]>;
+  items: ReportTaskItem[]; total: number;
 }
-interface PriorityStat { key: TaskPriority; label: string; color: string; count: number; pct: number; }
+interface PriorityStat {
+  key: TaskPriority; label: string; color: string; count: number; pct: number; items: ReportTaskItem[];
+}
 interface PersonStat {
   userId: string | null; name: string;
   total: number; task: number; bug: number; issue: number; done: number;
@@ -51,7 +55,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
  */
 @Component({
   selector: 'app-prj-reports-period',
-  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal],
+  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal, PrjTaskDetail],
   templateUrl: './reports-period.html',
   styles: [`
     .rpp { display: grid; gap: var(--space-4); font-size: var(--text-sm); color: var(--color-text); }
@@ -80,6 +84,42 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__hero-fill { height: 100%; border-radius: var(--radius-full);
       background: linear-gradient(90deg, var(--status-active), var(--status-done)); transition: width .3s ease; }
     .rpp__stats { display: grid; gap: var(--space-3); grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); }
+    /* Thẻ số liệu bấm được → mở danh sách việc đằng sau con số */
+    .rpp__statbtn { cursor: pointer; border-radius: var(--radius-lg); transition: transform .12s ease, box-shadow .12s ease; }
+    .rpp__statbtn:hover { transform: translateY(-1px); box-shadow: var(--shadow-md, 0 4px 14px rgba(0,0,0,.18)); }
+
+    /* ===== Ô SỐ bấm được (ma trận, ưu tiên, nhân sự, Epic/Story) ===== */
+    .rpp__num { border: 0; background: none; padding: 1px 6px; border-radius: var(--radius-sm); cursor: pointer;
+      font: inherit; font-weight: var(--weight-semibold); font-variant-numeric: tabular-nums; color: var(--color-primary); }
+    .rpp__num:hover { background: var(--color-primary-soft, var(--color-surface-alt)); text-decoration: underline; }
+    .rpp__num--done { color: var(--status-done); }
+    .rpp__num--open { color: var(--status-pending); }
+    .rpp__num-zero { padding: 1px 6px; color: var(--color-text-muted); opacity: .5; font-variant-numeric: tabular-nums; }
+
+    /* Dòng Epic/Story (có thêm cột Xong / Chưa xong) */
+    .rpp__es-row { display: flex; align-items: center; gap: 10px; padding: 5px 0; border-bottom: 1px solid var(--color-border); }
+    .rpp__es-row--head { color: var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--weight-semibold);
+      text-transform: uppercase; letter-spacing: .02em; }
+    .rpp__es-nums { flex: 0 0 auto; display: flex; align-items: center; }
+    .rpp__es-nums > * { flex: 0 0 78px; text-align: center; }
+
+    /* Mã / tiêu đề công việc bấm được → mở chi tiết */
+    .rpp__code-btn { border: 0; cursor: pointer; font: inherit; }
+    .rpp__code-btn:hover { text-decoration: underline; }
+    .rpp__title-btn { border: 0; background: none; padding: 0; cursor: pointer; font: inherit; color: inherit;
+      text-align: left; }
+    .rpp__title-btn:hover { color: var(--color-primary); text-decoration: underline; }
+
+    /* Bộ lọc LOẠI trong popup chi tiết */
+    .rpp__d-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+    .rpp__d-filters-lbl { font-size: var(--text-xs); color: var(--color-text-muted); margin-right: 2px; }
+    .rpp__d-chip { border: 1px solid var(--color-border); background: var(--color-surface); cursor: pointer;
+      font: inherit; font-size: var(--text-xs); font-weight: 600; color: var(--color-text-muted);
+      padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+    .rpp__d-chip b { font-variant-numeric: tabular-nums; opacity: .75; }
+    .rpp__d-chip:hover { border-color: var(--tb-color, var(--color-primary)); color: var(--tb-color, var(--color-primary)); }
+    .rpp__d-chip.is-active { border-color: var(--tb-color, var(--color-primary)); color: var(--tb-color, var(--color-primary));
+      background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 12%, transparent); }
 
     /* Section chung (thu gọn được) */
     .rpp__sec { border: 1px solid var(--color-border); border-radius: var(--radius-lg);
@@ -134,9 +174,8 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__ppct-val { min-width: 34px; text-align: right; font-size: var(--text-xs); color: var(--color-text-muted); }
     .rpp__prow--head { color: var(--color-text-muted); font-size: var(--text-xs);
       font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .03em; }
-    button.rpp__prow { width: 100%; border: 0; background: var(--color-surface-alt); cursor: pointer;
-      font: inherit; color: var(--color-text); text-align: left; }
-    button.rpp__prow:hover { background: var(--color-primary-soft); color: var(--color-primary); }
+    /* Dòng nhân sự: cả dòng KHÔNG còn là nút — từng con số mới bấm được (mở đúng danh sách của số đó). */
+    .rpp__prow--body { width: 100%; background: var(--color-surface-alt); color: var(--color-text); text-align: left; }
     .rpp__pname { display: inline-flex; align-items: center; gap: var(--space-2); font-weight: var(--weight-medium); }
     .rpp__ptotal { font-weight: var(--weight-semibold); }
     .rpp__pchev { color: var(--color-text-muted); }
@@ -304,8 +343,122 @@ export class PrjReportsPeriod {
     this.collapsed.set(s);
   }
 
-  /** Popup danh sách công việc chi tiết (theo nhân sự / theo bug). */
-  readonly detailModal = signal<{ title: string; items: ReportTaskItem[] } | null>(null);
+  // ===================== POPUP CHI TIẾT (bấm vào MỌI con số thống kê) =====================
+
+  /**
+   * Popup danh sách công việc chi tiết.
+   * `byPerson` = đã lọc sẵn theo 1 nhân sự → ẩn cột "Người làm" cho đỡ thừa.
+   */
+  readonly detailModal = signal<{ title: string; items: ReportTaskItem[]; byPerson: boolean } | null>(null);
+  /** Loại công việc đang lọc trong popup ('ALL' = tất cả). */
+  readonly detailType = signal<TaskType | 'ALL'>('ALL');
+
+  /** Mở popup; bỏ qua nếu con số bằng 0 (không có gì để xem). */
+  openDetail(title: string, items: ReportTaskItem[], byPerson = false): void {
+    if (!items.length) return;
+    this.detailType.set('ALL');
+    this.detailModal.set({ title: `${title} — ${items.length} việc`, items, byPerson });
+  }
+  closeDetail(): void { this.detailModal.set(null); this.detailType.set('ALL'); }
+
+  /** Chip lọc theo loại: chỉ liệt kê loại THỰC SỰ có trong danh sách, kèm số đếm. */
+  readonly detailTypeChips = computed<{ key: TaskType | 'ALL'; label: string; count: number; color: string }[]>(() => {
+    const items = this.detailModal()?.items ?? [];
+    if (!items.length) return [];
+    const order: TaskType[] = ['EPIC', 'STORY', 'TASK', 'SUBTASK', 'BUG', 'ISSUE'];
+    const chips = order
+      .map((t) => ({ key: t as TaskType | 'ALL', label: this.typeLabel(t), color: this.typeColor(t),
+        count: items.filter((i) => i.type === t).length }))
+      .filter((c) => c.count > 0);
+    return [{ key: 'ALL' as const, label: 'Tất cả', count: items.length, color: 'var(--color-primary)' }, ...chips];
+  });
+
+  /** Danh sách đưa vào lưới sau khi lọc loại. */
+  readonly detailRows = computed<ReportTaskItem[]>(() => {
+    const items = this.detailModal()?.items ?? [];
+    const t = this.detailType();
+    return t === 'ALL' ? items : items.filter((i) => i.type === t);
+  });
+
+  // ===== Danh sách task ĐẦY ĐỦ của dự án =====
+  // Cần cho: (a) mở popup chi tiết công việc, (b) Epic/Story xong-chưa xong,
+  // (c) danh sách đứng sau các thẻ số liệu TOÀN DỰ ÁN của báo cáo tuần.
+  readonly tasks = signal<ProjectTask[]>([]);
+
+  /**
+   * "Việc thực thi" = LÁ và không phải Epic/Story — ĐÚNG quy tắc backend dùng để đếm
+   * totalTasks / doneTasks / bugCount / overdueCount ở thẻ tổng quan tuần.
+   * Dùng cờ `leaf` do backend trả về, không tự suy lại, để hai bên không lệch nhau.
+   */
+  private readonly workItems = computed(() =>
+    this.tasks().filter((t) => t.leaf && t.type !== 'EPIC' && t.type !== 'STORY'));
+
+  readonly ovTotalItems = computed(() => this.workItems().map((t) => this.toItem(t)));
+  readonly ovDoneItems = computed(() => this.workItems().filter((t) => t.status === 'DONE').map((t) => this.toItem(t)));
+  readonly ovBugItems = computed(() => this.workItems().filter((t) => t.type === 'BUG').map((t) => this.toItem(t)));
+  readonly ovOverdueItems = computed(() =>
+    this.workItems().filter((t) => isOverdue(t.dueDate, t.status)).map((t) => this.toItem(t)));
+
+  /** ProjectTask → dòng hiển thị giống ReportTaskItem, để mọi popup dùng chung một kiểu dữ liệu. */
+  private toItem(t: ProjectTask): ReportTaskItem {
+    return {
+      taskId: t.id, code: t.code, title: t.title, type: t.type, status: t.status,
+      assigneeName: t.assigneeName, estimateHours: t.estimateHours,
+      startDate: t.startDate, dueDate: t.dueDate, progressPct: t.progressPct,
+      priority: t.priority, severity: t.severity, assigneeUserId: t.assigneeUserId,
+      parentPath: (t.parentChain ?? []).map((p) => p.title).join(' › ') || null,
+      reporterUserId: t.reporterUserId ?? null, reporterName: t.reporterName ?? null
+    };
+  }
+
+  /**
+   * Tiến độ EPIC/Story kèm số việc con XONG / CHƯA XONG (đếm mọi hậu duệ là việc thực thi).
+   * Chỉ số % vẫn lấy từ backend (r.epicStory) để không lệch với bản in.
+   */
+  readonly epicStoryRows = computed(() => {
+    const es = this.report()?.epicStory ?? [];
+    if (!es.length) return [];
+    const kids = new Map<string, ProjectTask[]>();
+    for (const t of this.tasks()) {
+      const k = t.parentId ?? '';
+      const arr = kids.get(k);
+      arr ? arr.push(t) : kids.set(k, [t]);
+    }
+    const descWork = (id: string): ProjectTask[] => {
+      const out: ProjectTask[] = [];
+      const stack = [...(kids.get(id) ?? [])];
+      let guard = 0;
+      while (stack.length && guard++ < 5000) {
+        const n = stack.pop()!;
+        if (catOf(n.type)) out.push(n);
+        stack.push(...(kids.get(n.id) ?? []));
+      }
+      return out;
+    };
+    return es.map((e) => {
+      const items = descWork(e.taskId);
+      return {
+        ...e,
+        doneItems: items.filter((i) => i.status === 'DONE').map((t) => this.toItem(t)),
+        openItems: items.filter((i) => i.status !== 'DONE' && i.status !== 'CANCELLED').map((t) => this.toItem(t))
+      };
+    });
+  });
+
+  // ===== Chi tiết công việc (mở chồng lên popup danh sách) =====
+  readonly taskDetail = signal<ProjectTask | null>(null);
+  readonly taskDetailOpen = signal(false);
+  /** Bấm 1 dòng bất kỳ → mở chi tiết task/bug kiểu Jira (tra ProjectTask theo taskId). */
+  openTask(it: ReportTaskItem): void {
+    const t = this.tasks().find((x) => x.id === it.taskId);
+    if (!t) return; // chưa tải xong danh sách task — bỏ qua thay vì mở popup rỗng
+    this.taskDetail.set(t);
+    this.taskDetailOpen.set(true);
+  }
+  closeTask(): void {
+    this.taskDetailOpen.set(false);
+    this.taskDetail.set(null);
+  }
 
   readonly pct = computed(() =>
     Math.max(0, Math.min(100, Math.round(this.report()?.overview.completionPct ?? 0)))
@@ -321,13 +474,20 @@ export class PrjReportsPeriod {
   });
 
   // ===== (1) Ma trận Task/Bug/Issue × trạng thái =====
+  // Giữ luôn DANH SÁCH từng ô để bấm số là mở đúng những việc đã đếm.
   readonly typeStatusRows = computed<TypeStatusRow[]>(() => {
     const items = this.allItems();
     return WORK_CATS.map((c) => {
       const list = items.filter((i) => catOf(i.type) === c.key);
       const byStatus: Record<string, number> = {};
-      for (const s of STATUS_META) byStatus[s.key] = list.filter((i) => i.status === s.key).length;
-      return { key: c.key, label: c.label, icon: c.icon, color: c.color, byStatus, total: list.length };
+      const itemsByStatus: Record<string, ReportTaskItem[]> = {};
+      for (const s of STATUS_META) {
+        const bucket = list.filter((i) => i.status === s.key);
+        byStatus[s.key] = bucket.length;
+        itemsByStatus[s.key] = bucket;
+      }
+      return { key: c.key, label: c.label, icon: c.icon, color: c.color, byStatus, itemsByStatus,
+        items: list, total: list.length };
     });
   });
 
@@ -336,8 +496,9 @@ export class PrjReportsPeriod {
     const bugs = this.allItems().filter((i) => i.type === 'BUG' || i.type === 'ISSUE');
     const max = Math.max(1, ...PRIORITY_META.map((p) => bugs.filter((b) => b.priority === p.key).length));
     return PRIORITY_META.map((p) => {
-      const count = bugs.filter((b) => b.priority === p.key).length;
-      return { key: p.key, label: p.label, color: p.color, count, pct: Math.round((count / max) * 100) };
+      const items = bugs.filter((b) => b.priority === p.key);
+      return { key: p.key, label: p.label, color: p.color, count: items.length, items,
+        pct: Math.round((items.length / max) * 100) };
     });
   });
   readonly bugTotal = computed(() => this.allItems().filter((i) => i.type === 'BUG' || i.type === 'ISSUE').length);
@@ -379,14 +540,29 @@ export class PrjReportsPeriod {
       const list = byUser.get(key);
       if (list) list.push(it); else byUser.set(key, [it]);
     }
-    return overall.map((ov) => ({
-      userId: ov.userId, name: ov.name,
-      totalAll: ov.total,               // tổng công việc (toàn dự án, việc lá)
-      pctAll: ov.pct,                   // % hoàn thành toàn dự án
-      inPeriod: ov.inPeriod,            // việc CÓ THAY ĐỔI trong Ngày/Tuần
-      doneInPeriod: ov.donePeriod,      // việc hoàn thành trong kỳ
-      items: byUser.get(ov.userId ?? 'NONE') ?? [],
-    }));
+    // Danh sách TOÀN DỰ ÁN của từng người — dựng lại ĐÚNG bộ lọc backend dùng cho cột "Tổng CV"
+    // (bỏ Epic/Story và việc Huỷ; KHÔNG lọc lá) để bấm vào số ra đúng chừng đó việc.
+    const allByUser = new Map<string, ReportTaskItem[]>();
+    for (const t of this.tasks()) {
+      if (t.type === 'EPIC' || t.type === 'STORY' || t.status === 'CANCELLED') continue;
+      const key = t.assigneeUserId ?? 'NONE';
+      const list = allByUser.get(key);
+      if (list) list.push(this.toItem(t)); else allByUser.set(key, [this.toItem(t)]);
+    }
+    return overall.map((ov) => {
+      const periodList = byUser.get(ov.userId ?? 'NONE') ?? [];
+      return {
+        userId: ov.userId, name: ov.name,
+        totalAll: ov.total,               // tổng công việc (toàn dự án, bỏ Huỷ)
+        pctAll: ov.pct,                   // % hoàn thành toàn dự án
+        inPeriod: ov.inPeriod,            // việc CÓ THAY ĐỔI trong Ngày/Tuần
+        doneInPeriod: ov.donePeriod,      // việc hoàn thành trong kỳ
+        items: periodList,
+        // donePeriod của backend = việc trong kỳ có trạng thái DONE → lọc lại y hệt.
+        doneItems: periodList.filter((i) => i.status === 'DONE'),
+        allItems: allByUser.get(ov.userId ?? 'NONE') ?? []
+      };
+    });
   });
 
   // ===== Bug/Issue theo nhân sự: tester đã LOG vs dev BỊ LOG (bug được TẠO trong kỳ Ngày/Tuần) =====
@@ -412,7 +588,7 @@ export class PrjReportsPeriod {
   }
 
   openBugPerson(p: BugPerson, prefix: string): void {
-    this.detailModal.set({ title: prefix + p.name, items: p.items });
+    this.openDetail(prefix + p.name, p.items, true);
   }
 
   // ===== (3) 4 khối trạng thái =====
@@ -458,10 +634,15 @@ export class PrjReportsPeriod {
     { key: 'code', header: 'Mã', width: '70px', sortable: true },
     { key: 'type', header: 'Loại', width: '78px' },
     { key: 'title', header: 'Công việc', sortable: true },
+    { key: 'assigneeName', header: 'Người làm', width: '150px' },
     { key: 'status', header: 'Trạng thái', width: '104px' },
     { key: 'dueDate', header: 'Hạn', align: 'center', width: '92px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
   ];
+  /** Cột hiển thị: bỏ "Người làm" khi popup đã lọc theo đúng người đó. */
+  readonly detailColsShown = computed<GridColumn[]>(() =>
+    this.detailModal()?.byPerson ? this.personCols.filter((c) => c.key !== 'assigneeName') : this.personCols
+  );
 
   constructor() {
     effect(() => {
@@ -476,6 +657,49 @@ export class PrjReportsPeriod {
         error: () => { this.report.set(null); this.loading.set(false); }
       });
     });
+    // Danh sách task đầy đủ — chỉ phụ thuộc dự án, không tải lại khi đổi kỳ/ngày.
+    effect(() => {
+      const pid = this.projectId();
+      if (pid) this.loadTasks(pid);
+    });
+  }
+
+  private loadTasks(pid: string): void {
+    this.svc.listTasks(pid).subscribe({
+      next: (t) => { this.tasks.set(t ?? []); this.syncOpenPopups(); },
+      error: () => this.tasks.set([])
+    });
+  }
+
+  /** Sửa task trong popup chi tiết → tải lại báo cáo + danh sách task. */
+  onTaskChanged(): void {
+    const pid = this.projectId();
+    if (!pid) return;
+    this.loadTasks(pid);
+    const src$ = this.period() === 'weekly'
+      ? this.svc.reportWeekly(pid, this.reportDate())
+      : this.svc.reportDaily(pid, this.reportDate());
+    src$.subscribe({ next: (r) => this.report.set(r) });
+  }
+
+  /**
+   * Sau khi tải lại task: đồng bộ dữ liệu MỚI vào popup đang mở, giữ nguyên tập việc đang xem
+   * (việc vừa đổi trạng thái vẫn nằm lại cho dễ theo dõi).
+   */
+  private syncOpenPopups(): void {
+    const byId = new Map(this.tasks().map((t) => [t.id, t]));
+    const d = this.detailModal();
+    if (d) {
+      this.detailModal.set({ ...d, items: d.items.map((i) => {
+        const fresh = byId.get(i.taskId);
+        return fresh ? { ...this.toItem(fresh), parentPath: i.parentPath } : i;
+      }) });
+    }
+    const cur = this.taskDetail();
+    if (cur) {
+      const fresh = byId.get(cur.id);
+      if (fresh) this.taskDetail.set(fresh);
+    }
   }
 
   setPeriod(p: Period): void { this.period.set(p); }
@@ -494,10 +718,10 @@ export class PrjReportsPeriod {
   personPct(p: PersonStat): number { return p.total ? Math.round((p.done / p.total) * 100) : 0; }
   catDonePct(c: TypeStatusRow): number { return c.total ? Math.round((c.byStatus['DONE'] / c.total) * 100) : 0; }
 
-  openPerson(p: PersonStat): void { this.detailModal.set({ title: 'Công việc của ' + p.name, items: p.items }); }
+  openPerson(p: PersonStat): void { this.openDetail('Công việc của ' + p.name, p.items, true); }
   /** Mở chi tiết việc TRONG KỲ của 1 người (từ bảng thống kê nhân sự). */
   openPersonRow(p: { name: string; items: ReportTaskItem[] }): void {
-    this.detailModal.set({ title: 'Công việc trong kỳ của ' + p.name, items: p.items });
+    this.openDetail('Công việc trong kỳ của ' + p.name, p.items, true);
   }
 
   typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }

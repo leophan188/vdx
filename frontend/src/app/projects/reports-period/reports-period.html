@@ -36,20 +36,36 @@
       </section>
 
       <section class="rpp__stats">
-        <stat-card icon="📋" label="Tổng task" [value]="r.overview.totalTasks" tint="var(--color-primary)" />
-        <stat-card icon="✅" label="Hoàn thành" [value]="r.overview.doneTasks" tint="var(--status-done)" />
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Tổng công việc dự án', ovTotalItems())">
+          <stat-card icon="📋" label="Tổng task" [value]="r.overview.totalTasks" tint="var(--color-primary)" />
+        </div>
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Công việc đã hoàn thành', ovDoneItems())">
+          <stat-card icon="✅" label="Hoàn thành" [value]="r.overview.doneTasks" tint="var(--status-done)" />
+        </div>
         <stat-card icon="⏱️" label="Est done / tổng (h)"
                    [value]="r.overview.doneEstimate + ' / ' + r.overview.totalEstimate" tint="var(--status-active)" />
-        <stat-card icon="⛔" label="Quá hạn" [value]="r.overview.overdueCount" tint="var(--overdue)" />
-        <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Công việc quá hạn', ovOverdueItems())">
+          <stat-card icon="⛔" label="Quá hạn" [value]="r.overview.overdueCount" tint="var(--overdue)" />
+        </div>
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Lỗi (bug) của dự án', ovBugItems())">
+          <stat-card icon="🐞" label="Lỗi (bug)" [value]="r.overview.bugCount" tint="var(--status-cancel)" />
+        </div>
       </section>
     } @else {
       <!-- NGÀY: số liệu CỦA NGÀY (không phải tổng quan dự án). -->
       <section class="rpp__stats">
-        <stat-card icon="✅" label="Hoàn thành trong ngày" [value]="r.done.length" tint="var(--status-done)" />
-        <stat-card icon="🔄" label="Đang làm" [value]="r.inProgress.length" tint="var(--status-active)" />
-        <stat-card icon="🗒️" [label]="upcomingTitle()" [value]="r.upcoming.length" tint="var(--status-pending)" />
-        <stat-card icon="⛔" label="Trễ hạn" [value]="r.overdue.length" tint="var(--overdue)" />
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Hoàn thành trong ngày', r.done)">
+          <stat-card icon="✅" label="Hoàn thành trong ngày" [value]="r.done.length" tint="var(--status-done)" />
+        </div>
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Đang làm', r.inProgress)">
+          <stat-card icon="🔄" label="Đang làm" [value]="r.inProgress.length" tint="var(--status-active)" />
+        </div>
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail(upcomingTitle(), r.upcoming)">
+          <stat-card icon="🗒️" [label]="upcomingTitle()" [value]="r.upcoming.length" tint="var(--status-pending)" />
+        </div>
+        <div class="rpp__statbtn" title="Xem danh sách" (click)="openDetail('Trễ hạn', r.overdue)">
+          <stat-card icon="⛔" label="Trễ hạn" [value]="r.overdue.length" tint="var(--overdue)" />
+        </div>
       </section>
     }
 
@@ -63,12 +79,27 @@
         </button>
         @if (!isCollapsed('epic')) {
           <div class="rpp__sec-body">
-            @for (e of r.epicStory; track e.taskId) {
-              <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-bottom:1px solid var(--color-border);"
-                   [style.padding-left.px]="e.type==='STORY' ? 24 : 0">
+            <div class="rpp__es-row rpp__es-row--head">
+              <span style="min-width:64px;"></span>
+              <span style="flex:1;min-width:0;">Hạng mục</span>
+              <span class="rpp__es-nums"><span>✅ Xong</span><span>⏳ Chưa xong</span></span>
+              <span style="width:196px;text-align:right;">Tiến độ</span>
+            </div>
+            @for (e of epicStoryRows(); track e.taskId) {
+              <div class="rpp__es-row" [style.padding-left.px]="e.type==='STORY' ? 24 : 0">
                 <span style="min-width:64px;font-size:.82em;opacity:.65;">{{ e.code }}</span>
                 <span class="badge" [class]="e.type==='EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type==='EPIC' ? 'Epic' : 'Story' }}</span>
                 <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.title }}</span>
+                <span class="rpp__es-nums">
+                  @if (e.doneItems.length) {
+                    <button type="button" class="rpp__num rpp__num--done"
+                            (click)="openDetail(e.title + ' · Đã hoàn thành', e.doneItems)">{{ e.doneItems.length }}</button>
+                  } @else { <span class="rpp__num-zero">0</span> }
+                  @if (e.openItems.length) {
+                    <button type="button" class="rpp__num rpp__num--open"
+                            (click)="openDetail(e.title + ' · Chưa hoàn thành', e.openItems)">{{ e.openItems.length }}</button>
+                  } @else { <span class="rpp__num-zero">0</span> }
+                </span>
                 <div class="rpp__mini-bar" style="width:140px;"><div class="rpp__mini-fill" [style.width.%]="e.progressPct"></div></div>
                 <b style="min-width:46px;text-align:right;">{{ clampPct(e.progressPct) }}%</b>
               </div>
@@ -98,9 +129,16 @@
               <div class="rpp__mrow" [style.--cat-color]="c.color">
                 <span class="rpp__mname"><i class="rpp__mdot"></i>{{ c.icon }} {{ c.label }}</span>
                 @for (s of statusMeta; track s.key) {
-                  <span [class.rpp__zero]="c.byStatus[s.key] === 0">{{ c.byStatus[s.key] }}</span>
+                  @if (c.byStatus[s.key]) {
+                    <span><button type="button" class="rpp__num"
+                            (click)="openDetail(c.label + ' · ' + s.label, c.itemsByStatus[s.key])">{{ c.byStatus[s.key] }}</button></span>
+                  } @else { <span class="rpp__num-zero">0</span> }
                 }
-                <span class="rpp__mtotal">{{ c.total }}</span>
+                <span class="rpp__mtotal">
+                  @if (c.total) {
+                    <button type="button" class="rpp__num" (click)="openDetail(c.label, c.items)">{{ c.total }}</button>
+                  } @else { <span class="rpp__num-zero">0</span> }
+                </span>
                 <span class="rpp__mpct">
                   <span class="rpp__mpct-bar"><span class="rpp__mpct-fill" [style.width.%]="catDonePct(c)"></span></span>
                   <span class="rpp__mpct-val">{{ catDonePct(c) }}%</span>
@@ -129,7 +167,12 @@
                 <div class="rpp__prio-row" [style.--p-color]="p.color">
                   <span class="rpp__prio-name"><i class="rpp__prio-dot"></i>{{ p.label }}</span>
                   <span class="rpp__prio-bar"><span class="rpp__prio-fill" [style.width.%]="p.pct"></span></span>
-                  <span class="rpp__prio-val">{{ p.count }}</span>
+                  <span class="rpp__prio-val">
+                    @if (p.count) {
+                      <button type="button" class="rpp__num"
+                              (click)="openDetail('Bug/Issue · ' + p.label, p.items)">{{ p.count }}</button>
+                    } @else { <span class="rpp__num-zero">0</span> }
+                  </span>
                 </div>
               }
             </div>
@@ -197,18 +240,32 @@
               <span>% HT (dự án)</span>
             </div>
             @for (p of peopleStats(); track p.userId ?? p.name) {
-              <button type="button" class="rpp__prow" (click)="openPersonRow(p)" title="Xem chi tiết công việc trong kỳ">
+              <div class="rpp__prow rpp__prow--body">
                 <span class="rpp__pname">
                   @if (p.userId) { <employee-chip [name]="p.name" /> } @else { {{ p.name }} }
                 </span>
-                <span class="rpp__ptotal">{{ p.totalAll }}</span>
-                <span>{{ p.inPeriod }}</span>
-                <span>{{ p.doneInPeriod }}</span>
+                <span class="rpp__ptotal">
+                  @if (p.allItems.length) {
+                    <button type="button" class="rpp__num"
+                            (click)="openDetail('Công việc của ' + p.name, p.allItems, true)">{{ p.totalAll }}</button>
+                  } @else { <span class="rpp__num-zero">{{ p.totalAll }}</span> }
+                </span>
+                <span>
+                  @if (p.inPeriod) {
+                    <button type="button" class="rpp__num" (click)="openPersonRow(p)">{{ p.inPeriod }}</button>
+                  } @else { <span class="rpp__num-zero">0</span> }
+                </span>
+                <span>
+                  @if (p.doneInPeriod) {
+                    <button type="button" class="rpp__num rpp__num--done"
+                            (click)="openDetail('Hoàn thành trong kỳ · ' + p.name, p.doneItems, true)">{{ p.doneInPeriod }}</button>
+                  } @else { <span class="rpp__num-zero">0</span> }
+                </span>
                 <span class="rpp__ppct">
                   <span class="rpp__ppct-bar"><span class="rpp__ppct-fill" [style.width.%]="clampPct(p.pctAll)"></span></span>
                   <span class="rpp__ppct-val">{{ clampPct(p.pctAll) }}%</span>
                 </span>
-              </button>
+              </div>
             }
           </div>
         </div>
@@ -228,12 +285,13 @@
                        [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
                        [emptyText]="b.emptyText">
               <ng-template gridCell="code" let-t>
-                <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)"
-                      [title]="typeLabel(t.type)">{{ t.code }}</span>
+                <button type="button" class="rpp__type-badge rpp__code-btn" [style.--tb-color]="typeColor(t.type)"
+                        [title]="typeLabel(t.type) + ' — bấm để mở chi tiết'" (click)="openTask(t)">{{ t.code }}</button>
               </ng-template>
               <ng-template gridCell="title" let-t>
                 <div>
-                  <span [title]="t.title">{{ t.title }}</span>
+                  <button type="button" class="rpp__title-btn" [title]="t.title + ' — bấm để mở chi tiết'"
+                          (click)="openTask(t)">{{ t.title }}</button>
                   <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
                 </div>
                 @if (t.parentPath) { <div class="rpp__li-parent" [title]="t.parentPath">↳ {{ t.parentPath }}</div> }
@@ -262,17 +320,38 @@
 
 <!-- Popup: chi tiết danh sách công việc (theo nhân sự / theo bug) -->
 <app-modal [open]="!!detailModal()" [title]="detailModal()?.title || ''"
-           [xwide]="true" (closed)="detailModal.set(null)">
+           [xwide]="true" (closed)="closeDetail()">
   @if (detailModal(); as p) {
-    <data-grid [columns]="personCols" [rows]="p.items" [exportName]="p.title"
+    <data-grid [columns]="detailColsShown()" [rows]="detailRows()" [exportName]="p.title"
                [pageSize]="50" [pageSizes]="[50, 100, 200]" searchPlaceholder="Tìm công việc…">
+      <!-- Lọc theo loại công việc -->
+      @if (detailTypeChips().length) {
+        <div gridFilters class="rpp__d-filters">
+          <span class="rpp__d-filters-lbl">Loại:</span>
+          @for (c of detailTypeChips(); track c.key) {
+            <button type="button" class="rpp__d-chip" [class.is-active]="detailType() === c.key"
+                    [style.--tb-color]="c.color" (click)="detailType.set(c.key)">
+              {{ c.label }} <b>{{ c.count }}</b>
+            </button>
+          }
+        </div>
+      }
       <ng-template gridCell="code" let-t>
-        <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)">{{ t.code }}</span>
+        <button type="button" class="rpp__type-badge rpp__code-btn" [style.--tb-color]="typeColor(t.type)"
+                title="Mở chi tiết công việc" (click)="openTask(t)">{{ t.code }}</button>
       </ng-template>
       <ng-template gridCell="type" let-t>
         <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
       </ng-template>
-      <ng-template gridCell="title" let-t><span [title]="t.title">{{ t.title }}</span></ng-template>
+      <ng-template gridCell="title" let-t>
+        <button type="button" class="rpp__title-btn" [title]="t.title + ' — bấm để mở chi tiết'"
+                (click)="openTask(t)">{{ t.title }}</button>
+        @if (t.parentPath) { <div class="rpp__li-parent" [title]="t.parentPath">↳ {{ t.parentPath }}</div> }
+      </ng-template>
+      <ng-template gridCell="assigneeName" let-t>
+        @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
+        @else { <span class="rpp__pct-val">— Chưa gán —</span> }
+      </ng-template>
       <ng-template gridCell="status" let-t>
         <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
       </ng-template>
@@ -286,6 +365,10 @@
     </data-grid>
   }
 </app-modal>
+
+<!-- Chi tiết công việc kiểu Jira — mở CHỒNG lên popup danh sách, đóng lại là về danh sách -->
+<app-prj-task-detail [projectId]="projectId()" [task]="taskDetail()" [open]="taskDetailOpen()"
+                     (closed)="closeTask()" (changed)="onTaskChanged()" />
 
 <!-- ===================== TRANG IN (HTML → PDF theo biểu mẫu) ===================== -->
 @if (printMode() && report(); as r) {
