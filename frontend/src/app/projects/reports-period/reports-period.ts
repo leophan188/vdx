@@ -101,7 +101,11 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__es-row--head { color: var(--color-text-muted); font-size: var(--text-xs); font-weight: var(--weight-semibold);
       text-transform: uppercase; letter-spacing: .02em; }
     .rpp__es-nums { flex: 0 0 auto; display: flex; align-items: center; }
-    .rpp__es-nums > * { flex: 0 0 78px; text-align: center; }
+    .rpp__es-nums > * { flex: 0 0 122px; text-align: center; white-space: nowrap; }
+    /* Pill LOẠI (Epic/Story) — màu theo loại (design system không có badge--info) */
+    .rpp__tag { flex: 0 0 auto; font-size: var(--text-xs); font-weight: 700; padding: 1px 8px; border-radius: 999px;
+      white-space: nowrap; color: var(--tb-color, var(--color-primary));
+      background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
 
     /* Mã / tiêu đề công việc bấm được → mở chi tiết */
     .rpp__code-btn { border: 0; cursor: pointer; font: inherit; }

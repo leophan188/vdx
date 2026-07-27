@@ -82,22 +82,25 @@
             <div class="rpp__es-row rpp__es-row--head">
               <span style="min-width:64px;"></span>
               <span style="flex:1;min-width:0;">Hạng mục</span>
-              <span class="rpp__es-nums"><span>✅ Xong</span><span>⏳ Chưa xong</span></span>
+              <span class="rpp__es-nums">
+                <span title="Số việc con đã hoàn thành">Hoàn thành</span>
+                <span title="Số việc con chưa hoàn thành (không tính việc Huỷ)">Đang thực hiện</span>
+              </span>
               <span style="width:196px;text-align:right;">Tiến độ</span>
             </div>
             @for (e of epicStoryRows(); track e.taskId) {
               <div class="rpp__es-row" [style.padding-left.px]="e.type==='STORY' ? 24 : 0">
                 <span style="min-width:64px;font-size:.82em;opacity:.65;">{{ e.code }}</span>
-                <span class="badge" [class]="e.type==='EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type==='EPIC' ? 'Epic' : 'Story' }}</span>
+                <span class="rpp__tag" [style.--tb-color]="typeColor(e.type)">{{ typeLabel(e.type) }}</span>
                 <span style="flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.title }}</span>
                 <span class="rpp__es-nums">
                   @if (e.doneItems.length) {
                     <button type="button" class="rpp__num rpp__num--done"
-                            (click)="openDetail(e.title + ' · Đã hoàn thành', e.doneItems)">{{ e.doneItems.length }}</button>
+                            (click)="openDetail(e.title + ' · Hoàn thành', e.doneItems)">{{ e.doneItems.length }}</button>
                   } @else { <span class="rpp__num-zero">0</span> }
                   @if (e.openItems.length) {
                     <button type="button" class="rpp__num rpp__num--open"
-                            (click)="openDetail(e.title + ' · Chưa hoàn thành', e.openItems)">{{ e.openItems.length }}</button>
+                            (click)="openDetail(e.title + ' · Đang thực hiện', e.openItems)">{{ e.openItems.length }}</button>
                   } @else { <span class="rpp__num-zero">0</span> }
                 </span>
                 <div class="rpp__mini-bar" style="width:140px;"><div class="rpp__mini-fill" [style.width.%]="e.progressPct"></div></div>

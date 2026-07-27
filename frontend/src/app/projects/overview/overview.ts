@@ -181,8 +181,11 @@ function emptyTypeBuckets(): TypeBuckets {
     .ov2__es-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
     .ov2__es-pct { flex: 0 0 auto; min-width: 44px; text-align: right; font-variant-numeric: tabular-nums; }
     .ov2__es-nums { flex: 0 0 auto; display: flex; align-items: center; }
-    .ov2__es-nums > * { flex: 0 0 78px; text-align: center; }
-    .ov2__es-lbl { text-transform: none; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .ov2__es-nums > * { flex: 0 0 122px; text-align: center; white-space: nowrap; }
+    /* Pill LOẠI (Epic/Story) — màu theo loại, dùng chung với popup chi tiết */
+    .ov2__tag { flex: 0 0 auto; font-size: var(--text-xs); font-weight: 700; padding: 1px 8px; border-radius: 999px;
+      white-space: nowrap; color: var(--tb-color, var(--color-primary));
+      background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
     .ov2__es-bar-head { flex: 0 0 auto; width: 216px; text-align: right; }
     .ov2__hint { font-size: var(--text-xs); font-weight: var(--weight-regular, 400); color: var(--color-text-muted); }
 
@@ -558,7 +561,7 @@ export class PrjOverview {
       case 'BACKLOG': return 'badge--neutral';
       case 'TODO': return 'badge--pending';
       case 'IN_PROGRESS': return 'badge--active';
-      case 'IN_REVIEW': return 'badge--info';
+      case 'IN_REVIEW': return 'badge--active'; // không có badge--info trong design system
       case 'DONE': return 'badge--done';
       case 'CANCELLED': return 'badge--cancel';
       default: return 'badge--neutral';

@@ -161,25 +161,25 @@
         <div class="ov2__es-row ov2__es-row--head">
           <span class="ov2__es-title">Hạng mục</span>
           <span class="ov2__es-nums">
-            <span class="ov2__es-lbl" title="Số việc con đã hoàn thành">✅ Xong</span>
-            <span class="ov2__es-lbl" title="Số việc con chưa hoàn thành (không tính Huỷ)">⏳ Chưa xong</span>
+            <span title="Số việc con đã hoàn thành">Hoàn thành</span>
+            <span title="Số việc con chưa hoàn thành (không tính việc Huỷ)">Đang thực hiện</span>
           </span>
           <span class="ov2__es-bar-head">Tiến độ</span>
         </div>
         @for (e of epicStoryRows(); track e.id) {
           <div class="ov2__es-row">
             <span class="ov2__es-title" [style.padding-left.px]="e.level * 22">
-              <span class="badge" [class]="e.type === 'EPIC' ? 'badge--info' : 'badge--pending'">{{ e.type === 'EPIC' ? 'Epic' : 'Story' }}</span>
+              <span class="ov2__tag" [style.--tb-color]="typeColor(e.type)">{{ typeLabel(e.type) }}</span>
               <span class="ov2__es-name" [title]="e.title">{{ e.title }}</span>
             </span>
             <span class="ov2__es-nums">
               @if (e.doneItems.length) {
                 <button type="button" class="ov2__num ov2__num--done"
-                        (click)="openDetail(e.title + ' · Đã hoàn thành', e.doneItems)">{{ e.doneItems.length }}</button>
+                        (click)="openDetail(e.title + ' · Hoàn thành', e.doneItems)">{{ e.doneItems.length }}</button>
               } @else { <span class="ov2__zero">0</span> }
               @if (e.openItems.length) {
                 <button type="button" class="ov2__num ov2__num--open"
-                        (click)="openDetail(e.title + ' · Chưa hoàn thành', e.openItems)">{{ e.openItems.length }}</button>
+                        (click)="openDetail(e.title + ' · Đang thực hiện', e.openItems)">{{ e.openItems.length }}</button>
               } @else { <span class="ov2__zero">0</span> }
             </span>
             <div class="ov2__es-bar"><div class="ov2__es-fill" [style.width.%]="e.pct"></div></div>
