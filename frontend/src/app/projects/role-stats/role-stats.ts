@@ -18,8 +18,9 @@ interface DevRow {
 interface TestRow {
   key: string; userId: string | null; name: string;
   logged: ProjectTask[];   // bug/issue do người này log
+  assigned: ProjectTask[]; // TOÀN BỘ task mình là người kiểm thử (mọi trạng thái)
   approved: ProjectTask[]; // đã kiểm thử xong (Hoàn thành)
-  pending: ProjectTask[];  // đang chờ mình kiểm thử (Kiểm thử)
+  pending: ProjectTask[];  // đang chờ mình kiểm thử (đang ở Kiểm thử)
   pct: number;
 }
 
@@ -99,9 +100,10 @@ interface TestRow {
           <div class="rs__row rs__row--head">
             <span class="rs__name">Nhân sự</span>
             <span title="Số bug/issue người này đã log">Đã log</span>
-            <span title="Task người này kiểm thử và đã chuyển Hoàn thành">Đã duyệt</span>
             <span title="Task đang ở Kiểm thử, chờ người này verify">Đang chờ</span>
-            <span>% Duyệt</span>
+            <span title="Task người này kiểm thử và đã chuyển Hoàn thành">Đã duyệt</span>
+            <span title="Tổng số task người này chịu trách nhiệm kiểm thử (mọi trạng thái)">Phải kiểm thử</span>
+            <span title="Đã duyệt / Tổng phải kiểm thử">% Duyệt</span>
           </div>
           @for (r of testRows(); track r.key) {
             <div class="rs__row">
@@ -111,11 +113,14 @@ interface TestRow {
               <span>@if (r.logged.length) {
                 <button type="button" class="rs__num" (click)="pick('Bug/Issue do ' + r.name + ' log', r.logged)">{{ r.logged.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
+              <span>@if (r.pending.length) {
+                <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Đang chờ kiểm thử', r.pending)">{{ r.pending.length }}</button>
+              } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.approved.length) {
                 <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Đã duyệt', r.approved)">{{ r.approved.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
-              <span>@if (r.pending.length) {
-                <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Đang chờ kiểm thử', r.pending)">{{ r.pending.length }}</button>
+              <span>@if (r.assigned.length) {
+                <button type="button" class="rs__num" (click)="pick(r.name + ' · Phải kiểm thử', r.assigned)">{{ r.assigned.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span class="rs__pct">
                 <span class="rs__bar"><span class="rs__fill" [style.width.%]="r.pct"></span></span>
@@ -146,11 +151,11 @@ interface TestRow {
     .rs__wrap { overflow-x: auto; }
     .rs__grid { display: grid; gap: 2px; }
     .rs__grid--dev { min-width: 660px; }
-    .rs__grid--test { min-width: 560px; }
+    .rs__grid--test { min-width: 660px; }
     .rs__row { display: grid; align-items: center; gap: var(--space-1); padding: 5px var(--space-3);
       border-radius: var(--radius-md); background: var(--color-surface-alt); font-size: var(--text-sm); }
     .rs__grid--dev .rs__row { grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(72px, .9fr)) minmax(120px, 1.2fr); }
-    .rs__grid--test .rs__row { grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(80px, 1fr)) minmax(120px, 1.2fr); }
+    .rs__grid--test .rs__row { grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(80px, 1fr)) minmax(120px, 1.2fr); }
     .rs__row > span:not(.rs__name) { text-align: center; }
     .rs__row--head { background: none; color: var(--color-text-muted); font-size: var(--text-xs);
       font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .02em; }
@@ -224,7 +229,8 @@ export class RoleStats {
       const key = id || name || '__none__';
       let r = map.get(key);
       if (!r) {
-        r = { key, userId: id, name: name || '— Không rõ —', logged: [], approved: [], pending: [], pct: 0 };
+        r = { key, userId: id, name: name || '— Không rõ —',
+          logged: [], assigned: [], approved: [], pending: [], pct: 0 };
         map.set(key, r);
       }
       return r;
@@ -239,17 +245,21 @@ export class RoleStats {
       const tid = t.testerUserId ?? (isBug ? t.reporterUserId : null);
       const tname = t.testerName ?? (isBug ? t.reporterName : null);
       if (tid || tname) {
-        if (t.status === 'DONE') row(tid ?? null, tname ?? null).approved.push(t);
-        else if (t.status === 'IN_REVIEW') row(tid ?? null, tname ?? null).pending.push(t);
+        const r = row(tid ?? null, tname ?? null);
+        r.assigned.push(t);
+        if (t.status === 'DONE') r.approved.push(t);
+        else if (t.status === 'IN_REVIEW') r.pending.push(t);
       }
     }
     const rows = [...map.values()];
     for (const r of rows) {
-      const scope = r.approved.length + r.pending.length;
-      r.pct = scope ? Math.round((r.approved.length / scope) * 100) : 0;
+      // Mẫu số là TOÀN BỘ việc mình phải kiểm thử, KHÔNG phải chỉ việc đã tới tay.
+      // Nếu chỉ lấy (Đã duyệt + Đang chờ) thì người log 45 bug, duyệt 7, còn 38 bug dev
+      // chưa bàn giao sẽ ra 100% — con số vô nghĩa vì phần lớn việc còn chưa kiểm thử.
+      r.pct = r.assigned.length ? Math.round((r.approved.length / r.assigned.length) * 100) : 0;
     }
     return rows.sort((a, b) =>
-      (b.approved.length + b.pending.length) - (a.approved.length + a.pending.length)
+      b.assigned.length - a.assigned.length
       || b.logged.length - a.logged.length || a.name.localeCompare(b.name, 'vi'));
   });
 }

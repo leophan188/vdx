@@ -473,6 +473,25 @@ export class PrjOverview {
       row.byStatus[t.status].push(t);
       if (isOverdue(t.dueDate, t.status)) row.overdueItems.push(t);
     }
+    // Người CÓ LIÊN QUAN nhưng đang giữ 0 việc (vd QA đã verify xong hết, hoặc dev vừa bàn
+    // giao hết) vẫn phải có dòng — nếu không họ biến mất khỏi bảng dù đóng góp rất nhiều.
+    for (const t of this.workItems()) {
+      for (const p of [
+        { id: t.assigneeUserId, name: t.assigneeName },
+        { id: t.testerUserId ?? null, name: t.testerName ?? null },
+        { id: t.reporterUserId ?? null, name: t.reporterName ?? null }
+      ]) {
+        if (!p.id && !p.name) continue;
+        const key = p.id || p.name || '__none__';
+        if (map.has(key)) continue;
+        map.set(key, {
+          key, userId: p.id ?? null, name: p.name || '— Chưa gán —', unassigned: false,
+          items: [], byType: emptyTypeBuckets(), byStatus: emptyStatusBuckets(), overdueItems: [],
+          total: 0, done: 0, donePct: 0
+        });
+      }
+    }
+
     const rows = [...map.values()];
     for (const r of rows) {
       r.total = r.items.length;
