@@ -389,11 +389,26 @@ public class ProjectReportService {
         // "đã xử lý" (vd 2 Issue log lúc 09:02/09:14 vẫn ở Cần làm mà vẫn đếm). Nên chỉ tính task
         // có hoạt động THỰC SỰ LÀM trong kỳ: mọi loại TRỪ CREATED (tạo mới không phải là xử lý).
         java.util.Set<String> workedInPeriod = new java.util.HashSet<>();
+        // MỐC BÀN GIAO trong kỳ — nền cho thống kê đóng góp theo VAI:
+        //  · handedToReview = dev đã bàn giao sang Kiểm thử (dev xong phần của mình)
+        //  · movedToDone    = tester đã chuyển Hoàn thành (tester xong phần của mình)
+        // Mỗi vai tính vào ĐÚNG kỳ xảy ra mốc của mình: dev bàn giao tuần trước, tester duyệt
+        // tuần này → tuần này chỉ đếm cho tester.
+        java.util.Set<String> handedToReview = new java.util.HashSet<>();
+        java.util.Set<String> movedToDone = new java.util.HashSet<>();
         for (com.bpm.domain.project.TaskActivity act
                 : activityRepo.findByProjectIdAndCreatedAtGreaterThanEqualAndCreatedAtLessThan(
                         projectId, startOfPeriod, endOfPeriod)) {
             if (!com.bpm.domain.project.TaskActivity.CREATED.equals(act.getAction())) {
                 workedInPeriod.add(act.getTaskId());
+            }
+            if (com.bpm.domain.project.TaskActivity.STATUS.equals(act.getAction())) {
+                TaskStatus to = toStatusOf(act);
+                if (to == TaskStatus.IN_REVIEW) {
+                    handedToReview.add(act.getTaskId());
+                } else if (to == TaskStatus.DONE) {
+                    movedToDone.add(act.getTaskId());
+                }
             }
         }
 
@@ -402,7 +417,7 @@ public class ProjectReportService {
         // Gom theo CHỦ HIỆN TẠI (xem ownerUserId): việc ở Kiểm thử tính cho người kiểm thử /
         // người log chứ không nằm mãi ở dev đã bàn giao. Mỗi việc chỉ thuộc ĐÚNG MỘT người
         // tại một thời điểm nên cộng các dòng lại vẫn đúng bằng tổng công việc.
-        java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue,inPeriod,donePeriod]
+        java.util.Map<String, int[]> pAgg = new java.util.LinkedHashMap<>();   // key -> [total,done,doing,todo,overdue,inPeriod,donePeriod,devHandover,testerDone]
         java.util.Map<String, String> pName = new java.util.LinkedHashMap<>(); // key -> tên hiển thị
         for (ProjectTask t : tasks) {
             if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
@@ -412,7 +427,7 @@ public class ProjectReportService {
             String nm = uid == null ? "(chưa gán)"
                     : nameCache.computeIfAbsent(uid, x -> userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
             pName.putIfAbsent(key, nm);
-            int[] a = pAgg.computeIfAbsent(key, x -> new int[7]);
+            int[] a = pAgg.computeIfAbsent(key, x -> new int[9]);
             a[0]++;
             boolean d = t.getStatus() == TaskStatus.DONE;
             if (d) a[1]++;
@@ -424,18 +439,45 @@ public class ProjectReportService {
                 if (d) a[6]++;
             }
         }
+
+        // ĐÓNG GÓP TRONG KỲ THEO VAI — tính cho ĐÚNG người giữ vai đó, không theo chủ hiện tại.
+        // Một task bàn giao rồi duyệt xong trong cùng kỳ sẽ được đếm cho CẢ dev lẫn tester
+        // (2 phần việc), trong khi tổng task của dự án vẫn là 1.
+        java.util.function.BiConsumer<String, Integer> bump = (uid, slot) -> {
+            if (uid == null) return;
+            pName.putIfAbsent(uid, nameCache.computeIfAbsent(uid,
+                    x -> userRepo.findById(uid).map(ProjectService::displayName).orElse(uid)));
+            pAgg.computeIfAbsent(uid, x -> new int[9])[slot]++;
+        };
+        List<ProjectDto.ReportTaskItem> devHandoverItems = new ArrayList<>();
+        List<ProjectDto.ReportTaskItem> testerDoneItems = new ArrayList<>();
+        for (ProjectTask t : tasks) {
+            if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) continue;
+            if (handedToReview.contains(t.getId())) {
+                bump.accept(t.getAssigneeUserId(), 7);
+                devHandoverItems.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange));
+            }
+            if (movedToDone.contains(t.getId())) {
+                bump.accept(testerUserIdOf(t), 8);
+                testerDoneItems.add(item(t, p.getCode(), nameCache, progress.getOrDefault(t.getId(), 0.0), taskById, rollEst, rollRange));
+            }
+        }
+
         List<ProjectDto.PersonProgress> byPerson = new ArrayList<>();
         for (var e : pAgg.entrySet()) {
             int[] a = e.getValue();
             double pct = a[0] == 0 ? 0 : Math.round(a[1] * 1000.0 / a[0]) / 10.0;
             byPerson.add(new ProjectDto.PersonProgress(
                     e.getKey().isEmpty() ? null : e.getKey(), pName.get(e.getKey()),
-                    a[0], a[1], a[2], a[3], a[4], pct, a[5], a[6]));
+                    a[0], a[1], a[2], a[3], a[4], pct, a[5], a[6], a[7], a[8]));
         }
-        // Ai làm nhiều TRONG KỲ lên trước (báo cáo kỳ), rồi mới đến tổng công việc.
-        byPerson.sort((x, y) -> y.inPeriod() != x.inPeriod()
-                ? Integer.compare(y.inPeriod(), x.inPeriod())
-                : Integer.compare(y.total(), x.total()));
+        // Ai đóng góp nhiều TRONG KỲ lên trước, rồi mới đến tổng công việc. Phải cộng cả đóng góp
+        // theo vai: tester duyệt xong nhiều nhưng không còn giữ việc nào thì inPeriod = 0,
+        // chỉ xếp theo inPeriod sẽ đẩy họ xuống đáy bảng dù làm nhiều nhất kỳ đó.
+        java.util.Comparator<ProjectDto.PersonProgress> byEffort =
+                java.util.Comparator.comparingInt(
+                        (ProjectDto.PersonProgress z) -> z.inPeriod() + z.devHandover() + z.testerDone()).reversed();
+        byPerson.sort(byEffort.thenComparing(ProjectDto.PersonProgress::total, java.util.Comparator.reverseOrder()));
 
         // Danh sách việc XỬ LÝ TRONG KỲ — CÙNG điều kiện với bộ đếm inPeriod ở trên, để popup chi tiết
         // và con số trong bảng LUÔN khớp nhau (trước đây popup lấy từ 4 nhóm done/inProgress/upcoming/
@@ -460,7 +502,7 @@ public class ProjectReportService {
         }
 
         return new ProjectDto.PeriodReportResponse(label, done, inProgress, upcoming, overdue, overview,
-                epicStory, byPerson, bugsLogged, periodItems, todo);
+                epicStory, byPerson, bugsLogged, periodItems, devHandoverItems, testerDoneItems, todo);
     }
 
     /**
@@ -513,6 +555,11 @@ public class ProjectReportService {
         double est = rollEst.getOrDefault(t.getId(), t.getEstimateHours());
         LocalDate[] range = rollRange.getOrDefault(t.getId(),
                 new LocalDate[]{t.getStartDate(), t.getDueDate()});
+        String tester = null;
+        if (t.getTesterUserId() != null) {
+            tester = nameCache.computeIfAbsent(t.getTesterUserId(), uid ->
+                    userRepo.findById(uid).map(ProjectService::displayName).orElse(uid));
+        }
         String ownerId = ownerUserId(t);
         String owner = null;
         if (ownerId != null) {
@@ -526,7 +573,7 @@ public class ProjectReportService {
                 t.getPriority() == null ? null : t.getPriority().name(),
                 t.getSeverity() == null ? null : t.getSeverity().name(),
                 t.getAssigneeUserId(), parentPath(t, taskById),
-                t.getReporterUserId(), reporter, ownerId, owner);
+                t.getReporterUserId(), reporter, t.getTesterUserId(), tester, ownerId, owner);
     }
 
     /**
@@ -540,6 +587,54 @@ public class ProjectReportService {
      * </ul>
      * Thiếu vai tương ứng thì lùi về người thực hiện để không việc nào rơi ra ngoài thống kê.
      */
+    /**
+     * Trạng thái ĐÍCH của một lần chuyển. Ưu tiên cột {@code to_status} (bản ghi mới).
+     * Bản ghi CŨ chỉ có {@code detail} dạng "Đang làm → Kiểm thử" nên phải đọc ngược từ nhãn,
+     * nếu không mọi số liệu lịch sử sẽ bằng 0. Nhãn không khớp → null (bỏ qua, không đoán bừa).
+     */
+    private static TaskStatus toStatusOf(com.bpm.domain.project.TaskActivity act) {
+        if (act.getToStatus() != null) {
+            try {
+                return TaskStatus.valueOf(act.getToStatus());
+            } catch (IllegalArgumentException e) {
+                return null;
+            }
+        }
+        String d = act.getDetail();
+        if (d == null) {
+            return null;
+        }
+        int arrow = d.lastIndexOf('→');
+        if (arrow < 0) {
+            return null;
+        }
+        String label = d.substring(arrow + 1).trim();
+        int paren = label.indexOf('(');           // bỏ "(tự tổng hợp từ task con)"
+        if (paren >= 0) {
+            label = label.substring(0, paren).trim();
+        }
+        switch (label) {
+            case "Backlog": return TaskStatus.BACKLOG;
+            case "Cần làm": return TaskStatus.TODO;
+            case "Đang làm": return TaskStatus.IN_PROGRESS;
+            case "Kiểm thử": return TaskStatus.IN_REVIEW;
+            case "Hoàn thành": return TaskStatus.DONE;
+            case "Huỷ": return TaskStatus.CANCELLED;
+            default: return null;
+        }
+    }
+
+    /**
+     * Người giữ vai KIỂM THỬ của một task. Dữ liệu cũ (bug/issue chuyển Kiểm thử trước khi có
+     * quy tắc tự gán tester = người log) chưa có testerUserId → lùi về người log để không mất số liệu.
+     */
+    private static String testerUserIdOf(ProjectTask t) {
+        if (t.getTesterUserId() != null) {
+            return t.getTesterUserId();
+        }
+        return (t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE) ? t.getReporterUserId() : null;
+    }
+
     static String ownerUserId(ProjectTask t) {
         if (t.getStatus() == TaskStatus.IN_REVIEW) {
             if (t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE) {

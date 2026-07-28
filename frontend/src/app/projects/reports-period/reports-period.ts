@@ -170,7 +170,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     .rpp__note { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
     .rpp__note b { color: var(--color-text); font-weight: 600; }
     .rpp__people { display: grid; gap: 2px; }
-    .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(84px, 1fr)) minmax(150px, 1.5fr);
+    .rpp__prow { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(84px, 1fr)) minmax(150px, 1.5fr);
       align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md);
       font-variant-numeric: tabular-nums; }
     .rpp__prow > span:not(.rpp__pname) { text-align: center; }
@@ -410,6 +410,7 @@ export class PrjReportsPeriod {
     const own = ownerOf(t);
     return {
       ownerUserId: own.id, ownerName: own.name,
+      testerUserId: t.testerUserId ?? null, testerName: t.testerName ?? null,
       taskId: t.id, code: t.code, title: t.title, type: t.type, status: t.status,
       assigneeName: t.assigneeName, estimateHours: t.estimateHours,
       startDate: t.startDate, dueDate: t.dueDate, progressPct: t.progressPct,
@@ -559,6 +560,23 @@ export class PrjReportsPeriod {
       const list = allByUser.get(key);
       if (list) list.push(this.toItem(t)); else allByUser.set(key, [this.toItem(t)]);
     }
+    // Đóng góp theo VAI trong kỳ — nhóm theo ĐÚNG vai: dev lấy theo assignee, tester lấy theo tester.
+    const r = this.report();
+    const devByUser = new Map<string, ReportTaskItem[]>();
+    for (const it of r?.devHandoverItems ?? []) {
+      const key = it.assigneeUserId ?? 'NONE';
+      const list = devByUser.get(key);
+      if (list) list.push(it); else devByUser.set(key, [it]);
+    }
+    const testByUser = new Map<string, ReportTaskItem[]>();
+    for (const it of r?.testerDoneItems ?? []) {
+      // Dữ liệu cũ chưa có tester → CHỈ bug/issue mới lùi về người log, khớp đúng
+      // ProjectReportService.testerUserIdOf; lùi cho mọi loại sẽ lệch con số backend đã đếm.
+      const fallback = (it.type === 'BUG' || it.type === 'ISSUE') ? it.reporterUserId : null;
+      const key = it.testerUserId ?? fallback ?? 'NONE';
+      const list = testByUser.get(key);
+      if (list) list.push(it); else testByUser.set(key, [it]);
+    }
     return overall.map((ov) => {
       const periodList = byUser.get(ov.userId ?? 'NONE') ?? [];
       return {
@@ -567,10 +585,14 @@ export class PrjReportsPeriod {
         pctAll: ov.pct,                   // % hoàn thành toàn dự án
         inPeriod: ov.inPeriod,            // việc CÓ THAY ĐỔI trong Ngày/Tuần
         doneInPeriod: ov.donePeriod,      // việc hoàn thành trong kỳ
+        devHandover: ov.devHandover,      // vai DEV: bàn giao sang Kiểm thử trong kỳ
+        testerDone: ov.testerDone,        // vai TESTER: chuyển Hoàn thành trong kỳ
         items: periodList,
         // donePeriod của backend = việc trong kỳ có trạng thái DONE → lọc lại y hệt.
         doneItems: periodList.filter((i) => i.status === 'DONE'),
-        allItems: allByUser.get(ov.userId ?? 'NONE') ?? []
+        allItems: allByUser.get(ov.userId ?? 'NONE') ?? [],
+        devItems: devByUser.get(ov.userId ?? 'NONE') ?? [],
+        testItems: testByUser.get(ov.userId ?? 'NONE') ?? []
       };
     });
   });

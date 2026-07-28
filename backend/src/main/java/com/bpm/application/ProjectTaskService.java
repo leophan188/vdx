@@ -274,6 +274,8 @@ public class ProjectTaskService {
         TaskStatus oldStatus = t.getStatus();
         applyFields(t, req, parentId);
         requireReadyForProgress(t, oldStatus, t.getStatus(), projectId, taskId); // PUT cũng không lách được rule Đang làm
+        autoTesterForBug(t, t.getStatus());
+        requireRolesForDone(t, t.getStatus(), projectId, taskId);
         ProjectTask saved = taskRepo.save(t);
         auditPort.record("PROJECT_TASK_UPDATED", "ProjectTask", saved.getId(), actor,
                 "projectId=" + projectId + ", code=" + saved.getSeq());
@@ -281,8 +283,8 @@ public class ProjectTaskService {
                 "Sửa " + typeLabel(saved.getType()) + " " + code(p, saved));
         // Trạng thái đổi qua PUT cũng ghi nhận + thông báo assignee.
         if (saved.getStatus() != oldStatus) {
-            recordActivity(saved, actor, TaskActivity.STATUS,
-                    statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()));
+            recordStatusActivity(saved, actor,
+                    statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()), oldStatus, saved.getStatus());
             notifyStatus(saved, p, code(p, saved), actor);
             rollupFromParent(projectId, saved.getParentId(), actor); // trạng thái đổi qua sửa → cập nhật cha
         }
@@ -304,6 +306,8 @@ public class ProjectTaskService {
         TaskStatus oldStatus = t.getStatus();
         TaskStatus newStatus = parseStatus(status);
         requireReadyForProgress(t, oldStatus, newStatus, projectId, taskId);
+        autoTesterForBug(t, newStatus);           // bug/issue → tester = người log
+        requireRolesForDone(t, newStatus, projectId, taskId); // Hoàn thành phải đủ dev + tester
         t.setStatus(newStatus);
         t.touch();
         // KHÔNG đổi assignee: người thực hiện (lập trình) + người kiểm thử (tester) + người log (reporter)
@@ -313,8 +317,8 @@ public class ProjectTaskService {
         auditPort.record("PROJECT_TASK_STATUS_CHANGED", "ProjectTask", saved.getId(), actor,
                 "status=" + saved.getStatus());
         if (saved.getStatus() != oldStatus) {
-            recordActivity(saved, actor, TaskActivity.STATUS,
-                    statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()));
+            recordStatusActivity(saved, actor,
+                    statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()), oldStatus, saved.getStatus());
             notifyStatus(saved, p, code(p, saved), actor);
             rollupFromParent(projectId, saved.getParentId(), actor); // tự cập nhật trạng thái Epic/Story/cha
         }
@@ -352,8 +356,8 @@ public class ProjectTaskService {
                 parent.setStatus(derived);
                 parent.touch();
                 taskRepo.save(parent);
-                recordActivity(parent, actor, TaskActivity.STATUS,
-                        statusLabel(old) + " → " + statusLabel(derived) + " (tự tổng hợp từ task con)");
+                recordStatusActivity(parent, actor,
+                        statusLabel(old) + " → " + statusLabel(derived) + " (tự tổng hợp từ task con)", old, derived);
                 auditPort.record("PROJECT_TASK_STATUS_ROLLUP", "ProjectTask", parent.getId(), actor,
                         "status=" + derived);
             }
@@ -575,6 +579,53 @@ public class ProjectTaskService {
 
     private void recordActivity(ProjectTask t, String actor, String action, String detail) {
         activityRepo.save(new TaskActivity(t.getId(), t.getProjectId(), actorName(actor), action, detail));
+    }
+
+    /**
+     * Ghi nhật ký ĐỔI TRẠNG THÁI kèm mốc có cấu trúc (from/to + userId người thao tác).
+     * Báo cáo đếm "dev bàn giao Kiểm thử" / "tester chuyển Hoàn thành" dựa vào đây.
+     */
+    private void recordStatusActivity(ProjectTask t, String actor, String detail,
+                                      TaskStatus from, TaskStatus to) {
+        activityRepo.save(new TaskActivity(t.getId(), t.getProjectId(), actorName(actor), userIdOf(actor),
+                detail, from == null ? null : from.name(), to == null ? null : to.name()));
+    }
+
+    /**
+     * Vai bắt buộc theo quy trình: task chỉ được HOÀN THÀNH khi có đủ NGƯỜI THỰC HIỆN (dev)
+     * và NGƯỜI KIỂM THỬ (tester). Chặn ở service nên mọi đường (PATCH status, PUT sửa,
+     * POST tạo mới) đều không lách được. Epic/Story là cấp nhóm, trạng thái do rollup tự tính → miễn.
+     */
+    private void requireRolesForDone(ProjectTask t, TaskStatus newStatus, String projectId, String taskId) {
+        if (newStatus != TaskStatus.DONE) {
+            return;
+        }
+        if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) {
+            return;
+        }
+        if (taskId != null && !isLeaf(projectId, taskId)) {
+            return; // task cha: rollup tự đặt trạng thái
+        }
+        if (t.getAssigneeUserId() == null) {
+            throw new IllegalArgumentException("Cần có Người thực hiện trước khi chuyển sang Hoàn thành");
+        }
+        if (t.getTesterUserId() == null) {
+            throw new IllegalArgumentException("Cần có Người kiểm thử trước khi chuyển sang Hoàn thành");
+        }
+    }
+
+    /**
+     * BUG/ISSUE chuyển sang Kiểm thử mà chưa có người kiểm thử → lấy luôn NGƯỜI LOG.
+     * Đúng thói quen đang chạy (hệ thống vốn bàn giao ngầm cho người log để verify) và
+     * giúp mọi task hoàn thành đều có đủ 2 vai mà không bắt tester tự chọn chính mình.
+     */
+    private void autoTesterForBug(ProjectTask t, TaskStatus newStatus) {
+        if (newStatus != TaskStatus.IN_REVIEW || t.getTesterUserId() != null) {
+            return;
+        }
+        if (t.getType() == TaskType.BUG || t.getType() == TaskType.ISSUE) {
+            t.setTesterUserId(t.getReporterUserId());
+        }
     }
 
     /** Thông báo người được giao việc (trừ chính người thao tác). */

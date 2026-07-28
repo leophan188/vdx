@@ -299,6 +299,8 @@ public final class ProjectDto {
             String parentPath,
             /** Người LOG (tester tạo bug/việc) — để thống kê "tester log nhiều bug". */
             String reporterUserId, String reporterName,
+            /** Người KIỂM THỬ — để nhóm thống kê "tester duyệt xong" theo đúng vai. */
+            String testerUserId, String testerName,
             /**
              * CHỦ HIỆN TẠI — ai đang thực sự giữ việc ở trạng thái này (xem
              * {@code ProjectReportService.ownerUserId}). Thống kê theo nhân sự gom theo
@@ -320,7 +322,15 @@ public final class ProjectDto {
      */
     public record PersonProgress(String userId, String name,
                                  int total, int done, int doing, int todo, int overdue, double pct,
-                                 int inPeriod, int donePeriod) {
+                                 int inPeriod, int donePeriod,
+                                 /**
+                                  * ĐÓNG GÓP TRONG KỲ theo VAI — mỗi task sinh 2 phần việc (dev + tester),
+                                  * tính theo mốc RIÊNG của từng vai:
+                                  * {@code devHandover} = task người này làm dev và đã bàn giao sang Kiểm thử trong kỳ;
+                                  * {@code testerDone}  = task người này làm tester và đã chuyển Hoàn thành trong kỳ.
+                                  * Cộng các dòng sẽ LỚN HƠN tổng task vì một task có 2 người tham gia.
+                                  */
+                                 int devHandover, int testerDone) {
     }
 
     /** Báo cáo ngày/tuần: nhãn kỳ + 4 nhóm task + tổng quan. */
@@ -334,6 +344,10 @@ public final class ProjectDto {
             List<ReportTaskItem> bugsLogged,
             /** Việc XỬ LÝ TRONG KỲ (có thay đổi trong kỳ) — nguồn cho popup chi tiết theo nhân sự. */
             List<ReportTaskItem> periodItems,
+            /** Task được DEV BÀN GIAO sang Kiểm thử trong kỳ — nguồn popup cột "Dev bàn giao". */
+            List<ReportTaskItem> devHandoverItems,
+            /** Task được TESTER chuyển Hoàn thành trong kỳ — nguồn popup cột "Tester duyệt". */
+            List<ReportTaskItem> testerDoneItems,
             /**
              * CẦN LÀM — đã đến hạn TRONG KỲ nhưng trạng thái vẫn Cần làm/Backlog (chưa ai khởi động).
              * Ngày: hạn đúng hôm nay. Tuần: hạn nằm trong tuần đang xem.

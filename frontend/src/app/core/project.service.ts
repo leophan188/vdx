@@ -294,6 +294,8 @@ export interface ReportTaskItem {
   parentPath: string | null;     // "Epic: … › Story: …" (ngữ cảnh cha)
   reporterUserId: string | null; // người LOG (tester tạo bug/việc)
   reporterName: string | null;
+  testerUserId: string | null;   // người KIỂM THỬ — nhóm thống kê "tester duyệt xong"
+  testerName: string | null;
   /**
    * CHỦ HIỆN TẠI — ai đang thực sự giữ việc ở trạng thái này (Kiểm thử → người kiểm thử,
    * bug/issue Kiểm thử → người log, còn lại → người thực hiện). Backend đã gom thống kê
@@ -325,6 +327,12 @@ export interface PersonProgress {
   pct: number;                   // 0..100
   inPeriod: number;              // việc CÓ THAY ĐỔI trong kỳ Ngày/Tuần đang xem
   donePeriod: number;            // việc hoàn thành trong kỳ
+  /**
+   * ĐÓNG GÓP TRONG KỲ theo VAI — mỗi task sinh 2 phần việc (dev + tester), tính theo mốc
+   * RIÊNG của từng vai. Cộng các dòng sẽ LỚN HƠN tổng task vì 1 task có 2 người tham gia.
+   */
+  devHandover: number;           // task người này làm dev, đã bàn giao sang Kiểm thử trong kỳ
+  testerDone: number;            // task người này làm tester, đã chuyển Hoàn thành trong kỳ
 }
 
 export interface PeriodReport {
@@ -338,6 +346,8 @@ export interface PeriodReport {
   byPerson: PersonProgress[];    // tỷ lệ hoàn thành theo nhân sự (việc lá)
   bugsLogged: ReportTaskItem[];  // Bug/Issue được LOG (tạo) TRONG KỲ — cho thống kê tester/dev theo kỳ
   periodItems: ReportTaskItem[]; // Việc XỬ LÝ TRONG KỲ — nguồn popup chi tiết theo nhân sự
+  devHandoverItems: ReportTaskItem[]; // Task dev BÀN GIAO sang Kiểm thử trong kỳ
+  testerDoneItems: ReportTaskItem[];  // Task tester chuyển HOÀN THÀNH trong kỳ
   todo: ReportTaskItem[];        // CẦN LÀM — đã đến hạn trong kỳ nhưng vẫn Cần làm/Backlog
 }
 

@@ -234,14 +234,19 @@
       </button>
       @if (!isCollapsed('people')) {
         <div class="rpp__sec-body">
-          <p class="rpp__note">Tính theo <b>người đang giữ việc</b>: việc ở <b>Kiểm thử</b> tính cho người kiểm thử
-            (bug/issue tính cho người log để verify), các trạng thái còn lại tính cho người thực hiện.</p>
+          <p class="rpp__note">
+            <b>Tổng CV</b> và <b>Xử lý trong kỳ</b> tính theo <b>người đang giữ việc</b>: việc ở Kiểm thử tính cho
+            người kiểm thử (bug/issue tính cho người log), còn lại tính cho người thực hiện.<br>
+            <b>Dev bàn giao</b> / <b>Tester duyệt</b> là <b>đóng góp theo vai</b>, mỗi vai tính vào kỳ có mốc của
+            mình — dev khi chuyển sang Kiểm thử, tester khi chuyển sang Hoàn thành. Một task đi trọn quy trình
+            trong kỳ được tính cho <b>cả hai người</b>, nên cộng hai cột này sẽ lớn hơn số task của dự án.</p>
           <div class="rpp__people">
             <div class="rpp__prow rpp__prow--head">
               <span class="rpp__pname">Nhân sự</span>
-              <span title="Tổng công việc lá toàn dự án">Tổng CV</span>
+              <span title="Tổng công việc toàn dự án đang giữ">Tổng CV</span>
               <span title="Số việc xử lý trong Ngày/Tuần">Xử lý trong kỳ</span>
-              <span title="Số việc hoàn thành trong kỳ">Xong (kỳ)</span>
+              <span title="Vai DEV: số task đã bàn giao sang Kiểm thử trong kỳ">Dev bàn giao</span>
+              <span title="Vai TESTER: số task đã chuyển Hoàn thành trong kỳ">Tester duyệt</span>
               <span>% HT (dự án)</span>
             </div>
             @for (p of peopleStats(); track p.userId ?? p.name) {
@@ -261,9 +266,15 @@
                   } @else { <span class="rpp__num-zero">0</span> }
                 </span>
                 <span>
-                  @if (p.doneInPeriod) {
+                  @if (p.devHandover) {
+                    <button type="button" class="rpp__num"
+                            (click)="openDetail('Dev bàn giao Kiểm thử · ' + p.name, p.devItems, true)">{{ p.devHandover }}</button>
+                  } @else { <span class="rpp__num-zero">0</span> }
+                </span>
+                <span>
+                  @if (p.testerDone) {
                     <button type="button" class="rpp__num rpp__num--done"
-                            (click)="openDetail('Hoàn thành trong kỳ · ' + p.name, p.doneItems, true)">{{ p.doneInPeriod }}</button>
+                            (click)="openDetail('Tester duyệt xong · ' + p.name, p.testItems)">{{ p.testerDone }}</button>
                   } @else { <span class="rpp__num-zero">0</span> }
                 </span>
                 <span class="rpp__ppct">

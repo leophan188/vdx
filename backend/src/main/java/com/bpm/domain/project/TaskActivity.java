@@ -54,6 +54,21 @@ public class TaskActivity {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
+    /**
+     * Trạng thái TRƯỚC/SAU của lần chuyển (chỉ có với action=STATUS).
+     * Ghi thành cột riêng thay vì chỉ nhét vào {@code detail}: báo cáo cần đếm theo mốc
+     * "bàn giao Kiểm thử" / "chuyển Hoàn thành", parse chuỗi tiếng Việt sẽ vỡ ngay khi đổi nhãn.
+     */
+    @Column(name = "from_status", length = 20)
+    private String fromStatus;
+
+    @Column(name = "to_status", length = 20)
+    private String toStatus;
+
+    /** ID tài khoản người thao tác — {@code actorName} là tên hiển thị nên trùng tên sẽ quy sai người. */
+    @Column(name = "actor_user_id", length = 36)
+    private String actorUserId;
+
     protected TaskActivity() {
     }
 
@@ -67,6 +82,15 @@ public class TaskActivity {
         this.createdAt = Instant.now();
     }
 
+    /** Bản ghi cho lần ĐỔI TRẠNG THÁI — kèm mốc chuyển giao có cấu trúc để thống kê. */
+    public TaskActivity(String taskId, String projectId, String actorName, String actorUserId,
+                        String detail, String fromStatus, String toStatus) {
+        this(taskId, projectId, actorName, STATUS, detail);
+        this.actorUserId = actorUserId;
+        this.fromStatus = fromStatus;
+        this.toStatus = toStatus;
+    }
+
     public String getId() { return id; }
     public String getTaskId() { return taskId; }
     public String getProjectId() { return projectId; }
@@ -74,4 +98,7 @@ public class TaskActivity {
     public String getAction() { return action; }
     public String getDetail() { return detail; }
     public Instant getCreatedAt() { return createdAt; }
+    public String getFromStatus() { return fromStatus; }
+    public String getToStatus() { return toStatus; }
+    public String getActorUserId() { return actorUserId; }
 }
