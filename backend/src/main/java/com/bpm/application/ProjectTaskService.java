@@ -42,6 +42,13 @@ public class ProjectTaskService {
 
     private static final DateTimeFormatter DMY = DateTimeFormatter.ofPattern("dd/MM/yyyy");
 
+    /**
+     * TRẦN GIỜ cho TASK LÁ (đơn vị làm việc nhỏ nhất): ước lượng và mỗi lần ghi giờ đều không
+     * được quá 4h — buộc chia nhỏ công việc để ước lượng và chấm công còn bám sát thực tế.
+     * Task CHA không áp trần: mọi con số của cha là TỔNG HỢP từ lá con, không nhập tay.
+     */
+    private static final double MAX_LEAF_HOURS = 4.0;
+
     private final ProjectRepository projectRepo;
     private final ProjectTaskRepository taskRepo;
     private final UserAccountRepository userRepo;
@@ -237,7 +244,7 @@ public class ProjectTaskService {
             requireSameProjectTask(projectId, parentId); // cha phải cùng dự án
         }
         ProjectTask t = new ProjectTask(projectId, p.nextSeq(), require(req.title(), "tiêu đề"), actor);
-        applyFields(t, req, parentId);
+        applyFields(t, req, parentId, true); // task vừa tạo luôn là LÁ (chưa có con)
         requireValidParent(t.getType(), parentId, projectId); // ràng buộc: Story/Task/Sub-task/Bug/Issue phải có cha đúng loại
         requireReadyForProgress(t, null, t.getStatus(), projectId, null); // tạo thẳng ở Đang làm cũng phải đủ est + ngày
         t.setReporterUserId(userIdOf(actor)); // người LOG = actor (UserAccount id); dùng cho auto-reassign bug
@@ -276,7 +283,7 @@ public class ProjectTaskService {
         }
         String oldAssignee = t.getAssigneeUserId();
         TaskStatus oldStatus = t.getStatus();
-        applyFields(t, req, parentId);
+        applyFields(t, req, parentId, isLeaf(projectId, taskId));
         requireReadyForProgress(t, oldStatus, t.getStatus(), projectId, taskId); // PUT cũng không lách được rule Đang làm
         autoTesterForBug(t, t.getStatus());
         requireRolesForDone(t, t.getStatus(), projectId, taskId);
@@ -323,10 +330,13 @@ public class ProjectTaskService {
         autoTesterForBug(t, newStatus);           // bug/issue → tester = người log
         requireRolesForDone(t, newStatus, projectId, taskId); // Hoàn thành phải đủ dev + tester
         String workRole = workRoleFor(t, oldStatus, newStatus, projectId, taskId);
-        if (workRole != null && (hours == null || hours <= 0)) {
-            throw new IllegalArgumentException(TaskWorkLog.ROLE_DEV.equals(workRole)
-                    ? "Cần nhập số giờ đã làm trước khi bàn giao sang Kiểm thử"
-                    : "Cần nhập số giờ đã kiểm thử trước khi chuyển sang Hoàn thành");
+        if (workRole != null) {
+            if (hours == null || hours <= 0) {
+                throw new IllegalArgumentException(TaskWorkLog.ROLE_DEV.equals(workRole)
+                        ? "Cần nhập số giờ đã làm trước khi bàn giao sang Kiểm thử"
+                        : "Cần nhập số giờ đã kiểm thử trước khi chuyển sang Hoàn thành");
+            }
+            requireHoursWithinCap(hours);
         }
         t.setStatus(newStatus);
         t.touch();
@@ -527,6 +537,12 @@ public class ProjectTaskService {
         ProjectTask t = requireSameProjectTask(projectId, taskId);
         if (req.hours() == null || req.hours() <= 0) {
             throw new IllegalArgumentException("Số giờ phải lớn hơn 0");
+        }
+        requireHoursWithinCap(req.hours());
+        // Task CHA tổng hợp giờ từ lá con — ghi thẳng vào cha sẽ cộng trùng với con.
+        if (!isLeaf(projectId, taskId)) {
+            throw new IllegalArgumentException(
+                    "Không ghi giờ trực tiếp lên công việc cha — giờ của cha được tổng hợp từ các công việc con");
         }
         String role = TaskWorkLog.ROLE_TEST.equalsIgnoreCase(req.role())
                 ? TaskWorkLog.ROLE_TEST : TaskWorkLog.ROLE_DEV;
@@ -747,6 +763,18 @@ public class ProjectTaskService {
                         + ", ngày " + d.format(DMY) + ")");
     }
 
+    /**
+     * MỖI LẦN ghi giờ trên task lá không quá {@link #MAX_LEAF_HOURS}. Chặn từng lần chứ không
+     * chặn tổng: task ước lượng 4h mà thực tế làm 6h (bị trả về sửa lại) thì vẫn phải ghi được
+     * đúng thực tế, nếu chặn tổng thì timesheet buộc phải ghi sai.
+     */
+    private static void requireHoursWithinCap(double hours) {
+        if (hours > MAX_LEAF_HOURS) {
+            throw new IllegalArgumentException("Mỗi lần ghi giờ không được quá " + trim(MAX_LEAF_HOURS)
+                    + " giờ — hãy tách nhỏ công việc hoặc ghi thành nhiều lần theo từng ngày");
+        }
+    }
+
     /** yyyy-MM-dd → LocalDate; rỗng/sai định dạng → hôm nay. */
     private static LocalDate parseWorkDate(String s) {
         if (s == null || s.isBlank()) {
@@ -964,12 +992,15 @@ public class ProjectTaskService {
         }
     }
 
-    private void applyFields(ProjectTask t, ProjectDto.TaskRequest req, String parentId) {
+    private void applyFields(ProjectTask t, ProjectDto.TaskRequest req, String parentId, boolean leaf) {
         TaskType type = parseType(req.type());
         double est = req.estimateHours() == null ? 0.0 : req.estimateHours();
-        // Ràng buộc: SUB-TASK ước lượng KHÔNG quá 4 giờ (đơn vị công việc nhỏ, chia nhỏ nếu lớn hơn).
-        if (type == TaskType.SUBTASK && est > 4.0) {
-            throw new IllegalArgumentException("Ước lượng sub-task không được quá 4 giờ");
+        // Ràng buộc: TASK LÁ (đơn vị làm việc nhỏ nhất) ước lượng KHÔNG quá 4 giờ — lớn hơn thì tách nhỏ.
+        // Task CHA không chặn: est của cha là TỔNG HỢP từ lá con, không nhập tay.
+        // Epic/Story là cấp NHÓM nên cũng bỏ qua, kể cả khi chưa có con.
+        if (leaf && type != TaskType.EPIC && type != TaskType.STORY && est > MAX_LEAF_HOURS) {
+            throw new IllegalArgumentException("Ước lượng " + typeLabel(type) + " không được quá "
+                    + trim(MAX_LEAF_HOURS) + " giờ — hãy tách nhỏ công việc");
         }
         t.apply(parentId,
                 require(req.title(), "tiêu đề"),

@@ -159,12 +159,11 @@
         @if (isRollup(r.task)) {
           <span class="bl-num bl-num--muted" title="Tổng est các task con (tự tổng hợp)">{{ rollupEst(r.task.id) }}</span>
         } @else {
-          <input type="number" class="bl-est" min="0" step="0.5"
-                 [max]="r.task.type === 'SUBTASK' ? 4 : null"
+          <input type="number" class="bl-est" min="0" step="0.5" [max]="4"
                  [value]="r.task.estimateHours || 0"
                  (blur)="saveEstInline(r.task, $any($event.target).value)"
                  (keydown.enter)="$any($event.target).blur()"
-                 [title]="r.task.type === 'SUBTASK' ? 'Nhập est (giờ) — ≤ 4h' : 'Nhập est (giờ) — Enter/rời ô để lưu'" />
+                 title="Nhập est (giờ) — task nhỏ nhất tối đa 4h; Enter/rời ô để lưu" />
         }
 
         <!-- % Hoàn thành (progressPct rollup) -->
@@ -265,9 +264,9 @@
           <span class="field-hint">Tự tổng hợp từ task con</span>
         } @else {
           <input type="number" name="estimateHours" min="0" step="0.5"
-                 [max]="f.type === 'SUBTASK' ? 4 : null" [(ngModel)]="f.estimateHours" />
-          @if (f.type === 'SUBTASK') {
-            <span class="field-hint">≤ 4h</span>
+                 [max]="f.type === 'EPIC' || f.type === 'STORY' ? null : 4" [(ngModel)]="f.estimateHours" />
+          @if (f.type !== 'EPIC' && f.type !== 'STORY') {
+            <span class="field-hint">Tối đa 4h — công việc lớn hơn thì tách nhỏ</span>
           }
         }
       </div>

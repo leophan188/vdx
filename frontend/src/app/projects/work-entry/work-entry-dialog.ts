@@ -22,8 +22,8 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
         <p class="we__hint">{{ hint() }}</p>
         <div class="we__row">
           <label class="we__field">
-            <span>Số giờ <b class="we__req">*</b></span>
-            <input type="number" min="0.25" step="0.25" [value]="hours()" autofocus
+            <span>Số giờ <b class="we__req">*</b> <i class="we__cap">tối đa {{ maxHours }}h</i></span>
+            <input type="number" min="0.25" step="0.25" [max]="maxHours" [value]="hours()" autofocus
                    (input)="hours.set(+$any($event.target).value)" (keydown.enter)="submit()" />
           </label>
           <label class="we__field">
@@ -61,6 +61,7 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
     .we__field { display: grid; gap: 4px; }
     .we__field > span { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-medium); }
     .we__req { color: var(--overdue, #e5484d); }
+    .we__cap { font-style: normal; opacity: .8; }
     .we__field input { height: var(--control-h-sm); padding: 0 var(--space-3); border: 1px solid var(--color-border);
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
     .we__quick { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -84,7 +85,9 @@ export class WorkEntryDialog {
   readonly cancelled = output<void>();
 
   readonly today = new Date().toISOString().slice(0, 10);
-  readonly quickHours = [0.5, 1, 2, 4, 8];
+  /** Trần giờ MỖI LẦN ghi trên task lá — khớp MAX_LEAF_HOURS ở backend. */
+  readonly maxHours = 4;
+  readonly quickHours = [0.5, 1, 2, 3, 4];
 
   readonly hours = signal<number>(1);
   readonly workDate = signal<string>(this.today);
@@ -109,8 +112,9 @@ export class WorkEntryDialog {
       this.error.set('Số giờ phải lớn hơn 0');
       return;
     }
-    if (h > 24) {
-      this.error.set('Số giờ trong một ngày không thể quá 24');
+    if (h > this.maxHours) {
+      this.error.set(`Mỗi lần ghi không được quá ${this.maxHours}h — hãy tách nhỏ công việc `
+        + 'hoặc ghi thành nhiều lần theo từng ngày');
       return;
     }
     this.error.set('');

@@ -749,9 +749,11 @@ export class PrjBacklog implements OnInit {
     } else {
       this.f.parentId = null; // EPIC → luôn là gốc
     }
-    // Chặn est SUB-TASK ≤ 4h (UX sớm — BE cũng chặn).
-    if (this.f.type === 'SUBTASK' && Number(this.f.estimateHours) > 4) {
-      this.toast.error('Ước lượng sub-task không được quá 4 giờ');
+    // Chặn est ≤ 4h cho TASK LÁ (UX sớm — BE cũng chặn). Epic/Story là cấp nhóm nên bỏ qua,
+    // task cha thì ô est đã khoá sang chế độ tự tổng hợp.
+    if (!this.editingRollup() && this.f.type !== 'EPIC' && this.f.type !== 'STORY'
+        && Number(this.f.estimateHours) > 4) {
+      this.toast.error('Ước lượng không được quá 4 giờ', 'Hãy tách nhỏ công việc');
       return;
     }
     this.saving.set(true);
@@ -899,9 +901,10 @@ export class PrjBacklog implements OnInit {
     if (this.isRollup(t)) return; // rollup (cha / EPIC / STORY) = tự tổng hợp, không nhập
     const val = Math.max(0, Number(raw) || 0);
     if (val === (t.estimateHours || 0)) return;
-    // Chặn est SUB-TASK ≤ 4h (UX sớm — BE cũng chặn); revert bằng silentReload.
-    if (t.type === 'SUBTASK' && val > 4) {
-      this.toast.error('Ước lượng sub-task không được quá 4 giờ');
+    // Chặn est TASK LÁ ≤ 4h (UX sớm — BE cũng chặn); revert bằng silentReload.
+    // Chỉ tới được đây khi là lá: isRollup() đã chặn task cha ở trên.
+    if (val > 4) {
+      this.toast.error('Ước lượng không được quá 4 giờ', 'Hãy tách nhỏ công việc');
       this.silentReload(); // khôi phục giá trị cũ trên lưới
       return;
     }

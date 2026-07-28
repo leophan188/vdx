@@ -54,11 +54,11 @@
       <!-- Est (giờ) -->
       <div class="field">
         <label>Est (giờ)</label>
-        <input type="number" min="0" step="0.5" [max]="isSubtask() ? 4 : null"
+        <input type="number" min="0" step="0.5" [max]="isGroupType() ? null : 4"
                [value]="estimateHours()" (input)="estimateHours.set($any($event.target).value)"
                placeholder="0" />
-        @if (isSubtask()) {
-          <div class="qc__hint">≤ 4h</div>
+        @if (!isGroupType()) {
+          <div class="qc__hint">Tối đa 4h — công việc lớn hơn thì tách nhỏ</div>
         }
       </div>
     </div>

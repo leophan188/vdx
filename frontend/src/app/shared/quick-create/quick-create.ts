@@ -156,6 +156,8 @@ export class QuickCreate {
 
   /** Loại đang chọn là SUB-TASK → chặn est > 4h (UX sớm; BE cũng chặn). */
   readonly isSubtask = computed<boolean>(() => this.type() === 'SUBTASK');
+  /** Epic/Story là cấp NHÓM — est của chúng tổng hợp từ con nên không áp trần 4h. */
+  readonly isGroupType = computed<boolean>(() => this.type() === 'EPIC' || this.type() === 'STORY');
 
   constructor() {
     // Mỗi lần mở → reset form + nạp danh sách dự án; áp preset loại.
@@ -319,8 +321,8 @@ export class QuickCreate {
         this.applyPendingParent();
       }
     }
-    // rời SUB-TASK vẫn giữ est; vào SUB-TASK mà est > 4 → cắt về 4 cho khớp max.
-    if (t === 'SUBTASK' && Number(this.estimateHours()) > 4) this.estimateHours.set('4');
+    // Task tạo mới luôn là LÁ → est trần 4h cho mọi loại trừ Epic/Story (cấp nhóm).
+    if (t !== 'EPIC' && t !== 'STORY' && Number(this.estimateHours()) > 4) this.estimateHours.set('4');
   }
 
   onParent(id: string): void { this.parentId.set(id || ''); }
@@ -340,10 +342,10 @@ export class QuickCreate {
       if (!ok) { this.toast.error(`Vui lòng chọn ${this.parentTypeLabel()} cha`); return; }
     }
 
-    // Chặn est SUB-TASK ≤ 4h (UX sớm — BE cũng chặn).
+    // Chặn est ≤ 4h — task tạo mới luôn là LÁ; Epic/Story là cấp nhóm nên bỏ qua.
     const est = this.estimateHours() ? Number(this.estimateHours()) : 0;
-    if (this.type() === 'SUBTASK' && est > 4) {
-      this.toast.error('Ước lượng sub-task không được quá 4 giờ');
+    if (this.type() !== 'EPIC' && this.type() !== 'STORY' && est > 4) {
+      this.toast.error('Ước lượng không được quá 4 giờ', 'Hãy tách nhỏ công việc');
       return;
     }
 
