@@ -74,8 +74,14 @@ public class ProjectTask {
      * Task có cờ này đi thẳng Đang làm → Hoàn thành, không đòi người kiểm thử, và giờ ghi
      * lúc hoàn thành tính là giờ LẬP TRÌNH của người thực hiện chứ không phải giờ kiểm thử.
      * BUG/ISSUE luôn phải kiểm thử nên cờ bị bỏ qua với hai loại này.
+     *
+     * <p>PHẢI khai báo {@code nullable = false}: với ddl-auto=update, Hibernate tạo cột MỚI ở dạng
+     * cho phép NULL và KHÔNG backfill dữ liệu cũ, nên mọi bản ghi sẵn có sẽ mang NULL — gán NULL
+     * vào field nguyên thuỷ {@code boolean} làm Hibernate ném lỗi ở MỌI lần đọc task, sập cả module.
+     * Đã xảy ra một lần; thêm field nguyên thuỷ vào bảng có sẵn thì luôn phải kèm backfill
+     * {@code UPDATE ... SET cot=0 WHERE cot IS NULL} trước khi lên bản mới.
      */
-    @Column(name = "skip_test")
+    @Column(name = "skip_test", nullable = false)
     private boolean skipTest;
 
     /** Ước lượng thời gian (giờ). */
