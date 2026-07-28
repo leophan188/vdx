@@ -36,6 +36,19 @@
           <div class="ov2__prog-bar"><div class="ov2__prog-fill ov2__prog-fill--alt" [style.width.%]="taskPct()"></div></div>
           <div class="ov2__prog-sub">{{ r.leafDoneTasks }}/{{ r.leafTasks }} task lá</div>
         </div>
+        <div class="ov2__prog-card">
+          <div class="ov2__prog-label">Công sức đã tiêu</div>
+          <div class="ov2__prog-pct ov2__prog-pct--effort" [class.is-over]="effortOverrun()">{{ effortPct() }}%</div>
+          <div class="ov2__prog-bar">
+            <div class="ov2__prog-fill ov2__prog-fill--effort" [class.is-over]="effortOverrun()"
+                 [style.width.%]="effortPct() > 100 ? 100 : effortPct()"></div>
+          </div>
+          @if (effortOverrun()) {
+            <div class="ov2__prog-warn">Tiêu nhanh hơn tiến độ bàn giao</div>
+          } @else {
+            <div class="ov2__prog-sub">{{ actualTotal() }}/{{ rnd(r.totalEstimate) }} h thực tế</div>
+          }
+        </div>
         <stat-card icon="👥" label="Thành viên" [value]="p.memberCount" tint="var(--status-active)" />
         <stat-card icon="⏰" label="Quá hạn" [value]="r.overdue" tint="var(--status-pending)" />
       </section>

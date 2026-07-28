@@ -111,6 +111,11 @@ function emptyTypeBuckets(): TypeBuckets {
     .ov2__prog-bar { height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
     .ov2__prog-fill { height: 100%; border-radius: 999px; background: var(--color-primary); }
     .ov2__prog-fill--alt { background: var(--color-info, var(--status-active)); }
+    .ov2__prog-pct--effort { color: var(--status-pending); }
+    .ov2__prog-pct--effort.is-over { color: var(--overdue, #e5484d); }
+    .ov2__prog-fill--effort { background: var(--status-pending); }
+    .ov2__prog-fill--effort.is-over { background: var(--overdue, #e5484d); }
+    .ov2__prog-warn { font-size: var(--text-xs); color: var(--overdue, #e5484d); font-weight: 600; }
     .ov2__prog-sub { font-size: var(--text-xs); color: var(--color-text-muted); }
 
     .ov2__h { margin: var(--space-2) 0 0; font-size: 1rem; font-weight: var(--weight-semibold); }
@@ -344,6 +349,20 @@ export class PrjOverview {
   /** Tổng giờ thực tế của dự án + độ lệch so với est. */
   readonly actualTotal = computed(() =>
     Math.round(this.workLogs().reduce((a, w) => a + (w.hours || 0), 0) * 10) / 10);
+  /**
+   * % CÔNG SỨC ĐÃ TIÊU = giờ thực tế đã ghi / tổng est dự án.
+   * Cố tình TÁCH khỏi "% hoàn thành": % hoàn thành đo KHỐI LƯỢNG đã bàn giao (trọng số est),
+   * chỉ số này đo CÔNG SỨC đã bỏ ra. Gộp hai thứ vào một số thì làm việc kém hiệu quả lại
+   * làm % đẹp lên — task est 4h tốn 8h sẽ đẩy tiến độ tăng dù chẳng giao thêm gì.
+   * Đọc cặp: công sức 80% mà khối lượng mới 50% là đang ăn vào dự toán.
+   */
+  readonly effortPct = computed(() => {
+    const est = this.report()?.totalEstimate ?? 0;
+    return est > 0 ? Math.round((this.actualTotal() / est) * 100) : 0;
+  });
+  /** Tiêu công sức nhanh hơn tốc độ bàn giao ít nhất 10 điểm → cảnh báo. */
+  readonly effortOverrun = computed(() => this.effortPct() - this.pct() >= 10);
+
   readonly estVariancePct = computed(() => {
     const est = this.report()?.totalEstimate ?? 0;
     return est > 0 ? Math.round(((this.actualTotal() - est) / est) * 100) : 0;
