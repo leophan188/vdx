@@ -52,7 +52,7 @@ interface TestRow {
       </div>
 
       <!-- ===== VAI DEV ===== -->
-      <h4 class="rs__h">👨‍💻 Theo vai Lập trình (dev) — {{ devRows().length }} người</h4>
+      <h4 class="rs__h">👨‍💻 Theo vai Lập trình (dev) — {{ devRows().length }} người{{ scopeSuffix() }}</h4>
       <div class="rs__wrap">
         <div class="rs__grid rs__grid--dev">
           <div class="rs__row rs__row--head">
@@ -94,7 +94,7 @@ interface TestRow {
       </div>
 
       <!-- ===== VAI TESTER ===== -->
-      <h4 class="rs__h">🔎 Theo vai Kiểm thử (tester) — {{ testRows().length }} người</h4>
+      <h4 class="rs__h">🔎 Theo vai Kiểm thử (tester) — {{ testRows().length }} người{{ scopeSuffix() }}</h4>
       <div class="rs__wrap">
         <div class="rs__grid rs__grid--test">
           <div class="rs__row rs__row--head">
@@ -132,7 +132,11 @@ interface TestRow {
       </div>
 
       <p class="rs__note">Một task nằm ở cả hai bảng — phần việc của dev và phần việc của tester.
-        Đó là 2 phần việc của 2 người, không phải đếm trùng; tổng task của dự án vẫn là 1.</p>
+        Đó là 2 phần việc của 2 người, không phải đếm trùng; tổng task của dự án vẫn là 1.
+        @if (scopeLabel()) {
+          <br>Phạm vi: <b>{{ scopeLabel() }}</b> — chỉ gồm công việc có thay đổi trong kỳ đang chọn,
+          cột trạng thái là trạng thái HIỆN TẠI của những việc đó.
+        }</p>
     </div>
   `,
   styles: [`
@@ -178,13 +182,19 @@ interface TestRow {
   `]
 })
 export class RoleStats {
-  /** Toàn bộ task của dự án (đã gồm Epic/Story — component tự bỏ). */
+  /**
+   * Tập task để thống kê (đã gồm Epic/Story — component tự bỏ).
+   * Tổng quan truyền TOÀN BỘ task dự án; Báo cáo kỳ truyền task ĐÃ XỬ LÝ TRONG KỲ.
+   */
   readonly tasks = input<ProjectTask[]>([]);
+  /** Nhãn phạm vi ghép vào tiêu đề, vd "việc xử lý trong kỳ" — rỗng = toàn dự án. */
+  readonly scopeLabel = input<string>('');
   /** Bấm một ô số → cha mở popup danh sách. */
   readonly picked = output<{ title: string; items: ProjectTask[] }>();
 
   readonly workCats = WORK_CATS;
   readonly cat = signal<WorkCat | 'ALL'>('ALL');
+  readonly scopeSuffix = computed(() => this.scopeLabel() ? ` · ${this.scopeLabel()}` : '');
 
   /** Việc thực (bỏ Epic/Story) và bỏ việc Huỷ — khớp cách backend đếm theo nhân sự. */
   private readonly base = computed(() =>

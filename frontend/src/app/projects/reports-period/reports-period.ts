@@ -620,6 +620,17 @@ export class PrjReportsPeriod {
     return [...map.values()].sort((a, b) => b.count - a.count);
   }
 
+  /**
+   * Task ĐÃ XỬ LÝ TRONG KỲ, dạng ProjectTask — nguồn cho bảng thống kê theo vai ở màn BÁO CÁO.
+   * Tổng quan dùng toàn bộ task dự án; báo cáo phải giới hạn theo kỳ đang chọn, nếu không
+   * hai màn ra số y hệt nhau và cái "báo cáo ngày/tuần" mất ý nghĩa.
+   * Lấy đúng tập periodItems của backend (cùng điều kiện với bộ đếm "Xử lý trong kỳ").
+   */
+  readonly periodTasks = computed<ProjectTask[]>(() => {
+    const ids = new Set((this.report()?.periodItems ?? []).map((i) => i.taskId));
+    return ids.size ? this.tasks().filter((t) => ids.has(t.id)) : [];
+  });
+
   /** Bấm ô số trong bảng theo vai → đổi ProjectTask sang dòng hiển thị rồi mở popup chung. */
   openRolePick(e: { title: string; items: ProjectTask[] }): void {
     this.openDetail(e.title, e.items.map((t) => this.toItem(t)));
