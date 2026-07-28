@@ -3,6 +3,7 @@ import { StatCard } from '../../shared/stat-card/stat-card';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { Modal } from '../../shared/modal/modal';
 import { PrjTaskDetail } from '../task-detail/task-detail';
+import { RoleStats } from '../role-stats/role-stats';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { formatThousands } from '../../shared/format';
@@ -73,7 +74,7 @@ function emptyTypeBuckets(): TypeBuckets {
 @Component({
   selector: 'app-prj-overview',
   standalone: true,
-  imports: [StatCard, EmployeeChip, Modal, DataGrid, GridCellDirective, PrjTaskDetail],
+  imports: [StatCard, EmployeeChip, Modal, DataGrid, GridCellDirective, PrjTaskDetail, RoleStats],
   templateUrl: './overview.html',
   styles: [`
     .ov2 { display: grid; gap: var(--space-4); }

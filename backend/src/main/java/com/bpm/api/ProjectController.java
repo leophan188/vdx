@@ -260,7 +260,39 @@ public class ProjectController {
     public ProjectDto.TaskResponse updateTaskStatus(@PathVariable String id, @PathVariable String taskId,
                                                     @RequestBody ProjectDto.StatusRequest req, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
-        return taskService.updateStatus(id, taskId, req.status(), actor(auth));
+        return taskService.updateStatus(id, taskId, req.status(), req.hours(), req.workDate(), req.note(), actor(auth));
+    }
+
+    // ===== Giờ làm việc thực tế (timesheet) =====
+
+    /** Ghi giờ cho một task (nút "Ghi giờ" — dùng để log hằng ngày, không chờ tới lúc bàn giao). */
+    @PostMapping("/{id}/tasks/{taskId}/work-logs")
+    public ProjectDto.WorkLogResponse addWorkLog(@PathVariable String id, @PathVariable String taskId,
+                                                 @RequestBody ProjectDto.WorkLogRequest req, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return taskService.addWorkLog(id, taskId, req, actor(auth));
+    }
+
+    @GetMapping("/{id}/tasks/{taskId}/work-logs")
+    public List<ProjectDto.WorkLogResponse> taskWorkLogs(@PathVariable String id, @PathVariable String taskId,
+                                                         Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return taskService.listTaskWorkLogs(id, taskId);
+    }
+
+    /** Giờ toàn dự án trong khoảng ngày — nguồn dựng timesheet. */
+    @GetMapping("/{id}/work-logs")
+    public List<ProjectDto.WorkLogResponse> projectWorkLogs(@PathVariable String id,
+                                                            @RequestParam String from, @RequestParam String to,
+                                                            Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        return taskService.listProjectWorkLogs(id, from, to);
+    }
+
+    @DeleteMapping("/{id}/work-logs/{workLogId}")
+    public void deleteWorkLog(@PathVariable String id, @PathVariable String workLogId, Authentication auth) {
+        projectService.requireMember(id, actor(auth), isAdmin(auth));
+        taskService.deleteWorkLog(id, workLogId, actor(auth));
     }
 
     @PatchMapping("/{id}/tasks/{taskId}/assignee")

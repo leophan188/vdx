@@ -126,3 +126,7 @@
     <div class="kb-ghost" [style.left.px]="g.x" [style.top.px]="g.y">{{ g.label }}</div>
   }
 }
+
+<!-- Nhập giờ khi thả card vào Kiểm thử / Hoàn thành (backend bắt buộc có giờ) -->
+<app-work-entry [open]="workOpen()" [role]="workRole()" [taskTitle]="workTitle()"
+                (confirmed)="onWorkConfirmed($event)" (cancelled)="onWorkCancelled()" />

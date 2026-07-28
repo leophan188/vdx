@@ -96,6 +96,22 @@ export function ownerOf(t: OwnableTask): { id: string | null; name: string | nul
   return { id: t.assigneeUserId, name: t.assigneeName };
 }
 
+/**
+ * Lần chuyển trạng thái này có phải MỐC BÀN GIAO cần ghi giờ không, và với vai nào.
+ * PHẢI khớp ProjectTaskService.workRoleFor ở backend — backend sẽ từ chối nếu thiếu giờ,
+ * nên mọi màn đổi trạng thái đều phải hỏi giờ đúng những trường hợp này.
+ */
+export function workRoleForTransition(
+  t: { type: TaskType; status: TaskStatus; leaf?: boolean }, next: TaskStatus
+): 'DEV' | 'TEST' | null {
+  if (next === t.status) return null;
+  if (t.type === 'EPIC' || t.type === 'STORY') return null;
+  if (t.leaf === false) return null;              // task cha: trạng thái do rollup
+  if (next === 'IN_REVIEW') return 'DEV';
+  if (next === 'DONE') return 'TEST';
+  return null;
+}
+
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
 export function catOf(type: TaskType): WorkCat | null {
   if (type === 'TASK' || type === 'SUBTASK') return 'TASK';

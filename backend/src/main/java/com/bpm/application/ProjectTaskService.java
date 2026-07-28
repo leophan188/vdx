@@ -12,6 +12,7 @@ import com.bpm.domain.project.TaskActivity;
 import com.bpm.domain.project.TaskPriority;
 import com.bpm.domain.project.TaskStatus;
 import com.bpm.domain.project.TaskType;
+import com.bpm.domain.project.TaskWorkLog;
 import com.bpm.infrastructure.EmployeeRepository;
 import com.bpm.infrastructure.ProjectDiaryRepository;
 import com.bpm.infrastructure.ProjectRepository;
@@ -49,6 +50,7 @@ public class ProjectTaskService {
     private final TaskAttachmentRepository attachmentRepo;
     private final TaskActivityRepository activityRepo;
     private final ProjectDiaryRepository diaryRepo;
+    private final com.bpm.infrastructure.TaskWorkLogRepository workLogRepo;
     private final AuditPort auditPort;
     private final NotificationService notificationService;
 
@@ -57,7 +59,9 @@ public class ProjectTaskService {
                               TaskCommentRepository commentRepo,
                               TaskAttachmentRepository attachmentRepo, TaskActivityRepository activityRepo,
                               ProjectDiaryRepository diaryRepo,
+                              com.bpm.infrastructure.TaskWorkLogRepository workLogRepo,
                               AuditPort auditPort, NotificationService notificationService) {
+        this.workLogRepo = workLogRepo;
         this.projectRepo = projectRepo;
         this.taskRepo = taskRepo;
         this.userRepo = userRepo;
@@ -301,6 +305,16 @@ public class ProjectTaskService {
 
     @Transactional
     public ProjectDto.TaskResponse updateStatus(String projectId, String taskId, String status, String actor) {
+        return updateStatus(projectId, taskId, status, null, null, null, actor);
+    }
+
+    /**
+     * Đổi trạng thái, kèm GHI GIỜ ở hai mốc bàn giao (nguồn timesheet):
+     * sang Kiểm thử ghi giờ vai DEV, sang Hoàn thành ghi giờ vai TEST.
+     */
+    @Transactional
+    public ProjectDto.TaskResponse updateStatus(String projectId, String taskId, String status,
+                                                Double hours, String workDate, String note, String actor) {
         Project p = getProject(projectId);
         ProjectTask t = requireSameProjectTask(projectId, taskId);
         TaskStatus oldStatus = t.getStatus();
@@ -308,6 +322,12 @@ public class ProjectTaskService {
         requireReadyForProgress(t, oldStatus, newStatus, projectId, taskId);
         autoTesterForBug(t, newStatus);           // bug/issue → tester = người log
         requireRolesForDone(t, newStatus, projectId, taskId); // Hoàn thành phải đủ dev + tester
+        String workRole = workRoleFor(t, oldStatus, newStatus, projectId, taskId);
+        if (workRole != null && (hours == null || hours <= 0)) {
+            throw new IllegalArgumentException(TaskWorkLog.ROLE_DEV.equals(workRole)
+                    ? "Cần nhập số giờ đã làm trước khi bàn giao sang Kiểm thử"
+                    : "Cần nhập số giờ đã kiểm thử trước khi chuyển sang Hoàn thành");
+        }
         t.setStatus(newStatus);
         t.touch();
         // KHÔNG đổi assignee: người thực hiện (lập trình) + người kiểm thử (tester) + người log (reporter)
@@ -319,6 +339,9 @@ public class ProjectTaskService {
         if (saved.getStatus() != oldStatus) {
             recordStatusActivity(saved, actor,
                     statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()), oldStatus, saved.getStatus());
+            if (workRole != null) {
+                saveWorkLog(saved, workRole, hours, workDate, note, actor);
+            }
             notifyStatus(saved, p, code(p, saved), actor);
             rollupFromParent(projectId, saved.getParentId(), actor); // tự cập nhật trạng thái Epic/Story/cha
         }
@@ -469,6 +492,7 @@ public class ProjectTaskService {
         commentRepo.deleteByTaskId(taskId);
         attachmentRepo.deleteByTaskId(taskId);
         activityRepo.deleteByTaskId(taskId);
+        workLogRepo.deleteByTaskId(taskId);
         taskRepo.delete(t);
         auditPort.record("PROJECT_TASK_DELETED", "ProjectTask", taskId, actor, "projectId=" + projectId);
         rollupFromParent(projectId, parentId, actor); // xoá con → cập nhật trạng thái cha
@@ -491,6 +515,87 @@ public class ProjectTaskService {
         recordActivity(saved, actor, TaskActivity.SPENT,
                 "+" + trim(hours) + "h (tổng " + trim(saved.getSpentHours()) + "h)");
         return toDto(saved, p.getCode(), isLeaf(projectId, taskId));
+    }
+
+    // ===== GIỜ LÀM VIỆC THỰC TẾ (timesheet) =====
+
+    /** Ghi giờ thủ công cho một task (nút "Ghi giờ" ở chi tiết công việc). */
+    @Transactional
+    public ProjectDto.WorkLogResponse addWorkLog(String projectId, String taskId, ProjectDto.WorkLogRequest req,
+                                                 String actor) {
+        Project p = getProject(projectId);
+        ProjectTask t = requireSameProjectTask(projectId, taskId);
+        if (req.hours() == null || req.hours() <= 0) {
+            throw new IllegalArgumentException("Số giờ phải lớn hơn 0");
+        }
+        String role = TaskWorkLog.ROLE_TEST.equalsIgnoreCase(req.role())
+                ? TaskWorkLog.ROLE_TEST : TaskWorkLog.ROLE_DEV;
+        // Người bỏ công = người thao tác (tự ghi giờ của mình), không suy theo vai của task:
+        // nút này dùng để ghi giờ HẰNG NGÀY nên ai bấm là giờ của người đó.
+        String uid = userIdOf(actor);
+        if (uid == null) {
+            throw new IllegalArgumentException("Không xác định được người ghi giờ");
+        }
+        LocalDate d = parseWorkDate(req.workDate());
+        String name = userRepo.findById(uid).map(ProjectService::displayName).orElse(null);
+        TaskWorkLog saved = workLogRepo.save(new TaskWorkLog(projectId, taskId, uid, name, role, d,
+                req.hours(), blankToNull(req.note()), actor));
+        t.addSpentHours(req.hours());
+        taskRepo.save(t);
+        recordActivity(t, actor, TaskActivity.SPENT,
+                "+" + trim(req.hours()) + "h (" + (TaskWorkLog.ROLE_DEV.equals(role) ? "lập trình" : "kiểm thử")
+                        + ", ngày " + d.format(DMY) + ")");
+        auditPort.record("PROJECT_TASK_WORK_LOGGED", "ProjectTask", taskId, actor,
+                "hours=" + req.hours() + ", role=" + role + ", date=" + d);
+        return ProjectDto.WorkLogResponse.of(saved, code(p, t), t.getTitle());
+    }
+
+    /** Giờ đã ghi trên một task (mới → cũ). */
+    @Transactional(readOnly = true)
+    public List<ProjectDto.WorkLogResponse> listTaskWorkLogs(String projectId, String taskId) {
+        Project p = getProject(projectId);
+        ProjectTask t = requireSameProjectTask(projectId, taskId);
+        List<ProjectDto.WorkLogResponse> out = new ArrayList<>();
+        for (TaskWorkLog w : workLogRepo.findByTaskIdOrderByWorkDateDescCreatedAtDesc(taskId)) {
+            out.add(ProjectDto.WorkLogResponse.of(w, code(p, t), t.getTitle()));
+        }
+        return out;
+    }
+
+    /** Giờ của cả dự án trong khoảng ngày — nguồn dựng timesheet. */
+    @Transactional(readOnly = true)
+    public List<ProjectDto.WorkLogResponse> listProjectWorkLogs(String projectId, String from, String to) {
+        Project p = getProject(projectId);
+        LocalDate f = parseWorkDate(from);
+        LocalDate t2 = parseWorkDate(to);
+        Map<String, ProjectTask> byId = new HashMap<>();
+        for (ProjectTask t : taskRepo.findByProjectIdOrderByOrderIndexAscSeqAsc(projectId)) {
+            byId.put(t.getId(), t);
+        }
+        List<ProjectDto.WorkLogResponse> out = new ArrayList<>();
+        for (TaskWorkLog w : workLogRepo.findByProjectIdAndWorkDateBetween(projectId, f, t2)) {
+            ProjectTask t = byId.get(w.getTaskId());
+            out.add(ProjectDto.WorkLogResponse.of(w,
+                    t == null ? "" : code(p, t), t == null ? "" : t.getTitle()));
+        }
+        return out;
+    }
+
+    /** Xoá một dòng giờ ghi nhầm (trừ lại vào tổng giờ của task). */
+    @Transactional
+    public void deleteWorkLog(String projectId, String workLogId, String actor) {
+        TaskWorkLog w = workLogRepo.findById(workLogId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dòng giờ"));
+        if (!w.getProjectId().equals(projectId)) {
+            throw new IllegalArgumentException("Dòng giờ không thuộc dự án này");
+        }
+        taskRepo.findById(w.getTaskId()).ifPresent(t -> {
+            t.addSpentHours(-w.getHours());
+            taskRepo.save(t);
+        });
+        workLogRepo.delete(w);
+        auditPort.record("PROJECT_TASK_WORK_LOG_DELETED", "ProjectTask", w.getTaskId(), actor,
+                "hours=" + w.getHours());
     }
 
     // ===== Lịch sử / hoạt động task (mới → cũ) =====
@@ -589,6 +694,69 @@ public class ProjectTaskService {
                                       TaskStatus from, TaskStatus to) {
         activityRepo.save(new TaskActivity(t.getId(), t.getProjectId(), actorName(actor), userIdOf(actor),
                 detail, from == null ? null : from.name(), to == null ? null : to.name()));
+    }
+
+    /**
+     * Lần chuyển trạng thái này có phải MỐC BÀN GIAO cần ghi giờ không, và ghi với vai nào.
+     * · → Kiểm thử  = dev xong phần code   → ghi giờ vai DEV
+     * · → Hoàn thành = tester xong phần test → ghi giờ vai TEST
+     * Trả null nếu không cần ghi (đổi trạng thái khác, task cha do rollup, Epic/Story).
+     */
+    private String workRoleFor(ProjectTask t, TaskStatus oldStatus, TaskStatus newStatus,
+                               String projectId, String taskId) {
+        if (newStatus == oldStatus) {
+            return null;
+        }
+        if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) {
+            return null;
+        }
+        if (taskId != null && !isLeaf(projectId, taskId)) {
+            return null; // task cha: trạng thái do rollup, không ai bỏ công trực tiếp
+        }
+        if (newStatus == TaskStatus.IN_REVIEW) {
+            return TaskWorkLog.ROLE_DEV;
+        }
+        if (newStatus == TaskStatus.DONE) {
+            return TaskWorkLog.ROLE_TEST;
+        }
+        return null;
+    }
+
+    /**
+     * Ghi một dòng giờ làm việc. Người bỏ công lấy theo VAI (dev = người thực hiện,
+     * test = người kiểm thử) chứ không phải người bấm nút — PM bấm hộ thì công vẫn về đúng người.
+     * {@code workDate} rỗng/sai định dạng → tính vào hôm nay.
+     */
+    private void saveWorkLog(ProjectTask t, String role, Double hours, String workDate,
+                             String note, String actor) {
+        String uid = TaskWorkLog.ROLE_DEV.equals(role) ? t.getAssigneeUserId() : t.getTesterUserId();
+        if (uid == null) {
+            uid = userIdOf(actor); // không xác định được vai → quy về người thao tác, tránh mất giờ
+        }
+        if (uid == null || hours == null || hours <= 0) {
+            return;
+        }
+        LocalDate d = parseWorkDate(workDate);
+        String name = userRepo.findById(uid).map(ProjectService::displayName).orElse(null);
+        workLogRepo.save(new TaskWorkLog(t.getProjectId(), t.getId(), uid, name, role, d, hours,
+                blankToNull(note), actor));
+        t.addSpentHours(hours); // giữ tổng giờ trên task cho các màn đang dùng spentHours
+        taskRepo.save(t);
+        recordActivity(t, actor, TaskActivity.SPENT,
+                "+" + trim(hours) + "h (" + (TaskWorkLog.ROLE_DEV.equals(role) ? "lập trình" : "kiểm thử")
+                        + ", ngày " + d.format(DMY) + ")");
+    }
+
+    /** yyyy-MM-dd → LocalDate; rỗng/sai định dạng → hôm nay. */
+    private static LocalDate parseWorkDate(String s) {
+        if (s == null || s.isBlank()) {
+            return LocalDate.now();
+        }
+        try {
+            return LocalDate.parse(s.trim());
+        } catch (java.time.format.DateTimeParseException e) {
+            return LocalDate.now();
+        }
     }
 
     /**

@@ -5,6 +5,7 @@ import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { StatCard } from '../../shared/stat-card/stat-card';
 import { Modal } from '../../shared/modal/modal';
 import { PrjTaskDetail } from '../task-detail/task-detail';
+import { RoleStats } from '../role-stats/role-stats';
 import {
   ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority, ProjectTask
 } from '../../core/project.service';
@@ -55,7 +56,7 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
  */
 @Component({
   selector: 'app-prj-reports-period',
-  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal, PrjTaskDetail],
+  imports: [DataGrid, GridCellDirective, EmployeeChip, StatCard, Modal, PrjTaskDetail, RoleStats],
   templateUrl: './reports-period.html',
   styles: [`
     .rpp { display: grid; gap: var(--space-4); font-size: var(--text-sm); color: var(--color-text); }
@@ -617,6 +618,11 @@ export class PrjReportsPeriod {
       p.items.push(b);
     }
     return [...map.values()].sort((a, b) => b.count - a.count);
+  }
+
+  /** Bấm ô số trong bảng theo vai → đổi ProjectTask sang dòng hiển thị rồi mở popup chung. */
+  openRolePick(e: { title: string; items: ProjectTask[] }): void {
+    this.openDetail(e.title, e.items.map((t) => this.toItem(t)));
   }
 
   openBugPerson(p: BugPerson, prefix: string): void {

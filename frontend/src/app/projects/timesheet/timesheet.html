@@ -12,6 +12,14 @@
       <label for="ts-to">Đến ngày</label>
       <input id="ts-to" type="date" [value]="to()" (change)="to.set($any($event.target).value)" />
     </div>
+    <div class="ts__field">
+      <label>Vai</label>
+      <div class="ts__roles">
+        <button type="button" [class.is-active]="roleFilter() === 'ALL'" (click)="roleFilter.set('ALL')">Tất cả</button>
+        <button type="button" [class.is-active]="roleFilter() === 'DEV'" (click)="roleFilter.set('DEV')">Lập trình {{ devTotal() }}h</button>
+        <button type="button" [class.is-active]="roleFilter() === 'TEST'" (click)="roleFilter.set('TEST')">Kiểm thử {{ testTotal() }}h</button>
+      </div>
+    </div>
     <div class="ts__legend">
       <span class="ts__swatch ts__swatch--under"></span> &lt; 8h (thiếu)
       <span class="ts__swatch ts__swatch--over"></span> &gt; 8h (dư)
@@ -27,7 +35,9 @@
     <div class="ts__empty">Dự án chưa có thành viên để lập timesheet.</div>
   } @else {
     <p class="ts__hint">
-      Giờ suy từ <strong>ước lượng (est)</strong> của task lá, phân bổ đều theo ngày công trong khoảng bắt đầu → kết thúc.
+      <strong>Giờ làm việc THỰC TẾ</strong> đã ghi khi bàn giao Kiểm thử / Hoàn thành, hoặc ghi tay trong chi tiết
+      công việc. Bấm vào một ô để xem đã ghi giờ vào những task nào.
+      Cột “Ngoài khoảng” là giờ ghi vào T7/CN hoặc ngày nằm ngoài khoảng đang xem.
     </p>
     <div class="ts__wrap">
       <table class="ts__grid">
@@ -38,7 +48,7 @@
               <th class="ts__day"><span class="ts__wd">{{ c.wd }}</span><span class="ts__dnum">{{ c.dnum }}</span></th>
             }
             <th class="ts__total-col">Tổng</th>
-            @if (hasUnscheduled()) { <th>Chưa xếp lịch</th> }
+            @if (hasUnscheduled()) { <th title="Giờ ghi vào T7/CN hoặc ngoài khoảng đang xem">Ngoài khoảng</th> }
           </tr>
         </thead>
         <tbody>
@@ -50,7 +60,8 @@
               </td>
               @for (v of r.days; track $index) {
                 <td class="ts__num" [class.ts__over]="isOver(v)" [class.ts__under]="isUnder(v)"
-                    [class.ts__zero]="!v">{{ fmt(v) || '·' }}</td>
+                    [class.ts__zero]="!v" [class.ts__click]="v > 0"
+                    (click)="openCell(r, cols()[$index].key, cols()[$index].wd + ' ' + cols()[$index].dnum)">{{ fmt(v) || '·' }}</td>
               }
               <td class="ts__num ts__total-col">{{ fmt(r.total) || '·' }}</td>
               @if (hasUnscheduled()) {
@@ -73,3 +84,20 @@
     </div>
   }
 </section>
+
+<!-- Chi tiết một ô: đã ghi giờ vào task nào -->
+<app-modal [open]="!!cellDetail()" [title]="cellDetail()?.title || ''" (closed)="cellDetail.set(null)">
+  @if (cellDetail(); as d) {
+    <div class="ts__detail">
+      @for (w of d.logs; track w.id) {
+        <div class="ts__drow">
+          <span class="ts__drole" [class.is-test]="w.role === 'TEST'">{{ w.role === 'TEST' ? 'Kiểm thử' : 'Lập trình' }}</span>
+          <span class="ts__dcode">{{ w.taskCode }}</span>
+          <span class="ts__dtitle" [title]="w.taskTitle">{{ w.taskTitle }}</span>
+          <b class="ts__dh">{{ w.hours }}h</b>
+        </div>
+        @if (w.note) { <div class="ts__dnote">{{ w.note }}</div> }
+      }
+    </div>
+  }
+</app-modal>

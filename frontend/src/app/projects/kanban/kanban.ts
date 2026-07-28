@@ -3,7 +3,9 @@ import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { TypeFilter } from '../../shared/type-filter/type-filter';
 import { ToastService } from '../../shared/toast/toast.service';
-import { ProjectService, ProjectTask, TaskStatus, TaskPriority, TaskType } from '../../core/project.service';
+import { ProjectService, ProjectTask, TaskStatus, TaskPriority, TaskType, WorkEntry, WorkRole } from '../../core/project.service';
+import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
+import { workRoleForTransition } from '../work-stats';
 
 interface Column {
   status: TaskStatus;
@@ -18,7 +20,7 @@ interface Column {
  */
 @Component({
   selector: 'app-prj-kanban',
-  imports: [EmployeeChip, SearchableSelect, TypeFilter],
+  imports: [EmployeeChip, SearchableSelect, TypeFilter, WorkEntryDialog],
   templateUrl: './kanban.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
@@ -364,15 +366,50 @@ export class PrjKanban {
     this.changeStatus(taskId, status);
   }
 
-  /** Đổi trạng thái (kéo-thả hoặc dropdown) — cập nhật lạc quan rồi reload. */
+  // ===== Nhập giờ tại mốc bàn giao (Kiểm thử / Hoàn thành) =====
+  readonly workOpen = signal(false);
+  readonly workRole = signal<WorkRole>('DEV');
+  readonly workTitle = signal('');
+  private pendingMove: { taskId: string; status: TaskStatus } | null = null;
+
+  /**
+   * Đổi trạng thái (kéo-thả hoặc dropdown). Thả vào Kiểm thử/Hoàn thành thì backend BẮT BUỘC
+   * có giờ → phải hỏi trước, nếu không thao tác sẽ bị từ chối và card bật ngược về cột cũ.
+   */
   changeStatus(taskId: string, status: TaskStatus): void {
+    const target = this.tasks().find((t) => t.id === taskId);
+    if (!target || target.status === status) return;
+    const role = workRoleForTransition(target, status);
+    if (role) {
+      this.pendingMove = { taskId, status };
+      this.workRole.set(role);
+      this.workTitle.set(target.title);
+      this.workOpen.set(true);
+      return;
+    }
+    this.applyStatus(taskId, status);
+  }
+
+  onWorkConfirmed(w: WorkEntry): void {
+    const mv = this.pendingMove;
+    this.pendingMove = null;
+    this.workOpen.set(false);
+    if (mv) this.applyStatus(mv.taskId, mv.status, w);
+  }
+  onWorkCancelled(): void {
+    this.pendingMove = null;
+    this.workOpen.set(false);
+    this.reload(); // trả card về đúng cột cũ nếu vừa kéo thả
+  }
+
+  private applyStatus(taskId: string, status: TaskStatus, work?: WorkEntry): void {
     const cur = this.tasks();
     const target = cur.find((t) => t.id === taskId);
-    if (!target || target.status === status) return;
+    if (!target) return;
     const prev = target.status;
     // Lạc quan: cập nhật ngay UI.
     this.tasks.set(cur.map((t) => (t.id === taskId ? { ...t, status } : t)));
-    this.svc.updateTaskStatus(this.projectId(), taskId, status).subscribe({
+    this.svc.updateTaskStatus(this.projectId(), taskId, status, work).subscribe({
       next: () => this.reload(),
       error: (e) => {
         // Hoàn tác khi lỗi.

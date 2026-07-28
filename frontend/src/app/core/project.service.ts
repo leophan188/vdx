@@ -316,6 +316,30 @@ export interface ReportOverview {
 }
 
 /** Tỷ lệ hoàn thành theo nhân sự trong kỳ (khớp DTO PersonProgress backend). */
+/** Vai khi bỏ công: lập trình hay kiểm thử. */
+export type WorkRole = 'DEV' | 'TEST';
+
+/** Một lần ghi giờ (nhập ở popup bàn giao hoặc nút "Ghi giờ"). */
+export interface WorkEntry {
+  hours: number;
+  workDate: string;   // yyyy-MM-dd — NGÀY TÍNH CÔNG, không phải ngày bấm ghi
+  note?: string | null;
+}
+
+/** Giờ làm việc thực tế đã ghi trên một task. */
+export interface WorkLog {
+  id: string;
+  taskId: string;
+  taskCode: string;
+  taskTitle: string;
+  userId: string;
+  userName: string | null;
+  role: WorkRole;
+  workDate: string;   // yyyy-MM-dd
+  hours: number;
+  note: string | null;
+}
+
 export interface PersonProgress {
   userId: string | null;
   name: string;
@@ -500,8 +524,29 @@ export class ProjectService {
   updateTask(projectId: string, taskId: string, body: TaskRequest): Observable<ProjectTask> {
     return this.http.put<ProjectTask>(`${this.base}/${projectId}/tasks/${taskId}`, body, this.opts);
   }
-  updateTaskStatus(projectId: string, taskId: string, status: TaskStatus): Observable<ProjectTask> {
-    return this.http.patch<ProjectTask>(`${this.base}/${projectId}/tasks/${taskId}/status`, { status }, this.opts);
+  /**
+   * Đổi trạng thái. `work` BẮT BUỘC khi bàn giao sang Kiểm thử (giờ dev) và khi chuyển
+   * Hoàn thành (giờ test) — backend chặn nếu thiếu. Dùng {@link WorkEntryDialog} để lấy.
+   */
+  updateTaskStatus(projectId: string, taskId: string, status: TaskStatus,
+                   work?: WorkEntry | null): Observable<ProjectTask> {
+    return this.http.patch<ProjectTask>(`${this.base}/${projectId}/tasks/${taskId}/status`,
+      { status, hours: work?.hours ?? null, workDate: work?.workDate ?? null, note: work?.note ?? null }, this.opts);
+  }
+
+  // ===== Giờ làm việc thực tế (timesheet) =====
+  addWorkLog(projectId: string, taskId: string, body: WorkEntry & { role: WorkRole }): Observable<WorkLog> {
+    return this.http.post<WorkLog>(`${this.base}/${projectId}/tasks/${taskId}/work-logs`, body, this.opts);
+  }
+  listTaskWorkLogs(projectId: string, taskId: string): Observable<WorkLog[]> {
+    return this.http.get<WorkLog[]>(`${this.base}/${projectId}/tasks/${taskId}/work-logs`, this.opts);
+  }
+  /** Giờ toàn dự án trong khoảng ngày (yyyy-MM-dd) — nguồn dựng timesheet. */
+  listProjectWorkLogs(projectId: string, from: string, to: string): Observable<WorkLog[]> {
+    return this.http.get<WorkLog[]>(`${this.base}/${projectId}/work-logs?from=${from}&to=${to}`, this.opts);
+  }
+  deleteWorkLog(projectId: string, workLogId: string): Observable<void> {
+    return this.http.delete<void>(`${this.base}/${projectId}/work-logs/${workLogId}`, this.opts);
   }
   assignTask(projectId: string, taskId: string, assigneeUserId: string | null): Observable<ProjectTask> {
     return this.http.patch<ProjectTask>(`${this.base}/${projectId}/tasks/${taskId}/assignee`, { assigneeUserId }, this.opts);

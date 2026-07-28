@@ -4,11 +4,13 @@ import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
-import { buildParentOptions } from '../work-stats';
+import { buildParentOptions, workRoleForTransition } from '../work-stats';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
-  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember, ReorderItem
+  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember, ReorderItem,
+  WorkEntry, WorkRole
 } from '../../core/project.service';
+import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
 import { memberPersonOptions } from '../../shared/person-options';
 import { buildTree, hasChildren, subtreeLeafEstimate, effectiveStart, effectiveDue } from '../../shared/task-tree';
 import { loadPref, savePref } from '../../shared/view-prefs';
@@ -29,7 +31,7 @@ interface TreeRow {
  */
 @Component({
   selector: 'app-prj-backlog',
-  imports: [FormsModule, Modal, SearchableSelect, TypeFilter],
+  imports: [FormsModule, Modal, SearchableSelect, TypeFilter, WorkEntryDialog],
   templateUrl: './backlog.html',
   styles: [`
     .bl-summary { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-3); }
@@ -823,10 +825,43 @@ export class PrjBacklog implements OnInit {
   }
 
   // ----- Thao tác nhanh trên dòng -----
-  /** Đổi trạng thái: không chặn — chuyển thẳng. Sau khi sang Kiểm thử, cột người tự thành ô nhập NGƯỜI KIỂM THỬ. */
+  // ===== Nhập giờ tại mốc bàn giao (Kiểm thử / Hoàn thành) =====
+  readonly workOpen = signal(false);
+  readonly workRole = signal<WorkRole>('DEV');
+  readonly workTitle = signal('');
+  private pendingMove: { task: ProjectTask; status: TaskStatus } | null = null;
+
+  /**
+   * Đổi trạng thái. Sang Kiểm thử/Hoàn thành thì backend BẮT BUỘC có giờ → hỏi trước.
+   * Sau khi sang Kiểm thử, cột người tự thành ô nhập NGƯỜI KIỂM THỬ.
+   */
   changeStatus(t: ProjectTask, status: string): void {
     if (!status || status === t.status) return;
-    this.svc.updateTaskStatus(this.projectId(), t.id, status as TaskStatus).subscribe({
+    const next = status as TaskStatus;
+    const role = workRoleForTransition(t, next);
+    if (role) {
+      this.pendingMove = { task: t, status: next };
+      this.workRole.set(role);
+      this.workTitle.set(t.title);
+      this.workOpen.set(true);
+      return;
+    }
+    this.applyStatus(t, next);
+  }
+  onWorkConfirmed(w: WorkEntry): void {
+    const mv = this.pendingMove;
+    this.pendingMove = null;
+    this.workOpen.set(false);
+    if (mv) this.applyStatus(mv.task, mv.status, w);
+  }
+  onWorkCancelled(): void {
+    this.pendingMove = null;
+    this.workOpen.set(false);
+    this.silentReload(); // trả ô chọn về trạng thái cũ
+  }
+
+  private applyStatus(t: ProjectTask, status: TaskStatus, work?: WorkEntry): void {
+    this.svc.updateTaskStatus(this.projectId(), t.id, status, work).subscribe({
       next: (u) => {
         this.patchLocal(u);
         this.toast.success('Đã đổi trạng thái', u.code);

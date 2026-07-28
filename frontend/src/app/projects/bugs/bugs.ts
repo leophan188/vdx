@@ -13,9 +13,12 @@ import { ToastService } from '../../shared/toast/toast.service';
 import { AuthService } from '../../core/auth.service';
 import { PrjTaskDetail } from '../task-detail/task-detail';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
+import { workRoleForTransition } from '../work-stats';
 import {
-  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember
+  ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember,
+  WorkEntry, WorkRole
 } from '../../core/project.service';
+import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
 
 /**
  * TAB Quản lý Bug/Issue. Bug/Issue gắn TRỰC TIẾP vào task cha (parentId).
@@ -24,7 +27,8 @@ import {
  */
 @Component({
   selector: 'app-prj-bugs',
-  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter],
+  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter,
+    WorkEntryDialog],
   templateUrl: './bugs.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
@@ -396,10 +400,40 @@ export class PrjBugs implements OnInit {
     this.detailTask.set(null);
   }
 
+  // ===== Nhập giờ tại mốc bàn giao (Kiểm thử / Hoàn thành) =====
+  readonly workOpen = signal(false);
+  readonly workRole = signal<WorkRole>('DEV');
+  readonly workTitle = signal('');
+  private pendingMove: { task: ProjectTask; status: TaskStatus } | null = null;
+
   // ----- Đổi status nhanh trên lưới -----
   changeStatus(t: ProjectTask, status: string): void {
     if (!status || status === t.status) return;
-    this.svc.updateTaskStatus(this.projectId(), t.id, status as TaskStatus).subscribe({
+    const next = status as TaskStatus;
+    const role = workRoleForTransition(t, next);
+    if (role) {
+      this.pendingMove = { task: t, status: next };
+      this.workRole.set(role);
+      this.workTitle.set(t.title);
+      this.workOpen.set(true);
+      return;
+    }
+    this.applyStatus(t, next);
+  }
+  onWorkConfirmed(w: WorkEntry): void {
+    const mv = this.pendingMove;
+    this.pendingMove = null;
+    this.workOpen.set(false);
+    if (mv) this.applyStatus(mv.task, mv.status, w);
+  }
+  onWorkCancelled(): void {
+    this.pendingMove = null;
+    this.workOpen.set(false);
+    this.reload(); // trả ô chọn về trạng thái cũ
+  }
+
+  private applyStatus(t: ProjectTask, status: TaskStatus, work?: WorkEntry): void {
+    this.svc.updateTaskStatus(this.projectId(), t.id, status, work).subscribe({
       next: (u) => {
         this.tasks.update((ts) => ts.map((x) => (x.id === u.id ? u : x)));
         this.toast.success('Đã đổi trạng thái', u.code);

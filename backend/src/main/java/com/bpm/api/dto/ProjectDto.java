@@ -222,7 +222,27 @@ public final class ProjectDto {
             String testerUserId) {
     }
 
-    public record StatusRequest(String status) {
+    /**
+     * Đổi trạng thái. {@code hours}/{@code workDate} BẮT BUỘC khi bàn giao sang Kiểm thử
+     * (giờ dev) và khi chuyển Hoàn thành (giờ test) — nguồn dữ liệu cho timesheet.
+     * {@code workDate} dạng yyyy-MM-dd, bỏ trống thì tính vào hôm nay.
+     */
+    public record StatusRequest(String status, Double hours, String workDate, String note) {
+    }
+
+    /** Một lần ghi giờ làm việc trên task. */
+    public record WorkLogRequest(Double hours, String workDate, String role, String note) {
+    }
+
+    /** Giờ đã ghi — trả về cho chi tiết task và timesheet. */
+    public record WorkLogResponse(String id, String taskId, String taskCode, String taskTitle,
+                                  String userId, String userName, String role,
+                                  String workDate, double hours, String note) {
+        public static WorkLogResponse of(com.bpm.domain.project.TaskWorkLog w, String taskCode, String taskTitle) {
+            return new WorkLogResponse(w.getId(), w.getTaskId(), taskCode, taskTitle,
+                    w.getUserId(), w.getUserName(), w.getRole(),
+                    w.getWorkDate() == null ? null : w.getWorkDate().toString(), w.getHours(), w.getNote());
+        }
     }
 
     public record AssigneeRequest(String assigneeUserId) {

@@ -119,6 +119,36 @@
         </div>
       }
 
+      <!-- ===== Giờ làm việc thực tế (timesheet) ===== -->
+      <div class="td__work">
+        <div class="td__work-head">
+          <h4>⏱ Giờ làm việc</h4>
+          <span class="td__work-sum">
+            Lập trình <b>{{ devHours() }}h</b> · Kiểm thử <b>{{ testHours() }}h</b>
+          </span>
+          <span style="flex:1"></span>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="openLog('DEV')">+ Giờ lập trình</button>
+          <button type="button" class="btn btn--ghost btn--sm" (click)="openLog('TEST')">+ Giờ kiểm thử</button>
+        </div>
+        @if (workLogs().length) {
+          <div class="td__work-list">
+            @for (w of workLogs(); track w.id) {
+              <div class="td__work-row">
+                <span class="td__work-role" [class.is-test]="w.role === 'TEST'">{{ roleLabel(w.role) }}</span>
+                <span class="td__work-who">{{ w.userName || '—' }}</span>
+                <span class="td__work-date">{{ w.workDate }}</span>
+                <b class="td__work-h">{{ w.hours }}h</b>
+                <span class="td__work-note" [title]="w.note || ''">{{ w.note || '' }}</span>
+                <button type="button" class="td__work-del" title="Xoá dòng giờ" (click)="deleteLog(w)">×</button>
+              </div>
+            }
+          </div>
+        } @else {
+          <p class="td__work-empty">Chưa ghi giờ nào. Giờ sẽ được ghi tự động khi bàn giao Kiểm thử / Hoàn thành,
+            hoặc bấm nút trên để ghi giờ hằng ngày.</p>
+        }
+      </div>
+
       <!-- ===== Segmented trạng thái ===== -->
       <div class="td__seg">
         @for (s of statusOptions; track s.value) {
@@ -367,6 +397,16 @@
     <button type="button" class="btn btn--ghost" (click)="closed.emit()">Đóng</button>
   </div>
 </app-modal>
+
+<!-- Nhập giờ tại MỐC BÀN GIAO (Kiểm thử / Hoàn thành) — backend bắt buộc có giờ -->
+<app-work-entry [open]="workOpen()" [role]="workRole()" [taskTitle]="current()?.title || ''"
+                [saving]="busyLifecycle() || busyStatus()"
+                (confirmed)="onWorkConfirmed($event)" (cancelled)="onWorkCancelled()" />
+
+<!-- Ghi giờ HẰNG NGÀY (nút + Giờ lập trình / + Giờ kiểm thử) -->
+<app-work-entry [open]="logOpen()" [role]="logRole()" [taskTitle]="current()?.title || ''"
+                [saving]="savingLog()"
+                (confirmed)="onLogConfirmed($event)" (cancelled)="logOpen.set(false)" />
 
 <!-- ===== Lightbox xem ảnh lớn (zoom in/out) ===== -->
 <app-image-lightbox [items]="lightboxItems()" [index]="lightboxIndex()" (closed)="closeLightbox()" />

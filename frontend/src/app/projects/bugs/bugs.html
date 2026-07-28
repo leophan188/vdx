@@ -165,3 +165,7 @@
 <!-- Chi tiết task kiểu Jira -->
 <app-prj-task-detail [projectId]="projectId()" [task]="detailTask()" [open]="detailOpen()"
                      (closed)="closeDetail()" (changed)="reload()" />
+
+<!-- Nhập giờ khi chuyển Kiểm thử / Hoàn thành (backend bắt buộc có giờ) -->
+<app-work-entry [open]="workOpen()" [role]="workRole()" [taskTitle]="workTitle()"
+                (confirmed)="onWorkConfirmed($event)" (cancelled)="onWorkCancelled()" />

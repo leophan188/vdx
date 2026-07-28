@@ -9,8 +9,10 @@ import { mergeBugFieldsIntoDescription } from '../../shared/bug-template';
 import { ToastService } from '../../shared/toast/toast.service';
 import {
   ProjectService, ProjectTask, TaskComment, TaskAttachment, TaskActivity, TaskActivityAction,
-  TaskType, TaskStatus, TaskPriority, BugSeverity, TaskRequest, ProjectMember
+  TaskType, TaskStatus, TaskPriority, BugSeverity, TaskRequest, ProjectMember, WorkEntry, WorkRole, WorkLog
 } from '../../core/project.service';
+import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
+import { workRoleForTransition } from '../work-stats';
 
 type SubTab = 'info' | 'comments' | 'activity';
 
@@ -27,7 +29,7 @@ type SubTab = 'info' | 'comments' | 'activity';
  */
 @Component({
   selector: 'app-prj-task-detail',
-  imports: [Modal, SearchableSelect, ImageLightbox],
+  imports: [Modal, SearchableSelect, ImageLightbox, WorkEntryDialog],
   templateUrl: './task-detail.html',
   styles: [`
     .td { display: grid; gap: var(--space-4); width: 100%; }
@@ -58,6 +60,30 @@ type SubTab = 'info' | 'comments' | 'activity';
       border-top: 1px dashed var(--color-border); }
     .td__life-pick searchable-select { min-width: 260px; }
     .td__life-pickrow { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+
+    /* Khu GIỜ LÀM VIỆC (timesheet) */
+    .td__work { display: grid; gap: 8px; padding: 12px; border-radius: 10px;
+      background: var(--color-surface-alt); border: 1px solid var(--color-border); }
+    .td__work-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .td__work-head h4 { margin: 0; font-size: .9rem; }
+    .td__work-sum { font-size: .8rem; color: var(--color-text-muted); }
+    .td__work-sum b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .td__work-list { display: grid; gap: 2px; }
+    .td__work-row { display: grid; grid-template-columns: 76px minmax(90px, 1fr) 92px 52px 2fr 24px;
+      align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
+      background: var(--color-surface); font-size: var(--text-sm); }
+    .td__work-role { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; text-align: center;
+      color: var(--status-active); background: color-mix(in srgb, var(--status-active) 14%, transparent); }
+    .td__work-role.is-test { color: var(--status-done); background: color-mix(in srgb, var(--status-done) 14%, transparent); }
+    .td__work-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td__work-date { color: var(--color-text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
+    .td__work-h { text-align: right; font-variant-numeric: tabular-nums; }
+    .td__work-note { color: var(--color-text-muted); font-size: var(--text-xs);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .td__work-del { border: 0; background: none; cursor: pointer; color: var(--color-text-muted);
+      font-size: 1.1rem; line-height: 1; padding: 0; }
+    .td__work-del:hover { color: var(--overdue, #e5484d); }
+    .td__work-empty { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
     .td__life-input { height: var(--control-h-sm); border: 1px solid var(--color-border);
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
       padding: 0 var(--space-2); font: inherit; width: 130px; }
@@ -326,6 +352,7 @@ export class PrjTaskDetail {
       error: () => this.attachments.set([])
     });
     this.loadActivity(taskId);
+    this.loadWorkLogs(taskId);
   }
 
   private loadActivity(taskId: string): void {
@@ -341,8 +368,16 @@ export class PrjTaskDetail {
     if (!t || t.status === s || this.busyStatus()) return;
     // Chuyển ĐANG LÀM mà thiếu est/ngày → mở form nhập (thay vì để BE báo lỗi).
     if (s === 'IN_PROGRESS' && this.needsStartInfo(t)) { this.openStart(t); return; }
+    // Mốc bàn giao (Kiểm thử / Hoàn thành) bắt buộc ghi giờ → hỏi trước khi gọi API.
+    const role = workRoleForTransition(t, s);
+    if (role) { this.askWork(role, (w) => this.doSetStatus(s, w)); return; }
+    this.doSetStatus(s);
+  }
+  private doSetStatus(s: TaskStatus, work?: WorkEntry): void {
+    const t = this.current();
+    if (!t) return;
     this.busyStatus.set(true);
-    this.svc.updateTaskStatus(this.projectId(), t.id, s).subscribe({
+    this.svc.updateTaskStatus(this.projectId(), t.id, s, work).subscribe({
       next: (u) => {
         this.model.set(u);
         this.busyStatus.set(false);
@@ -479,10 +514,86 @@ export class PrjTaskDetail {
     return this.isBug() || !!t.testerUserId;
   });
 
-  /** Bấm "→ Chuyển Kiểm thử": đủ điều kiện → chuyển ngay; task thường thiếu tester → mở chọn. */
+  /**
+   * Bấm "→ Chuyển Kiểm thử": chọn tester (nếu thiếu) → NHẬP GIỜ lập trình → chuyển.
+   * Giờ là bắt buộc (backend chặn) nên luôn phải qua popup.
+   */
   toReview(): void {
-    if (this.canReviewDirectly()) { this.doReview(); return; }
+    if (this.canReviewDirectly()) { this.askWork('DEV', (w) => this.doReview(w)); return; }
     this.openPickTester();
+  }
+
+  // ===== Ghi giờ HẰNG NGÀY (không chờ tới lúc bàn giao) =====
+  readonly workLogs = signal<WorkLog[]>([]);
+  readonly logOpen = signal(false);
+  readonly logRole = signal<WorkRole>('DEV');
+  readonly savingLog = signal(false);
+
+  /** Tổng giờ đã ghi, tách theo vai — hiện ngay dưới nút. */
+  readonly devHours = computed(() => this.sumHours('DEV'));
+  readonly testHours = computed(() => this.sumHours('TEST'));
+  private sumHours(role: WorkRole): number {
+    const s = this.workLogs().filter((w) => w.role === role).reduce((a, w) => a + (w.hours || 0), 0);
+    return Math.round(s * 100) / 100;
+  }
+
+  private loadWorkLogs(taskId: string): void {
+    this.svc.listTaskWorkLogs(this.projectId(), taskId).subscribe({
+      next: (w) => this.workLogs.set(w ?? []),
+      error: () => this.workLogs.set([])
+    });
+  }
+  /** Mở popup ghi giờ thủ công (vai do người dùng chọn qua nút bấm). */
+  openLog(role: WorkRole): void {
+    this.logRole.set(role);
+    this.logOpen.set(true);
+  }
+  onLogConfirmed(w: WorkEntry): void {
+    const t = this.current();
+    if (!t || this.savingLog()) return;
+    this.savingLog.set(true);
+    this.svc.addWorkLog(this.projectId(), t.id, { ...w, role: this.logRole() }).subscribe({
+      next: () => {
+        this.savingLog.set(false);
+        this.logOpen.set(false);
+        this.toast.success('Đã ghi giờ', w.hours + 'h ngày ' + w.workDate);
+        this.loadWorkLogs(t.id);
+        this.loadActivity(t.id);
+        this.changed.emit();
+      },
+      error: (e) => { this.savingLog.set(false); this.toast.error('Không ghi được giờ', e?.error?.message ?? ''); }
+    });
+  }
+  deleteLog(w: WorkLog): void {
+    const t = this.current();
+    if (!t) return;
+    this.svc.deleteWorkLog(this.projectId(), w.id).subscribe({
+      next: () => { this.toast.success('Đã xoá dòng giờ'); this.loadWorkLogs(t.id); this.changed.emit(); },
+      error: (e) => this.toast.error('Không xoá được', e?.error?.message ?? '')
+    });
+  }
+  roleLabel(r: WorkRole): string { return r === 'DEV' ? 'Lập trình' : 'Kiểm thử'; }
+
+  // ===== Popup nhập giờ tại mốc bàn giao =====
+  readonly workOpen = signal(false);
+  readonly workRole = signal<WorkRole>('DEV');
+  private workDone: ((w: WorkEntry) => void) | null = null;
+
+  /** Mở popup nhập giờ; xác nhận xong mới chạy tiếp hành động chuyển trạng thái. */
+  private askWork(role: WorkRole, then: (w: WorkEntry) => void): void {
+    this.workRole.set(role);
+    this.workDone = then;
+    this.workOpen.set(true);
+  }
+  onWorkConfirmed(w: WorkEntry): void {
+    this.workOpen.set(false);
+    const fn = this.workDone;
+    this.workDone = null;
+    fn?.(w);
+  }
+  onWorkCancelled(): void {
+    this.workOpen.set(false);
+    this.workDone = null;
   }
 
   /** Mở/đóng khu chọn người kiểm thử (inline). Mặc định gợi ý tester hiện có. */
@@ -494,11 +605,11 @@ export class PrjTaskDetail {
   cancelPickTester(): void { this.pickTesterOpen.set(false); }
 
   /** Chuyển sang KIỂM THỬ (BE tự bàn giao PIC: task→tester, bug/issue→người log). */
-  private doReview(): void {
+  private doReview(work?: WorkEntry): void {
     const t = this.current();
     if (!t || this.busyLifecycle()) return;
     this.busyLifecycle.set(true);
-    this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_REVIEW').subscribe({
+    this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_REVIEW', work).subscribe({
       next: (u) => {
         this.model.set(u);
         this.busyLifecycle.set(false);
@@ -520,12 +631,19 @@ export class PrjTaskDetail {
     if (!t || this.busyLifecycle()) return;
     const testerId = this.testerUserId() || null;
     if (!testerId) { this.toast.warning('Chọn người kiểm thử'); return; }
+    this.askWork('DEV', (w) => this.doConfirmToReview(testerId, w));
+  }
+
+  /** Gán tester rồi chuyển Kiểm thử kèm giờ lập trình. */
+  private doConfirmToReview(testerId: string, work: WorkEntry): void {
+    const t = this.current();
+    if (!t) return;
     this.busyLifecycle.set(true);
     const body = this.buildRequest(t, { testerUserId: testerId });
     this.svc.updateTask(this.projectId(), t.id, body).subscribe({
       next: (afterSet) => {
         this.model.set(afterSet);
-        this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_REVIEW').subscribe({
+        this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_REVIEW', work).subscribe({
           next: (u) => {
             this.model.set(u);
             this.busyLifecycle.set(false);
@@ -542,12 +660,15 @@ export class PrjTaskDetail {
     });
   }
 
-  /** IN_REVIEW → DONE: hoàn thành. */
+  /** IN_REVIEW → DONE: nhập giờ kiểm thử rồi hoàn thành. */
   completeTask(): void {
+    this.askWork('TEST', (w) => this.doComplete(w));
+  }
+  private doComplete(work: WorkEntry): void {
     const t = this.current();
     if (!t || this.busyLifecycle()) return;
     this.busyLifecycle.set(true);
-    this.svc.updateTaskStatus(this.projectId(), t.id, 'DONE').subscribe({
+    this.svc.updateTaskStatus(this.projectId(), t.id, 'DONE', work).subscribe({
       next: (u) => {
         this.model.set(u);
         this.busyLifecycle.set(false);

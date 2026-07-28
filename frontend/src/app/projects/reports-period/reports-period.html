@@ -225,6 +225,19 @@
       }
     </section>
 
+    <!-- Thống kê theo VAI (dev / tester) — trạng thái hiện tại, không phụ thuộc kỳ -->
+    <section class="rpp__sec">
+      <button type="button" class="rpp__sec-head" (click)="toggle('roles')">
+        <span class="rpp__sec-caret" [class.is-collapsed]="isCollapsed('roles')">▾</span>
+        <span>🎭 Thống kê theo vai (dev / tester)</span>
+      </button>
+      @if (!isCollapsed('roles')) {
+        <div class="rpp__sec-body">
+          <app-role-stats [tasks]="tasks()" (picked)="openRolePick($event)" />
+        </div>
+      }
+    </section>
+
     <!-- (4) Thống kê theo nhân sự -->
     <section class="rpp__sec">
       <button type="button" class="rpp__sec-head" (click)="toggle('people')">
