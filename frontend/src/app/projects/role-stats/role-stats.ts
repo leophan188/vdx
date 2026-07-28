@@ -15,9 +15,9 @@ interface DevRow {
 }
 
 /**
- * Một dòng bảng vai TESTER. Tập gốc {@code assigned} = việc người này phụ trách kiểm thử
- * (là người kiểm thử; bug/issue chưa gán tester thì người log chính là người verify).
- * Ba cột trạng thái chia HẾT tập gốc nên luôn có: done + waitTest + waitDev = assigned.
+ * Một dòng bảng vai TESTER. Tập gốc {@code assigned} = HỢP của việc người này LOG và việc
+ * người này KIỂM THỬ (bug/issue chưa gán tester thì người log chính là người verify).
+ * Ba cột trạng thái chia HẾT tập gốc: done + waitTest + waitDev = assigned, và logged ⊆ assigned.
  */
 interface TestRow {
   key: string; userId: string | null; name: string;
@@ -108,7 +108,7 @@ interface TestRow {
             <span title="Việc đã ở trạng thái Hoàn thành">Hoàn thành</span>
             <span title="Đang ở trạng thái Kiểm thử — nằm ở chân tester, chờ người này verify">Chờ test</span>
             <span title="Backlog / Cần làm / Đang làm — còn ở chân dev, chưa bàn giao">Chờ Dev</span>
-            <span title="Tổng việc người này phụ trách kiểm thử = Hoàn thành + Chờ test + Chờ Dev">Tổng</span>
+            <span title="Tổng việc liên quan tới vai kiểm thử (mình log hoặc mình kiểm thử) = Hoàn thành + Chờ test + Chờ Dev">Tổng</span>
             <span title="Hoàn thành / Tổng">% HT</span>
           </div>
           @for (r of testRows(); track r.key) {
@@ -129,7 +129,7 @@ interface TestRow {
                 <button type="button" class="rs__num rs__num--doing" (click)="pick(r.name + ' · Chờ Dev (chưa bàn giao)', r.waitDev)">{{ r.waitDev.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.assigned.length) {
-                <button type="button" class="rs__num" (click)="pick(r.name + ' · Tổng việc phụ trách kiểm thử', r.assigned)">{{ r.assigned.length }}</button>
+                <button type="button" class="rs__num" (click)="pick(r.name + ' · Tổng việc liên quan vai kiểm thử', r.assigned)">{{ r.assigned.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span class="rs__pct">
                 <span class="rs__bar"><span class="rs__fill" [style.width.%]="r.pct"></span></span>
@@ -140,9 +140,10 @@ interface TestRow {
         </div>
       </div>
 
-      <p class="rs__note">Bảng tester: <b>Hoàn thành + Chờ test + Chờ Dev = Tổng</b>. “Chờ Dev” là việc đã log
-        nhưng dev chưa bàn giao nên tester chưa động vào được, “Chờ test” là việc đang nằm trên tay tester.
-        Cột “Đã log” đếm bug/issue do người đó tạo — có thể lệch Tổng nếu bug được giao cho người khác kiểm thử.
+      <p class="rs__note">Bảng tester: <b>Hoàn thành + Chờ test + Chờ Dev = Tổng</b>, và <b>Đã log ≤ Tổng</b>.
+        “Chờ Dev” là việc dev chưa bàn giao nên tester chưa động vào được, “Chờ test” là việc đang nằm trên
+        tay tester. “Tổng” gồm cả việc mình log lẫn việc người khác log mà mình được giao kiểm thử, nên có
+        thể lớn hơn “Đã log”.
         <br>Một task nằm ở cả hai bảng — phần việc của dev và phần việc của tester.
         Đó là 2 phần việc của 2 người, không phải đếm trùng; tổng task của dự án vẫn là 1.
         @if (scopeLabel()) {
@@ -258,16 +259,25 @@ export class RoleStats {
       return r;
     };
     for (const t of this.scoped()) {
-      // Đã LOG: chỉ bug/issue mới có khái niệm người log.
-      if ((t.type === 'BUG' || t.type === 'ISSUE') && (t.reporterUserId || t.reporterName)) {
-        row(t.reporterUserId ?? null, t.reporterName ?? null).logged.push(t);
-      }
-      // Vai kiểm thử: bug/issue chưa có tester thì người log chính là người verify (khớp backend).
       const isBug = t.type === 'BUG' || t.type === 'ISSUE';
-      const tid = t.testerUserId ?? (isBug ? t.reporterUserId : null);
-      const tname = t.testerName ?? (isBug ? t.reporterName : null);
-      if (tid || tname) {
-        const r = row(tid ?? null, tname ?? null);
+      // Người LOG — chỉ bug/issue mới có khái niệm này.
+      const rid = isBug ? (t.reporterUserId ?? null) : null;
+      const rname = isBug ? (t.reporterName ?? null) : null;
+      // Người KIỂM THỬ — bug/issue chưa gán tester thì người log chính là người verify (khớp backend).
+      const tid = t.testerUserId ?? rid;
+      const tname = t.testerName ?? rname;
+
+      if (rid || rname) row(rid, rname).logged.push(t);
+
+      // TỔNG là HỢP của (việc mình log) và (việc mình kiểm thử) — nếu chỉ lấy vế kiểm thử thì
+      // bug mình log nhưng giao người khác test sẽ rơi ra ngoài, khiến "Đã log" lớn hơn "Tổng",
+      // vô lý vì Đã log phải là TẬP CON của Tổng. Dùng Map để một task chỉ tính một lần cho
+      // mỗi người, kể cả khi họ vừa log vừa kiểm thử.
+      const involved = new Map<string, { id: string | null; name: string | null }>();
+      if (rid || rname) involved.set(rid || rname || '__none__', { id: rid, name: rname });
+      if (tid || tname) involved.set(tid || tname || '__none__', { id: tid ?? null, name: tname ?? null });
+      for (const p of involved.values()) {
+        const r = row(p.id, p.name);
         r.assigned.push(t);
         if (t.status === 'DONE') r.done.push(t);
         else if (t.status === 'IN_REVIEW') r.waitTest.push(t); // đang ở chân tester
