@@ -163,7 +163,7 @@
       @if (!isCollapsed('priority')) {
         <div class="rpp__sec-body">
           @if (bugTotal() === 0) {
-            <span class="rpp__empty-note">Không có bug/issue nào trong kỳ. 🎉</span>
+            <span class="rpp__empty-note">Không có bug/issue nào {{ periodWord() }}. 🎉</span>
           } @else {
             <div class="rpp__prio">
               @for (p of bugPriority(); track p.key) {
@@ -194,7 +194,7 @@
       @if (!isCollapsed('bugpeople')) {
         <div class="rpp__sec-body">
           @if (bugsInPeriod().length === 0) {
-            <span class="rpp__empty-note">Không có bug/issue nào trong kỳ. 🎉</span>
+            <span class="rpp__empty-note">Không có bug/issue nào {{ periodWord() }}. 🎉</span>
           } @else {
             <div class="rpp__bugcols">
               <div>
@@ -229,12 +229,12 @@
     <section class="rpp__sec">
       <button type="button" class="rpp__sec-head" (click)="toggle('roles')">
         <span class="rpp__sec-caret" [class.is-collapsed]="isCollapsed('roles')">▾</span>
-        <span>🎭 Thống kê theo vai (dev / tester) — trong kỳ</span>
+        <span>🎭 Thống kê theo vai (dev / tester) — {{ periodWord() }}</span>
         <span class="rpp__sec-count">{{ periodTasks().length }} việc</span>
       </button>
       @if (!isCollapsed('roles')) {
         <div class="rpp__sec-body">
-          <app-role-stats [tasks]="periodTasks()" scopeLabel="việc xử lý trong kỳ"
+          <app-role-stats [tasks]="periodTasks()" [scopeLabel]="'việc xử lý ' + periodWord()"
                           (picked)="openRolePick($event)" />
         </div>
       }
@@ -250,18 +250,19 @@
       @if (!isCollapsed('people')) {
         <div class="rpp__sec-body">
           <p class="rpp__note">
-            <b>Tổng CV</b> và <b>Xử lý trong kỳ</b> tính theo <b>người đang giữ việc</b>: việc ở Kiểm thử tính cho
-            người kiểm thử (bug/issue tính cho người log), còn lại tính cho người thực hiện.<br>
-            <b>Dev bàn giao</b> / <b>Tester duyệt</b> là <b>đóng góp theo vai</b>, mỗi vai tính vào kỳ có mốc của
-            mình — dev khi chuyển sang Kiểm thử, tester khi chuyển sang Hoàn thành. Một task đi trọn quy trình
-            trong kỳ được tính cho <b>cả hai người</b>, nên cộng hai cột này sẽ lớn hơn số task của dự án.</p>
+            <b>Tổng CV</b> và <b>Xử lý {{ periodWord() }}</b> tính theo <b>người đang giữ việc</b>: việc ở Kiểm thử
+            tính cho người kiểm thử (bug/issue tính cho người log), còn lại tính cho người thực hiện.<br>
+            <b>Dev bàn giao</b> / <b>Tester duyệt</b> là <b>đóng góp theo vai</b>, mỗi vai tính vào {{ periodNoun() }}
+            có mốc của mình — dev khi chuyển sang Kiểm thử, tester khi chuyển sang Hoàn thành. Một task đi trọn
+            quy trình {{ periodWord() }} được tính cho <b>cả hai người</b>, nên cộng hai cột này sẽ lớn hơn số task
+            của dự án.</p>
           <div class="rpp__people">
             <div class="rpp__prow rpp__prow--head">
               <span class="rpp__pname">Nhân sự</span>
               <span title="Tổng công việc toàn dự án đang giữ">Tổng CV</span>
-              <span title="Số việc xử lý trong Ngày/Tuần">Xử lý trong kỳ</span>
-              <span title="Vai DEV: số task đã bàn giao sang Kiểm thử trong kỳ">Dev bàn giao</span>
-              <span title="Vai TESTER: số task đã chuyển Hoàn thành trong kỳ">Tester duyệt</span>
+              <span [title]="'Số việc có thay đổi ' + periodWord()">Xử lý {{ periodWord() }}</span>
+              <span [title]="'Vai DEV: số task đã bàn giao sang Kiểm thử ' + periodWord()">Dev bàn giao</span>
+              <span [title]="'Vai TESTER: số task đã chuyển Hoàn thành ' + periodWord()">Tester duyệt</span>
               <span>% HT (dự án)</span>
             </div>
             @for (p of peopleStats(); track p.userId ?? p.name) {
@@ -283,13 +284,13 @@
                 <span>
                   @if (p.devHandover) {
                     <button type="button" class="rpp__num"
-                            (click)="openDetail('Dev bàn giao Kiểm thử · ' + p.name, p.devItems, true)">{{ p.devHandover }}</button>
+                            (click)="openDetail('Dev bàn giao Kiểm thử ' + periodWord() + ' · ' + p.name, p.devItems, true)">{{ p.devHandover }}</button>
                   } @else { <span class="rpp__num-zero">0</span> }
                 </span>
                 <span>
                   @if (p.testerDone) {
                     <button type="button" class="rpp__num rpp__num--done"
-                            (click)="openDetail('Tester duyệt xong · ' + p.name, p.testItems)">{{ p.testerDone }}</button>
+                            (click)="openDetail('Tester duyệt xong ' + periodWord() + ' · ' + p.name, p.testItems)">{{ p.testerDone }}</button>
                   } @else { <span class="rpp__num-zero">0</span> }
                 </span>
                 <span class="rpp__ppct">

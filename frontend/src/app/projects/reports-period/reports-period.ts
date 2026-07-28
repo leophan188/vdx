@@ -338,6 +338,14 @@ export class PrjReportsPeriod {
     return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
   }
 
+  /**
+   * Chữ hiển thị cho kỳ đang chọn. "Trong kỳ" chỉ là từ nội bộ cho gọn — trên màn hình
+   * phải ghi rõ "trong ngày" / "trong tuần" để người đọc báo cáo không phải đoán.
+   */
+  readonly periodWord = computed(() => (this.period() === 'weekly' ? 'trong tuần' : 'trong ngày'));
+  /** Danh từ kỳ ("ngày" / "tuần") — ghép vào câu như "kỳ ngày này", "hạn trong tuần". */
+  readonly periodNoun = computed(() => (this.period() === 'weekly' ? 'tuần' : 'ngày'));
+
   readonly statusMeta = STATUS_META;
   readonly priorityMeta = PRIORITY_META;
 
@@ -654,7 +662,8 @@ export class PrjReportsPeriod {
   readonly blocks = computed<ReportBlock[]>(() => {
     const r = this.report();
     return [
-      { key: 'done', icon: '✅', title: 'Đã hoàn thành', rows: r?.done ?? [], emptyText: 'Chưa có công việc nào hoàn thành trong kỳ.' },
+      { key: 'done', icon: '✅', title: 'Đã hoàn thành ' + this.periodWord(), rows: r?.done ?? [],
+        emptyText: 'Chưa có công việc nào hoàn thành ' + this.periodWord() + '.' },
       { key: 'overdue', icon: '⛔', title: 'Trễ hạn', rows: r?.overdue ?? [], emptyText: 'Không có công việc trễ hạn. 🎉' },
       { key: 'todo', icon: '📌', title: this.todoTitle(), rows: r?.todo ?? [],
         emptyText: 'Không có việc nào đến hạn mà chưa khởi động.' },
@@ -778,7 +787,7 @@ export class PrjReportsPeriod {
   openPerson(p: PersonStat): void { this.openDetail('Công việc của ' + p.name, p.items, true); }
   /** Mở chi tiết việc TRONG KỲ của 1 người (từ bảng thống kê nhân sự). */
   openPersonRow(p: { name: string; items: ReportTaskItem[] }): void {
-    this.openDetail('Công việc trong kỳ của ' + p.name, p.items, true);
+    this.openDetail('Công việc xử lý ' + this.periodWord() + ' của ' + p.name, p.items, true);
   }
 
   typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }

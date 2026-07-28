@@ -134,8 +134,8 @@ interface TestRow {
       <p class="rs__note">Một task nằm ở cả hai bảng — phần việc của dev và phần việc của tester.
         Đó là 2 phần việc của 2 người, không phải đếm trùng; tổng task của dự án vẫn là 1.
         @if (scopeLabel()) {
-          <br>Phạm vi: <b>{{ scopeLabel() }}</b> — chỉ gồm công việc có thay đổi trong kỳ đang chọn,
-          cột trạng thái là trạng thái HIỆN TẠI của những việc đó.
+          <br>Phạm vi: <b>{{ scopeLabel() }}</b> — chỉ gồm công việc có thay đổi trong khoảng thời gian
+          đang chọn; cột trạng thái là trạng thái HIỆN TẠI của những việc đó.
         }</p>
     </div>
   `,
