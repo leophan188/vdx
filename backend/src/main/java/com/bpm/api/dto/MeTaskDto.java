@@ -94,6 +94,8 @@ public final class MeTaskDto {
             String priority, String assigneeUserId, Double estimateHours, String startDate, String dueDate,
             String testerUserId, String parentId,
             String severity, String screen, String environment,
-            String stepsToReproduce, String expectedResult, String actualResult) {
+            String stepsToReproduce, String expectedResult, String actualResult,
+            /** Việc không cần qua kiểm thử (PM/BA). */
+            Boolean skipTest) {
     }
 }

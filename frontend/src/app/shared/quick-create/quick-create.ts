@@ -27,6 +27,9 @@ interface PendingImage { file: File; url: string; name: string; }
   imports: [Modal, SearchableSelect],
   templateUrl: './quick-create.html',
   styles: [`
+    .qc__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
+    .qc__skip input { cursor: pointer; }
+    .qc__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
     .qc { display: grid; gap: var(--space-3); width: 100%; }
     .qc__seg { display: flex; gap: 6px; flex-wrap: wrap; }
     .qc__seg button {
@@ -89,6 +92,8 @@ export class QuickCreate {
   readonly priority = signal<TaskPriority>('MEDIUM');
   readonly assigneeUserId = signal('');
   readonly testerUserId = signal('');
+  /** Việc không cần qua kiểm thử (PM/BA) — Bug/Issue luôn phải kiểm thử nên ẩn ô này. */
+  readonly skipTest = signal(false);
   readonly estimateHours = signal('');
   readonly startIso = signal('');
   readonly dueIso = signal('');
@@ -217,6 +222,7 @@ export class QuickCreate {
     this.priority.set('MEDIUM');
     this.assigneeUserId.set('');
     this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
+    this.skipTest.set(false);
     // Tạo nhanh: KHÔNG bắt buộc — mặc định est = 4 giờ, từ ngày & đến ngày = hôm nay (vẫn cho sửa).
     this.estimateHours.set('4');
     this.startIso.set(this.todayIso());
@@ -289,6 +295,7 @@ export class QuickCreate {
     this.parentId.set('');
     this.assigneeUserId.set('');
     this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
+    this.skipTest.set(false);
     this.members.set([]);
     this.tasks.set([]);
     if (!id) return;
@@ -359,6 +366,7 @@ export class QuickCreate {
       priority: this.priority(),
       assigneeUserId: this.assigneeUserId() || null,
       testerUserId: this.testerUserId() || null,
+      skipTest: bug ? false : this.skipTest(),
       estimateHours: est || null,
       startDate: this.startIso() || null,
       dueDate: this.dueIso() || null,

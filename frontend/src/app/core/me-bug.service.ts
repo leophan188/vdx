@@ -79,6 +79,7 @@ export interface QuickCreateRequest {
   priority?: TaskPriority | null;
   assigneeUserId?: string | null;  // PIC / người thực hiện
   testerUserId?: string | null;    // người kiểm thử (tuỳ chọn)
+  skipTest?: boolean | null;       // việc không cần qua kiểm thử (PM/BA)
   estimateHours?: number | null;
   startDate?: string | null;       // ISO yyyy-MM-dd | null (mặc định hôm nay ở tạo nhanh)
   dueDate?: string | null;         // ISO yyyy-MM-dd | null

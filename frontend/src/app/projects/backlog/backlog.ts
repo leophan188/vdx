@@ -34,6 +34,9 @@ interface TreeRow {
   imports: [FormsModule, Modal, SearchableSelect, TypeFilter, WorkEntryDialog],
   templateUrl: './backlog.html',
   styles: [`
+    .bl-skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
+    .bl-skip input { cursor: pointer; }
+    .bl-skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
     .bl-summary { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-3); }
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
     .bl-toolbar__spacer { flex: 1; } /* còn dùng trong footer modal */
@@ -732,7 +735,8 @@ export class PrjBacklog implements OnInit {
       stepsToReproduce: '',
       expectedResult: '',
       actualResult: '',
-      environment: t.environment ?? ''
+      environment: t.environment ?? '',
+      skipTest: t.skipTest ?? false
     };
     this.startIso = this.toIso(t.startDate);
     this.dueIso = this.toIso(t.dueDate);
@@ -760,8 +764,10 @@ export class PrjBacklog implements OnInit {
     const bug = this.isBugLike(this.f.type);
     const sd = this.fromIso(this.startIso);
     const dd = this.fromIso(this.dueIso);
-    // Est không nhập → tự tính theo duration × 8 (trừ SUBTASK do trần ≤ 4h).
-    const durEst = this.f.type !== 'SUBTASK' ? this.daysBetween(sd, dd) * 8 : 0;
+    // Est không nhập → tự tính theo duration × 8, nhưng KẸP theo trần 4h của task lá,
+    // nếu không backend sẽ từ chối ("Ước lượng không được quá 4 giờ") ngay khi lưu.
+    const group = this.f.type === 'EPIC' || this.f.type === 'STORY';
+    const durEst = group ? this.daysBetween(sd, dd) * 8 : Math.min(this.daysBetween(sd, dd) * 8, 4);
     const body: TaskRequest = {
       ...this.f,
       title: this.f.title.trim(),
@@ -1072,7 +1078,8 @@ export class PrjBacklog implements OnInit {
       priority: 'MEDIUM', assigneeUserId: null, estimateHours: 4, screen: '',
       startDate: null, dueDate: null,
       // Chi tiết lỗi (BUG/ISSUE) — mặc định rỗng, chỉ dùng khi loại là BUG/ISSUE.
-      severity: null, stepsToReproduce: '', expectedResult: '', actualResult: '', environment: ''
+      severity: null, stepsToReproduce: '', expectedResult: '', actualResult: '', environment: '',
+      skipTest: false
     };
   }
 

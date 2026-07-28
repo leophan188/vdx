@@ -93,7 +93,17 @@
                            [allowEmpty]="true" emptyLabel="— Chưa gán —"
                            placeholder="Chọn người kiểm thử…" />
       </div>
-      <div class="field"></div>
+      <!-- Việc PM/BA: không qua kiểm thử. Bug/Issue luôn phải kiểm thử nên ẩn. -->
+      <div class="field">
+        @if (!isBugLike() && !isGroupType()) {
+          <label>Kiểm thử</label>
+          <label class="qc__skip">
+            <input type="checkbox" [checked]="skipTest()"
+                   (change)="skipTest.set($any($event.target).checked)" />
+            <span>Không cần kiểm thử <i>(việc PM/BA — hoàn thành thẳng từ Đang làm)</i></span>
+          </label>
+        }
+      </div>
     </div>
 
     <!-- ===== Chi tiết lỗi — chỉ BUG/ISSUE (đồng bộ task-detail) ===== -->

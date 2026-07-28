@@ -240,7 +240,7 @@ public class MeTaskService {
                 null, blankToNull(req.screen()),
                 blankToNull(req.severity()), blankToNull(req.stepsToReproduce()), blankToNull(req.expectedResult()),
                 blankToNull(req.actualResult()), blankToNull(req.environment()),
-                blankToNull(req.testerUserId()), null);
+                blankToNull(req.testerUserId()), req.skipTest());
         ProjectDto.TaskResponse created = projectTaskService.create(pid, taskReq, actor);
         auditPort.record("ME_QUICK_CREATED", "ProjectTask", created.id(), actor,
                 "projectId=" + pid + ", type=" + type);
