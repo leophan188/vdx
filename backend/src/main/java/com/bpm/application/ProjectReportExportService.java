@@ -641,11 +641,11 @@ public class ProjectReportExportService {
             default: return s;
         }
     }
-    /** Gộp loại → nhóm thống kê (Công việc / Bug / Issue). */
+    /** Gộp loại → nhóm thống kê (Task / Bug / Issue) — nhãn đồng bộ với tên LOẠI trên giao diện. */
     private static String catOf(String type) {
         if ("BUG".equals(type)) return "Bug";
         if ("ISSUE".equals(type)) return "Issue";
-        return "Công việc"; // EPIC/STORY/TASK/SUBTASK
+        return "Task"; // EPIC/STORY/TASK/SUBTASK
     }
 
     public byte[] projectOverviewXlsx(String projectName, ProjectDto.ProjectResponse p,
@@ -714,7 +714,7 @@ public class ProjectReportExportService {
             Row h = sh.createRow(rr++);
             for (int c = 0; c < cols.length; c++) put(h, c, cols[c], header);
             java.util.LinkedHashMap<String, int[]> cat = new java.util.LinkedHashMap<>(); // [total,done,doing,review,notStarted,cancel]
-            for (String k : new String[]{"Công việc", "Bug", "Issue"}) cat.put(k, new int[6]);
+            for (String k : new String[]{"Task", "Bug", "Issue"}) cat.put(k, new int[6]);
             for (ProjectDto.TaskResponse t : tasks) {
                 int[] a = cat.get(catOf(t.type()));
                 a[0]++;

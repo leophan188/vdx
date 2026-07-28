@@ -1,11 +1,14 @@
 import { TaskType, TaskStatus, ProjectTask } from '../core/project.service';
 import { SelectOption } from '../shared/searchable-select/searchable-select';
 
-/** Nhóm thống kê công việc: gộp Task (Task+Sub-task), Bug, Issue riêng biệt. Bỏ EPIC/STORY (cấp nhóm). */
+/**
+ * Nhóm thống kê công việc: gộp Task (Task+Sub-task), Bug, Issue riêng biệt. Bỏ EPIC/STORY (cấp nhóm).
+ * Nhãn để nguyên tiếng Anh (Task/Bug/Issue) cho đồng bộ với tên LOẠI ở mọi màn.
+ */
 export type WorkCat = 'TASK' | 'BUG' | 'ISSUE';
 
 export const WORK_CATS: { key: WorkCat; label: string; icon: string; color: string }[] = [
-  { key: 'TASK', label: 'Công việc', icon: '📋', color: 'var(--type-task, var(--status-active))' },
+  { key: 'TASK', label: 'Task', icon: '📋', color: 'var(--type-task, var(--status-active))' },
   { key: 'BUG', label: 'Bug', icon: '🐞', color: 'var(--status-cancel, #e5484d)' },
   { key: 'ISSUE', label: 'Issue', icon: '⚠️', color: 'var(--status-pending, #f5a623)' }
 ];
