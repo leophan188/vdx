@@ -88,6 +88,10 @@ type SubTab = 'info' | 'comments' | 'activity';
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
       padding: 0 var(--space-2); font: inherit; width: 130px; }
     .td__life-note { font-size: .78rem; color: var(--color-text-muted); }
+    .td__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
+    .td__skip input { cursor: pointer; }
+    .td__skip input:disabled { cursor: default; }
+    .td__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
 
     .td__seg { display: flex; flex-wrap: wrap; gap: 6px; }
     .td__seg button {
@@ -420,6 +424,7 @@ export class PrjTaskDetail {
       severity: t.severity, stepsToReproduce: t.stepsToReproduce,
       expectedResult: t.expectedResult, actualResult: t.actualResult, environment: t.environment,
       testerUserId: t.testerUserId ?? null,
+      skipTest: t.skipTest ?? false,
       ...patch
     };
   }
@@ -508,6 +513,22 @@ export class PrjTaskDetail {
    * - Task thường đã có testerUserId → được.
    * Ngược lại (task thường chưa có tester) → phải chọn tester trước.
    */
+  /** Việc không cần kiểm thử (PM/BA) → ẩn bước Kiểm thử, cho Hoàn thành thẳng từ Đang làm. */
+  readonly skipTest = computed(() => !!this.current()?.skipTest && !this.isBug());
+  /** Bật/tắt cờ "không cần kiểm thử" — backend chặn nếu task đã sang Kiểm thử trở đi. */
+  toggleSkipTest(v: boolean): void {
+    const t = this.current();
+    if (!t) return;
+    this.svc.updateTask(this.projectId(), t.id, this.buildRequest(t, { skipTest: v })).subscribe({
+      next: (u) => {
+        this.model.set(u);
+        this.toast.success(v ? 'Đã đánh dấu không cần kiểm thử' : 'Đã bật lại yêu cầu kiểm thử');
+        this.changed.emit();
+      },
+      error: (e) => this.toast.error('Không đổi được', e?.error?.message ?? '')
+    });
+  }
+
   readonly canReviewDirectly = computed(() => {
     const t = this.current();
     if (!t) return false;
@@ -662,7 +683,7 @@ export class PrjTaskDetail {
 
   /** IN_REVIEW → DONE: nhập giờ kiểm thử rồi hoàn thành. */
   completeTask(): void {
-    this.askWork('TEST', (w) => this.doComplete(w));
+    this.askWork(this.skipTest() ? 'DEV' : 'TEST', (w) => this.doComplete(w));
   }
   private doComplete(work: WorkEntry): void {
     const t = this.current();

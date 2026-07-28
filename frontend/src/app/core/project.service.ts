@@ -113,6 +113,8 @@ export interface ProjectTask {
   // ===== Người kiểm thử (tester) + người log (reporter) — denorm từ UserAccount =====
   testerUserId?: string | null;
   testerName?: string | null;
+  /** Việc không cần qua kiểm thử (PM/BA) — đi thẳng Đang làm → Hoàn thành. */
+  skipTest?: boolean;
   reporterUserId?: string | null;
   reporterName?: string | null;
   estimateHours: number;
@@ -150,6 +152,7 @@ export interface TaskRequest {
   orderIndex?: number | null;
   screen?: string | null;
   testerUserId?: string | null; // người kiểm thử (bàn giao khi chuyển Kiểm thử)
+  skipTest?: boolean | null;    // việc không cần qua kiểm thử (PM/BA)
   // ===== Chi tiết lỗi (BUG/ISSUE) — đều optional =====
   severity?: BugSeverity | null;
   stepsToReproduce?: string | null;

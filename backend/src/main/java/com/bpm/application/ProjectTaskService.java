@@ -738,7 +738,9 @@ public class ProjectTaskService {
             return TaskWorkLog.ROLE_DEV;
         }
         if (newStatus == TaskStatus.DONE) {
-            return TaskWorkLog.ROLE_TEST;
+            // Việc không qua kiểm thử: người thực hiện tự hoàn thành → giờ tính vai LẬP TRÌNH,
+            // nếu ghi vai TEST thì timesheet của họ sẽ hiện thành giờ kiểm thử, sai hoàn toàn.
+            return t.requiresTest() ? TaskWorkLog.ROLE_TEST : TaskWorkLog.ROLE_DEV;
         }
         return null;
     }
@@ -810,8 +812,9 @@ public class ProjectTaskService {
         if (t.getAssigneeUserId() == null) {
             throw new IllegalArgumentException("Cần có Người thực hiện trước khi chuyển sang Hoàn thành");
         }
-        if (t.getTesterUserId() == null) {
-            throw new IllegalArgumentException("Cần có Người kiểm thử trước khi chuyển sang Hoàn thành");
+        if (t.requiresTest() && t.getTesterUserId() == null) {
+            throw new IllegalArgumentException("Cần có Người kiểm thử trước khi chuyển sang Hoàn thành"
+                    + " — hoặc đánh dấu \"Không cần kiểm thử\" nếu đây là việc không qua kiểm thử");
         }
     }
 
@@ -999,6 +1002,14 @@ public class ProjectTaskService {
 
     private void applyFields(ProjectTask t, ProjectDto.TaskRequest req, String parentId, boolean leaf) {
         TaskType type = parseType(req.type());
+        // Cờ "không cần kiểm thử" (việc PM/BA). KHÔNG cho bật khi task đã bàn giao kiểm thử
+        // trở đi — bật lúc đó là bỏ qua quy trình giữa chừng và xoá công tester đã ghi nhận.
+        boolean skipTest = Boolean.TRUE.equals(req.skipTest());
+        if (skipTest && !t.isSkipTest()
+                && (t.getStatus() == TaskStatus.IN_REVIEW || t.getStatus() == TaskStatus.DONE)) {
+            throw new IllegalArgumentException(
+                    "Task đã chuyển sang Kiểm thử thì không đánh dấu \"không cần kiểm thử\" được nữa");
+        }
         double est = req.estimateHours() == null ? 0.0 : req.estimateHours();
         // Ràng buộc: TASK LÁ (đơn vị làm việc nhỏ nhất) ước lượng KHÔNG quá 4 giờ — lớn hơn thì tách nhỏ.
         // Task CHA không chặn: est của cha là TỔNG HỢP từ lá con, không nhập tay.
@@ -1024,7 +1035,8 @@ public class ProjectTaskService {
                 blankToNull(req.expectedResult()),
                 blankToNull(req.actualResult()),
                 blankToNull(req.environment()),
-                blankToNull(req.testerUserId()));
+                blankToNull(req.testerUserId()),
+                skipTest);
     }
 
     /** Parse mức độ nghiêm trọng AN TOÀN: rỗng/null/không hợp lệ → null (không ném lỗi). */

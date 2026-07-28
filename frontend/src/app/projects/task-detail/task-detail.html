@@ -65,7 +65,12 @@
 
           @if (t.status === 'IN_PROGRESS') {
             <div class="td__life-acts">
-              @if (!pickTesterOpen()) {
+              @if (skipTest()) {
+                <!-- Việc PM/BA: không qua kiểm thử → hoàn thành thẳng, giờ ghi tính cho người thực hiện -->
+                <button type="button" class="btn btn--primary btn--sm"
+                        [disabled]="busyLifecycle()" (click)="completeTask()">🏁 Hoàn thành</button>
+                <span class="td__life-note">ℹ️ Việc này không cần kiểm thử.</span>
+              } @else if (!pickTesterOpen()) {
                 <button type="button" class="btn btn--primary btn--sm"
                         [disabled]="busyLifecycle()" (click)="toReview()">→ Chuyển Kiểm thử</button>
                 @if (isBug()) {
@@ -192,6 +197,17 @@
                                    [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người kiểm thử…" />
               }
             </div>
+            @if (!isBug()) {
+              <div class="td__row">
+                <label>Kiểm thử</label>
+                <label class="td__skip">
+                  <input type="checkbox" [checked]="t.skipTest"
+                         [disabled]="t.status === 'IN_REVIEW' || t.status === 'DONE'"
+                         (change)="toggleSkipTest($any($event.target).checked)" />
+                  <span>Không cần kiểm thử <i>(việc PM/BA — hoàn thành thẳng từ Đang làm)</i></span>
+                </label>
+              </div>
+            }
             @if (t.reporterName) {
               <div class="td__row">
                 <label>Người log</label>

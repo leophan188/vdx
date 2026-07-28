@@ -822,6 +822,7 @@ export class PrjBacklog implements OnInit {
       severity: t.severity, stepsToReproduce: t.stepsToReproduce,
       expectedResult: t.expectedResult, actualResult: t.actualResult, environment: t.environment,
       testerUserId: t.testerUserId ?? null,
+      skipTest: t.skipTest ?? false,
       ...patch
     };
   }

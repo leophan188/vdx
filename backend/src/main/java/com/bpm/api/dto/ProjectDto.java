@@ -106,7 +106,9 @@ public final class ProjectDto {
             boolean leaf, double progressPct, List<ParentRef> parentChain,
             String createdAt, String updatedAt, String createdBy,
             String reporterUserId, String reporterName,
-            String testerUserId, String testerName) {
+            String testerUserId, String testerName,
+            /** Việc không cần qua kiểm thử (PM/BA) — FE ẩn bước kiểm thử cho task này. */
+            boolean skipTest) {
 
         public static TaskResponse of(ProjectTask t, String projectCode, String assigneeName, boolean leaf) {
             return of(t, projectCode, assigneeName, null, null, null, null,
@@ -164,7 +166,7 @@ public final class ProjectDto {
                     t.getUpdatedAt() == null ? null : t.getUpdatedAt().toString(),
                     t.getCreatedBy(),
                     t.getReporterUserId(), reporterName,
-                    t.getTesterUserId(), testerName);
+                    t.getTesterUserId(), testerName, t.isSkipTest());
         }
     }
 
@@ -219,7 +221,9 @@ public final class ProjectDto {
             Integer orderIndex, String screen,
             String severity, String stepsToReproduce, String expectedResult,
             String actualResult, String environment,
-            String testerUserId) {
+            String testerUserId,
+            /** Việc không cần qua kiểm thử (PM/BA) — bỏ trống = cần kiểm thử như bình thường. */
+            Boolean skipTest) {
     }
 
     /**

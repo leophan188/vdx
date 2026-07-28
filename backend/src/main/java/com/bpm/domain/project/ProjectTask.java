@@ -69,6 +69,15 @@ public class ProjectTask {
     @Column(name = "tester_user_id", length = 36)
     private String testerUserId;
 
+    /**
+     * Việc này KHÔNG cần qua kiểm thử (vd việc của PM/BA: khảo sát, tài liệu, họp).
+     * Task có cờ này đi thẳng Đang làm → Hoàn thành, không đòi người kiểm thử, và giờ ghi
+     * lúc hoàn thành tính là giờ LẬP TRÌNH của người thực hiện chứ không phải giờ kiểm thử.
+     * BUG/ISSUE luôn phải kiểm thử nên cờ bị bỏ qua với hai loại này.
+     */
+    @Column(name = "skip_test")
+    private boolean skipTest;
+
     /** Ước lượng thời gian (giờ). */
     @Column(name = "estimate_hours")
     private double estimateHours;
@@ -142,7 +151,7 @@ public class ProjectTask {
                       LocalDate startDate, LocalDate dueDate, int orderIndex, String screen) {
         apply(parentId, title, description, type, status, priority, assigneeUserId, estimateHours,
                 startDate, dueDate, orderIndex, screen,
-                null, null, null, null, null, null);
+                null, null, null, null, null, null, false);
     }
 
     /** Cập nhật toàn bộ trường nghiệp vụ (PUT) — bao gồm chi tiết lỗi (BUG/ISSUE) + người kiểm thử. */
@@ -150,7 +159,7 @@ public class ProjectTask {
                       TaskPriority priority, String assigneeUserId, double estimateHours,
                       LocalDate startDate, LocalDate dueDate, int orderIndex, String screen,
                       BugSeverity severity, String stepsToReproduce, String expectedResult,
-                      String actualResult, String environment, String testerUserId) {
+                      String actualResult, String environment, String testerUserId, boolean skipTest) {
         this.parentId = parentId;
         this.title = title;
         this.description = description;
@@ -169,6 +178,7 @@ public class ProjectTask {
         this.actualResult = actualResult;
         this.environment = environment;
         this.testerUserId = testerUserId;
+        this.skipTest = skipTest;
         touch();
     }
 
@@ -196,6 +206,15 @@ public class ProjectTask {
     public String getReporterUserId() { return reporterUserId; }
     public void setReporterUserId(String reporterUserId) { this.reporterUserId = reporterUserId; }
     public String getTesterUserId() { return testerUserId; }
+    public boolean isSkipTest() { return skipTest; }
+    public void setSkipTest(boolean skipTest) { this.skipTest = skipTest; }
+    /** Task này có phải đi qua kiểm thử không — BUG/ISSUE luôn phải, không tắt được. */
+    public boolean requiresTest() {
+        if (type == TaskType.BUG || type == TaskType.ISSUE) {
+            return true;
+        }
+        return !skipTest;
+    }
     public void setTesterUserId(String testerUserId) { this.testerUserId = testerUserId; }
     public double getEstimateHours() { return estimateHours; }
     public void setEstimateHours(double estimateHours) { this.estimateHours = estimateHours; }

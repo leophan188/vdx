@@ -102,13 +102,18 @@ export function ownerOf(t: OwnableTask): { id: string | null; name: string | nul
  * nên mọi màn đổi trạng thái đều phải hỏi giờ đúng những trường hợp này.
  */
 export function workRoleForTransition(
-  t: { type: TaskType; status: TaskStatus; leaf?: boolean }, next: TaskStatus
+  t: { type: TaskType; status: TaskStatus; leaf?: boolean; skipTest?: boolean }, next: TaskStatus
 ): 'DEV' | 'TEST' | null {
   if (next === t.status) return null;
   if (t.type === 'EPIC' || t.type === 'STORY') return null;
   if (t.leaf === false) return null;              // task cha: trạng thái do rollup
   if (next === 'IN_REVIEW') return 'DEV';
-  if (next === 'DONE') return 'TEST';
+  if (next === 'DONE') {
+    // Việc không cần kiểm thử (PM/BA): người thực hiện tự hoàn thành → giờ tính vai LẬP TRÌNH.
+    // Bug/Issue luôn phải kiểm thử nên cờ không áp dụng.
+    const skips = t.skipTest && t.type !== 'BUG' && t.type !== 'ISSUE';
+    return skips ? 'DEV' : 'TEST';
+  }
   return null;
 }
 
