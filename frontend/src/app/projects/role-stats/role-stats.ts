@@ -14,13 +14,18 @@ interface DevRow {
   pct: number;
 }
 
-/** Một dòng bảng vai TESTER — task người đó LOG và task người đó KIỂM THỬ. */
+/**
+ * Một dòng bảng vai TESTER. Tập gốc {@code assigned} = việc người này phụ trách kiểm thử
+ * (là người kiểm thử; bug/issue chưa gán tester thì người log chính là người verify).
+ * Ba cột trạng thái chia HẾT tập gốc nên luôn có: done + waitTest + waitDev = assigned.
+ */
 interface TestRow {
   key: string; userId: string | null; name: string;
-  logged: ProjectTask[];   // bug/issue do người này log
-  assigned: ProjectTask[]; // TOÀN BỘ task mình là người kiểm thử (mọi trạng thái)
-  approved: ProjectTask[]; // đã kiểm thử xong (Hoàn thành)
-  pending: ProjectTask[];  // đang chờ mình kiểm thử (đang ở Kiểm thử)
+  logged: ProjectTask[];   // bug/issue do người này TẠO
+  assigned: ProjectTask[]; // tổng việc mình phụ trách kiểm thử
+  done: ProjectTask[];     // đã Hoàn thành
+  waitTest: ProjectTask[]; // đang ở Kiểm thử — nằm ở chân TESTER
+  waitDev: ProjectTask[];  // Backlog/Cần làm/Đang làm — còn ở chân DEV
   pct: number;
 }
 
@@ -99,11 +104,12 @@ interface TestRow {
         <div class="rs__grid rs__grid--test">
           <div class="rs__row rs__row--head">
             <span class="rs__name">Nhân sự</span>
-            <span title="Số bug/issue người này đã log">Đã log</span>
-            <span title="Task đang ở Kiểm thử, chờ người này verify">Đang chờ</span>
-            <span title="Task người này kiểm thử và đã chuyển Hoàn thành">Đã duyệt</span>
-            <span title="Tổng số task người này chịu trách nhiệm kiểm thử (mọi trạng thái)">Phải kiểm thử</span>
-            <span title="Đã duyệt / Tổng phải kiểm thử">% Duyệt</span>
+            <span title="Số bug/issue do người này tạo">Đã log</span>
+            <span title="Việc đã ở trạng thái Hoàn thành">Hoàn thành</span>
+            <span title="Đang ở trạng thái Kiểm thử — nằm ở chân tester, chờ người này verify">Chờ test</span>
+            <span title="Backlog / Cần làm / Đang làm — còn ở chân dev, chưa bàn giao">Chờ Dev</span>
+            <span title="Tổng việc người này phụ trách kiểm thử = Hoàn thành + Chờ test + Chờ Dev">Tổng</span>
+            <span title="Hoàn thành / Tổng">% HT</span>
           </div>
           @for (r of testRows(); track r.key) {
             <div class="rs__row">
@@ -113,14 +119,17 @@ interface TestRow {
               <span>@if (r.logged.length) {
                 <button type="button" class="rs__num" (click)="pick('Bug/Issue do ' + r.name + ' log', r.logged)">{{ r.logged.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
-              <span>@if (r.pending.length) {
-                <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Đang chờ kiểm thử', r.pending)">{{ r.pending.length }}</button>
+              <span>@if (r.done.length) {
+                <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Hoàn thành', r.done)">{{ r.done.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
-              <span>@if (r.approved.length) {
-                <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Đã duyệt', r.approved)">{{ r.approved.length }}</button>
+              <span>@if (r.waitTest.length) {
+                <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Chờ test (đang ở chân tester)', r.waitTest)">{{ r.waitTest.length }}</button>
+              } @else { <i class="rs__zero">0</i> }</span>
+              <span>@if (r.waitDev.length) {
+                <button type="button" class="rs__num rs__num--doing" (click)="pick(r.name + ' · Chờ Dev (chưa bàn giao)', r.waitDev)">{{ r.waitDev.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.assigned.length) {
-                <button type="button" class="rs__num" (click)="pick(r.name + ' · Phải kiểm thử', r.assigned)">{{ r.assigned.length }}</button>
+                <button type="button" class="rs__num" (click)="pick(r.name + ' · Tổng việc phụ trách kiểm thử', r.assigned)">{{ r.assigned.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span class="rs__pct">
                 <span class="rs__bar"><span class="rs__fill" [style.width.%]="r.pct"></span></span>
@@ -131,7 +140,10 @@ interface TestRow {
         </div>
       </div>
 
-      <p class="rs__note">Một task nằm ở cả hai bảng — phần việc của dev và phần việc của tester.
+      <p class="rs__note">Bảng tester: <b>Hoàn thành + Chờ test + Chờ Dev = Tổng</b>. “Chờ Dev” là việc đã log
+        nhưng dev chưa bàn giao nên tester chưa động vào được, “Chờ test” là việc đang nằm trên tay tester.
+        Cột “Đã log” đếm bug/issue do người đó tạo — có thể lệch Tổng nếu bug được giao cho người khác kiểm thử.
+        <br>Một task nằm ở cả hai bảng — phần việc của dev và phần việc của tester.
         Đó là 2 phần việc của 2 người, không phải đếm trùng; tổng task của dự án vẫn là 1.
         @if (scopeLabel()) {
           <br>Phạm vi: <b>{{ scopeLabel() }}</b> — chỉ gồm công việc có thay đổi trong khoảng thời gian
@@ -155,11 +167,11 @@ interface TestRow {
     .rs__wrap { overflow-x: auto; }
     .rs__grid { display: grid; gap: 2px; }
     .rs__grid--dev { min-width: 660px; }
-    .rs__grid--test { min-width: 660px; }
+    .rs__grid--test { min-width: 740px; }
     .rs__row { display: grid; align-items: center; gap: var(--space-1); padding: 5px var(--space-3);
       border-radius: var(--radius-md); background: var(--color-surface-alt); font-size: var(--text-sm); }
     .rs__grid--dev .rs__row { grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(72px, .9fr)) minmax(120px, 1.2fr); }
-    .rs__grid--test .rs__row { grid-template-columns: minmax(180px, 2fr) repeat(4, minmax(80px, 1fr)) minmax(120px, 1.2fr); }
+    .rs__grid--test .rs__row { grid-template-columns: minmax(180px, 2fr) repeat(5, minmax(74px, 1fr)) minmax(120px, 1.2fr); }
     .rs__row > span:not(.rs__name) { text-align: center; }
     .rs__row--head { background: none; color: var(--color-text-muted); font-size: var(--text-xs);
       font-weight: var(--weight-semibold); text-transform: uppercase; letter-spacing: .02em; }
@@ -240,7 +252,7 @@ export class RoleStats {
       let r = map.get(key);
       if (!r) {
         r = { key, userId: id, name: name || '— Không rõ —',
-          logged: [], assigned: [], approved: [], pending: [], pct: 0 };
+          logged: [], assigned: [], done: [], waitTest: [], waitDev: [], pct: 0 };
         map.set(key, r);
       }
       return r;
@@ -257,16 +269,17 @@ export class RoleStats {
       if (tid || tname) {
         const r = row(tid ?? null, tname ?? null);
         r.assigned.push(t);
-        if (t.status === 'DONE') r.approved.push(t);
-        else if (t.status === 'IN_REVIEW') r.pending.push(t);
+        if (t.status === 'DONE') r.done.push(t);
+        else if (t.status === 'IN_REVIEW') r.waitTest.push(t); // đang ở chân tester
+        else r.waitDev.push(t);                                // Backlog/Cần làm/Đang làm → còn ở chân dev
       }
     }
     const rows = [...map.values()];
     for (const r of rows) {
-      // Mẫu số là TOÀN BỘ việc mình phải kiểm thử, KHÔNG phải chỉ việc đã tới tay.
-      // Nếu chỉ lấy (Đã duyệt + Đang chờ) thì người log 45 bug, duyệt 7, còn 38 bug dev
-      // chưa bàn giao sẽ ra 100% — con số vô nghĩa vì phần lớn việc còn chưa kiểm thử.
-      r.pct = r.assigned.length ? Math.round((r.approved.length / r.assigned.length) * 100) : 0;
+      // Mẫu số là TOÀN BỘ việc mình phụ trách kiểm thử. Nếu chỉ lấy việc đã tới tay
+      // (Hoàn thành + Chờ test) thì người log 50 bug, xong 7, còn 43 bug dev chưa bàn giao
+      // sẽ ra 100% — con số vô nghĩa vì phần lớn việc còn chưa kiểm thử.
+      r.pct = r.assigned.length ? Math.round((r.done.length / r.assigned.length) * 100) : 0;
     }
     return rows.sort((a, b) =>
       b.assigned.length - a.assigned.length
