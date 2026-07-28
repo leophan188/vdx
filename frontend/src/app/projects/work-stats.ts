@@ -112,6 +112,29 @@ export function workRoleForTransition(
   return null;
 }
 
+/**
+ * GIỜ HIỆU LỰC dùng làm trọng số khi tính % — PHẢI khớp ProjectTask.effectiveHours ở backend:
+ * ưu tiên est đã nhập; chưa nhập thì suy từ số NGÀY CÔNG (T2–T6) trong [bắt đầu, kết thúc] × 8h.
+ * Nhờ vậy task chưa ước lượng vẫn có sức nặng thay vì tàng hình với % hoàn thành.
+ */
+export function effectiveHours(t: { estimateHours: number; startDate: string | null; dueDate: string | null }): number {
+  if (t.estimateHours > 0) return t.estimateHours;
+  const s = parseDmyLocal(t.startDate);
+  const d = parseDmyLocal(t.dueDate);
+  if (!s || !d || d < s) return 0;
+  let workdays = 0;
+  for (const cur = new Date(s); cur <= d; cur.setDate(cur.getDate() + 1)) {
+    const w = cur.getDay();
+    if (w >= 1 && w <= 5) workdays++;
+  }
+  return workdays * 8;
+}
+function parseDmyLocal(s: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s);
+  return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+}
+
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
 export function catOf(type: TaskType): WorkCat | null {
   if (type === 'TASK' || type === 'SUBTASK') return 'TASK';

@@ -206,11 +206,16 @@ public class ProjectTaskService {
                 pct.put(t.getId(), 0.0);
                 return new double[]{0, 0, 0, 0}; // Huỷ = ngoài phạm vi, không góp vào rollup cha
             }
-            // LÁ — trọng số = est THÔ (KHỚP % tổng ở Tổng quan/report; KHÔNG suy từ duration).
-            boolean done = t.getStatus() == TaskStatus.DONE;
-            double est = t.getEstimateHours();
-            pct.put(t.getId(), done ? 100.0 : 0.0);
-            return new double[]{est, done ? est : 0.0, 1, done ? 1 : 0};
+            // LÁ — quy tắc chung ở TaskProgress: trọng số = giờ hiệu lực, Kiểm thử được 0.8 điểm.
+            // Epic/Story RỖNG là lá về mặt cây nhưng KHÔNG phải việc thực thi → không góp vào rollup.
+            if (t.getType() == TaskType.EPIC || t.getType() == TaskType.STORY) {
+                pct.put(t.getId(), 0.0);
+                return new double[]{0, 0, 0, 0};
+            }
+            double w = TaskProgress.weight(t);
+            double f = TaskProgress.factor(t);
+            pct.put(t.getId(), Math.round(f * 10000.0) / 100.0);
+            return new double[]{w, w * f, 1, f};
         }
         double leafEst = 0, leafDoneEst = 0, leaf = 0, leafDone = 0;
         for (ProjectTask k : kids) {

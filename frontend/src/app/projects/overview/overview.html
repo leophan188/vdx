@@ -100,6 +100,9 @@
               @for (c of workCats; track c.key) { <span [title]="c.label">{{ c.icon }} {{ c.label }}</span> }
               @for (s of statusMetaAll; track s.key) { <span class="ov2__msep">{{ s.label }}</span> }
               <span class="ov2__msep">Tổng</span>
+              <span title="Tổng giờ ước lượng của việc đang giữ">Est (h)</span>
+              <span title="Tổng giờ thực tế người này đã ghi (mọi vai)">Thực tế (h)</span>
+              <span title="(Thực tế − Est) / Est — dương là vượt giờ ước lượng">Lệch</span>
               <span>% HT</span>
             </div>
 
@@ -122,6 +125,9 @@
                 }
                 <span class="ov2__msep"><button type="button" class="ov2__num"
                         (click)="openDetail('Công việc của ' + p.name, p.items, true)">{{ p.total }}</button></span>
+                <span>{{ p.estHours || '—' }}</span>
+                <span>{{ p.actualHours || '—' }}</span>
+                <span [class]="varianceClass(p)">{{ varianceText(p) }}</span>
                 <span class="ov2__mpct">
                   <span class="ov2__mpct-bar"><span class="ov2__mpct-fill" [style.width.%]="p.donePct"></span></span>
                   <span class="ov2__mpct-val">{{ p.donePct }}%</span>
@@ -147,6 +153,10 @@
                 }
                 <span class="ov2__msep"><button type="button" class="ov2__num"
                         (click)="openDetail('Toàn bộ công việc dự án', tt.items)">{{ tt.total }}</button></span>
+                <span>{{ rnd(report()?.totalEstimate) || '—' }}</span>
+                <span>{{ actualTotal() || '—' }}</span>
+                <span [class]="estVariancePct() > 0 ? 'ov2__var--over' : 'ov2__var--under'">
+                  {{ estVariancePct() > 0 ? '+' : '' }}{{ estVariancePct() }}%</span>
                 <span class="ov2__mpct">
                   <span class="ov2__mpct-bar"><span class="ov2__mpct-fill" [style.width.%]="tt.donePct"></span></span>
                   <span class="ov2__mpct-val">{{ tt.donePct }}%</span>

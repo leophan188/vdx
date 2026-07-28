@@ -411,11 +411,18 @@ public class ProjectService {
 
             byStatus.merge(t.getStatus().name(), 1, Integer::sum);
             byType.merge(t.getType().name(), 1, Integer::sum);
-            totalEstimate += t.getEstimateHours();
-            totalSpent += t.getSpentHours();
+            // Est/giờ TỔNG chỉ cộng trên VIỆC THỰC THI. Trước đây cộng cả task cha nên est của
+            // cha (nhập từ lúc chưa có con) bị cộng THÊM vào est của các con → tổng giờ phồng lên.
+            boolean countable = TaskProgress.countable(t, parentIds);
+            if (countable) {
+                totalEstimate += TaskProgress.weight(t);
+                totalSpent += t.getSpentHours();
+                if (done) {
+                    doneEstimate += TaskProgress.weight(t);
+                }
+            }
             if (done) {
                 doneTasks++;
-                doneEstimate += t.getEstimateHours();
             }
             if (t.getType() == TaskType.BUG) {
                 bugCount++;
@@ -423,12 +430,13 @@ public class ProjectService {
             if (t.getDueDate() != null && t.getDueDate().isBefore(today) && !done && !cancelled) {
                 overdue++;
             }
-            if (leaf && !cancelled) { // task Huỷ không tính vào mẫu số % hoàn thành
+            if (countable) { // lá, không Epic/Story, không Huỷ — xem TaskProgress
                 leafTasks++;
-                leafEstimate += t.getEstimateHours();
+                double w = TaskProgress.weight(t);
+                leafEstimate += w;
+                leafDoneEstimate += w * TaskProgress.factor(t); // Kiểm thử được 0.8
                 if (done) {
                     leafDoneTasks++;
-                    leafDoneEstimate += t.getEstimateHours();
                 }
             }
             String uid = t.getAssigneeUserId();
@@ -445,7 +453,7 @@ public class ProjectService {
                     case CANCELLED -> agg[6]++;
                 }
                 if (!cancelled) { // ước lượng giờ không tính việc đã huỷ
-                    assigneeEst.merge(uid, t.getEstimateHours(), Double::sum);
+                    assigneeEst.merge(uid, TaskProgress.weight(t), Double::sum);
                 }
             }
         }
@@ -459,7 +467,7 @@ public class ProjectService {
                     v[0], v[1], v[2], v[3], v[4], v[5], v[6], assigneeEst.getOrDefault(uid, 0.0)));
         }
 
-        double pct = completionFrom(leafEstimate, leafDoneEstimate, leafTasks, leafDoneTasks);
+        double pct = TaskProgress.completion(tasks, parentIds);
         return new ProjectDto.ReportResponse(pct, totalTasks, doneTasks, leafTasks, leafDoneTasks,
                 round2(totalEstimate), round2(doneEstimate), round2(totalSpent), bugCount, overdue,
                 byStatus, byType, byAssignee);
@@ -473,33 +481,9 @@ public class ProjectService {
                 parentIds.add(t.getParentId());
             }
         }
-        double leafEst = 0, leafDoneEst = 0;
-        int leaf = 0, leafDone = 0;
-        for (ProjectTask t : tasks) {
-            if (parentIds.contains(t.getId())) {
-                continue; // không phải lá
-            }
-            if (t.getStatus() == TaskStatus.CANCELLED) {
-                continue; // Huỷ = ngoài phạm vi, không tính vào % hoàn thành
-            }
-            leaf++;
-            double w = t.getEstimateHours(); // KHỚP report()/Tổng quan: dùng est THÔ (không suy từ duration)
-            leafEst += w;
-            if (t.getStatus() == TaskStatus.DONE) {
-                leafDone++;
-                leafDoneEst += w;
-            }
-        }
-        return completionFrom(leafEst, leafDoneEst, leaf, leafDone);
+        return TaskProgress.completion(tasks, parentIds);
     }
 
-    private static double completionFrom(double leafEst, double leafDoneEst, int leaf, int leafDone) {
-        if (leaf == 0) {
-            return 0.0;
-        }
-        double pct = leafEst > 0 ? (leafDoneEst / leafEst) * 100.0 : ((double) leafDone / leaf) * 100.0;
-        return round2(pct);
-    }
 
     // ===== People (chọn thành viên / assignee) =====
 

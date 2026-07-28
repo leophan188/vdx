@@ -7,10 +7,10 @@ import { RoleStats } from '../role-stats/role-stats';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
 import { formatThousands } from '../../shared/format';
-import { categoryStats, CatStat, catOf, isOverdue, ownerOf, STATUS_META, TYPE_META, WORK_CATS, WorkCat } from '../work-stats';
+import { categoryStats, CatStat, catOf, effectiveHours, isOverdue, ownerOf, STATUS_META, TYPE_META, WORK_CATS, WorkCat } from '../work-stats';
 import {
   ProjectService, Project, ProjectReport, ProjectStatus, TaskStatus, TaskType, ProjectTask,
-  ProjectMember, ProjectActivityItem
+  ProjectMember, ProjectActivityItem, WorkLog
 } from '../../core/project.service';
 
 interface StatusBar { status: TaskStatus; label: string; color: string; count: number; pct: number; }
@@ -41,6 +41,8 @@ interface PersonRow {
   total: number;
   done: number;
   donePct: number;
+  estHours: number;    // Σ giờ hiệu lực của việc đang giữ
+  actualHours: number; // Σ giờ THỰC TẾ người này đã ghi (mọi vai)
 }
 
 /** Một dòng tiến độ EPIC / Story kèm số việc con xong / chưa xong. */
@@ -203,9 +205,9 @@ function emptyTypeBuckets(): TypeBuckets {
 
     /* ===== Bảng tổng hợp theo nhân sự (nhân sự × loại × trạng thái) ===== */
     .ov2__mx { overflow-x: auto; }
-    .ov2__mx-inner { display: grid; gap: 2px; min-width: 940px; }
+    .ov2__mx-inner { display: grid; gap: 2px; min-width: 1180px; }
     .ov2__mrow { display: grid;
-      grid-template-columns: minmax(180px, 1.8fr) repeat(9, minmax(56px, .85fr)) minmax(56px, .7fr) minmax(112px, 1.1fr);
+      grid-template-columns: minmax(180px, 1.8fr) repeat(9, minmax(52px, .8fr)) minmax(52px, .7fr) repeat(3, minmax(62px, .8fr)) minmax(104px, 1fr);
       align-items: center; gap: var(--space-1); padding: 5px var(--space-3); border-radius: var(--radius-md); font-size: var(--text-sm); }
     .ov2__mrow > span:not(.ov2__mname) { text-align: center; }
     .ov2__mrow--body { background: var(--color-surface-alt); }
@@ -219,6 +221,8 @@ function emptyTypeBuckets(): TypeBuckets {
       font-weight: var(--weight-medium); overflow: hidden; }
     .ov2__mname span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ov2__msep { border-left: 1px solid var(--color-border); }
+    .ov2__var--over { color: var(--overdue, #e5484d); font-weight: var(--weight-semibold); }
+    .ov2__var--under { color: var(--status-done); font-weight: var(--weight-semibold); }
     .ov2__mpct { display: flex; align-items: center; gap: var(--space-2); justify-content: center; }
     .ov2__mpct-bar { flex: 1; max-width: 70px; height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
     .ov2__mpct-fill { display: block; height: 100%; border-radius: 999px; background: var(--status-done); }
@@ -327,6 +331,23 @@ export class PrjOverview {
   readonly members = signal<ProjectMember[]>([]);
   readonly activity = signal<ProjectActivityItem[]>([]);
   readonly loading = signal(true);
+  /** Giờ THỰC TẾ toàn dự án — để đối chiếu est vs thực tế theo người. */
+  readonly workLogs = signal<WorkLog[]>([]);
+  /** userId → tổng giờ đã ghi (mọi vai). */
+  readonly actualByUser = computed(() => {
+    const m = new Map<string, number>();
+    for (const w of this.workLogs()) {
+      m.set(w.userId, (m.get(w.userId) ?? 0) + (w.hours || 0));
+    }
+    return m;
+  });
+  /** Tổng giờ thực tế của dự án + độ lệch so với est. */
+  readonly actualTotal = computed(() =>
+    Math.round(this.workLogs().reduce((a, w) => a + (w.hours || 0), 0) * 10) / 10);
+  readonly estVariancePct = computed(() => {
+    const est = this.report()?.totalEstimate ?? 0;
+    return est > 0 ? Math.round(((this.actualTotal() - est) / est) * 100) : 0;
+  });
 
   /** Xuất báo cáo Tổng quan cho khách (Excel + PDF) — KHÔNG có người thực hiện & trễ hạn. */
   readonly exporting = signal(false);
@@ -463,7 +484,7 @@ export class PrjOverview {
           key, userId: own.id, name: own.name || '— Chưa gán —',
           unassigned: !own.id && !own.name,
           items: [], byType: emptyTypeBuckets(), byStatus: emptyStatusBuckets(), overdueItems: [],
-          total: 0, done: 0, donePct: 0
+          total: 0, done: 0, donePct: 0, estHours: 0, actualHours: 0
         };
         map.set(key, row);
       }
@@ -487,17 +508,22 @@ export class PrjOverview {
         map.set(key, {
           key, userId: p.id ?? null, name: p.name || '— Chưa gán —', unassigned: false,
           items: [], byType: emptyTypeBuckets(), byStatus: emptyStatusBuckets(), overdueItems: [],
-          total: 0, done: 0, donePct: 0
+          total: 0, done: 0, donePct: 0, estHours: 0, actualHours: 0
         });
       }
     }
 
+    const actual = this.actualByUser();
     const rows = [...map.values()];
     for (const r of rows) {
       r.total = r.items.length;
       r.done = r.byStatus.DONE.length;
       const scope = r.total - r.byStatus.CANCELLED.length; // Huỷ ngoài phạm vi % hoàn thành
       r.donePct = scope > 0 ? Math.round((r.done / scope) * 100) : 0;
+      r.estHours = Math.round(r.items
+        .filter((t) => t.status !== 'CANCELLED')
+        .reduce((a, t) => a + effectiveHours(t), 0) * 10) / 10;
+      r.actualHours = Math.round((actual.get(r.userId ?? '__none__') ?? 0) * 10) / 10;
     }
     return rows.sort((a, b) =>
       (a.unassigned ? 1 : 0) - (b.unassigned ? 1 : 0) || b.total - a.total || a.name.localeCompare(b.name, 'vi')
@@ -519,6 +545,7 @@ export class PrjOverview {
     return {
       key: '__total__', userId: null, name: 'Tổng cộng', unassigned: false,
       items: all, byType, byStatus, overdueItems: all.filter((t) => isOverdue(t.dueDate, t.status)),
+      estHours: 0, actualHours: 0, // dòng Σ lấy số tổng từ report + work log, không cộng lại từ dòng con
       total, done: byStatus.DONE.length,
       donePct: scope > 0 ? Math.round((byStatus.DONE.length / scope) * 100) : 0
     };
@@ -573,6 +600,17 @@ export class PrjOverview {
     walk('', 0);
     return out;
   });
+
+  /** Độ lệch giờ thực tế so với est của một người: "+25%" là vượt, "−10%" là dưới ước lượng. */
+  varianceText(p: PersonRow): string {
+    if (!p.estHours || !p.actualHours) return '—';
+    const v = Math.round(((p.actualHours - p.estHours) / p.estHours) * 100);
+    return (v > 0 ? '+' : '') + v + '%';
+  }
+  varianceClass(p: PersonRow): string {
+    if (!p.estHours || !p.actualHours) return 'ov2__zero';
+    return p.actualHours > p.estHours ? 'ov2__var--over' : 'ov2__var--under';
+  }
 
   /** Nhãn/màu cho popup + bảng. */
   readonly detailCols: GridColumn[] = [
@@ -724,6 +762,11 @@ export class PrjOverview {
     this.svc.listMembers(id).subscribe({
       next: (m) => this.members.set(m ?? []),
       error: () => this.members.set([])
+    });
+    // Khoảng rộng để lấy TOÀN BỘ giờ đã ghi của dự án (API lọc theo ngày).
+    this.svc.listProjectWorkLogs(id, '2000-01-01', '2100-12-31').subscribe({
+      next: (w) => this.workLogs.set(w ?? []),
+      error: () => this.workLogs.set([])
     });
     this.svc.projectActivity(id).subscribe({
       next: (a) => this.activity.set(a ?? []),

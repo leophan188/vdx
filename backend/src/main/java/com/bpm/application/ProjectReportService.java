@@ -716,27 +716,9 @@ public class ProjectReportService {
     }
 
     /** completionPct toàn dự án = rollup tại "rễ ảo" (gộp mọi lá). Nhất quán ProjectService.completionPct. */
+    /** % hoàn thành — dùng chung quy tắc ở {@link TaskProgress} để không lệch với Tổng quan. */
     private double completionPct(List<ProjectTask> tasks, Set<String> parentIds) {
-        double leafEst = 0, leafDoneEst = 0;
-        int leaf = 0, leafDone = 0;
-        for (ProjectTask t : tasks) {
-            if (parentIds.contains(t.getId())) {
-                continue;
-            }
-            if (t.getStatus() == TaskStatus.CANCELLED) {
-                continue; // Huỷ = ngoài phạm vi, không tính vào % hoàn thành
-            }
-            leaf++;
-            leafEst += t.getEstimateHours();
-            if (t.getStatus() == TaskStatus.DONE) {
-                leafDone++;
-                leafDoneEst += t.getEstimateHours();
-            }
-        }
-        if (leaf == 0) {
-            return 0.0;
-        }
-        return round2(leafEst > 0 ? (leafDoneEst / leafEst) * 100.0 : ((double) leafDone / leaf) * 100.0);
+        return TaskProgress.completion(tasks, parentIds);
     }
 
     private static double round2(double v) {
