@@ -23,8 +23,9 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
         <div class="we__row">
           <label class="we__field">
             <span>Số giờ <b class="we__req">*</b> <i class="we__cap">tối đa {{ maxHours }}h</i></span>
-            <input type="number" min="0.25" step="0.25" [max]="maxHours" [value]="hours()" autofocus
-                   (input)="hours.set(+$any($event.target).value)" (keydown.enter)="submit()" />
+            <input type="text" inputmode="decimal" autocomplete="off" [value]="hoursText()" autofocus
+                   (input)="hoursText.set($any($event.target).value)" (keydown.enter)="submit()" />
+            @if (minutesLabel()) { <i class="we__mins">= {{ minutesLabel() }}</i> }
           </label>
           <label class="we__field">
             <span>Ngày tính công</span>
@@ -33,9 +34,9 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
           </label>
         </div>
         <div class="we__quick">
-          @for (h of quickHours; track h) {
-            <button type="button" class="we__chip" [class.is-active]="hours() === h"
-                    (click)="hours.set(h)">{{ h }}h</button>
+          @for (q of quickPicks; track q.label) {
+            <button type="button" class="we__chip" [class.is-active]="hours() === q.hours"
+                    [title]="q.hours + ' giờ'" (click)="hoursText.set(String(q.hours))">{{ q.label }}</button>
           }
         </div>
         <label class="we__field">
@@ -66,6 +67,7 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
     .we__field > span { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: var(--weight-medium); }
     .we__req { color: var(--overdue, #e5484d); }
     .we__cap { font-style: normal; opacity: .8; }
+    .we__mins { font-style: normal; font-size: var(--text-xs); color: var(--color-primary); font-weight: 600; }
     .we__field input { height: var(--control-h-sm); padding: 0 var(--space-3); border: 1px solid var(--color-border);
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text); font: inherit; }
     .we__quick { display: flex; flex-wrap: wrap; gap: 4px; }
@@ -96,9 +98,38 @@ export class WorkEntryDialog {
   readonly today = new Date().toISOString().slice(0, 10);
   /** Trần giờ MỖI LẦN ghi trên task lá — khớp MAX_LEAF_HOURS ở backend. */
   readonly maxHours = 4;
-  readonly quickHours = [0.5, 1, 2, 3, 4];
+  /**
+   * Mốc chọn nhanh. Mốc PHÚT quy ra giờ (10' = 0.17h) vì hệ thống chấm công theo GIỜ —
+   * lưu thẳng số phút sẽ phải đổi đơn vị ở mọi báo cáo phía sau.
+   */
+  readonly quickPicks: { label: string; hours: number }[] = [
+    { label: "10'", hours: 0.17 }, { label: "15'", hours: 0.25 }, { label: "20'", hours: 0.33 },
+    { label: "30'", hours: 0.5 },
+    { label: '1h', hours: 1 }, { label: '2h', hours: 2 }, { label: '4h', hours: 4 }
+  ];
 
-  readonly hours = signal<number>(1);
+  /**
+   * Giữ NGUYÊN chuỗi người dùng gõ, không ghi ngược số đã parse vào ô.
+   *
+   * Trước đây dùng input[type=number] + hours.set(+value): gõ "0.1" rồi xoá số 1 thành "0."
+   * — chuỗi này KHÔNG hợp lệ với input number nên .value trả về rỗng, thành số 0, rồi
+   * Angular ghi đè "0" vào ô làm CON TRỎ NHẢY VỀ ĐẦU. Dùng type=text và chỉ đọc, không
+   * ghi lại, nên gõ dở dang bao nhiêu cũng không bị nhảy con trỏ.
+   */
+  readonly hoursText = signal<string>('1');
+  /** Số giờ suy từ chuỗi; nhận cả dấu phẩy thập phân kiểu Việt ("0,5"). */
+  readonly hours = computed<number>(() => {
+    const n = parseFloat(this.hoursText().replace(',', '.').trim());
+    return isNaN(n) ? 0 : n;
+  });
+  /** Quy đổi ra phút để người nhập thấy 0.17h nghĩa là gì. */
+  readonly minutesLabel = computed<string>(() => {
+    const h = this.hours();
+    if (!h || h <= 0) return '';
+    const m = Math.round(h * 60);
+    return m >= 60 ? `${Math.round((m / 60) * 100) / 100} giờ` : `${m} phút`;
+  });
+  readonly String = String;
   readonly workDate = signal<string>(this.today);
   readonly note = signal<string>('');
   readonly error = signal<string>('');
@@ -132,7 +163,7 @@ export class WorkEntryDialog {
 
   /** Đặt lại về mặc định — gọi mỗi lần mở popup cho một task khác. */
   reset(): void {
-    this.hours.set(1);
+    this.hoursText.set('1');
     this.workDate.set(this.today);
     this.note.set('');
     this.error.set('');
