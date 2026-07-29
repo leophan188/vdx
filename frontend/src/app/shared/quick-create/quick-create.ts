@@ -27,6 +27,7 @@ interface PendingImage { file: File; url: string; name: string; }
   imports: [Modal, SearchableSelect],
   templateUrl: './quick-create.html',
   styles: [`
+    .qc__opt { font-style: normal; font-weight: 400; color: var(--color-text-muted); font-size: var(--text-xs); }
     .qc__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
     .qc__skip input { cursor: pointer; }
     .qc__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
@@ -94,6 +95,13 @@ export class QuickCreate {
   readonly testerUserId = signal('');
   /** Việc không cần qua kiểm thử (PM/BA) — Bug/Issue luôn phải kiểm thử nên ẩn ô này. */
   readonly skipTest = signal(false);
+  /**
+   * GIỜ KIỂM THỬ tuỳ chọn khi log Bug/Issue — thời gian tìm & ghi nhận RIÊNG lỗi này.
+   * KHÔNG phải cả buổi test: nhập giờ cả buổi vào từng lỗi sẽ cộng trùng rất nặng khi
+   * tester log hàng chục lỗi một ngày.
+   */
+  readonly logHours = signal<string>('');
+  readonly logDate = signal<string>(new Date().toISOString().slice(0, 10));
   readonly estimateHours = signal('');
   readonly startIso = signal('');
   readonly dueIso = signal('');
@@ -223,6 +231,7 @@ export class QuickCreate {
     this.assigneeUserId.set('');
     this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
     this.skipTest.set(false);
+    this.logHours.set('');
     // Tạo nhanh: KHÔNG bắt buộc — mặc định est = 4 giờ, từ ngày & đến ngày = hôm nay (vẫn cho sửa).
     this.estimateHours.set('4');
     this.startIso.set(this.todayIso());
@@ -332,6 +341,22 @@ export class QuickCreate {
     if (t !== 'EPIC' && t !== 'STORY' && Number(this.estimateHours()) > 4) this.estimateHours.set('4');
   }
 
+  /**
+   * Ghi giờ kiểm thử cho lỗi vừa log. Dùng lại API work-log sẵn có nên tự hưởng trần 4h
+   * và gán đúng người thao tác. Lỗi ghi giờ không làm hỏng việc tạo lỗi đã thành công.
+   */
+  private logTestHours(projectId: string, taskId: string): void {
+    const h = Number(this.logHours());
+    if (!h || h <= 0 || !this.isBugLike()) return;
+    this.projectApi.addWorkLog(projectId, taskId, {
+      hours: h, workDate: this.logDate(), role: 'TEST', note: 'Tìm và ghi nhận lỗi'
+    }).subscribe({
+      next: () => { /* toast tổng đã báo tạo thành công */ },
+      error: () => this.toast.warning('Đã tạo nhưng chưa ghi được giờ kiểm thử',
+        'Ghi lại ở chi tiết công việc.')
+    });
+  }
+
   onParent(id: string): void { this.parentId.set(id || ''); }
 
   /** yyyy-MM-dd (từ input date) — dùng thẳng cho ISO dueDate. */
@@ -386,6 +411,7 @@ export class QuickCreate {
         this.prefs.save(this.type(), this.projectId(), body.parentId ?? null);
         const imgs = this.previews();
         const taskId = r.projectTaskId; // backend trả projectTaskId (id task dự án)
+        if (taskId && r.projectId) this.logTestHours(r.projectId, taskId);
         // Không có ảnh → xong ngay.
         if (!imgs.length || !taskId || !r.projectId) {
           this.finishOk(imgs.length ? 'Đã tạo nhưng thiếu id để đính kèm ảnh' : undefined);

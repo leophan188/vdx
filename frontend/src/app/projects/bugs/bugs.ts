@@ -40,6 +40,7 @@ import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
     .bug-progress .pct { font-size: .75rem; min-width: 34px; text-align: right; }
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
     .field-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
+    .bug-opt { font-style: normal; font-weight: 400; color: var(--color-text-muted); font-size: var(--text-xs); }
     /* Khu chọn ảnh khi báo lỗi */
     .bug-att { display: flex; flex-wrap: wrap; gap: var(--space-2); }
     .bug-att__item { position: relative; width: 76px; height: 76px; border-radius: var(--radius-md);
@@ -174,6 +175,13 @@ export class PrjBugs implements OnInit {
     return src ? `Copy lỗi từ ${src}` : 'Báo lỗi';
   });
   f: TaskRequest = this.emptyForm();
+  /**
+   * GIỜ KIỂM THỬ tuỳ chọn khi báo lỗi — thời gian tìm ra + viết lại RIÊNG lỗi này.
+   * KHÔNG phải cả buổi test: tester log tới 20+ lỗi/ngày, nhập giờ cả buổi vào từng lỗi
+   * sẽ cộng trùng thành hàng chục giờ trong một ngày. Ghi vai TEST cho người đang log.
+   */
+  readonly logHours = signal<string>('');
+  readonly logDate = signal<string>(new Date().toISOString().slice(0, 10));
 
   // ----- Chi tiết task (Jira) -----
   readonly detailOpen = signal(false);
@@ -272,6 +280,8 @@ export class PrjBugs implements OnInit {
     this.editingId.set(null);
     this.copiedFrom.set(null);
     this.f = this.emptyForm();
+    this.logHours.set('');
+    this.logDate.set(new Date().toISOString().slice(0, 10));
     this.clearQueued();
     this.modalOpen.set(true);
   }
@@ -373,6 +383,7 @@ export class PrjBugs implements OnInit {
             this.toast.success('Đã báo lỗi', `${t.code} · ${t.title}`
               + (files.length ? ` · ${files.length} ảnh` : ''));
             this.modalOpen.set(false);
+            this.logTestHours(t);   // ghi giờ kiểm thử nếu tester có nhập
             this.reload();
             this.openDetail(t); // mở chi tiết để xem/đính kèm thêm
           },
@@ -439,6 +450,23 @@ export class PrjBugs implements OnInit {
         this.toast.success('Đã đổi trạng thái', u.code);
       },
       error: (e) => this.toast.error('Không đổi được trạng thái', e?.error?.message ?? '')
+    });
+  }
+
+  /**
+   * Ghi giờ kiểm thử cho lỗi vừa báo. Dùng lại API work-log sẵn có nên tự hưởng trần 4h
+   * và tự gán cho NGƯỜI ĐANG THAO TÁC (chính là tester đang log lỗi).
+   * Lỗi khi ghi giờ KHÔNG làm hỏng việc báo lỗi — bug đã tạo xong, chỉ cảnh báo để ghi lại tay.
+   */
+  private logTestHours(t: ProjectTask): void {
+    const h = Number(this.logHours());
+    if (!h || h <= 0) return;
+    this.svc.addWorkLog(this.projectId(), t.id, {
+      hours: h, workDate: this.logDate(), role: 'TEST', note: 'Tìm và ghi nhận lỗi'
+    }).subscribe({
+      next: () => this.toast.success('Đã ghi giờ kiểm thử', `${h}h ngày ${this.logDate()}`),
+      error: (e) => this.toast.warning('Đã báo lỗi nhưng chưa ghi được giờ',
+        (e?.error?.message ?? '') + ' — ghi lại ở chi tiết công việc.')
     });
   }
 
