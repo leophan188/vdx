@@ -328,7 +328,9 @@ export class PrjBugs implements OnInit {
       type: t.type, status: 'BACKLOG', priority: t.priority,
       assigneeUserId: t.assigneeUserId,
       testerUserId: t.testerUserId ?? this.auth.currentUser()?.userId ?? null,
-      estimateHours: t.estimateHours || 4,
+      // Lỗi CHÉP ra là task MỚI nên phải theo trần 4h hiện hành; task nguồn có thể mang
+      // est cũ (vd 8h) từ trước khi có trần, chép nguyên sẽ bị backend từ chối lúc lưu.
+      estimateHours: Math.min(t.estimateHours || 4, 4),
       startDate: null, dueDate: null,
       severity: t.severity, stepsToReproduce: '', expectedResult: '', actualResult: '',
       environment: t.environment ?? ''

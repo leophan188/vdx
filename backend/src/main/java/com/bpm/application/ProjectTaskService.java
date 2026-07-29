@@ -1067,7 +1067,13 @@ public class ProjectTaskService {
         // Ràng buộc: TASK LÁ (đơn vị làm việc nhỏ nhất) ước lượng KHÔNG quá 4 giờ — lớn hơn thì tách nhỏ.
         // Task CHA không chặn: est của cha là TỔNG HỢP từ lá con, không nhập tay.
         // Epic/Story là cấp NHÓM nên cũng bỏ qua, kể cả khi chưa có con.
-        if (leaf && type != TaskType.EPIC && type != TaskType.STORY && est > MAX_LEAF_HOURS) {
+        //
+        // MIỄN TRỪ DỮ LIỆU CŨ: chỉ chặn khi est THỰC SỰ THAY ĐỔI. Trần 4h thêm sau khi hệ thống
+        // đã chạy nên còn 71 task lá mang est cũ > 4h; nếu chặn cả khi giữ nguyên thì mọi thao tác
+        // sửa chúng (kể cả chỉ đổi tiêu đề hay gán người) đều bị từ chối — khoá cứng dữ liệu cũ.
+        // Người dùng vẫn không thể ĐẶT một giá trị mới quá 4h.
+        boolean estChanged = Math.abs(est - t.getEstimateHours()) > 0.0001;
+        if (leaf && estChanged && type != TaskType.EPIC && type != TaskType.STORY && est > MAX_LEAF_HOURS) {
             throw new IllegalArgumentException("Ước lượng " + typeLabel(type) + " không được quá "
                     + trim(MAX_LEAF_HOURS) + " giờ — hãy tách nhỏ công việc");
         }
