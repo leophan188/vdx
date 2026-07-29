@@ -146,8 +146,12 @@ function parseDmyLocal(s: string | null): Date | null {
 }
 
 /**
- * Nhãn + màu cho HÀNH ĐỘNG ghi giờ. Bản ghi cũ không có action (null) → suy tạm theo vai
- * để không hiện ô trống: vai TEST ghi "Kiểm thử", vai DEV ghi "Lập trình".
+ * Nhãn + màu cho HÀNH ĐỘNG ghi giờ.
+ *
+ * Bản ghi thiếu action → ghi thẳng "Không rõ". TRƯỚC ĐÂY lùi về nhãn theo vai
+ * ("Kiểm thử"/"Lập trình"), khiến bảng vừa có "Duyệt xong" vừa có "Kiểm thử" — người xem
+ * tưởng là hai hành động khác nhau trong khi "Kiểm thử" chỉ nghĩa là KHÔNG BIẾT.
+ * Dữ liệu cũ đã được suy ngược từ nhật ký trạng thái nên thực tế không còn dòng nào rơi vào đây.
  */
 export const WORK_ACTION_META: Record<string, { label: string; color: string }> = {
   LOG_BUG:     { label: 'Log lỗi',     color: 'var(--status-pending, #d97706)' },
@@ -156,12 +160,11 @@ export const WORK_ACTION_META: Record<string, { label: string; color: string }> 
   REOPEN:      { label: 'Trả về sửa',  color: 'var(--overdue, #e5484d)' },
   MANUAL:      { label: 'Ghi tay',     color: 'var(--color-text-muted, #64748b)' }
 };
-export function workActionLabel(action: string | null, role: 'DEV' | 'TEST'): string {
-  return WORK_ACTION_META[action ?? '']?.label ?? (role === 'TEST' ? 'Kiểm thử' : 'Lập trình');
+export function workActionLabel(action: string | null, _role: 'DEV' | 'TEST'): string {
+  return WORK_ACTION_META[action ?? '']?.label ?? 'Không rõ';
 }
-export function workActionColor(action: string | null, role: 'DEV' | 'TEST'): string {
-  return WORK_ACTION_META[action ?? '']?.color
-    ?? (role === 'TEST' ? 'var(--status-done, #22c55e)' : 'var(--status-active, #2563eb)');
+export function workActionColor(action: string | null, _role: 'DEV' | 'TEST'): string {
+  return WORK_ACTION_META[action ?? '']?.color ?? 'var(--color-text-muted, #64748b)';
 }
 
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
