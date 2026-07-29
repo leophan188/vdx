@@ -87,7 +87,7 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__work-var { color: var(--status-done); }
     .td__work-var.is-over { color: var(--overdue, #e5484d); }
     .td__work-list { display: grid; gap: 2px; }
-    .td__work-row { display: grid; grid-template-columns: 92px minmax(90px, 1fr) 92px 52px 2fr 24px;
+    .td__work-row { display: grid; grid-template-columns: 114px minmax(90px, 1fr) 92px 52px 2fr 24px;
       align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
       background: var(--color-surface); font-size: var(--text-sm); }
     .td__work-role { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; text-align: center;

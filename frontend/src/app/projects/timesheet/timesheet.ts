@@ -111,7 +111,7 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
     .ts__dsum b { color: var(--color-text); font-variant-numeric: tabular-nums; }
     .ts__dsum-dev b { color: var(--status-active); }
     .ts__dsum-test b { color: var(--status-done); }
-    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 96px 72px 1fr 62px 66px;
+    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 118px 72px 1fr 62px 66px;
       align-items: start; gap: 10px; padding: 7px 10px; }
     .ts__dhead { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted);
       text-transform: uppercase; letter-spacing: .02em; padding-bottom: 2px; }

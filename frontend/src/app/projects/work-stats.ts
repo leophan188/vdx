@@ -154,14 +154,14 @@ function parseDmyLocal(s: string | null): Date | null {
  * Dữ liệu cũ đã được suy ngược từ nhật ký trạng thái nên thực tế không còn dòng nào rơi vào đây.
  */
 export const WORK_ACTION_META: Record<string, { label: string; color: string }> = {
-  LOG_BUG:     { label: 'Log lỗi',     color: 'var(--status-pending, #d97706)' },
-  HANDOVER:    { label: 'Bàn giao KT', color: 'var(--status-active, #2563eb)' },
-  VERIFY_DONE: { label: 'Duyệt xong',  color: 'var(--status-done, #22c55e)' },
-  REOPEN:      { label: 'Trả về sửa',  color: 'var(--overdue, #e5484d)' },
-  MANUAL:      { label: 'Ghi tay',     color: 'var(--color-text-muted, #64748b)' }
+  LOG_BUG:     { label: 'Log bug',         color: 'var(--status-pending, #d97706)' },
+  HANDOVER:    { label: 'Move to testing', color: 'var(--status-active, #2563eb)' },
+  VERIFY_DONE: { label: 'Done',            color: 'var(--status-done, #22c55e)' },
+  REOPEN:      { label: 'Reopen',          color: 'var(--overdue, #e5484d)' },
+  MANUAL:      { label: 'Manual log',      color: 'var(--color-text-muted, #64748b)' }
 };
 export function workActionLabel(action: string | null, _role: 'DEV' | 'TEST'): string {
-  return WORK_ACTION_META[action ?? '']?.label ?? 'Không rõ';
+  return WORK_ACTION_META[action ?? '']?.label ?? 'Unknown';
 }
 export function workActionColor(action: string | null, _role: 'DEV' | 'TEST'): string {
   return WORK_ACTION_META[action ?? '']?.color ?? 'var(--color-text-muted, #64748b)';
