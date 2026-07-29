@@ -32,6 +32,22 @@ type SubTab = 'info' | 'comments' | 'activity';
   imports: [Modal, SearchableSelect, ImageLightbox, WorkEntryDialog],
   templateUrl: './task-detail.html',
   styles: [`
+    /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
+       Dùng margin thay flex-gap và ghim kích thước bằng !important vì input trong form
+       dính quy tắc width:100% dùng chung, làm ô vuông phình và chữ tràn lệch hàng. */
+    .td__skip { display: flex; align-items: flex-start; padding: 9px 11px;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); cursor: pointer; transition: border-color .15s ease; }
+    .td__skip:hover { border-color: var(--color-primary); }
+    .td__skip:has(input:checked) { border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+    .td__skip input[type="checkbox"] { flex: 0 0 16px !important; width: 16px !important;
+      height: 16px !important; min-width: 16px; max-width: 16px; margin: 1px 10px 0 0 !important;
+      padding: 0 !important; cursor: pointer; accent-color: var(--color-primary); }
+    .td__skip input:disabled { cursor: default; opacity: .55; }
+    .td__skip-txt { display: grid; gap: 2px; min-width: 0; }
+    .td__skip-txt b { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .td__skip-txt i { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.45; }
     .td { display: grid; gap: var(--space-4); width: 100%; }
     .td__head { display: grid; gap: var(--space-2); }
     .td__path { display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
@@ -90,14 +106,6 @@ type SubTab = 'info' | 'comments' | 'activity';
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
       padding: 0 var(--space-2); font: inherit; width: 130px; }
     .td__life-note { font-size: .78rem; color: var(--color-text-muted); }
-    /* Ô tích BỎ QUA KIỂM THỬ — phải ghim kích thước, nếu không input kế thừa width:100%
-       của .field trong form và phình thành ô vuông to, chữ bị đẩy xuống dòng lệch hẳn. */
-    .td__skip { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-sm);
-      cursor: pointer; line-height: 1.4; }
-    .td__skip input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px;
-      margin: 2px 0 0; padding: 0; cursor: pointer; accent-color: var(--color-primary); }
-    .td__skip input:disabled { cursor: default; opacity: .6; }
-    .td__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
 
     .td__seg { display: flex; flex-wrap: wrap; gap: 6px; }
     .td__seg button {
@@ -290,12 +298,12 @@ export class PrjTaskDetail {
     LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', URGENT: 'Urgent'
   };
   readonly severityLabels: Record<BugSeverity, string> = {
-    BLOCKER: 'Chặn', CRITICAL: 'Nguy kịch', MAJOR: 'Lớn', MINOR: 'Nhỏ', TRIVIAL: 'Không đáng kể'
+    BLOCKER: 'Blocker', CRITICAL: 'Critical', MAJOR: 'Major', MINOR: 'Minor', TRIVIAL: 'Trivial'
   };
   readonly severityOptions: { value: BugSeverity; label: string }[] = [
-    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
-    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
-    { value: 'TRIVIAL', label: 'Không đáng kể' }
+    { value: 'BLOCKER', label: 'Blocker' }, { value: 'CRITICAL', label: 'Critical' },
+    { value: 'MAJOR', label: 'Major' }, { value: 'MINOR', label: 'Minor' },
+    { value: 'TRIVIAL', label: 'Trivial' }
   ];
   readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
 
@@ -811,7 +819,7 @@ export class PrjTaskDetail {
     });
   }
 
-  /** Badge mức độ: Chặn/Nguy kịch = đỏ; Lớn = cam; Nhỏ/Không đáng kể = xám. */
+  /** Badge mức độ: Blocker/Critical = đỏ; Major = cam; Minor/Trivial = xám. */
   severityBadge(s: BugSeverity | null): string {
     switch (s) {
       case 'BLOCKER':

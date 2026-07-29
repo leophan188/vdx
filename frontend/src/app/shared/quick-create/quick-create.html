@@ -100,7 +100,7 @@
           <label class="qc__skip">
             <input type="checkbox" [checked]="skipTest()"
                    (change)="skipTest.set($any($event.target).checked)" />
-            <span>Không cần kiểm thử <i>(việc PM/BA — đi thẳng In Progress → Done)</i></span>
+            <span class="qc__skip-txt"><b>Không cần kiểm thử</b><i>Việc PM/BA — đi thẳng In Progress → Done</i></span>
           </label>
         }
       </div>

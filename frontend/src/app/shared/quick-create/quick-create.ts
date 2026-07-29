@@ -27,6 +27,22 @@ interface PendingImage { file: File; url: string; name: string; }
   imports: [Modal, SearchableSelect],
   templateUrl: './quick-create.html',
   styles: [`
+    /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
+       Dùng margin thay flex-gap và ghim kích thước bằng !important vì input trong form
+       dính quy tắc width:100% dùng chung, làm ô vuông phình và chữ tràn lệch hàng. */
+    .qc__skip { display: flex; align-items: flex-start; padding: 9px 11px;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); cursor: pointer; transition: border-color .15s ease; }
+    .qc__skip:hover { border-color: var(--color-primary); }
+    .qc__skip:has(input:checked) { border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+    .qc__skip input[type="checkbox"] { flex: 0 0 16px !important; width: 16px !important;
+      height: 16px !important; min-width: 16px; max-width: 16px; margin: 1px 10px 0 0 !important;
+      padding: 0 !important; cursor: pointer; accent-color: var(--color-primary); }
+    .qc__skip input:disabled { cursor: default; opacity: .55; }
+    .qc__skip-txt { display: grid; gap: 2px; min-width: 0; }
+    .qc__skip-txt b { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .qc__skip-txt i { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.45; }
     .qc__req { color: var(--overdue, #e5484d); }
     .qc__work .qc__row2 { align-items: end; }
     .qc__work { display: grid; gap: var(--space-2); padding: 12px; border-radius: 10px;
@@ -34,14 +50,6 @@ interface PendingImage { file: File; url: string; name: string; }
     .qc__work-head { font-size: .9rem; font-weight: var(--weight-semibold); }
     .qc__work-hint { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
     .qc__work-hint b { color: var(--color-text); }
-    /* Ô tích BỎ QUA KIỂM THỬ — phải ghim kích thước, nếu không input kế thừa width:100%
-       của .field trong form và phình thành ô vuông to, chữ bị đẩy xuống dòng lệch hẳn. */
-    .qc__skip { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-sm);
-      cursor: pointer; line-height: 1.4; }
-    .qc__skip input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px;
-      margin: 2px 0 0; padding: 0; cursor: pointer; accent-color: var(--color-primary); }
-    .qc__skip input:disabled { cursor: default; opacity: .6; }
-    .qc__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
     .qc { display: grid; gap: var(--space-3); width: 100%; }
     .qc__seg { display: flex; gap: 6px; flex-wrap: wrap; }
     .qc__seg button {
@@ -139,9 +147,9 @@ export class QuickCreate {
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
   /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ task-detail. */
   readonly severityOptions: { value: BugSeverity; label: string }[] = [
-    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
-    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
-    { value: 'TRIVIAL', label: 'Không đáng kể' }
+    { value: 'BLOCKER', label: 'Blocker' }, { value: 'CRITICAL', label: 'Critical' },
+    { value: 'MAJOR', label: 'Major' }, { value: 'MINOR', label: 'Minor' },
+    { value: 'TRIVIAL', label: 'Trivial' }
   ];
   readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
   /** Loại đang chọn là BUG/ISSUE → hiện khối "Chi tiết lỗi". */

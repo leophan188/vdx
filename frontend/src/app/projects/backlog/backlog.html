@@ -285,7 +285,7 @@
           <label class="bl-skip">
             <input type="checkbox" name="skipTest" [(ngModel)]="f.skipTest"
                    [disabled]="f.status === 'IN_REVIEW' || f.status === 'DONE'" />
-            <span>Không cần kiểm thử <i>(việc PM/BA — đi thẳng In Progress → Done)</i></span>
+            <span class="bl-skip-txt"><b>Không cần kiểm thử</b><i>Việc PM/BA — đi thẳng In Progress → Done</i></span>
           </label>
         </div>
       }

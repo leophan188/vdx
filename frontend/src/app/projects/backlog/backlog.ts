@@ -34,14 +34,22 @@ interface TreeRow {
   imports: [FormsModule, Modal, SearchableSelect, TypeFilter, WorkEntryDialog],
   templateUrl: './backlog.html',
   styles: [`
-    /* Ô tích BỎ QUA KIỂM THỬ — phải ghim kích thước, nếu không input kế thừa width:100%
-       của .field trong form và phình thành ô vuông to, chữ bị đẩy xuống dòng lệch hẳn. */
-    .bl-skip { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-sm);
-      cursor: pointer; line-height: 1.4; }
-    .bl-skip input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px;
-      margin: 2px 0 0; padding: 0; cursor: pointer; accent-color: var(--color-primary); }
-    .bl-skip input:disabled { cursor: default; opacity: .6; }
-    .bl-skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
+    /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
+       Dùng margin thay flex-gap và ghim kích thước bằng !important vì input trong form
+       dính quy tắc width:100% dùng chung, làm ô vuông phình và chữ tràn lệch hàng. */
+    .bl-skip { display: flex; align-items: flex-start; padding: 9px 11px;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); cursor: pointer; transition: border-color .15s ease; }
+    .bl-skip:hover { border-color: var(--color-primary); }
+    .bl-skip:has(input:checked) { border-color: var(--color-primary);
+      background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
+    .bl-skip input[type="checkbox"] { flex: 0 0 16px !important; width: 16px !important;
+      height: 16px !important; min-width: 16px; max-width: 16px; margin: 1px 10px 0 0 !important;
+      padding: 0 !important; cursor: pointer; accent-color: var(--color-primary); }
+    .bl-skip input:disabled { cursor: default; opacity: .55; }
+    .bl-skip-txt { display: grid; gap: 2px; min-width: 0; }
+    .bl-skip-txt b { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+    .bl-skip-txt i { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.45; }
     .bl-summary { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-3); }
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
     .bl-toolbar__spacer { flex: 1; } /* còn dùng trong footer modal */
@@ -253,9 +261,9 @@ export class PrjBacklog implements OnInit {
 
   /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ với task-detail. */
   readonly severityOptions: { value: BugSeverity; label: string }[] = [
-    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
-    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
-    { value: 'TRIVIAL', label: 'Không đáng kể' }
+    { value: 'BLOCKER', label: 'Blocker' }, { value: 'CRITICAL', label: 'Critical' },
+    { value: 'MAJOR', label: 'Major' }, { value: 'MINOR', label: 'Minor' },
+    { value: 'TRIVIAL', label: 'Trivial' }
   ];
 
   readonly typeSel: SelectOption[] = this.typeOptions.map((o) => ({ value: o.value, label: o.label }));

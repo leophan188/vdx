@@ -210,7 +210,7 @@
                   <input type="checkbox" [checked]="t.skipTest"
                          [disabled]="t.status === 'IN_REVIEW' || t.status === 'DONE'"
                          (change)="toggleSkipTest($any($event.target).checked)" />
-                  <span>Không cần kiểm thử <i>(việc PM/BA — đi thẳng In Progress → Done)</i></span>
+                  <span class="td__skip-txt"><b>Không cần kiểm thử</b><i>Việc PM/BA — đi thẳng In Progress → Done</i></span>
                 </label>
               </div>
             }

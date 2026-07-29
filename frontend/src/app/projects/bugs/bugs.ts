@@ -114,9 +114,9 @@ export class PrjBugs implements OnInit {
     { value: 'HIGH', label: 'High' }, { value: 'URGENT', label: 'Urgent' }
   ];
   readonly severityOptions: { value: BugSeverity; label: string }[] = [
-    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
-    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
-    { value: 'TRIVIAL', label: 'Không đáng kể' }
+    { value: 'BLOCKER', label: 'Blocker' }, { value: 'CRITICAL', label: 'Critical' },
+    { value: 'MAJOR', label: 'Major' }, { value: 'MINOR', label: 'Minor' },
+    { value: 'TRIVIAL', label: 'Trivial' }
   ];
 
   readonly typeSel: SelectOption[] = this.typeOptions.map((o) => ({ value: o.value, label: o.label }));
@@ -498,7 +498,7 @@ export class PrjBugs implements OnInit {
   severityLabel(s: BugSeverity | null): string {
     return s ? (this.severityOptions.find((o) => o.value === s)?.label ?? s) : '';
   }
-  /** Badge mức độ: Chặn/Nguy kịch = đỏ; Lớn = cam; Nhỏ/Không đáng kể = xám. */
+  /** Badge mức độ: Blocker/Critical = đỏ; Major = cam; Minor/Trivial = xám. */
   severityBadge(s: BugSeverity | null): string {
     switch (s) {
       case 'BLOCKER':

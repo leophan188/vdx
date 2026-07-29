@@ -73,9 +73,9 @@ export class MyBugs implements OnInit {
 
   /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ task-detail. */
   readonly severityOptions: { value: BugSeverity; label: string }[] = [
-    { value: 'BLOCKER', label: 'Chặn' }, { value: 'CRITICAL', label: 'Nguy kịch' },
-    { value: 'MAJOR', label: 'Lớn' }, { value: 'MINOR', label: 'Nhỏ' },
-    { value: 'TRIVIAL', label: 'Không đáng kể' }
+    { value: 'BLOCKER', label: 'Blocker' }, { value: 'CRITICAL', label: 'Critical' },
+    { value: 'MAJOR', label: 'Major' }, { value: 'MINOR', label: 'Minor' },
+    { value: 'TRIVIAL', label: 'Trivial' }
   ];
   readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
 
