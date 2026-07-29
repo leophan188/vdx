@@ -963,9 +963,12 @@ export class PrjBacklog implements OnInit {
   }
 
   /** dd/MM/yyyy → yyyy-MM-dd cho <input type=date>; task CHƯA có ngày → mặc định HÔM NAY. */
-  iso(d: string | null | undefined): string { return this.toIso(d ?? null) || this.todayIso(); }
-  /** Hôm nay dạng dd/MM/yyyy (cho API). */
-  private todayDmy(): string { return this.fromIso(this.todayIso())!; }
+  /**
+   * dd/MM/yyyy → yyyy-MM-dd cho &lt;input type=date&gt;. CHƯA CÓ NGÀY → trả RỖNG.
+   * Trước đây trả về hôm nay, khiến task chưa đặt ngày trông y như đã có ngày —
+   * người dùng tưởng đã điền rồi nên bỏ qua, và 104 task cứ thế không có hạn.
+   */
+  iso(d: string | null | undefined): string { return this.toIso(d ?? null) || ''; }
 
   /** Số ngày (gồm 2 đầu) giữa 2 ngày dd/MM/yyyy; 0 nếu thiếu/không hợp lệ. */
   private daysBetween(start: string | null, due: string | null): number {
@@ -981,9 +984,11 @@ export class PrjBacklog implements OnInit {
   saveDateInline(t: ProjectTask, which: 'start' | 'due', iso: string): void {
     if (this.isRollup(t)) return; // cha/EPIC/STORY = ngày tự tổng hợp
     const dmy = this.fromIso(iso);
-    // Ngày còn lại nếu task CHƯA có → mặc định HÔM NAY (khớp giá trị đang hiển thị trên lưới).
-    const startDate = which === 'start' ? dmy : (t.startDate ?? this.todayDmy());
-    const dueDate = which === 'due' ? dmy : (t.dueDate ?? this.todayDmy());
+    // GIỮ NGUYÊN ngày còn lại, kể cả khi đang trống. Trước đây tự điền HÔM NAY cho ngày
+    // kia — sửa ngày bắt đầu là âm thầm đặt luôn hạn hoàn thành = hôm nay, người dùng
+    // không hề biết mình vừa gán một cái hạn.
+    const startDate = which === 'start' ? dmy : (t.startDate ?? null);
+    const dueDate = which === 'due' ? dmy : (t.dueDate ?? null);
     if (startDate === t.startDate && dueDate === t.dueDate) return;
     let estimateHours = t.estimateHours;
     const dur = this.daysBetween(startDate, dueDate);
