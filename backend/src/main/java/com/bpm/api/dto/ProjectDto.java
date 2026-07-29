@@ -250,7 +250,9 @@ public final class ProjectDto {
                                   String workDate, double hours, String note,
                                   /** Loại task (BUG/TASK/…) và chuỗi cha "Epic › Story › Task" — để timesheet
                                    *  hiện đủ ngữ cảnh như các màn khác, không chỉ mỗi tên việc. */
-                                  String taskType, String parentPath, double estimateHours) {
+                                  String taskType, String parentPath, double estimateHours,
+                                  /** Hành động sinh ra dòng giờ: LOG_BUG/HANDOVER/VERIFY_DONE/REOPEN/MANUAL. */
+                                  String action) {
         public static WorkLogResponse of(com.bpm.domain.project.TaskWorkLog w, String taskCode, String taskTitle) {
             return of(w, taskCode, taskTitle, null, null, 0);
         }
@@ -259,7 +261,7 @@ public final class ProjectDto {
             return new WorkLogResponse(w.getId(), w.getTaskId(), taskCode, taskTitle,
                     w.getUserId(), w.getUserName(), w.getRole(),
                     w.getWorkDate() == null ? null : w.getWorkDate().toString(), w.getHours(), w.getNote(),
-                    taskType, parentPath, estimateHours);
+                    taskType, parentPath, estimateHours, w.getAction());
         }
     }
 

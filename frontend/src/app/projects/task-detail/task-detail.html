@@ -144,7 +144,8 @@
           <div class="td__work-list">
             @for (w of workLogs(); track w.id) {
               <div class="td__work-row">
-                <span class="td__work-role" [class.is-test]="w.role === 'TEST'">{{ roleLabel(w.role) }}</span>
+                <span class="td__work-role" [style.--act]="actColor(w)"
+                      [title]="roleLabel(w.role) + ' — ' + actLabel(w)">{{ actLabel(w) }}</span>
                 <span class="td__work-who">{{ w.userName || '—' }}</span>
                 <span class="td__work-date">{{ w.workDate }}</span>
                 <b class="td__work-h">{{ w.hours }}h</b>

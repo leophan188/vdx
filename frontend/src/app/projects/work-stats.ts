@@ -145,6 +145,25 @@ function parseDmyLocal(s: string | null): Date | null {
   return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
 }
 
+/**
+ * Nhãn + màu cho HÀNH ĐỘNG ghi giờ. Bản ghi cũ không có action (null) → suy tạm theo vai
+ * để không hiện ô trống: vai TEST ghi "Kiểm thử", vai DEV ghi "Lập trình".
+ */
+export const WORK_ACTION_META: Record<string, { label: string; color: string }> = {
+  LOG_BUG:     { label: 'Log lỗi',     color: 'var(--status-pending, #d97706)' },
+  HANDOVER:    { label: 'Bàn giao KT', color: 'var(--status-active, #2563eb)' },
+  VERIFY_DONE: { label: 'Duyệt xong',  color: 'var(--status-done, #22c55e)' },
+  REOPEN:      { label: 'Trả về sửa',  color: 'var(--overdue, #e5484d)' },
+  MANUAL:      { label: 'Ghi tay',     color: 'var(--color-text-muted, #64748b)' }
+};
+export function workActionLabel(action: string | null, role: 'DEV' | 'TEST'): string {
+  return WORK_ACTION_META[action ?? '']?.label ?? (role === 'TEST' ? 'Kiểm thử' : 'Lập trình');
+}
+export function workActionColor(action: string | null, role: 'DEV' | 'TEST'): string {
+  return WORK_ACTION_META[action ?? '']?.color
+    ?? (role === 'TEST' ? 'var(--status-done, #22c55e)' : 'var(--status-active, #2563eb)');
+}
+
 /** Loại task → nhóm (null nếu là EPIC/STORY — không tính vào 3 nhóm). */
 export function catOf(type: TaskType): WorkCat | null {
   if (type === 'TASK' || type === 'SUBTASK') return 'TASK';

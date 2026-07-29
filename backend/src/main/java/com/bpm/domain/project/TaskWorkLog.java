@@ -35,6 +35,13 @@ public class TaskWorkLog {
     public static final String ROLE_DEV = "DEV";
     public static final String ROLE_TEST = "TEST";
 
+    /** Hành động sinh ra dòng giờ — cùng vai TEST nhưng ý nghĩa khác hẳn nhau. */
+    public static final String ACT_LOG_BUG = "LOG_BUG";       // tester log lỗi mới
+    public static final String ACT_HANDOVER = "HANDOVER";     // dev bàn giao sang Kiểm thử
+    public static final String ACT_VERIFY_DONE = "VERIFY_DONE"; // chuyển Hoàn thành
+    public static final String ACT_REOPEN = "REOPEN";         // kiểm thử chưa đạt, trả về sửa
+    public static final String ACT_MANUAL = "MANUAL";         // ghi giờ tay
+
     @Id
     @Column(name = "id", length = 36, nullable = false, updatable = false)
     private String id;
@@ -67,6 +74,14 @@ public class TaskWorkLog {
     @Column(name = "note", length = 500)
     private String note;
 
+    /**
+     * HÀNH ĐỘNG sinh ra dòng giờ này. Chỉ nhìn `role` thì không phân biệt được tester đang
+     * LOG LỖI MỚI, TRẢ VỀ SỬA hay DUYỆT XONG — cả ba đều là vai TEST.
+     * Kiểu String (không phải enum nguyên thuỷ) nên bản ghi cũ mang NULL vẫn đọc được bình thường.
+     */
+    @Column(name = "action", length = 20)
+    private String action;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt;
 
@@ -78,6 +93,12 @@ public class TaskWorkLog {
 
     public TaskWorkLog(String projectId, String taskId, String userId, String userName,
                        String role, LocalDate workDate, double hours, String note, String createdBy) {
+        this(projectId, taskId, userId, userName, role, workDate, hours, note, createdBy, null);
+    }
+
+    public TaskWorkLog(String projectId, String taskId, String userId, String userName,
+                       String role, LocalDate workDate, double hours, String note, String createdBy,
+                       String action) {
         this.id = UUID.randomUUID().toString();
         this.projectId = projectId;
         this.taskId = taskId;
@@ -89,6 +110,7 @@ public class TaskWorkLog {
         this.note = note;
         this.createdBy = createdBy;
         this.createdAt = Instant.now();
+        this.action = action;
     }
 
     public String getId() { return id; }
@@ -100,6 +122,7 @@ public class TaskWorkLog {
     public LocalDate getWorkDate() { return workDate; }
     public double getHours() { return hours; }
     public String getNote() { return note; }
+    public String getAction() { return action; }
     public Instant getCreatedAt() { return createdAt; }
     public String getCreatedBy() { return createdBy; }
 }

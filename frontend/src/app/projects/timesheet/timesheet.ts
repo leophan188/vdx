@@ -2,7 +2,7 @@ import { Component, computed, effect, inject, input, signal } from '@angular/cor
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { Modal } from '../../shared/modal/modal';
 import { PrjTaskDetail } from '../task-detail/task-detail';
-import { TYPE_META } from '../work-stats';
+import { TYPE_META, workActionLabel, workActionColor } from '../work-stats';
 import { ProjectService, ProjectMember, ProjectTask, TaskType, WorkLog, WorkRole } from '../../core/project.service';
 
 /** Một cột NGÀY CÔNG (T2–T6) trong khoảng đang xem. */
@@ -111,15 +111,16 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
     .ts__dsum b { color: var(--color-text); font-variant-numeric: tabular-nums; }
     .ts__dsum-dev b { color: var(--status-active); }
     .ts__dsum-test b { color: var(--status-done); }
-    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 82px 72px 1fr 62px 66px;
+    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 96px 72px 1fr 62px 66px;
       align-items: start; gap: 10px; padding: 7px 10px; }
     .ts__dhead { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted);
       text-transform: uppercase; letter-spacing: .02em; padding-bottom: 2px; }
     .ts__dhead > :nth-child(4), .ts__dhead > :nth-child(5) { text-align: right; }
     .ts__drow { border-radius: 8px; background: var(--color-surface-alt); font-size: var(--text-sm); }
+    /* Nhãn HÀNH ĐỘNG — màu theo loại hành động, không phải theo vai. */
     .ts__drole { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; text-align: center;
-      white-space: nowrap; color: var(--status-active); background: color-mix(in srgb, var(--status-active) 14%, transparent); }
-    .ts__drole.is-test { color: var(--status-done); background: color-mix(in srgb, var(--status-done) 14%, transparent); }
+      white-space: nowrap; color: var(--act, var(--status-active));
+      background: color-mix(in srgb, var(--act, var(--status-active)) 14%, transparent); }
     .ts__dcode { border: 0; background: none; padding: 0; cursor: pointer; text-align: left;
       font: inherit; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); }
     .ts__dcode:hover { text-decoration: underline; }
@@ -197,6 +198,9 @@ export class PrjTimesheet {
     this.sum((this.cellDetail()?.logs ?? []).filter((w) => w.role === 'TEST')));
 
   typeLabel(t: TaskType): string { return TYPE_META[t]?.short ?? t; }
+  /** Nhãn HÀNH ĐỘNG (Log lỗi / Bàn giao KT / Duyệt xong / Trả về sửa / Ghi tay). */
+  actLabel(w: WorkLog): string { return workActionLabel(w.action, w.role); }
+  actColor(w: WorkLog): string { return workActionColor(w.action, w.role); }
 
   // ===== Chi tiết công việc (mở chồng lên popup giờ) =====
   readonly taskDetail = signal<ProjectTask | null>(null);

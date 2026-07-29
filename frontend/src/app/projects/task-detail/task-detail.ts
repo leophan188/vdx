@@ -12,7 +12,7 @@ import {
   TaskType, TaskStatus, TaskPriority, BugSeverity, TaskRequest, ProjectMember, WorkEntry, WorkRole, WorkLog
 } from '../../core/project.service';
 import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
-import { workRoleForTransition } from '../work-stats';
+import { workRoleForTransition, workActionLabel, workActionColor } from '../work-stats';
 
 type SubTab = 'info' | 'comments' | 'activity';
 
@@ -71,12 +71,12 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__work-var { color: var(--status-done); }
     .td__work-var.is-over { color: var(--overdue, #e5484d); }
     .td__work-list { display: grid; gap: 2px; }
-    .td__work-row { display: grid; grid-template-columns: 76px minmax(90px, 1fr) 92px 52px 2fr 24px;
+    .td__work-row { display: grid; grid-template-columns: 92px minmax(90px, 1fr) 92px 52px 2fr 24px;
       align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
       background: var(--color-surface); font-size: var(--text-sm); }
     .td__work-role { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; text-align: center;
-      color: var(--status-active); background: color-mix(in srgb, var(--status-active) 14%, transparent); }
-    .td__work-role.is-test { color: var(--status-done); background: color-mix(in srgb, var(--status-done) 14%, transparent); }
+      white-space: nowrap; color: var(--act, var(--status-active));
+      background: color-mix(in srgb, var(--act, var(--status-active)) 14%, transparent); }
     .td__work-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .td__work-date { color: var(--color-text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
     .td__work-h { text-align: right; font-variant-numeric: tabular-nums; }
@@ -596,6 +596,9 @@ export class PrjTaskDetail {
     });
   }
   roleLabel(r: WorkRole): string { return r === 'DEV' ? 'Lập trình' : 'Kiểm thử'; }
+  /** Hành động sinh ra dòng giờ — phân biệt log lỗi / bàn giao / duyệt xong / trả về sửa. */
+  actLabel(w: WorkLog): string { return workActionLabel(w.action, w.role); }
+  actColor(w: WorkLog): string { return workActionColor(w.action, w.role); }
 
   /** Tổng giờ THỰC TẾ đã ghi trên task (mọi vai, mọi lượt kể cả bị trả về làm lại). */
   readonly totalHours = computed(() => Math.round((this.devHours() + this.testHours()) * 100) / 100);

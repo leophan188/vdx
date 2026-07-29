@@ -276,7 +276,7 @@ public class ProjectTaskService {
             }
             requireHoursWithinCap(req.testHours());
             saveWorkLog(saved, TaskWorkLog.ROLE_TEST, req.testHours(), req.workDate(),
-                    "Tìm và ghi nhận lỗi", actor);
+                    null, actor, TaskWorkLog.ACT_LOG_BUG);
         }
         return toDto(saved, p.getCode(), true);
     }
@@ -378,7 +378,16 @@ public class ProjectTaskService {
             recordStatusActivity(saved, actor,
                     statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()), oldStatus, saved.getStatus());
             if (workRole != null) {
-                saveWorkLog(saved, workRole, hours, workDate, note, actor);
+                // Cùng vai TEST nhưng ý nghĩa khác hẳn: duyệt xong vs trả về sửa.
+                String act;
+                if (newStatus == TaskStatus.IN_REVIEW) {
+                    act = TaskWorkLog.ACT_HANDOVER;
+                } else if (newStatus == TaskStatus.DONE) {
+                    act = TaskWorkLog.ACT_VERIFY_DONE;
+                } else {
+                    act = TaskWorkLog.ACT_REOPEN;
+                }
+                saveWorkLog(saved, workRole, hours, workDate, note, actor, act);
             }
             if (autoDue != null) {
                 // Ghi vết rõ ràng: tự điền ngày là SỬA DỮ LIỆU, người dùng phải truy được.
@@ -588,7 +597,7 @@ public class ProjectTaskService {
         LocalDate d = parseWorkDate(req.workDate());
         String name = userRepo.findById(uid).map(ProjectService::displayName).orElse(null);
         TaskWorkLog saved = workLogRepo.save(new TaskWorkLog(projectId, taskId, uid, name, role, d,
-                req.hours(), blankToNull(req.note()), actor));
+                req.hours(), blankToNull(req.note()), actor, TaskWorkLog.ACT_MANUAL));
         t.addSpentHours(req.hours());
         taskRepo.save(t);
         recordActivity(t, actor, TaskActivity.SPENT,
@@ -804,7 +813,7 @@ public class ProjectTaskService {
      * {@code workDate} rỗng/sai định dạng → tính vào hôm nay.
      */
     private void saveWorkLog(ProjectTask t, String role, Double hours, String workDate,
-                             String note, String actor) {
+                             String note, String actor, String action) {
         String uid = TaskWorkLog.ROLE_DEV.equals(role) ? t.getAssigneeUserId() : t.getTesterUserId();
         if (uid == null) {
             uid = userIdOf(actor); // không xác định được vai → quy về người thao tác, tránh mất giờ
@@ -815,7 +824,7 @@ public class ProjectTaskService {
         LocalDate d = parseWorkDate(workDate);
         String name = userRepo.findById(uid).map(ProjectService::displayName).orElse(null);
         workLogRepo.save(new TaskWorkLog(t.getProjectId(), t.getId(), uid, name, role, d, hours,
-                blankToNull(note), actor));
+                blankToNull(note), actor, action));
         t.addSpentHours(hours); // giữ tổng giờ trên task cho các màn đang dùng spentHours
         taskRepo.save(t);
         recordActivity(t, actor, TaskActivity.SPENT,

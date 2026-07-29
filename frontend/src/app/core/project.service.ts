@@ -324,6 +324,8 @@ export interface ReportOverview {
 /** Tỷ lệ hoàn thành theo nhân sự trong kỳ (khớp DTO PersonProgress backend). */
 /** Vai khi bỏ công: lập trình hay kiểm thử. */
 export type WorkRole = 'DEV' | 'TEST';
+/** Hành động sinh ra dòng ghi giờ. */
+export type WorkLogAction = 'LOG_BUG' | 'HANDOVER' | 'VERIFY_DONE' | 'REOPEN' | 'MANUAL';
 
 /** Một lần ghi giờ (nhập ở popup bàn giao hoặc nút "Ghi giờ"). */
 export interface WorkEntry {
@@ -344,6 +346,11 @@ export interface WorkLog {
   workDate: string;   // yyyy-MM-dd
   hours: number;
   note: string | null;
+  /**
+   * HÀNH ĐỘNG sinh ra dòng giờ. Chỉ nhìn role thì không phân biệt được tester đang
+   * log lỗi mới, trả về sửa hay duyệt xong — cả ba đều là vai TEST. NULL với bản ghi cũ.
+   */
+  action: WorkLogAction | null;
   taskType: TaskType | null;   // loại việc — hiện badge trong timesheet
   parentPath: string | null;   // "Epic › Story › Task cha" — ngữ cảnh như các màn khác
   estimateHours: number;       // est của task, để đối chiếu ngay tại chỗ
