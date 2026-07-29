@@ -28,6 +28,12 @@ interface PendingImage { file: File; url: string; name: string; }
   templateUrl: './quick-create.html',
   styles: [`
     .qc__req { color: var(--overdue, #e5484d); }
+    .qc__work .qc__row2 { align-items: end; }
+    .qc__work { display: grid; gap: var(--space-2); padding: 12px; border-radius: 10px;
+      background: var(--color-surface-alt); border: 1px solid var(--color-border); }
+    .qc__work-head { font-size: .9rem; font-weight: var(--weight-semibold); }
+    .qc__work-hint { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
+    .qc__work-hint b { color: var(--color-text); }
     .qc__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
     .qc__skip input { cursor: pointer; }
     .qc__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }

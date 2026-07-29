@@ -118,18 +118,25 @@
                            (valueChange)="f.testerUserId = $event || null"
                            [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Mặc định người log…" />
       </div>
-      <!-- Giờ kiểm thử — CHỈ khi báo lỗi mới; sửa lỗi cũ thì ghi giờ ở chi tiết công việc -->
+      <!-- Ghi giờ — CHỈ khi báo lỗi mới; sửa lỗi cũ thì ghi giờ ở chi tiết công việc.
+           Tách thành KHỐI RIÊNG span 2 cột: nhét chú thích vào trong .field sẽ đẻ thêm
+           một hàng grid làm ô ngày bên cạnh bị kéo giãn lệch hàng. -->
       @if (!editingId()) {
-        <div class="field">
-          <label>Giờ tìm ra lỗi <b class="bug-req">*</b></label>
-          <input type="number" min="0.25" max="4" step="0.25" placeholder="Vd: 0.5"
-                 [value]="logHours()" (input)="logHours.set($any($event.target).value)" />
-          <span class="field-hint">Thời gian tìm &amp; ghi nhận RIÊNG lỗi này (tối đa 4h) —
-            đừng nhập cả buổi test vào từng lỗi</span>
-        </div>
-        <div class="field">
-          <label>Ngày tính công</label>
-          <input type="date" [value]="logDate()" (change)="logDate.set($any($event.target).value)" />
+        <div class="bug-work">
+          <div class="bug-work__head">⏱ Ghi công kiểm thử</div>
+          <div class="bug-work__row">
+            <div class="field">
+              <label>Giờ tìm ra lỗi <b class="bug-req">*</b></label>
+              <input type="number" min="0.25" max="4" step="0.25" placeholder="Vd: 0.5"
+                     [value]="logHours()" (input)="logHours.set($any($event.target).value)" />
+            </div>
+            <div class="field">
+              <label>Ngày tính công</label>
+              <input type="date" [value]="logDate()" (change)="logDate.set($any($event.target).value)" />
+            </div>
+          </div>
+          <p class="bug-work__hint">Nhập thời gian tìm &amp; ghi nhận <b>riêng lỗi này</b> (tối đa 4h).
+            Đừng nhập cả buổi test vào từng lỗi — log 20 lỗi/ngày sẽ thành hàng chục giờ.</p>
         </div>
       }
     </div>

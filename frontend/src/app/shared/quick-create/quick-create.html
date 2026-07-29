@@ -126,18 +126,23 @@
         <input type="text" [value]="environment()" (input)="environment.set($any($event.target).value)"
                placeholder="Trình duyệt / OS / phiên bản" />
       </div>
-      <div class="qc__row2">
-        <div class="field">
-          <label>Giờ tìm ra lỗi <b class="qc__req">*</b></label>
-          <input type="number" min="0.25" max="4" step="0.25" placeholder="Vd: 0.5"
-                 [value]="logHours()" (input)="logHours.set($any($event.target).value)" />
-          <div class="qc__hint">Thời gian tìm &amp; ghi nhận RIÊNG lỗi này (tối đa 4h) —
-            đừng nhập cả buổi test vào từng lỗi</div>
+      <!-- Khối ghi công: chú thích để NGOÀI .field, nếu nhét vào trong sẽ đẻ thêm hàng grid
+           làm ô ngày bên cạnh bị kéo giãn lệch hàng. -->
+      <div class="qc__work">
+        <div class="qc__work-head">⏱ Ghi công kiểm thử</div>
+        <div class="qc__row2">
+          <div class="field">
+            <label>Giờ tìm ra lỗi <b class="qc__req">*</b></label>
+            <input type="number" min="0.25" max="4" step="0.25" placeholder="Vd: 0.5"
+                   [value]="logHours()" (input)="logHours.set($any($event.target).value)" />
+          </div>
+          <div class="field">
+            <label>Ngày tính công</label>
+            <input type="date" [value]="logDate()" (change)="logDate.set($any($event.target).value)" />
+          </div>
         </div>
-        <div class="field">
-          <label>Ngày tính công</label>
-          <input type="date" [value]="logDate()" (change)="logDate.set($any($event.target).value)" />
-        </div>
+        <p class="qc__work-hint">Nhập thời gian tìm &amp; ghi nhận <b>riêng lỗi này</b> (tối đa 4h).
+          Đừng nhập cả buổi test vào từng lỗi — log 20 lỗi/ngày sẽ thành hàng chục giờ.</p>
       </div>
     }
 

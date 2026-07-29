@@ -41,6 +41,14 @@ import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
     .field-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
     .bug-req { color: var(--overdue, #e5484d); }
+    /* Khối ghi công kiểm thử — span cả 2 cột của .form-2col để không phá lưới. */
+    .bug-work { grid-column: 1 / -1; display: grid; gap: var(--space-2); padding: 12px;
+      border-radius: 10px; background: var(--color-surface-alt); border: 1px solid var(--color-border); }
+    .bug-work__head { font-size: .9rem; font-weight: var(--weight-semibold); }
+    .bug-work__row { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-3); align-items: end; }
+    @media (max-width: 560px) { .bug-work__row { grid-template-columns: 1fr; } }
+    .bug-work__hint { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
+    .bug-work__hint b { color: var(--color-text); }
     /* Khu chọn ảnh khi báo lỗi */
     .bug-att { display: flex; flex-wrap: wrap; gap: var(--space-2); }
     .bug-att__item { position: relative; width: 76px; height: 76px; border-radius: var(--radius-md);
