@@ -238,7 +238,9 @@
             <div class="td__sec">
               <h4>Mô tả</h4>
               @if (bugDesc(t)) {
-                <div class="td__desc">{{ bugDesc(t) }}</div>
+                <!-- Đánh dấu [Ảnh n] hiện thành ảnh thật, bấm vào xem to. -->
+                <app-desc-view class="td__desc" [text]="bugDesc(t)" [shots]="descShots()"
+                               (shotClicked)="openShotByNo($event)" />
               } @else {
                 <div class="td__muted">Chưa có mô tả.</div>
               }

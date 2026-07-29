@@ -13,6 +13,8 @@ import {
 } from '../../core/project.service';
 import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
 import { workRoleForTransition, workActionLabel, workActionColor } from '../work-stats';
+import { DescShot } from '../desc-editor/desc-editor';
+import { DescView } from '../desc-editor/desc-view';
 
 type SubTab = 'info' | 'comments' | 'activity';
 
@@ -29,7 +31,7 @@ type SubTab = 'info' | 'comments' | 'activity';
  */
 @Component({
   selector: 'app-prj-task-detail',
-  imports: [Modal, SearchableSelect, ImageLightbox, WorkEntryDialog],
+  imports: [Modal, SearchableSelect, ImageLightbox, WorkEntryDialog, DescView],
   templateUrl: './task-detail.html',
   styles: [`
     /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
@@ -121,7 +123,8 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__info { display: grid; gap: var(--space-3); }
     .td__row { display: grid; grid-template-columns: 120px 1fr; align-items: center; gap: var(--space-2); }
     .td__row > label { font-size: .82rem; color: var(--color-text-muted); }
-    .td__desc { white-space: pre-wrap; line-height: 1.5; }
+    /* Mô tả do <app-desc-view> vẽ (chữ + ảnh trong dòng) — chỉ cần cho nó thành khối. */
+    .td__desc { display: block; }
     .td__muted { color: var(--color-text-muted); }
 
     .td__sec h4 { margin: 0 0 var(--space-2); font-size: .9rem; }
@@ -254,6 +257,18 @@ export class PrjTaskDetail {
   /** Ảnh đính kèm chung → phần tử cho lightbox chung (zoom được). Index khớp taskAttachments(). */
   readonly lightboxItems = computed<LightboxItem[]>(() =>
     this.taskAttachments().map((a) => ({ url: this.attUrl(a), name: a.fileName, kind: 'IMAGE' as const })));
+
+  /**
+   * Ảnh cấp cho phần Mô tả: "[Ảnh n]" ứng với ảnh đính kèm THỨ n, đúng thứ tự tải lên —
+   * cùng quy ước với lúc nhập (ảnh dán được đánh số rồi upload theo đúng thứ tự đó).
+   */
+  readonly descShots = computed<DescShot[]>(() =>
+    this.taskAttachments().map((a, i) => ({ no: i + 1, url: this.attUrl(a) })));
+
+  /** Bấm ảnh trong Mô tả → mở lightbox; số thứ tự n ứng với vị trí n-1 của dải đính kèm. */
+  openShotByNo(no: number): void {
+    if (no >= 1 && no <= this.taskAttachments().length) this.lightboxIndex.set(no - 1);
+  }
 
   readonly draft = signal('');
   /** Ảnh CHỜ trong ô soạn bình luận — upload sau khi bấm Gửi (cần commentId). */
