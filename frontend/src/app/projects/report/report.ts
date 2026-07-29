@@ -83,11 +83,11 @@ export class PrjReport {
   // ----- byStatus → thanh ngang -----
   private readonly statusMeta: { status: TaskStatus; label: string; color: string }[] = [
     { status: 'BACKLOG', label: 'Backlog', color: 'var(--color-text-muted)' },
-    { status: 'TODO', label: 'Cần làm', color: 'var(--status-pending)' },
-    { status: 'IN_PROGRESS', label: 'Đang làm', color: 'var(--status-active)' },
-    { status: 'IN_REVIEW', label: 'Kiểm thử', color: 'var(--color-info)' },
-    { status: 'DONE', label: 'Hoàn thành', color: 'var(--status-done)' },
-    { status: 'CANCELLED', label: 'Huỷ', color: 'var(--status-cancel)' }
+    { status: 'TODO', label: 'To Do', color: 'var(--status-pending)' },
+    { status: 'IN_PROGRESS', label: 'In Progress', color: 'var(--status-active)' },
+    { status: 'IN_REVIEW', label: 'Testing', color: 'var(--color-info)' },
+    { status: 'DONE', label: 'Done', color: 'var(--status-done)' },
+    { status: 'CANCELLED', label: 'Cancelled', color: 'var(--status-cancel)' }
   ];
 
   readonly statusBars = computed(() => {

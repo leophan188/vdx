@@ -62,13 +62,13 @@ export class MyBugs implements OnInit {
     { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
   ];
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
-    { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
-    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
+    { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'To Do' },
+    { value: 'IN_PROGRESS', label: 'In Progress' }, { value: 'IN_REVIEW', label: 'Testing' },
+    { value: 'DONE', label: 'Done' }, { value: 'CANCELLED', label: 'Cancelled' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
-    { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
-    { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
+    { value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' }, { value: 'URGENT', label: 'Urgent' }
   ];
 
   /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ task-detail. */

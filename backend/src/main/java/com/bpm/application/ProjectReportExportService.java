@@ -636,8 +636,8 @@ public class ProjectReportExportService {
             case "PLANNING": return "Lập kế hoạch";
             case "ACTIVE": return "Đang thực hiện";
             case "ON_HOLD": return "Tạm dừng";
-            case "DONE": return "Hoàn thành";
-            case "CANCELLED": return "Đã hủy";
+            case "DONE": return "Done";
+            case "CANCELLED": return "Cancelled";
             default: return s;
         }
     }
@@ -854,21 +854,21 @@ public class ProjectReportExportService {
         if (s == null) return "";
         switch (s) {
             case "BACKLOG": return "Backlog";
-            case "TODO": return "Cần làm";
-            case "IN_PROGRESS": return "Đang làm";
-            case "IN_REVIEW": return "Kiểm thử";
-            case "DONE": return "Hoàn thành";
-            case "CANCELLED": return "Huỷ";
+            case "TODO": return "To Do";
+            case "IN_PROGRESS": return "In Progress";
+            case "IN_REVIEW": return "Testing";
+            case "DONE": return "Done";
+            case "CANCELLED": return "Cancelled";
             default: return s;
         }
     }
     private static String priorityVi(String p) {
         if (p == null) return "";
         switch (p) {
-            case "LOW": return "Thấp";
-            case "MEDIUM": return "Trung bình";
-            case "HIGH": return "Cao";
-            case "URGENT": return "Khẩn cấp";
+            case "LOW": return "Low";
+            case "MEDIUM": return "Medium";
+            case "HIGH": return "High";
+            case "URGENT": return "Urgent";
             default: return p;
         }
     }
@@ -975,11 +975,11 @@ public class ProjectReportExportService {
         if (s == null) return "";
         switch (s) {
             case "BACKLOG": return "Backlog";
-            case "TODO": return "Cần làm";
-            case "IN_PROGRESS": return "Đang làm";
-            case "IN_REVIEW": return "Kiểm thử";
-            case "DONE": return "Hoàn thành";
-            case "CANCELLED": return "Huỷ";
+            case "TODO": return "To Do";
+            case "IN_PROGRESS": return "In Progress";
+            case "IN_REVIEW": return "Testing";
+            case "DONE": return "Done";
+            case "CANCELLED": return "Cancelled";
             default: return s;
         }
     }

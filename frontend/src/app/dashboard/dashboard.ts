@@ -50,7 +50,7 @@ export class Dashboard implements OnInit {
     if (!o || o.totalEst <= 0) return [];
     // 3 nhóm partition (đang làm / đã xong / sắp làm) — trễ là cắt ngang nên không vẽ trong donut.
     const segs = [
-      { key: 'inProgress', label: 'Đang làm', color: GROUP_COLORS.inProgress, g: o.inProgress },
+      { key: 'inProgress', label: 'In Progress', color: GROUP_COLORS.inProgress, g: o.inProgress },
       { key: 'done', label: 'Đã xong', color: GROUP_COLORS.done, g: o.done },
       { key: 'upcoming', label: 'Sắp làm', color: GROUP_COLORS.upcoming, g: o.upcoming }
     ];

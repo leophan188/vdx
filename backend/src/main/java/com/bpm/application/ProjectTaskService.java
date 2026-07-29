@@ -971,11 +971,11 @@ public class ProjectTaskService {
         }
         switch (s) {
             case BACKLOG: return "Backlog";
-            case TODO: return "Cần làm";
-            case IN_PROGRESS: return "Đang làm";
-            case IN_REVIEW: return "Kiểm thử";
-            case DONE: return "Hoàn thành";
-            case CANCELLED: return "Huỷ";
+            case TODO: return "To Do";
+            case IN_PROGRESS: return "In Progress";
+            case IN_REVIEW: return "Testing";
+            case DONE: return "Done";
+            case CANCELLED: return "Cancelled";
             default: return s.name();
         }
     }

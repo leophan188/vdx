@@ -34,8 +34,13 @@ interface TreeRow {
   imports: [FormsModule, Modal, SearchableSelect, TypeFilter, WorkEntryDialog],
   templateUrl: './backlog.html',
   styles: [`
-    .bl-skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
-    .bl-skip input { cursor: pointer; }
+    /* Ô tích BỎ QUA KIỂM THỬ — phải ghim kích thước, nếu không input kế thừa width:100%
+       của .field trong form và phình thành ô vuông to, chữ bị đẩy xuống dòng lệch hẳn. */
+    .bl-skip { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-sm);
+      cursor: pointer; line-height: 1.4; }
+    .bl-skip input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px;
+      margin: 2px 0 0; padding: 0; cursor: pointer; accent-color: var(--color-primary); }
+    .bl-skip input:disabled { cursor: default; opacity: .6; }
     .bl-skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
     .bl-summary { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; margin-bottom: var(--space-3); }
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
@@ -237,13 +242,13 @@ export class PrjBacklog implements OnInit {
     { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
   ];
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
-    { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
-    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
+    { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'To Do' },
+    { value: 'IN_PROGRESS', label: 'In Progress' }, { value: 'IN_REVIEW', label: 'Testing' },
+    { value: 'DONE', label: 'Done' }, { value: 'CANCELLED', label: 'Cancelled' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
-    { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
-    { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
+    { value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' }, { value: 'URGENT', label: 'Urgent' }
   ];
 
   /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ với task-detail. */
@@ -325,7 +330,7 @@ export class PrjBacklog implements OnInit {
   readonly priorityFilter = signal<Set<TaskPriority>>(new Set(this.allPriorities));
   /** Chip lọc ưu tiên — tên khác prioritySel (đã dùng cho dropdown trong form). */
   readonly priorityFilterSel = this.allPriorities.map((v) => ({
-    value: v, label: { URGENT: 'Khẩn cấp', HIGH: 'Cao', MEDIUM: 'Trung bình', LOW: 'Thấp' }[v]
+    value: v, label: { URGENT: 'Urgent', HIGH: 'High', MEDIUM: 'Medium', LOW: 'Low' }[v]
   }));
   isPriorityOn(v: TaskPriority): boolean { return this.priorityFilter().has(v); }
   togglePriority(v: TaskPriority): void {

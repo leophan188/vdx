@@ -62,10 +62,10 @@ interface TestRow {
         <div class="rs__grid rs__grid--dev">
           <div class="rs__row rs__row--head">
             <span class="rs__name">Nhân sự</span>
-            <span title="Cần làm + Backlog">Cần làm</span>
-            <span>Đang làm</span>
-            <span title="Đã bàn giao, đang chờ kiểm thử">Kiểm thử</span>
-            <span>Hoàn thành</span>
+            <span title="To Do + Backlog">To Do</span>
+            <span>In Progress</span>
+            <span title="Đã bàn giao, đang chờ kiểm thử">Testing</span>
+            <span>Done</span>
             <span>Tổng</span>
             <span>% HT</span>
           </div>
@@ -75,16 +75,16 @@ interface TestRow {
                 @if (r.userId) { <employee-chip [name]="r.name" /> } @else { <span>{{ r.name }}</span> }
               </span>
               <span>@if (r.todo.length) {
-                <button type="button" class="rs__num" (click)="pick(r.name + ' · Cần làm', r.todo)">{{ r.todo.length }}</button>
+                <button type="button" class="rs__num" (click)="pick(r.name + ' · To Do', r.todo)">{{ r.todo.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.doing.length) {
-                <button type="button" class="rs__num rs__num--doing" (click)="pick(r.name + ' · Đang làm', r.doing)">{{ r.doing.length }}</button>
+                <button type="button" class="rs__num rs__num--doing" (click)="pick(r.name + ' · In Progress', r.doing)">{{ r.doing.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.review.length) {
-                <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Chờ kiểm thử', r.review)">{{ r.review.length }}</button>
+                <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Testing', r.review)">{{ r.review.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.done.length) {
-                <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Hoàn thành', r.done)">{{ r.done.length }}</button>
+                <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Done', r.done)">{{ r.done.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.items.length) {
                 <button type="button" class="rs__num" (click)="pick('Công việc dev của ' + r.name, r.items)">{{ r.items.length }}</button>
@@ -105,7 +105,7 @@ interface TestRow {
           <div class="rs__row rs__row--head">
             <span class="rs__name">Nhân sự</span>
             <span title="Số bug/issue do người này tạo">Đã log</span>
-            <span title="Việc đã ở trạng thái Hoàn thành">Hoàn thành</span>
+            <span title="Việc đã ở trạng thái Done">Done</span>
             <span title="Đang ở trạng thái Kiểm thử — nằm ở chân tester, chờ người này verify">Chờ test</span>
             <span title="Backlog / Cần làm / Đang làm — còn ở chân dev, chưa bàn giao">Chờ Dev</span>
             <span title="Tổng việc liên quan tới vai kiểm thử (mình log hoặc mình kiểm thử) = Hoàn thành + Chờ test + Chờ Dev">Tổng</span>
@@ -120,7 +120,7 @@ interface TestRow {
                 <button type="button" class="rs__num" (click)="pick('Bug/Issue do ' + r.name + ' log', r.logged)">{{ r.logged.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.done.length) {
-                <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Hoàn thành', r.done)">{{ r.done.length }}</button>
+                <button type="button" class="rs__num rs__num--done" (click)="pick(r.name + ' · Done', r.done)">{{ r.done.length }}</button>
               } @else { <i class="rs__zero">0</i> }</span>
               <span>@if (r.waitTest.length) {
                 <button type="button" class="rs__num rs__num--review" (click)="pick(r.name + ' · Chờ test (đang ở chân tester)', r.waitTest)">{{ r.waitTest.length }}</button>

@@ -156,7 +156,7 @@ export class PrjLog {
 
   /** Nhãn trạng thái tiếng Việt (dịch cả bản ghi CŨ đã lưu mã TODO/IN_REVIEW…). */
   private static readonly STATUS_VI: Record<string, string> = {
-    BACKLOG: 'Backlog', TODO: 'Cần làm', IN_PROGRESS: 'Đang làm', IN_REVIEW: 'Kiểm thử', DONE: 'Hoàn thành'
+    BACKLOG: 'Backlog', TODO: 'To Do', IN_PROGRESS: 'In Progress', IN_REVIEW: 'Testing', DONE: 'Done'
   };
   displayDetail(detail: string | null): string {
     if (!detail) return '';

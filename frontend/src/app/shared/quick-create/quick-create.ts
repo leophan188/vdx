@@ -34,8 +34,13 @@ interface PendingImage { file: File; url: string; name: string; }
     .qc__work-head { font-size: .9rem; font-weight: var(--weight-semibold); }
     .qc__work-hint { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
     .qc__work-hint b { color: var(--color-text); }
-    .qc__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
-    .qc__skip input { cursor: pointer; }
+    /* Ô tích BỎ QUA KIỂM THỬ — phải ghim kích thước, nếu không input kế thừa width:100%
+       của .field trong form và phình thành ô vuông to, chữ bị đẩy xuống dòng lệch hẳn. */
+    .qc__skip { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-sm);
+      cursor: pointer; line-height: 1.4; }
+    .qc__skip input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px;
+      margin: 2px 0 0; padding: 0; cursor: pointer; accent-color: var(--color-primary); }
+    .qc__skip input:disabled { cursor: default; opacity: .6; }
     .qc__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
     .qc { display: grid; gap: var(--space-3); width: 100%; }
     .qc__seg { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -128,8 +133,8 @@ export class QuickCreate {
     { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
   ];
   readonly priorityOptions: { value: TaskPriority; label: string }[] = [
-    { value: 'LOW', label: 'Thấp' }, { value: 'MEDIUM', label: 'Trung bình' },
-    { value: 'HIGH', label: 'Cao' }, { value: 'URGENT', label: 'Khẩn cấp' }
+    { value: 'LOW', label: 'Low' }, { value: 'MEDIUM', label: 'Medium' },
+    { value: 'HIGH', label: 'High' }, { value: 'URGENT', label: 'Urgent' }
   ];
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
   /** Mức độ nghiêm trọng (BUG/ISSUE) — đồng bộ task-detail. */

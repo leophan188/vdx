@@ -168,17 +168,17 @@ export class PrjKanban {
 
   readonly columns: Column[] = [
     { status: 'BACKLOG', label: 'Backlog' },
-    { status: 'TODO', label: 'Cần làm' },
-    { status: 'IN_PROGRESS', label: 'Đang làm' },
-    { status: 'IN_REVIEW', label: 'Kiểm thử' },
-    { status: 'DONE', label: 'Hoàn thành' },
-    { status: 'CANCELLED', label: 'Huỷ' }
+    { status: 'TODO', label: 'To Do' },
+    { status: 'IN_PROGRESS', label: 'In Progress' },
+    { status: 'IN_REVIEW', label: 'Testing' },
+    { status: 'DONE', label: 'Done' },
+    { status: 'CANCELLED', label: 'Cancelled' }
   ];
 
   /** Lọc ƯU TIÊN — chip dùng chung. Mặc định hiện hết. */
   readonly priorityChips = [
-    { value: 'URGENT', label: 'Khẩn' }, { value: 'HIGH', label: 'Cao' },
-    { value: 'MEDIUM', label: 'Trung bình' }, { value: 'LOW', label: 'Thấp' }
+    { value: 'URGENT', label: 'Khẩn' }, { value: 'HIGH', label: 'High' },
+    { value: 'MEDIUM', label: 'Medium' }, { value: 'LOW', label: 'Low' }
   ];
   readonly priorityFilter = signal<Set<string>>(new Set(['URGENT', 'HIGH', 'MEDIUM', 'LOW']));
   togglePriority(p: string): void {
@@ -441,9 +441,9 @@ export class PrjKanban {
   priorityLabel(p: TaskPriority): string {
     switch (p) {
       case 'URGENT': return 'Khẩn';
-      case 'HIGH': return 'Cao';
-      case 'MEDIUM': return 'Trung bình';
-      default: return 'Thấp';
+      case 'HIGH': return 'High';
+      case 'MEDIUM': return 'Medium';
+      default: return 'Low';
     }
   }
 }

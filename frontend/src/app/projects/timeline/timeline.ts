@@ -225,10 +225,10 @@ export class PrjTimeline implements OnInit {
   readonly statusLegend: { status: TaskStatus; label: string }[] = [
     { status: 'BACKLOG', label: 'Tồn đọng' },
     { status: 'TODO', label: 'Chờ làm' },
-    { status: 'IN_PROGRESS', label: 'Đang làm' },
+    { status: 'IN_PROGRESS', label: 'In Progress' },
     { status: 'IN_REVIEW', label: 'Chờ duyệt' },
-    { status: 'DONE', label: 'Hoàn thành' },
-    { status: 'CANCELLED', label: 'Huỷ' }
+    { status: 'DONE', label: 'Done' },
+    { status: 'CANCELLED', label: 'Cancelled' }
   ];
 
   // ----- Thanh tuỳ chỉnh -----

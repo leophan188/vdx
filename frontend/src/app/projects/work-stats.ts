@@ -19,11 +19,11 @@ export const WORK_CATS: { key: WorkCat; label: string; icon: string; color: stri
  */
 export const STATUS_META: { key: TaskStatus; label: string; color: string; icon: string }[] = [
   { key: 'BACKLOG', label: 'Backlog', color: '#94a3b8', icon: '📋' },
-  { key: 'TODO', label: 'Cần làm', color: '#3b82f6', icon: '🗒️' },
-  { key: 'IN_PROGRESS', label: 'Đang làm', color: '#f59e0b', icon: '🔄' },
-  { key: 'IN_REVIEW', label: 'Kiểm thử', color: '#8b5cf6', icon: '🔍' },
-  { key: 'DONE', label: 'Hoàn thành', color: '#22c55e', icon: '✅' },
-  { key: 'CANCELLED', label: 'Huỷ', color: '#cbd5e1', icon: '🚫' }
+  { key: 'TODO', label: 'To Do', color: '#3b82f6', icon: '🗒️' },
+  { key: 'IN_PROGRESS', label: 'In Progress', color: '#f59e0b', icon: '🔄' },
+  { key: 'IN_REVIEW', label: 'Testing', color: '#8b5cf6', icon: '🔍' },
+  { key: 'DONE', label: 'Done', color: '#22c55e', icon: '✅' },
+  { key: 'CANCELLED', label: 'Cancelled', color: '#cbd5e1', icon: '🚫' }
 ];
 
 /** Nhãn NGẮN + màu pill theo LOẠI công việc (dùng cho badge ở dropdown chọn cha). */

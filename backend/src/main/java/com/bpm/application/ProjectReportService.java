@@ -613,13 +613,14 @@ public class ProjectReportService {
         if (paren >= 0) {
             label = label.substring(0, paren).trim();
         }
+        // Nhận CẢ nhãn tiếng Việt (bản ghi trước khi đổi giao diện sang tiếng Anh) lẫn nhãn mới.
         switch (label) {
             case "Backlog": return TaskStatus.BACKLOG;
-            case "Cần làm": return TaskStatus.TODO;
-            case "Đang làm": return TaskStatus.IN_PROGRESS;
-            case "Kiểm thử": return TaskStatus.IN_REVIEW;
-            case "Hoàn thành": return TaskStatus.DONE;
-            case "Huỷ": return TaskStatus.CANCELLED;
+            case "Cần làm": case "To Do": return TaskStatus.TODO;
+            case "Đang làm": case "In Progress": return TaskStatus.IN_PROGRESS;
+            case "Kiểm thử": case "Testing": return TaskStatus.IN_REVIEW;
+            case "Hoàn thành": case "Done": return TaskStatus.DONE;
+            case "Huỷ": case "Cancelled": return TaskStatus.CANCELLED;
             default: return null;
         }
     }

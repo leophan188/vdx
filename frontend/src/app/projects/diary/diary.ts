@@ -203,7 +203,7 @@ export class PrjDiary {
   clearTeam(): void { this.fTeam.set(new Set()); }
 
   private readonly statusLabels: Record<string, string> = {
-    NEW: 'Mới', DOING: 'Đang làm', DONE: 'Hoàn thành'
+    NEW: 'Mới', DOING: 'In Progress', DONE: 'Done'
   };
   statusLabel(s: string | null): string {
     return this.statusLabels[s ?? 'NEW'] ?? 'Mới';

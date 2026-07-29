@@ -90,9 +90,13 @@ type SubTab = 'info' | 'comments' | 'activity';
       border-radius: var(--radius-md); background: var(--color-surface); color: var(--color-text);
       padding: 0 var(--space-2); font: inherit; width: 130px; }
     .td__life-note { font-size: .78rem; color: var(--color-text-muted); }
-    .td__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
-    .td__skip input { cursor: pointer; }
-    .td__skip input:disabled { cursor: default; }
+    /* Ô tích BỎ QUA KIỂM THỬ — phải ghim kích thước, nếu không input kế thừa width:100%
+       của .field trong form và phình thành ô vuông to, chữ bị đẩy xuống dòng lệch hẳn. */
+    .td__skip { display: flex; align-items: flex-start; gap: 8px; font-size: var(--text-sm);
+      cursor: pointer; line-height: 1.4; }
+    .td__skip input[type="checkbox"] { flex: 0 0 auto; width: 16px; height: 16px; min-width: 16px;
+      margin: 2px 0 0; padding: 0; cursor: pointer; accent-color: var(--color-primary); }
+    .td__skip input:disabled { cursor: default; opacity: .6; }
     .td__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
 
     .td__seg { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -275,15 +279,15 @@ export class PrjTaskDetail {
   });
 
   readonly statusOptions: { value: TaskStatus; label: string }[] = [
-    { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'Cần làm' },
-    { value: 'IN_PROGRESS', label: 'Đang làm' }, { value: 'IN_REVIEW', label: 'Kiểm thử' },
-    { value: 'DONE', label: 'Hoàn thành' }, { value: 'CANCELLED', label: 'Huỷ' }
+    { value: 'BACKLOG', label: 'Backlog' }, { value: 'TODO', label: 'To Do' },
+    { value: 'IN_PROGRESS', label: 'In Progress' }, { value: 'IN_REVIEW', label: 'Testing' },
+    { value: 'DONE', label: 'Done' }, { value: 'CANCELLED', label: 'Cancelled' }
   ];
   readonly typeLabels: Record<TaskType, string> = {
     EPIC: 'Epic', STORY: 'Story', TASK: 'Task', SUBTASK: 'Subtask', BUG: 'Bug', ISSUE: 'Issue'
   };
   readonly priorityLabels: Record<TaskPriority, string> = {
-    LOW: 'Thấp', MEDIUM: 'Trung bình', HIGH: 'Cao', URGENT: 'Khẩn cấp'
+    LOW: 'Low', MEDIUM: 'Medium', HIGH: 'High', URGENT: 'Urgent'
   };
   readonly severityLabels: Record<BugSeverity, string> = {
     BLOCKER: 'Chặn', CRITICAL: 'Nguy kịch', MAJOR: 'Lớn', MINOR: 'Nhỏ', TRIVIAL: 'Không đáng kể'

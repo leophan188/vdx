@@ -25,10 +25,10 @@ interface ReportBlock {
 
 /** Mức ưu tiên (thống kê bug/issue). */
 const PRIORITY_META: { key: TaskPriority; label: string; color: string }[] = [
-  { key: 'URGENT', label: 'Khẩn cấp', color: 'var(--overdue, #e5484d)' },
-  { key: 'HIGH', label: 'Cao', color: 'var(--status-pending, #d97706)' },
-  { key: 'MEDIUM', label: 'Trung bình', color: 'var(--status-active, #2563eb)' },
-  { key: 'LOW', label: 'Thấp', color: 'var(--color-text-muted, #64748b)' }
+  { key: 'URGENT', label: 'Urgent', color: 'var(--overdue, #e5484d)' },
+  { key: 'HIGH', label: 'High', color: 'var(--status-pending, #d97706)' },
+  { key: 'MEDIUM', label: 'Medium', color: 'var(--status-active, #2563eb)' },
+  { key: 'LOW', label: 'Low', color: 'var(--color-text-muted, #64748b)' }
 ];
 
 interface TypeStatusRow {
@@ -805,10 +805,10 @@ export class PrjReportsPeriod {
   statusLabel(s: TaskStatus): string {
     switch (s) {
       case 'BACKLOG': return 'Backlog';
-      case 'TODO': return 'Cần làm';
-      case 'IN_PROGRESS': return 'Đang làm';
-      case 'IN_REVIEW': return 'Kiểm thử';
-      case 'DONE': return 'Hoàn thành';
+      case 'TODO': return 'To Do';
+      case 'IN_PROGRESS': return 'In Progress';
+      case 'IN_REVIEW': return 'Testing';
+      case 'DONE': return 'Done';
       default: return s;
     }
   }
@@ -855,7 +855,7 @@ export class PrjReportsPeriod {
     return [
       { icon: '🗂️', label: 'Tổng số công việc', value: String(o.totalTasks) },
       { icon: '✅', label: 'Đã hoàn thành', value: String(o.doneTasks), tone: 'done' },
-      { icon: '🔄', label: 'Đang làm', value: String(this.report()?.inProgress.length ?? 0), tone: 'doing' },
+      { icon: '🔄', label: 'In Progress', value: String(this.report()?.inProgress.length ?? 0), tone: 'doing' },
       { icon: '⛔', label: 'Quá hạn', value: String(o.overdueCount), tone: 'over' },
       { icon: '🐞', label: 'Lỗi (bug)', value: String(o.bugCount) },
       { icon: '📊', label: 'Ước lượng (%)', value: `${estPct}% (${doneEst}/${est} h)` }
