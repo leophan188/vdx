@@ -43,6 +43,10 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
           <input type="text" [value]="note()" placeholder="Vd: sửa lỗi hiển thị, test lại luồng đăng nhập…"
                  (input)="note.set($any($event.target).value)" (keydown.enter)="submit()" />
         </label>
+        @if (fillsDueDate()) {
+          <p class="we__fill">📌 Công việc này <b>chưa có hạn hoàn thành</b> — ngày chọn ở trên sẽ được
+            ghi luôn thành hạn hoàn thành của công việc.</p>
+        }
         @if (error()) { <p class="we__err">{{ error() }}</p> }
       </div>
       <div modalFooter>
@@ -71,6 +75,9 @@ import { WorkEntry, WorkRole } from '../../core/project.service';
     .we__chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
     .we__chip.is-active { border-color: var(--color-primary); color: var(--color-primary);
       background: var(--color-primary-soft, transparent); }
+    .we__fill { margin: 0; padding: 8px 10px; border-radius: 8px; font-size: var(--text-xs); line-height: 1.5;
+      color: var(--color-text-muted); background: var(--color-surface-alt); border: 1px solid var(--color-border); }
+    .we__fill b { color: var(--color-text); }
     .we__err { margin: 0; font-size: var(--text-sm); color: var(--overdue, #e5484d); }
   `]
 })
@@ -80,6 +87,8 @@ export class WorkEntryDialog {
   readonly role = input<WorkRole>('DEV');
   readonly taskTitle = input<string>('');
   readonly saving = input(false);
+  /** Task chưa có hạn hoàn thành và lần chuyển này sẽ lấy "Ngày tính công" làm hạn. */
+  readonly fillsDueDate = input(false);
 
   readonly confirmed = output<WorkEntry>();
   readonly cancelled = output<void>();

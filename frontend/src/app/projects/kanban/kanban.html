@@ -129,4 +129,5 @@
 
 <!-- Nhập giờ khi thả card vào Kiểm thử / Hoàn thành (backend bắt buộc có giờ) -->
 <app-work-entry [open]="workOpen()" [role]="workRole()" [taskTitle]="workTitle()"
+                [fillsDueDate]="workFillsDue()"
                 (confirmed)="onWorkConfirmed($event)" (cancelled)="onWorkCancelled()" />

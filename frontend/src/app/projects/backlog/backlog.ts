@@ -874,6 +874,8 @@ export class PrjBacklog implements OnInit {
   readonly workOpen = signal(false);
   readonly workRole = signal<WorkRole>('DEV');
   readonly workTitle = signal('');
+  /** Chuyển sang Hoàn thành mà task chưa có hạn → ngày nhập sẽ thành hạn hoàn thành. */
+  readonly workFillsDue = signal(false);
   private pendingMove: { task: ProjectTask; status: TaskStatus } | null = null;
 
   /**
@@ -888,6 +890,7 @@ export class PrjBacklog implements OnInit {
       this.pendingMove = { task: t, status: next };
       this.workRole.set(role);
       this.workTitle.set(t.title);
+      this.workFillsDue.set(next === 'DONE' && !t.dueDate);
       this.workOpen.set(true);
       return;
     }

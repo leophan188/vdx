@@ -376,7 +376,7 @@ export class PrjTaskDetail {
     if (s === 'IN_PROGRESS' && this.needsStartInfo(t)) { this.openStart(t); return; }
     // Mốc bàn giao (Kiểm thử / Hoàn thành) bắt buộc ghi giờ → hỏi trước khi gọi API.
     const role = workRoleForTransition(t, s);
-    if (role) { this.askWork(role, (w) => this.doSetStatus(s, w)); return; }
+    if (role) { this.askWork(role, (w) => this.doSetStatus(s, w), s === 'DONE'); return; }
     this.doSetStatus(s);
   }
   private doSetStatus(s: TaskStatus, work?: WorkEntry): void {
@@ -613,11 +613,14 @@ export class PrjTaskDetail {
   // ===== Popup nhập giờ tại mốc bàn giao =====
   readonly workOpen = signal(false);
   readonly workRole = signal<WorkRole>('DEV');
+  /** Lần chuyển này sẽ lấy "Ngày tính công" làm hạn hoàn thành (task đang chưa có hạn). */
+  readonly workFillsDue = signal(false);
   private workDone: ((w: WorkEntry) => void) | null = null;
 
   /** Mở popup nhập giờ; xác nhận xong mới chạy tiếp hành động chuyển trạng thái. */
-  private askWork(role: WorkRole, then: (w: WorkEntry) => void): void {
+  private askWork(role: WorkRole, then: (w: WorkEntry) => void, fillsDue = false): void {
     this.workRole.set(role);
+    this.workFillsDue.set(fillsDue && !this.current()?.dueDate);
     this.workDone = then;
     this.workOpen.set(true);
   }
@@ -698,7 +701,7 @@ export class PrjTaskDetail {
 
   /** IN_REVIEW → DONE: nhập giờ kiểm thử rồi hoàn thành. */
   completeTask(): void {
-    this.askWork(this.skipTest() ? 'DEV' : 'TEST', (w) => this.doComplete(w));
+    this.askWork(this.skipTest() ? 'DEV' : 'TEST', (w) => this.doComplete(w), true);
   }
   private doComplete(work: WorkEntry): void {
     const t = this.current();

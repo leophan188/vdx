@@ -370,6 +370,8 @@ export class PrjKanban {
   readonly workOpen = signal(false);
   readonly workRole = signal<WorkRole>('DEV');
   readonly workTitle = signal('');
+  /** Thả sang Hoàn thành mà task chưa có hạn → ngày nhập sẽ thành hạn hoàn thành. */
+  readonly workFillsDue = signal(false);
   private pendingMove: { taskId: string; status: TaskStatus } | null = null;
 
   /**
@@ -384,6 +386,7 @@ export class PrjKanban {
       this.pendingMove = { taskId, status };
       this.workRole.set(role);
       this.workTitle.set(target.title);
+      this.workFillsDue.set(status === 'DONE' && !target.dueDate);
       this.workOpen.set(true);
       return;
     }

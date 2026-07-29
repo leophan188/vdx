@@ -421,7 +421,7 @@
 
 <!-- Nhập giờ tại MỐC BÀN GIAO (Kiểm thử / Hoàn thành) — backend bắt buộc có giờ -->
 <app-work-entry [open]="workOpen()" [role]="workRole()" [taskTitle]="current()?.title || ''"
-                [saving]="busyLifecycle() || busyStatus()"
+                [saving]="busyLifecycle() || busyStatus()" [fillsDueDate]="workFillsDue()"
                 (confirmed)="onWorkConfirmed($event)" (cancelled)="onWorkCancelled()" />
 
 <!-- Ghi giờ HẰNG NGÀY (nút + Giờ lập trình / + Giờ kiểm thử) -->

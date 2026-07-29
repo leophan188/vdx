@@ -359,6 +359,14 @@ public class ProjectTaskService {
             requireHoursWithinCap(hours);
         }
         t.setStatus(newStatus);
+        // HOÀN THÀNH mà chưa có hạn → lấy NGÀY THỰC TẾ hoàn thành làm hạn, để task không
+        // nằm mãi trong nhóm "thiếu hạn" và các báo cáo theo ngày có mốc mà bám.
+        // Ngày lấy từ ô "Ngày tính công" người dùng vừa nhập (mặc định hôm nay).
+        LocalDate autoDue = null;
+        if (newStatus == TaskStatus.DONE && t.getDueDate() == null && oldStatus != TaskStatus.DONE) {
+            autoDue = parseWorkDate(workDate);
+            t.setDueDate(autoDue);
+        }
         t.touch();
         // KHÔNG đổi assignee: người thực hiện (lập trình) + người kiểm thử (tester) + người log (reporter)
         // là 3 field RIÊNG BIỆT, GIỮ NGUYÊN qua các trạng thái. FE hiển thị "chủ hiện tại" theo status
@@ -371,6 +379,11 @@ public class ProjectTaskService {
                     statusLabel(oldStatus) + " → " + statusLabel(saved.getStatus()), oldStatus, saved.getStatus());
             if (workRole != null) {
                 saveWorkLog(saved, workRole, hours, workDate, note, actor);
+            }
+            if (autoDue != null) {
+                // Ghi vết rõ ràng: tự điền ngày là SỬA DỮ LIỆU, người dùng phải truy được.
+                recordActivity(saved, actor, TaskActivity.EDIT,
+                        "Tự điền Ngày hoàn thành = " + autoDue.format(DMY) + " (hoàn thành khi chưa có hạn)");
             }
             notifyStatus(saved, p, code(p, saved), actor);
             rollupFromParent(projectId, saved.getParentId(), actor); // tự cập nhật trạng thái Epic/Story/cha
