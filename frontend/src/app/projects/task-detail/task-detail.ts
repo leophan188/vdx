@@ -68,6 +68,8 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__work-head h4 { margin: 0; font-size: .9rem; }
     .td__work-sum { font-size: .8rem; color: var(--color-text-muted); }
     .td__work-sum b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .td__work-var { color: var(--status-done); }
+    .td__work-var.is-over { color: var(--overdue, #e5484d); }
     .td__work-list { display: grid; gap: 2px; }
     .td__work-row { display: grid; grid-template-columns: 76px minmax(90px, 1fr) 92px 52px 2fr 24px;
       align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
@@ -595,6 +597,19 @@ export class PrjTaskDetail {
   }
   roleLabel(r: WorkRole): string { return r === 'DEV' ? 'Lập trình' : 'Kiểm thử'; }
 
+  /** Tổng giờ THỰC TẾ đã ghi trên task (mọi vai, mọi lượt kể cả bị trả về làm lại). */
+  readonly totalHours = computed(() => Math.round((this.devHours() + this.testHours()) * 100) / 100);
+  /**
+   * Độ lệch tổng giờ thực tế so với ƯỚC LƯỢNG của task.
+   * Task bị trả về sửa lại nhiều lượt sẽ cộng dồn giờ nên rất dễ vượt est — đó chính là
+   * tín hiệu cần nhìn, không phải lỗi số liệu.
+   */
+  readonly hoursVariance = computed(() => {
+    const est = this.current()?.estimateHours ?? 0;
+    if (!est || !this.totalHours()) return null;
+    return Math.round(((this.totalHours() - est) / est) * 100);
+  });
+
   // ===== Popup nhập giờ tại mốc bàn giao =====
   readonly workOpen = signal(false);
   readonly workRole = signal<WorkRole>('DEV');
@@ -708,11 +723,15 @@ export class PrjTaskDetail {
   }
   cancelReopen(): void { this.pickReopenOpen.set(false); }
   confirmReopen(): void {
+    // Trả về Đang làm = tester đã kiểm thử xong và kết luận chưa đạt → phải ghi công đó.
+    this.askWork('TEST', (w) => this.doConfirmReopen(w));
+  }
+  private doConfirmReopen(work: WorkEntry): void {
     const t = this.current();
     if (!t || this.busyLifecycle()) return;
     this.busyLifecycle.set(true);
     const target = this.reopenAssignee() || null;
-    const toProgress = () => this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_PROGRESS').subscribe({
+    const toProgress = () => this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_PROGRESS', work).subscribe({
       next: (u) => {
         this.model.set(u);
         this.busyLifecycle.set(false);

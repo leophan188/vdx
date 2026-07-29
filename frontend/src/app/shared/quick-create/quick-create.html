@@ -128,8 +128,8 @@
       </div>
       <div class="qc__row2">
         <div class="field">
-          <label>Giờ kiểm thử <i class="qc__opt">(không bắt buộc)</i></label>
-          <input type="number" min="0" max="4" step="0.25" placeholder="0"
+          <label>Giờ tìm ra lỗi <b class="qc__req">*</b></label>
+          <input type="number" min="0.25" max="4" step="0.25" placeholder="Vd: 0.5"
                  [value]="logHours()" (input)="logHours.set($any($event.target).value)" />
           <div class="qc__hint">Thời gian tìm &amp; ghi nhận RIÊNG lỗi này (tối đa 4h) —
             đừng nhập cả buổi test vào từng lỗi</div>

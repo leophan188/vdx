@@ -35,8 +35,9 @@
     <div class="ts__empty">Dự án chưa có thành viên để lập timesheet.</div>
   } @else {
     <p class="ts__hint">
-      <strong>Giờ làm việc THỰC TẾ</strong> đã ghi khi bàn giao Kiểm thử / Hoàn thành, hoặc ghi tay trong chi tiết
-      công việc. Bấm vào một ô để xem đã ghi giờ vào những task nào.
+      <strong>Giờ làm việc THỰC TẾ</strong> đã ghi khi bàn giao Kiểm thử / Hoàn thành, khi log lỗi, hoặc ghi tay
+      trong chi tiết công việc. Mỗi ô hiện <strong>số giờ</strong> và <strong>số công việc</strong> đã ghi giờ
+      trong ngày đó (một việc ghi nhiều lần vẫn tính là một). Bấm vào ô để xem chi tiết từng việc.
       Cột “Ngoài khoảng” là giờ ghi vào T7/CN hoặc ngày nằm ngoài khoảng đang xem.
     </p>
     <div class="ts__wrap">
@@ -61,9 +62,20 @@
               @for (v of r.days; track $index) {
                 <td class="ts__num" [class.ts__over]="isOver(v)" [class.ts__under]="isUnder(v)"
                     [class.ts__zero]="!v" [class.ts__click]="v > 0"
-                    (click)="openCell(r, cols()[$index].key, cols()[$index].wd + ' ' + cols()[$index].dnum)">{{ fmt(v) || '·' }}</td>
+                    [title]="v ? fmt(v) + 'h · ' + r.dayTasks[$index] + ' công việc' : ''"
+                    (click)="openCell(r, cols()[$index].key, cols()[$index].wd + ' ' + cols()[$index].dnum)">
+                  @if (v) {
+                    <span class="ts__h">{{ fmt(v) }}</span>
+                    <span class="ts__t">{{ r.dayTasks[$index] }} việc</span>
+                  } @else { · }
+                </td>
               }
-              <td class="ts__num ts__total-col">{{ fmt(r.total) || '·' }}</td>
+              <td class="ts__num ts__total-col" [title]="fmt(r.total) + 'h · ' + r.totalTasks + ' công việc'">
+                @if (r.total) {
+                  <span class="ts__h">{{ fmt(r.total) }}</span>
+                  <span class="ts__t">{{ r.totalTasks }} việc</span>
+                } @else { · }
+              </td>
               @if (hasUnscheduled()) {
                 <td class="ts__num" [class.ts__zero]="!r.unscheduled">{{ fmt(r.unscheduled) || '·' }}</td>
               }
@@ -74,9 +86,19 @@
           <tr>
             <td class="ts__who">Tổng theo ngày</td>
             @for (v of dayTotals(); track $index) {
-              <td class="ts__num">{{ fmt(v) || '·' }}</td>
+              <td class="ts__num">
+                @if (v) {
+                  <span class="ts__h">{{ fmt(v) }}</span>
+                  <span class="ts__t">{{ dayTaskTotals()[$index] }} việc</span>
+                } @else { · }
+              </td>
             }
-            <td class="ts__num">{{ fmt(grandTotal()) || '·' }}</td>
+            <td class="ts__num">
+              @if (grandTotal()) {
+                <span class="ts__h">{{ fmt(grandTotal()) }}</span>
+                <span class="ts__t">{{ grandTaskTotal() }} việc</span>
+              } @else { · }
+            </td>
             @if (hasUnscheduled()) { <td class="ts__num">{{ fmt(unscheduledTotal()) || '·' }}</td> }
           </tr>
         </tfoot>
@@ -85,19 +107,42 @@
   }
 </section>
 
-<!-- Chi tiết một ô: đã ghi giờ vào task nào -->
-<app-modal [open]="!!cellDetail()" [title]="cellDetail()?.title || ''" (closed)="cellDetail.set(null)">
+<!-- Chi tiết một ô (người × ngày): đủ ngữ cảnh Epic › Story như các màn khác -->
+<app-modal [open]="!!cellDetail()" [title]="cellDetail()?.title || ''" [xwide]="true"
+           (closed)="cellDetail.set(null)">
   @if (cellDetail(); as d) {
     <div class="ts__detail">
+      <!-- Tổng hợp đầu popup: bao nhiêu việc, bao nhiêu giờ, tách theo vai -->
+      <div class="ts__dsum">
+        <span><b>{{ d.logs.length }}</b> lần ghi giờ</span>
+        <span>Tổng <b>{{ cellTotal() }}h</b></span>
+        @if (cellDevTotal()) { <span class="ts__dsum-dev">Lập trình <b>{{ cellDevTotal() }}h</b></span> }
+        @if (cellTestTotal()) { <span class="ts__dsum-test">Kiểm thử <b>{{ cellTestTotal() }}h</b></span> }
+      </div>
+
+      <div class="ts__dhead">
+        <span>Vai</span><span>Mã</span><span>Công việc</span><span>Est</span><span>Giờ ghi</span>
+      </div>
       @for (w of d.logs; track w.id) {
         <div class="ts__drow">
           <span class="ts__drole" [class.is-test]="w.role === 'TEST'">{{ w.role === 'TEST' ? 'Kiểm thử' : 'Lập trình' }}</span>
-          <span class="ts__dcode">{{ w.taskCode }}</span>
-          <span class="ts__dtitle" [title]="w.taskTitle">{{ w.taskTitle }}</span>
+          <button type="button" class="ts__dcode" title="Mở chi tiết công việc"
+                  (click)="openTask(w)">{{ w.taskCode }}</button>
+          <span class="ts__dmain">
+            <button type="button" class="ts__dtitle" [title]="w.taskTitle" (click)="openTask(w)">
+              @if (w.taskType) { <i class="ts__dtype">{{ typeLabel(w.taskType) }}</i> }{{ w.taskTitle }}
+            </button>
+            @if (w.parentPath) { <span class="ts__dpath" [title]="w.parentPath">↳ {{ w.parentPath }}</span> }
+            @if (w.note) { <span class="ts__dnote">📝 {{ w.note }}</span> }
+          </span>
+          <span class="ts__dest">{{ w.estimateHours || '—' }}</span>
           <b class="ts__dh">{{ w.hours }}h</b>
         </div>
-        @if (w.note) { <div class="ts__dnote">{{ w.note }}</div> }
       }
     </div>
   }
 </app-modal>
+
+<!-- Chi tiết công việc — mở chồng lên popup giờ, đóng lại là về danh sách -->
+<app-prj-task-detail [projectId]="projectId()" [task]="taskDetail()" [open]="taskDetailOpen()"
+                     (closed)="closeTask()" (changed)="reloadLogs()" />

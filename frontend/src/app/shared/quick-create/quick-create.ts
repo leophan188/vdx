@@ -27,7 +27,7 @@ interface PendingImage { file: File; url: string; name: string; }
   imports: [Modal, SearchableSelect],
   templateUrl: './quick-create.html',
   styles: [`
-    .qc__opt { font-style: normal; font-weight: 400; color: var(--color-text-muted); font-size: var(--text-xs); }
+    .qc__req { color: var(--overdue, #e5484d); }
     .qc__skip { display: flex; align-items: center; gap: 8px; font-size: var(--text-sm); cursor: pointer; }
     .qc__skip input { cursor: pointer; }
     .qc__skip i { font-style: normal; color: var(--color-text-muted); font-size: var(--text-xs); }
@@ -341,22 +341,6 @@ export class QuickCreate {
     if (t !== 'EPIC' && t !== 'STORY' && Number(this.estimateHours()) > 4) this.estimateHours.set('4');
   }
 
-  /**
-   * Ghi giờ kiểm thử cho lỗi vừa log. Dùng lại API work-log sẵn có nên tự hưởng trần 4h
-   * và gán đúng người thao tác. Lỗi ghi giờ không làm hỏng việc tạo lỗi đã thành công.
-   */
-  private logTestHours(projectId: string, taskId: string): void {
-    const h = Number(this.logHours());
-    if (!h || h <= 0 || !this.isBugLike()) return;
-    this.projectApi.addWorkLog(projectId, taskId, {
-      hours: h, workDate: this.logDate(), role: 'TEST', note: 'Tìm và ghi nhận lỗi'
-    }).subscribe({
-      next: () => { /* toast tổng đã báo tạo thành công */ },
-      error: () => this.toast.warning('Đã tạo nhưng chưa ghi được giờ kiểm thử',
-        'Ghi lại ở chi tiết công việc.')
-    });
-  }
-
   onParent(id: string): void { this.parentId.set(id || ''); }
 
   /** yyyy-MM-dd (từ input date) — dùng thẳng cho ISO dueDate. */
@@ -381,6 +365,12 @@ export class QuickCreate {
       return;
     }
 
+    // Log BUG/ISSUE bắt buộc có giờ tìm ra lỗi (backend cũng chặn).
+    if (this.isBugLike()) {
+      const h = Number(this.logHours());
+      if (!h || h <= 0) { this.toast.warning('Nhập số giờ đã bỏ ra để tìm & ghi nhận lỗi'); return; }
+      if (h > 4) { this.toast.warning('Mỗi lần ghi giờ không quá 4h'); return; }
+    }
     this.saving.set(true);
     const bug = this.isBugLike();
     const body: QuickCreateRequest = {
@@ -392,6 +382,9 @@ export class QuickCreate {
       assigneeUserId: this.assigneeUserId() || null,
       testerUserId: this.testerUserId() || null,
       skipTest: bug ? false : this.skipTest(),
+      // Giờ tìm lỗi gửi NGAY trong lệnh tạo (chỉ BUG/ISSUE) — atomic, không mất giờ.
+      testHours: bug ? Number(this.logHours()) : null,
+      workDate: bug ? this.logDate() : null,
       estimateHours: est || null,
       startDate: this.startIso() || null,
       dueDate: this.dueIso() || null,
@@ -411,7 +404,6 @@ export class QuickCreate {
         this.prefs.save(this.type(), this.projectId(), body.parentId ?? null);
         const imgs = this.previews();
         const taskId = r.projectTaskId; // backend trả projectTaskId (id task dự án)
-        if (taskId && r.projectId) this.logTestHours(r.projectId, taskId);
         // Không có ảnh → xong ngay.
         if (!imgs.length || !taskId || !r.projectId) {
           this.finishOk(imgs.length ? 'Đã tạo nhưng thiếu id để đính kèm ảnh' : undefined);

@@ -153,6 +153,9 @@ export interface TaskRequest {
   screen?: string | null;
   testerUserId?: string | null; // người kiểm thử (bàn giao khi chuyển Kiểm thử)
   skipTest?: boolean | null;    // việc không cần qua kiểm thử (PM/BA)
+  // Giờ tìm & ghi nhận lỗi — BẮT BUỘC khi tạo BUG/ISSUE, ghi ngay trong lệnh tạo.
+  testHours?: number | null;
+  workDate?: string | null;     // yyyy-MM-dd
   // ===== Chi tiết lỗi (BUG/ISSUE) — đều optional =====
   severity?: BugSeverity | null;
   stepsToReproduce?: string | null;
@@ -341,6 +344,9 @@ export interface WorkLog {
   workDate: string;   // yyyy-MM-dd
   hours: number;
   note: string | null;
+  taskType: TaskType | null;   // loại việc — hiện badge trong timesheet
+  parentPath: string | null;   // "Epic › Story › Task cha" — ngữ cảnh như các màn khác
+  estimateHours: number;       // est của task, để đối chiếu ngay tại chỗ
 }
 
 export interface PersonProgress {

@@ -223,7 +223,13 @@ public final class ProjectDto {
             String actualResult, String environment,
             String testerUserId,
             /** Việc không cần qua kiểm thử (PM/BA) — bỏ trống = cần kiểm thử như bình thường. */
-            Boolean skipTest) {
+            Boolean skipTest,
+            /**
+             * Giờ tester bỏ ra để TÌM & ghi nhận lỗi — BẮT BUỘC khi tạo BUG/ISSUE.
+             * Ghi ngay trong lệnh tạo (không gọi API thứ hai) để không có cảnh tạo được lỗi
+             * nhưng mất giờ vì lệnh sau thất bại.
+             */
+            Double testHours, String workDate) {
     }
 
     /**
@@ -241,11 +247,19 @@ public final class ProjectDto {
     /** Giờ đã ghi — trả về cho chi tiết task và timesheet. */
     public record WorkLogResponse(String id, String taskId, String taskCode, String taskTitle,
                                   String userId, String userName, String role,
-                                  String workDate, double hours, String note) {
+                                  String workDate, double hours, String note,
+                                  /** Loại task (BUG/TASK/…) và chuỗi cha "Epic › Story › Task" — để timesheet
+                                   *  hiện đủ ngữ cảnh như các màn khác, không chỉ mỗi tên việc. */
+                                  String taskType, String parentPath, double estimateHours) {
         public static WorkLogResponse of(com.bpm.domain.project.TaskWorkLog w, String taskCode, String taskTitle) {
+            return of(w, taskCode, taskTitle, null, null, 0);
+        }
+        public static WorkLogResponse of(com.bpm.domain.project.TaskWorkLog w, String taskCode, String taskTitle,
+                                         String taskType, String parentPath, double estimateHours) {
             return new WorkLogResponse(w.getId(), w.getTaskId(), taskCode, taskTitle,
                     w.getUserId(), w.getUserName(), w.getRole(),
-                    w.getWorkDate() == null ? null : w.getWorkDate().toString(), w.getHours(), w.getNote());
+                    w.getWorkDate() == null ? null : w.getWorkDate().toString(), w.getHours(), w.getNote(),
+                    taskType, parentPath, estimateHours);
         }
     }
 

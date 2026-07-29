@@ -126,7 +126,7 @@ public class MeTaskService {
         ProjectDto.TaskRequest req = new ProjectDto.TaskRequest(
                 null, cleanTitle, null, "TASK", "BACKLOG", "MEDIUM",
                 me.getId(), est, null, deadline == null ? null : deadline.format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy")),
-                null, null, null, null, null, null, null, null, null);
+                null, null, null, null, null, null, null, null, null, null, null);
         ProjectDto.TaskResponse created = projectTaskService.create(pid, req, actor);
         return MeTaskDto.CreateResult.project(created.id(), pid);
     }
@@ -240,7 +240,7 @@ public class MeTaskService {
                 null, blankToNull(req.screen()),
                 blankToNull(req.severity()), blankToNull(req.stepsToReproduce()), blankToNull(req.expectedResult()),
                 blankToNull(req.actualResult()), blankToNull(req.environment()),
-                blankToNull(req.testerUserId()), req.skipTest());
+                blankToNull(req.testerUserId()), req.skipTest(), req.testHours(), req.workDate());
         ProjectDto.TaskResponse created = projectTaskService.create(pid, taskReq, actor);
         auditPort.record("ME_QUICK_CREATED", "ProjectTask", created.id(), actor,
                 "projectId=" + pid + ", type=" + type);

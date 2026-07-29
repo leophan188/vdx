@@ -1,7 +1,9 @@
 import { Component, computed, effect, inject, input, signal } from '@angular/core';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { Modal } from '../../shared/modal/modal';
-import { ProjectService, ProjectMember, WorkLog, WorkRole } from '../../core/project.service';
+import { PrjTaskDetail } from '../task-detail/task-detail';
+import { TYPE_META } from '../work-stats';
+import { ProjectService, ProjectMember, ProjectTask, TaskType, WorkLog, WorkRole } from '../../core/project.service';
 
 /** Một cột NGÀY CÔNG (T2–T6) trong khoảng đang xem. */
 interface DayCol {
@@ -13,9 +15,11 @@ interface DayCol {
 /** Một hàng người: giờ theo từng ngày công + tổng + giờ chưa xếp lịch. */
 interface Row {
   member: ProjectMember;
-  days: number[];       // khớp thứ tự cột ngày
-  total: number;        // tổng theo người trong khoảng (Σ days)
-  unscheduled: number;  // est của task không có ngày nào
+  days: number[];        // giờ thực tế theo từng ngày công
+  dayTasks: number[];    // SỐ CÔNG VIỆC riêng biệt có ghi giờ trong ngày đó
+  total: number;         // tổng giờ theo người trong khoảng (Σ days)
+  totalTasks: number;    // tổng công việc riêng biệt trong khoảng
+  unscheduled: number;   // giờ ghi vào T7/CN hoặc ngoài khoảng đang xem
 }
 
 const WDAY_VN = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -42,7 +46,7 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
  */
 @Component({
   selector: 'app-prj-timesheet',
-  imports: [EmployeeChip, Modal],
+  imports: [EmployeeChip, Modal, PrjTaskDetail],
   templateUrl: './timesheet.html',
   styles: [`
     .ts { display: grid; gap: var(--space-4); font-size: var(--text-sm); color: var(--color-text); }
@@ -63,8 +67,12 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
       color: var(--color-text-muted); font-size: var(--text-xs); position: sticky; top: 0; }
     .ts__grid th.ts__who, .ts__grid td.ts__who { text-align: left; min-width: 200px; }
     /* Cột NGÀY thu gọn: hẹp, padding nhỏ, nhãn 2 dòng (thứ nhỏ + số ngày) */
-    .ts__grid th.ts__day, .ts__grid td.ts__num { min-width: 32px; width: 32px; padding: 4px 3px; }
-    .ts__grid td.ts__num { font-variant-numeric: tabular-nums; font-size: var(--text-sm); }
+    /* Ô rộng hơn vì hiển thị 2 số liệu: giờ (to) + số công việc (nhỏ, mờ). */
+    .ts__grid th.ts__day, .ts__grid td.ts__num { min-width: 52px; width: 52px; padding: 4px 3px; }
+    .ts__grid td.ts__num { font-variant-numeric: tabular-nums; font-size: var(--text-sm); line-height: 1.15; }
+    .ts__h { display: block; font-weight: var(--weight-semibold); }
+    .ts__t { display: block; font-size: 10px; color: var(--color-text-muted); white-space: nowrap; }
+    .ts__over .ts__t, .ts__under .ts__t { color: inherit; opacity: .8; }
     .ts__day { line-height: 1.1; }
     .ts__wd { display: block; font-size: 10px; font-weight: 500; color: var(--color-text-muted); }
     .ts__dnum { display: block; font-size: var(--text-sm); }
@@ -95,17 +103,37 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
     .ts__grid td.ts__click { cursor: pointer; }
     .ts__grid td.ts__click:hover { outline: 2px solid var(--color-primary); outline-offset: -2px; }
 
-    /* Popup chi tiết ô */
-    .ts__detail { display: grid; gap: 4px; min-width: 380px; }
-    .ts__drow { display: grid; grid-template-columns: 74px 70px 1fr 52px; align-items: center; gap: 8px;
-      padding: 5px 8px; border-radius: 6px; background: var(--color-surface-alt); font-size: var(--text-sm); }
-    .ts__drole { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; text-align: center;
-      color: var(--status-active); background: color-mix(in srgb, var(--status-active) 14%, transparent); }
+    /* ===== Popup chi tiết ô (người × ngày) ===== */
+    .ts__detail { display: grid; gap: 3px; }
+    .ts__dsum { display: flex; flex-wrap: wrap; gap: var(--space-4); padding: 8px 10px; margin-bottom: 6px;
+      border-radius: 8px; background: var(--color-surface-alt); font-size: var(--text-sm);
+      color: var(--color-text-muted); }
+    .ts__dsum b { color: var(--color-text); font-variant-numeric: tabular-nums; }
+    .ts__dsum-dev b { color: var(--status-active); }
+    .ts__dsum-test b { color: var(--status-done); }
+    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 82px 72px 1fr 62px 66px;
+      align-items: start; gap: 10px; padding: 7px 10px; }
+    .ts__dhead { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted);
+      text-transform: uppercase; letter-spacing: .02em; padding-bottom: 2px; }
+    .ts__dhead > :nth-child(4), .ts__dhead > :nth-child(5) { text-align: right; }
+    .ts__drow { border-radius: 8px; background: var(--color-surface-alt); font-size: var(--text-sm); }
+    .ts__drole { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; text-align: center;
+      white-space: nowrap; color: var(--status-active); background: color-mix(in srgb, var(--status-active) 14%, transparent); }
     .ts__drole.is-test { color: var(--status-done); background: color-mix(in srgb, var(--status-done) 14%, transparent); }
-    .ts__dcode { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 600; }
-    .ts__dtitle { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .ts__dh { text-align: right; font-variant-numeric: tabular-nums; }
-    .ts__dnote { padding: 0 8px 4px 90px; font-size: var(--text-xs); color: var(--color-text-muted); }
+    .ts__dcode { border: 0; background: none; padding: 0; cursor: pointer; text-align: left;
+      font: inherit; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); }
+    .ts__dcode:hover { text-decoration: underline; }
+    .ts__dmain { display: grid; gap: 2px; min-width: 0; }
+    .ts__dtitle { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; font: inherit;
+      color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ts__dtitle:hover { color: var(--color-primary); text-decoration: underline; }
+    .ts__dtype { font-style: normal; font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px;
+      margin-right: 6px; color: var(--color-text-muted); background: var(--color-surface); }
+    .ts__dpath, .ts__dnote { font-size: var(--text-xs); color: var(--color-text-muted);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ts__dest { text-align: right; font-variant-numeric: tabular-nums; color: var(--color-text-muted);
+      font-size: var(--text-sm); }
+    .ts__dh { text-align: right; font-variant-numeric: tabular-nums; font-size: 1rem; }
   `]
 })
 export class PrjTimesheet {
@@ -161,6 +189,37 @@ export class PrjTimesheet {
 
   /** Chi tiết một ô (người × ngày) — bấm để xem đã ghi giờ vào task nào. */
   readonly cellDetail = signal<{ title: string; logs: WorkLog[] } | null>(null);
+  /** Tổng giờ + tách theo vai của ô đang mở — hiện ngay đầu popup. */
+  readonly cellTotal = computed(() => this.sum(this.cellDetail()?.logs ?? []));
+  readonly cellDevTotal = computed(() =>
+    this.sum((this.cellDetail()?.logs ?? []).filter((w) => w.role === 'DEV')));
+  readonly cellTestTotal = computed(() =>
+    this.sum((this.cellDetail()?.logs ?? []).filter((w) => w.role === 'TEST')));
+
+  typeLabel(t: TaskType): string { return TYPE_META[t]?.short ?? t; }
+
+  // ===== Chi tiết công việc (mở chồng lên popup giờ) =====
+  readonly taskDetail = signal<ProjectTask | null>(null);
+  readonly taskDetailOpen = signal(false);
+  /** Bấm mã/tên việc trong popup giờ → mở chi tiết công việc đầy đủ như các màn khác. */
+  openTask(w: WorkLog): void {
+    this.svc.listTasks(this.projectId()).subscribe({
+      next: (ts) => {
+        const t = (ts ?? []).find((x) => x.id === w.taskId);
+        if (!t) return;
+        this.taskDetail.set(t);
+        this.taskDetailOpen.set(true);
+      }
+    });
+  }
+  closeTask(): void { this.taskDetailOpen.set(false); this.taskDetail.set(null); }
+  /** Sửa task xong → nạp lại giờ để ô trong lưới cập nhật ngay. */
+  reloadLogs(): void {
+    this.svc.listProjectWorkLogs(this.projectId(), this.from(), this.to()).subscribe({
+      next: (w) => this.logs.set(w ?? [])
+    });
+  }
+
   openCell(r: Row, colKey: string, label: string): void {
     const uid = r.member.userId;
     const list = this.scopedLogs().filter((w) => w.userId === uid && w.workDate === colKey);
@@ -199,26 +258,38 @@ export class PrjTimesheet {
     cols.forEach((c, i) => colIndex.set(c.key, i));
 
     const rowByUser = new Map<string, Row>();
+    const mk = (m: ProjectMember): Row => ({
+      member: m, days: new Array(cols.length).fill(0), dayTasks: new Array(cols.length).fill(0),
+      total: 0, totalTasks: 0, unscheduled: 0
+    });
     const rows: Row[] = this.members().map((m) => {
-      const r: Row = { member: m, days: new Array(cols.length).fill(0), total: 0, unscheduled: 0 };
+      const r = mk(m);
       rowByUser.set(m.userId, r);
       return r;
     });
+    // Khử trùng công việc theo (người × ngày) và theo (người × cả khoảng): một task ghi giờ
+    // nhiều lần trong ngày vẫn chỉ tính LÀ MỘT việc, nếu không con số sẽ đếm số lần ghi.
+    const seenDay = new Set<string>();
+    const seenAll = new Set<string>();
 
     for (const w of this.scopedLogs()) {
       let row = rowByUser.get(w.userId);
       if (!row) {
         // Không còn trong danh sách thành viên → vẫn dựng dòng để không mất giờ.
-        row = {
-          member: ghostMember(w.userId, w.userName),
-          days: new Array(cols.length).fill(0), total: 0, unscheduled: 0
-        };
+        row = mk(ghostMember(w.userId, w.userName));
         rowByUser.set(w.userId, row);
         rows.push(row);
       }
       const ci = colIndex.get(w.workDate);
-      if (ci !== undefined) row.days[ci] += w.hours || 0;
-      else row.unscheduled += w.hours || 0;   // ghi vào T7/CN hoặc ngoài khoảng đang xem
+      if (ci !== undefined) {
+        row.days[ci] += w.hours || 0;
+        const k = w.userId + '|' + w.workDate + '|' + w.taskId;
+        if (!seenDay.has(k)) { seenDay.add(k); row.dayTasks[ci]++; }
+      } else {
+        row.unscheduled += w.hours || 0;   // ghi vào T7/CN hoặc ngoài khoảng đang xem
+      }
+      const ka = w.userId + '|' + w.taskId;
+      if (!seenAll.has(ka)) { seenAll.add(ka); row.totalTasks++; }
     }
 
     for (const r of rows) r.total = r.days.reduce((a, b) => a + b, 0);
@@ -233,6 +304,17 @@ export class PrjTimesheet {
     return totals;
   });
   readonly grandTotal = computed(() => this.rows().reduce((a, r) => a + r.total, 0));
+  /** Số công việc riêng biệt có ghi giờ theo từng ngày (mọi người) — hàng cuối lưới. */
+  readonly dayTaskTotals = computed<number[]>(() => {
+    const cols = this.cols();
+    const out = new Array(cols.length).fill(0);
+    cols.forEach((c, i) => {
+      const set = new Set(this.scopedLogs().filter((w) => w.workDate === c.key).map((w) => w.taskId));
+      out[i] = set.size;
+    });
+    return out;
+  });
+  readonly grandTaskTotal = computed(() => new Set(this.scopedLogs().map((w) => w.taskId)).size);
   readonly unscheduledTotal = computed(() => this.rows().reduce((a, r) => a + r.unscheduled, 0));
 
   // ----- Hiển thị -----

@@ -80,6 +80,8 @@ export interface QuickCreateRequest {
   assigneeUserId?: string | null;  // PIC / người thực hiện
   testerUserId?: string | null;    // người kiểm thử (tuỳ chọn)
   skipTest?: boolean | null;       // việc không cần qua kiểm thử (PM/BA)
+  testHours?: number | null;       // giờ tìm & ghi nhận lỗi (bắt buộc khi log bug)
+  workDate?: string | null;        // yyyy-MM-dd
   estimateHours?: number | null;
   startDate?: string | null;       // ISO yyyy-MM-dd | null (mặc định hôm nay ở tạo nhanh)
   dueDate?: string | null;         // ISO yyyy-MM-dd | null

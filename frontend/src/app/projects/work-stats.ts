@@ -111,6 +111,8 @@ export function workRoleForTransition(
   if (t.type === 'EPIC' || t.type === 'STORY') return null;
   if (t.leaf === false) return null;              // task cha: trạng thái do rollup
   if (next === 'IN_REVIEW') return 'DEV';
+  // REOPEN (Kiểm thử -> Đang làm): tester đã bỏ công kiểm thử rồi mới kết luận CHƯA ĐẠT.
+  if (t.status === 'IN_REVIEW' && next === 'IN_PROGRESS') return 'TEST';
   if (next === 'DONE') {
     // Việc không cần kiểm thử (PM/BA): người thực hiện tự hoàn thành → giờ tính vai LẬP TRÌNH.
     // Bug/Issue luôn phải kiểm thử nên cờ không áp dụng.

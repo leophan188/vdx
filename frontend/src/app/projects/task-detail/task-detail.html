@@ -130,6 +130,11 @@
           <h4>⏱ Giờ làm việc</h4>
           <span class="td__work-sum">
             Lập trình <b>{{ devHours() }}h</b> · Kiểm thử <b>{{ testHours() }}h</b>
+            · Tổng <b>{{ totalHours() }}h</b> / Est <b>{{ t.estimateHours || 0 }}h</b>
+            @if (hoursVariance() !== null) {
+              <b class="td__work-var" [class.is-over]="(hoursVariance() ?? 0) > 0">
+                {{ (hoursVariance() ?? 0) > 0 ? '+' : '' }}{{ hoursVariance() }}%</b>
+            }
           </span>
           <span style="flex:1"></span>
           <button type="button" class="btn btn--ghost btn--sm" (click)="openLog('DEV')">+ Giờ lập trình</button>

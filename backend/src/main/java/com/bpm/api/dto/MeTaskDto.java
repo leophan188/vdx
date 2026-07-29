@@ -96,6 +96,8 @@ public final class MeTaskDto {
             String severity, String screen, String environment,
             String stepsToReproduce, String expectedResult, String actualResult,
             /** Việc không cần qua kiểm thử (PM/BA). */
-            Boolean skipTest) {
+            Boolean skipTest,
+            /** Giờ tìm & ghi nhận lỗi — bắt buộc khi log BUG/ISSUE. */
+            Double testHours, String workDate) {
     }
 }

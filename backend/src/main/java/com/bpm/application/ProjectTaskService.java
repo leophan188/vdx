@@ -269,6 +269,15 @@ public class ProjectTaskService {
             notifyAssign(saved, p, code(p, saved), actor);
         }
         rollupFromParent(projectId, saved.getParentId(), actor); // thêm con → cập nhật trạng thái cha
+        // BUG/ISSUE: bắt buộc ghi giờ tester đã bỏ ra để TÌM ra lỗi này.
+        if (saved.getType() == TaskType.BUG || saved.getType() == TaskType.ISSUE) {
+            if (req.testHours() == null || req.testHours() <= 0) {
+                throw new IllegalArgumentException("Cần nhập số giờ đã bỏ ra để tìm & ghi nhận lỗi này");
+            }
+            requireHoursWithinCap(req.testHours());
+            saveWorkLog(saved, TaskWorkLog.ROLE_TEST, req.testHours(), req.workDate(),
+                    "Tìm và ghi nhận lỗi", actor);
+        }
         return toDto(saved, p.getCode(), true);
     }
 
@@ -337,9 +346,15 @@ public class ProjectTaskService {
         String workRole = workRoleFor(t, oldStatus, newStatus, projectId, taskId);
         if (workRole != null) {
             if (hours == null || hours <= 0) {
-                throw new IllegalArgumentException(TaskWorkLog.ROLE_DEV.equals(workRole)
-                        ? "Cần nhập số giờ đã làm trước khi bàn giao sang Kiểm thử"
-                        : "Cần nhập số giờ đã kiểm thử trước khi chuyển sang Hoàn thành");
+                String msg;
+                if (TaskWorkLog.ROLE_DEV.equals(workRole)) {
+                    msg = "Cần nhập số giờ đã làm trước khi bàn giao sang Kiểm thử";
+                } else if (newStatus == TaskStatus.IN_PROGRESS) {
+                    msg = "Cần nhập số giờ đã kiểm thử trước khi trả về Đang làm";
+                } else {
+                    msg = "Cần nhập số giờ đã kiểm thử trước khi chuyển sang Hoàn thành";
+                }
+                throw new IllegalArgumentException(msg);
             }
             requireHoursWithinCap(hours);
         }
@@ -571,6 +586,22 @@ public class ProjectTaskService {
         return ProjectDto.WorkLogResponse.of(saved, code(p, t), t.getTitle());
     }
 
+    /** Chuỗi cha "Epic › Story › Task cha" của một task; rỗng nếu là gốc. */
+    private static String parentPathOf(ProjectTask t, Map<String, ProjectTask> byId) {
+        java.util.LinkedList<String> chain = new java.util.LinkedList<>();
+        String pid = t.getParentId();
+        int guard = 0;
+        while (pid != null && guard++ < 12) {
+            ProjectTask par = byId.get(pid);
+            if (par == null) {
+                break;
+            }
+            chain.addFirst(par.getTitle());
+            pid = par.getParentId();
+        }
+        return String.join(" › ", chain);
+    }
+
     /** Giờ đã ghi trên một task (mới → cũ). */
     @Transactional(readOnly = true)
     public List<ProjectDto.WorkLogResponse> listTaskWorkLogs(String projectId, String taskId) {
@@ -596,8 +627,12 @@ public class ProjectTaskService {
         List<ProjectDto.WorkLogResponse> out = new ArrayList<>();
         for (TaskWorkLog w : workLogRepo.findByProjectIdAndWorkDateBetween(projectId, f, t2)) {
             ProjectTask t = byId.get(w.getTaskId());
-            out.add(ProjectDto.WorkLogResponse.of(w,
-                    t == null ? "" : code(p, t), t == null ? "" : t.getTitle()));
+            if (t == null) {
+                out.add(ProjectDto.WorkLogResponse.of(w, "", ""));
+                continue;
+            }
+            out.add(ProjectDto.WorkLogResponse.of(w, code(p, t), t.getTitle(),
+                    t.getType().name(), parentPathOf(t, byId), t.getEstimateHours()));
         }
         return out;
     }
@@ -736,6 +771,11 @@ public class ProjectTaskService {
         }
         if (newStatus == TaskStatus.IN_REVIEW) {
             return TaskWorkLog.ROLE_DEV;
+        }
+        // REOPEN (Kiểm thử -> Đang làm): tester đã bỏ công kiểm thử rồi mới kết luận CHƯA ĐẠT.
+        // Không ghi thì toàn bộ công của những lượt kiểm thử fail bị mất trắng khỏi timesheet.
+        if (oldStatus == TaskStatus.IN_REVIEW && newStatus == TaskStatus.IN_PROGRESS) {
+            return TaskWorkLog.ROLE_TEST;
         }
         if (newStatus == TaskStatus.DONE) {
             // Việc không qua kiểm thử: người thực hiện tự hoàn thành → giờ tính vai LẬP TRÌNH,
