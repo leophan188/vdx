@@ -143,27 +143,12 @@
 
     <div class="field">
       <label>Mô tả</label>
-      <textarea #descBox name="description" rows="12" [(ngModel)]="f.description"
-                placeholder="Mô tả chi tiết lỗi… (dán ảnh Ctrl/Cmd+V để chèn [Ảnh n] tại chỗ đang gõ)"></textarea>
-      <!-- Dải ảnh đặt NGAY DƯỚI mô tả: số thứ tự khớp đánh dấu [Ảnh n] trong chữ. -->
-      @if (queuedFiles().length) {
-        <div class="bug-shots">
-          @for (q of queuedFiles(); track q.url; let i = $index) {
-            <div class="bug-shot">
-              <button type="button" class="bug-shot__view" [title]="'Xem to — Ảnh ' + (i + 1)"
-                      (click)="shotIndex.set(i)">
-                <img [src]="q.url" [alt]="'Ảnh ' + (i + 1)" />
-              </button>
-              <span class="bug-shot__no">Ảnh {{ i + 1 }}</span>
-              <button type="button" class="bug-shot__del" title="Bỏ ảnh" (click)="removeQueued(i)">✕</button>
-            </div>
-          }
-          <label class="bug-shot__add" title="Chọn ảnh hoặc dán (Ctrl/Cmd+V)">
-            ＋
-            <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
-          </label>
-        </div>
-      }
+      <!-- Ảnh hiện THẲNG trong dòng chữ; lưu xuống vẫn là văn bản thuần "[Ảnh n]". -->
+      <app-desc-editor [value]="f.description || ''" [shots]="descShots()"
+                       placeholder="Mô tả chi tiết lỗi… — dán ảnh (Ctrl/Cmd+V) để chèn ngay tại chỗ đang gõ"
+                       (valueChange)="f.description = $event"
+                       (pastedFiles)="onDescPaste($event)"
+                       (shotClicked)="onDescShotClick($event)" />
     </div>
 
     <div class="field">
@@ -188,8 +173,8 @@
         </label>
       </div>
       <span class="field-hint">
-        💡 Dán ảnh (Ctrl/Cmd+V) <strong>khi con trỏ đang ở ô Mô tả</strong> để chèn đánh dấu
-        <code>[Ảnh n]</code> ngay tại chỗ đang gõ — ảnh vẫn được đính kèm như thường.
+        💡 Dán ảnh (Ctrl/Cmd+V) <strong>khi con trỏ đang ở ô Mô tả</strong> để ảnh hiện ngay tại
+        chỗ đang gõ — ảnh vẫn được đính kèm như thường. Bấm ✕ dưới đây để bỏ ảnh.
         @if (editingId()) { Ảnh sẽ được TẢI THÊM khi bấm "Lưu thay đổi" (ảnh cũ xem/xoá ở chi tiết). }
         @else { Ảnh sẽ tải lên khi bấm "Báo lỗi". }
       </span>

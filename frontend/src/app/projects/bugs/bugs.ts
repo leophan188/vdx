@@ -1,4 +1,4 @@
-import { Component, ElementRef, HostListener, OnInit, computed, effect, inject, input, signal, viewChild } from '@angular/core';
+import { Component, HostListener, OnInit, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
@@ -20,6 +20,7 @@ import {
   WorkEntry, WorkRole
 } from '../../core/project.service';
 import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
+import { DescEditor, DescShot } from '../desc-editor/desc-editor';
 
 /**
  * TAB Quản lý Bug/Issue. Bug/Issue gắn TRỰC TIẾP vào task cha (parentId).
@@ -29,7 +30,7 @@ import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
 @Component({
   selector: 'app-prj-bugs',
   imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter,
-    WorkEntryDialog, ImageLightbox],
+    WorkEntryDialog, ImageLightbox, DescEditor],
   templateUrl: './bugs.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
@@ -42,22 +43,6 @@ import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
     .field-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
     .bug-req { color: var(--overdue, #e5484d); }
-    /* Dải ảnh ngay dưới ô Mô tả — số thứ tự khớp đánh dấu [Ảnh n] trong chữ. */
-    .bug-shots { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
-    .bug-shot { position: relative; width: 92px; }
-    .bug-shot__view { display: block; width: 92px; height: 68px; padding: 0; cursor: pointer;
-      border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;
-      background: var(--color-surface-alt); }
-    .bug-shot__view:hover { border-color: var(--color-primary); }
-    .bug-shot__view img { width: 100%; height: 100%; object-fit: cover; display: block; }
-    .bug-shot__no { display: block; margin-top: 2px; text-align: center; font-size: var(--text-xs);
-      font-weight: var(--weight-semibold); color: var(--color-primary); }
-    .bug-shot__del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none;
-      border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; line-height: 1; font-size: .75rem; }
-    .bug-shot__add { display: flex; align-items: center; justify-content: center; width: 92px; height: 68px;
-      border: 1px dashed var(--color-border); border-radius: var(--radius-md); cursor: pointer;
-      color: var(--color-text-muted); background: var(--color-surface-alt); }
-    .bug-shot__add:hover { border-color: var(--color-primary); color: var(--color-primary); }
     /* Khối ghi công kiểm thử — span cả 2 cột của .form-2col để không phá lưới. */
     .bug-work { grid-column: 1 / -1; display: grid; gap: var(--space-2); padding: 12px;
       border-radius: 10px; background: var(--color-surface-alt); border: 1px solid var(--color-border); }
@@ -99,35 +84,34 @@ export class PrjBugs implements OnInit {
   readonly members = signal<ProjectMember[]>([]);
   /** Ảnh đính kèm chờ tải lên (queue khi báo lỗi, upload sau khi tạo task). */
   readonly queuedFiles = signal<{ file: File; url: string }[]>([]);
-  /** Ô Mô tả — cần tham chiếu để biết con trỏ đang ở đâu mà chèn đánh dấu ảnh. */
-  private readonly descBox = viewChild<ElementRef<HTMLTextAreaElement>>('descBox');
+  /** Ô Mô tả có ảnh hiện thẳng trong dòng chữ — cần tham chiếu để chèn ảnh tại con trỏ. */
+  private readonly descEditor = viewChild(DescEditor);
   /** Ảnh đang xem to (index trong queuedFiles); null = đóng. */
   readonly shotIndex = signal<number | null>(null);
   readonly shots = computed<LightboxItem[]>(() =>
     this.queuedFiles().map((q, i) => ({ url: q.url, name: `Ảnh ${i + 1}` })));
+  /** Ảnh cấp cho ô Mô tả để đổi "[Ảnh n]" thành ảnh thật hiện ngay trong chữ. */
+  readonly descShots = computed<DescShot[]>(() =>
+    this.queuedFiles().map((q, i) => ({ no: i + 1, url: q.url })));
 
-  /**
-   * Chèn "[Ảnh n]" vào ĐÚNG vị trí con trỏ trong ô Mô tả.
-   * Nhờ vậy ảnh gắn được với đúng bước gây lỗi thay vì nằm rời ở cuối form.
-   * Mô tả vẫn là VĂN BẢN THUẦN nên file xuất Excel/Word và bản in PDF không phải sửa gì.
-   */
-  private insertShotMarker(no: number): void {
-    const el = this.descBox()?.nativeElement;
-    const marker = `[Ảnh ${no}]`;
-    const cur = this.f.description ?? '';
-    if (!el || document.activeElement !== el) {
-      // Con trỏ không ở ô Mô tả → nối vào cuối, vẫn giữ được liên kết ảnh ↔ mô tả.
-      this.f.description = cur ? `${cur}\n${marker}` : marker;
-      return;
-    }
-    const a = el.selectionStart ?? cur.length;
-    const b = el.selectionEnd ?? a;
-    this.f.description = cur.slice(0, a) + marker + cur.slice(b);
-    // Đưa con trỏ ra sau đánh dấu để gõ tiếp được ngay.
-    queueMicrotask(() => {
-      el.selectionStart = el.selectionEnd = a + marker.length;
-      el.focus();
-    });
+  /** Đưa ảnh vào hàng chờ upload, trả về số thứ tự + URL để chèn vào mô tả. */
+  private queueImages(files: File[]): DescShot[] {
+    const from = this.queuedFiles().length;
+    const add = files.map((file) => ({ file, url: URL.createObjectURL(file) }));
+    this.queuedFiles.update((q) => [...q, ...add]);
+    return add.map((a, i) => ({ no: from + i + 1, url: a.url }));
+  }
+
+  /** Dán ảnh khi con trỏ ĐANG Ở ô Mô tả → ảnh hiện ngay tại chỗ đang gõ. */
+  onDescPaste(files: File[]): void {
+    const shots = this.queueImages(files);
+    this.descEditor()?.insertShots(shots);
+    this.toast.success('Đã dán ảnh', `${shots.length} ảnh — đã chèn vào Mô tả.`);
+  }
+
+  /** Bấm ảnh trong mô tả → xem to (dùng chung lightbox với dải ảnh đính kèm). */
+  onDescShotClick(no: number): void {
+    if (no >= 1 && no <= this.queuedFiles().length) this.shotIndex.set(no - 1);
   }
 
   // ----- Bộ lọc (chip đa chọn — signal để computed lọc CHẠY LẠI khi đổi; đồng bộ với Kanban/Log) -----
@@ -269,34 +253,34 @@ export class PrjBugs implements OnInit {
   }
 
   /**
-   * Dán ảnh từ clipboard (Ctrl/Cmd+V) khi form Báo lỗi/Sửa lỗi đang mở → tự thêm vào hàng chờ,
-   * upload cùng lúc lưu (không cần bấm đính kèm). Tester chỉ cần chụp màn hình rồi dán.
+   * Dán ảnh khi con trỏ Ở NGOÀI ô Mô tả (đang ở ô Tiêu đề, hoặc chưa bấm vào đâu).
+   * Dán ngay trong ô Mô tả thì ô đó tự xử lý và chặn sự kiện, nên không chạy vào đây.
+   * Ở đây không biết chèn vào chỗ nào nên nối ảnh xuống CUỐI mô tả.
    */
   @HostListener('document:paste', ['$event'])
   onPaste(ev: ClipboardEvent): void {
     if (!this.modalOpen()) return; // chỉ khi form báo/sửa lỗi đang mở
     const items = ev.clipboardData?.items;
     if (!items) return;
-    const add: { file: File; url: string }[] = [];
+    const files: File[] = [];
     for (const it of Array.from(items)) {
       if (it.kind === 'file' && it.type.startsWith('image/')) {
         const raw = it.getAsFile();
         if (!raw) continue;
         const ext = (it.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
         // Ảnh clipboard thường không có tên → đặt tên gợi nhớ theo thời điểm.
-        const file = raw.name && raw.name !== 'image.png'
+        files.push(raw.name && raw.name !== 'image.png'
           ? raw
-          : new File([raw], `screenshot-${Date.now()}.${ext}`, { type: it.type });
-        add.push({ file, url: URL.createObjectURL(file) });
+          : new File([raw], `screenshot-${Date.now()}.${ext}`, { type: it.type }));
       }
     }
-    if (add.length) {
+    if (files.length) {
       ev.preventDefault();
-      const from = this.queuedFiles().length;
-      this.queuedFiles.update((q) => [...q, ...add]);
-      // Chèn đánh dấu vào mô tả để biết ảnh nào ứng với bước nào.
-      add.forEach((_, i) => this.insertShotMarker(from + i + 1));
-      this.toast.success('Đã dán ảnh', `${add.length} ảnh — đã chèn [Ảnh ${from + 1}] vào Mô tả.`);
+      const shots = this.queueImages(files);
+      const cur = this.f.description ?? '';
+      const tail = shots.map((s) => `[Ảnh ${s.no}]`).join('\n');
+      this.f.description = cur ? `${cur}\n${tail}` : tail;
+      this.toast.success('Đã dán ảnh', `${shots.length} ảnh — đã thêm vào cuối Mô tả.`);
     }
   }
   removeQueued(i: number): void {
@@ -380,7 +364,7 @@ export class PrjBugs implements OnInit {
       testerUserId: t.testerUserId ?? this.auth.currentUser()?.userId ?? null,
       // Lỗi CHÉP ra là task MỚI nên phải theo trần 4h hiện hành; task nguồn có thể mang
       // est cũ (vd 8h) từ trước khi có trần, chép nguyên sẽ bị backend từ chối lúc lưu.
-      estimateHours: Math.min(t.estimateHours || 4, 4),
+      estimateHours: Math.min(t.estimateHours || 1, 4),
       startDate: null, dueDate: null,
       severity: t.severity, stepsToReproduce: '', expectedResult: '', actualResult: '',
       environment: t.environment ?? ''
@@ -563,8 +547,10 @@ export class PrjBugs implements OnInit {
   private emptyForm(): TaskRequest {
     return {
       parentId: null, title: '', description: BUG_DESCRIPTION_TEMPLATE, type: 'BUG', status: 'BACKLOG',
-      // Log nhanh: est mặc định 4 giờ (vẫn cho sửa). Bug/Issue không có ô ngày → để trống.
-      priority: 'MEDIUM', assigneeUserId: null, estimateHours: 4,
+      // Log nhanh: est mặc định 1 giờ (vẫn cho sửa). Đa số lỗi log ra là việc nhỏ, để 4h
+      // thì người log ngại sửa xuống, ước lượng cả dự án bị thổi phồng.
+      // Bug/Issue không có ô ngày → để trống.
+      priority: 'MEDIUM', assigneeUserId: null, estimateHours: 1,
       startDate: null, dueDate: null,
       // Người kiểm thử MẶC ĐỊNH = người log/tạo (chính mình) — vẫn cho chỉnh lại.
       testerUserId: this.auth.currentUser()?.userId ?? null,

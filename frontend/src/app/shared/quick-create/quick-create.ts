@@ -1,10 +1,11 @@
-import { Component, ElementRef, HostListener, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
+import { Component, HostListener, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Modal } from '../modal/modal';
 import { BUG_DESCRIPTION_TEMPLATE } from '../bug-template';
 import { SearchableSelect, SelectOption } from '../searchable-select/searchable-select';
 import { buildParentOptions } from '../../projects/work-stats';
+import { DescEditor, DescShot } from '../../projects/desc-editor/desc-editor';
 import { memberPersonOptions } from '../person-options';
 import { ToastService } from '../toast/toast.service';
 import { AuthService } from '../../core/auth.service';
@@ -24,7 +25,7 @@ interface PendingImage { file: File; url: string; name: string; }
  */
 @Component({
   selector: 'app-quick-create',
-  imports: [Modal, SearchableSelect],
+  imports: [Modal, SearchableSelect, DescEditor],
   templateUrl: './quick-create.html',
   styles: [`
     /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
@@ -44,15 +45,6 @@ interface PendingImage { file: File; url: string; name: string; }
     .qc__skip-txt b { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
     .qc__skip-txt i { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.45; }
     .qc__req { color: var(--overdue, #e5484d); }
-    /* Dải ảnh dưới ô Mô tả — số khớp đánh dấu [Ảnh n]. */
-    .qc__shots { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
-    .qc__shot { position: relative; width: 92px; }
-    .qc__shot img { width: 92px; height: 68px; object-fit: cover; display: block;
-      border: 1px solid var(--color-border); border-radius: var(--radius-md); }
-    .qc__shot-no { display: block; margin-top: 2px; text-align: center; font-size: var(--text-xs);
-      font-weight: var(--weight-semibold); color: var(--color-primary); }
-    .qc__shot-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none;
-      border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; line-height: 1; font-size: .75rem; }
     .qc__work .qc__row2 { align-items: end; }
     .qc__work { display: grid; gap: var(--space-2); padding: 12px; border-radius: 10px;
       background: var(--color-surface-alt); border: 1px solid var(--color-border); }
@@ -118,25 +110,25 @@ export class QuickCreate {
   readonly parentId = signal('');
   readonly title = signal('');
   readonly description = signal('');
-  /** Ô Mô tả — cần tham chiếu để chèn đánh dấu ảnh đúng vị trí con trỏ. */
-  private readonly descBox = viewChild<ElementRef<HTMLTextAreaElement>>('descBox');
+  /** Ô Mô tả có ảnh hiện thẳng trong dòng chữ — cần tham chiếu để chèn ảnh tại con trỏ. */
+  private readonly descEditor = viewChild(DescEditor);
+  /** Ảnh cấp cho ô Mô tả để đổi "[Ảnh n]" thành ảnh thật. */
+  readonly descShots = computed<DescShot[]>(() =>
+    this.previews().map((p, i) => ({ no: i + 1, url: p.url })));
 
-  /**
-   * Chèn "[Ảnh n]" vào ĐÚNG vị trí con trỏ trong ô Mô tả (giống form Báo lỗi).
-   * Mô tả vẫn là văn bản thuần nên không ảnh hưởng file xuất và bản in.
-   */
-  private insertShotMarker(no: number): void {
-    const el = this.descBox()?.nativeElement;
-    const marker = `[Ảnh ${no}]`;
-    const cur = this.description();
-    if (!el || document.activeElement !== el) {
-      this.description.set(cur ? `${cur}\n${marker}` : marker);
-      return;
-    }
-    const a = el.selectionStart ?? cur.length;
-    const b = el.selectionEnd ?? a;
-    this.description.set(cur.slice(0, a) + marker + cur.slice(b));
-    queueMicrotask(() => { el.selectionStart = el.selectionEnd = a + marker.length; el.focus(); });
+  /** Đưa ảnh vào hàng chờ upload, trả về số thứ tự + URL để chèn vào mô tả. */
+  private queueImages(files: File[]): DescShot[] {
+    const from = this.previews().length;
+    const add = files.map((file) => ({ file, url: URL.createObjectURL(file), name: file.name }));
+    this.previews.update((xs) => [...xs, ...add]);
+    return add.map((a, i) => ({ no: from + i + 1, url: a.url }));
+  }
+
+  /** Dán ảnh khi con trỏ ĐANG Ở ô Mô tả → ảnh hiện ngay tại chỗ đang gõ. */
+  onDescPaste(files: File[]): void {
+    const shots = this.queueImages(files);
+    this.descEditor()?.insertShots(shots);
+    this.toast.success('Đã dán ảnh', `${shots.length} ảnh — đã chèn vào Mô tả.`);
   }
   readonly priority = signal<TaskPriority>('MEDIUM');
   readonly assigneeUserId = signal('');
@@ -238,29 +230,33 @@ export class QuickCreate {
     });
   }
 
-  /** Dán ảnh (Ctrl/Cmd+V) khi form Tạo nhanh đang mở → tự thêm vào ảnh chờ, upload sau khi tạo. */
+  /**
+   * Dán ảnh khi con trỏ Ở NGOÀI ô Mô tả (ô Tiêu đề, hoặc chưa bấm vào đâu).
+   * Dán ngay trong ô Mô tả thì ô đó tự xử lý và chặn sự kiện nên không chạy vào đây;
+   * ở đây không biết chèn vào chỗ nào nên nối ảnh xuống CUỐI mô tả.
+   */
   @HostListener('document:paste', ['$event'])
   onPaste(ev: ClipboardEvent): void {
     if (!this.open()) return;
     const items = ev.clipboardData?.items;
     if (!items) return;
-    const add: PendingImage[] = [];
+    const files: File[] = [];
     for (const it of Array.from(items)) {
       if (it.kind === 'file' && it.type.startsWith('image/')) {
         const raw = it.getAsFile();
         if (!raw) continue;
         const ext = (it.type.split('/')[1] || 'png').replace('jpeg', 'jpg');
         const name = raw.name && raw.name !== 'image.png' ? raw.name : `screenshot-${Date.now()}.${ext}`;
-        const file = raw.name && raw.name !== 'image.png' ? raw : new File([raw], name, { type: it.type });
-        add.push({ file, url: URL.createObjectURL(file), name });
+        files.push(raw.name && raw.name !== 'image.png' ? raw : new File([raw], name, { type: it.type }));
       }
     }
-    if (add.length) {
+    if (files.length) {
       ev.preventDefault();
-      const from = this.previews().length;
-      this.previews.update((xs) => [...xs, ...add]);
-      add.forEach((_, i) => this.insertShotMarker(from + i + 1));
-      this.toast.success('Đã dán ảnh', `${add.length} ảnh — đã chèn [Ảnh ${from + 1}] vào Mô tả.`);
+      const shots = this.queueImages(files);
+      const cur = this.description();
+      const tail = shots.map((s) => `[Ảnh ${s.no}]`).join('\n');
+      this.description.set(cur ? `${cur}\n${tail}` : tail);
+      this.toast.success('Đã dán ảnh', `${shots.length} ảnh — đã thêm vào cuối Mô tả.`);
     }
   }
 
@@ -282,8 +278,10 @@ export class QuickCreate {
     this.testerUserId.set(this.auth.currentUser()?.userId ?? '');
     this.skipTest.set(false);
     this.logHours.set('');
-    // Tạo nhanh: KHÔNG bắt buộc — mặc định est = 4 giờ, từ ngày & đến ngày = hôm nay (vẫn cho sửa).
-    this.estimateHours.set('4');
+    // Tạo nhanh: KHÔNG bắt buộc — mặc định est = 1 giờ, từ ngày & đến ngày = hôm nay (vẫn cho sửa).
+    // Để 1h chứ không phải trần 4h: mặc định bằng trần khiến người tạo ngại sửa xuống,
+    // ước lượng toàn dự án bị thổi phồng.
+    this.estimateHours.set('1');
     this.startIso.set(this.todayIso());
     this.dueIso.set(this.todayIso());
     this.severity.set('');
