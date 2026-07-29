@@ -40,8 +40,21 @@
     <!-- Mô tả (rộng; với Bug/Issue điền sẵn khung Bước/Kết quả) -->
     <div class="field">
       <label>Mô tả</label>
-      <textarea [rows]="isBugLike() ? 10 : 3" [value]="description()" (input)="description.set($any($event.target).value)"
-                placeholder="Mô tả (tuỳ chọn)…"></textarea>
+      <textarea #descBox [rows]="isBugLike() ? 10 : 3" [value]="description()"
+                (input)="description.set($any($event.target).value)"
+                placeholder="Mô tả (tuỳ chọn)… — dán ảnh Ctrl/Cmd+V để chèn [Ảnh n] tại chỗ đang gõ"></textarea>
+      <!-- Dải ảnh NGAY DƯỚI mô tả: số thứ tự khớp đánh dấu [Ảnh n] trong chữ. -->
+      @if (previews().length) {
+        <div class="qc__shots">
+          @for (p of previews(); track p.url; let i = $index) {
+            <div class="qc__shot">
+              <img [src]="p.url" [alt]="'Ảnh ' + (i + 1)" />
+              <span class="qc__shot-no">Ảnh {{ i + 1 }}</span>
+              <button type="button" class="qc__shot-del" title="Bỏ ảnh" (click)="removeFile(i)">✕</button>
+            </div>
+          }
+        </div>
+      }
     </div>
 
     <div class="qc__row2">

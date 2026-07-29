@@ -143,8 +143,27 @@
 
     <div class="field">
       <label>Mô tả</label>
-      <textarea name="description" rows="12" [(ngModel)]="f.description"
-                placeholder="Mô tả chi tiết lỗi…"></textarea>
+      <textarea #descBox name="description" rows="12" [(ngModel)]="f.description"
+                placeholder="Mô tả chi tiết lỗi… (dán ảnh Ctrl/Cmd+V để chèn [Ảnh n] tại chỗ đang gõ)"></textarea>
+      <!-- Dải ảnh đặt NGAY DƯỚI mô tả: số thứ tự khớp đánh dấu [Ảnh n] trong chữ. -->
+      @if (queuedFiles().length) {
+        <div class="bug-shots">
+          @for (q of queuedFiles(); track q.url; let i = $index) {
+            <div class="bug-shot">
+              <button type="button" class="bug-shot__view" [title]="'Xem to — Ảnh ' + (i + 1)"
+                      (click)="shotIndex.set(i)">
+                <img [src]="q.url" [alt]="'Ảnh ' + (i + 1)" />
+              </button>
+              <span class="bug-shot__no">Ảnh {{ i + 1 }}</span>
+              <button type="button" class="bug-shot__del" title="Bỏ ảnh" (click)="removeQueued(i)">✕</button>
+            </div>
+          }
+          <label class="bug-shot__add" title="Chọn ảnh hoặc dán (Ctrl/Cmd+V)">
+            ＋
+            <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" hidden />
+          </label>
+        </div>
+      }
     </div>
 
     <div class="field">
@@ -169,7 +188,8 @@
         </label>
       </div>
       <span class="field-hint">
-        💡 Chụp màn hình rồi <strong>dán (Ctrl/Cmd+V)</strong> để tự thêm ảnh — hoặc bấm ＋ Ảnh để chọn tệp.
+        💡 Dán ảnh (Ctrl/Cmd+V) <strong>khi con trỏ đang ở ô Mô tả</strong> để chèn đánh dấu
+        <code>[Ảnh n]</code> ngay tại chỗ đang gõ — ảnh vẫn được đính kèm như thường.
         @if (editingId()) { Ảnh sẽ được TẢI THÊM khi bấm "Lưu thay đổi" (ảnh cũ xem/xoá ở chi tiết). }
         @else { Ảnh sẽ tải lên khi bấm "Báo lỗi". }
       </span>
@@ -182,6 +202,9 @@
     </button>
   </div>
 </app-modal>
+
+<!-- Xem to ảnh đang chờ tải lên -->
+<app-image-lightbox [items]="shots()" [index]="shotIndex()" (closed)="shotIndex.set(null)" />
 
 <!-- Chi tiết task kiểu Jira -->
 <app-prj-task-detail [projectId]="projectId()" [task]="detailTask()" [open]="detailOpen()"

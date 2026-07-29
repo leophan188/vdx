@@ -1,4 +1,4 @@
-import { Component, HostListener, computed, effect, inject, input, output, signal, untracked } from '@angular/core';
+import { Component, ElementRef, HostListener, computed, effect, inject, input, output, signal, untracked, viewChild } from '@angular/core';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import { Modal } from '../modal/modal';
@@ -44,6 +44,15 @@ interface PendingImage { file: File; url: string; name: string; }
     .qc__skip-txt b { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
     .qc__skip-txt i { font-style: normal; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.45; }
     .qc__req { color: var(--overdue, #e5484d); }
+    /* Dải ảnh dưới ô Mô tả — số khớp đánh dấu [Ảnh n]. */
+    .qc__shots { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+    .qc__shot { position: relative; width: 92px; }
+    .qc__shot img { width: 92px; height: 68px; object-fit: cover; display: block;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .qc__shot-no { display: block; margin-top: 2px; text-align: center; font-size: var(--text-xs);
+      font-weight: var(--weight-semibold); color: var(--color-primary); }
+    .qc__shot-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none;
+      border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; line-height: 1; font-size: .75rem; }
     .qc__work .qc__row2 { align-items: end; }
     .qc__work { display: grid; gap: var(--space-2); padding: 12px; border-radius: 10px;
       background: var(--color-surface-alt); border: 1px solid var(--color-border); }
@@ -109,6 +118,26 @@ export class QuickCreate {
   readonly parentId = signal('');
   readonly title = signal('');
   readonly description = signal('');
+  /** Ô Mô tả — cần tham chiếu để chèn đánh dấu ảnh đúng vị trí con trỏ. */
+  private readonly descBox = viewChild<ElementRef<HTMLTextAreaElement>>('descBox');
+
+  /**
+   * Chèn "[Ảnh n]" vào ĐÚNG vị trí con trỏ trong ô Mô tả (giống form Báo lỗi).
+   * Mô tả vẫn là văn bản thuần nên không ảnh hưởng file xuất và bản in.
+   */
+  private insertShotMarker(no: number): void {
+    const el = this.descBox()?.nativeElement;
+    const marker = `[Ảnh ${no}]`;
+    const cur = this.description();
+    if (!el || document.activeElement !== el) {
+      this.description.set(cur ? `${cur}\n${marker}` : marker);
+      return;
+    }
+    const a = el.selectionStart ?? cur.length;
+    const b = el.selectionEnd ?? a;
+    this.description.set(cur.slice(0, a) + marker + cur.slice(b));
+    queueMicrotask(() => { el.selectionStart = el.selectionEnd = a + marker.length; el.focus(); });
+  }
   readonly priority = signal<TaskPriority>('MEDIUM');
   readonly assigneeUserId = signal('');
   readonly testerUserId = signal('');
@@ -228,8 +257,10 @@ export class QuickCreate {
     }
     if (add.length) {
       ev.preventDefault();
+      const from = this.previews().length;
       this.previews.update((xs) => [...xs, ...add]);
-      this.toast.success('Đã dán ảnh', `${add.length} ảnh`);
+      add.forEach((_, i) => this.insertShotMarker(from + i + 1));
+      this.toast.success('Đã dán ảnh', `${add.length} ảnh — đã chèn [Ảnh ${from + 1}] vào Mô tả.`);
     }
   }
 

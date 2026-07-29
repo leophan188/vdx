@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit, computed, effect, inject, input, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, OnInit, computed, effect, inject, input, signal, viewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DataGrid, GridColumn } from '../../shared/data-grid/data-grid';
 import { GridCellDirective } from '../../shared/data-grid/grid-cell.directive';
@@ -13,6 +13,7 @@ import { ToastService } from '../../shared/toast/toast.service';
 import { AuthService } from '../../core/auth.service';
 import { PrjTaskDetail } from '../task-detail/task-detail';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
+import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { workRoleForTransition } from '../work-stats';
 import {
   ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember,
@@ -28,7 +29,7 @@ import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
 @Component({
   selector: 'app-prj-bugs',
   imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter,
-    WorkEntryDialog],
+    WorkEntryDialog, ImageLightbox],
   templateUrl: './bugs.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
@@ -41,6 +42,22 @@ import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
     .field-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
     .bug-req { color: var(--overdue, #e5484d); }
+    /* Dải ảnh ngay dưới ô Mô tả — số thứ tự khớp đánh dấu [Ảnh n] trong chữ. */
+    .bug-shots { display: flex; flex-wrap: wrap; gap: var(--space-2); margin-top: var(--space-2); }
+    .bug-shot { position: relative; width: 92px; }
+    .bug-shot__view { display: block; width: 92px; height: 68px; padding: 0; cursor: pointer;
+      border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow: hidden;
+      background: var(--color-surface-alt); }
+    .bug-shot__view:hover { border-color: var(--color-primary); }
+    .bug-shot__view img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .bug-shot__no { display: block; margin-top: 2px; text-align: center; font-size: var(--text-xs);
+      font-weight: var(--weight-semibold); color: var(--color-primary); }
+    .bug-shot__del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; border: none;
+      border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; cursor: pointer; line-height: 1; font-size: .75rem; }
+    .bug-shot__add { display: flex; align-items: center; justify-content: center; width: 92px; height: 68px;
+      border: 1px dashed var(--color-border); border-radius: var(--radius-md); cursor: pointer;
+      color: var(--color-text-muted); background: var(--color-surface-alt); }
+    .bug-shot__add:hover { border-color: var(--color-primary); color: var(--color-primary); }
     /* Khối ghi công kiểm thử — span cả 2 cột của .form-2col để không phá lưới. */
     .bug-work { grid-column: 1 / -1; display: grid; gap: var(--space-2); padding: 12px;
       border-radius: 10px; background: var(--color-surface-alt); border: 1px solid var(--color-border); }
@@ -82,6 +99,36 @@ export class PrjBugs implements OnInit {
   readonly members = signal<ProjectMember[]>([]);
   /** Ảnh đính kèm chờ tải lên (queue khi báo lỗi, upload sau khi tạo task). */
   readonly queuedFiles = signal<{ file: File; url: string }[]>([]);
+  /** Ô Mô tả — cần tham chiếu để biết con trỏ đang ở đâu mà chèn đánh dấu ảnh. */
+  private readonly descBox = viewChild<ElementRef<HTMLTextAreaElement>>('descBox');
+  /** Ảnh đang xem to (index trong queuedFiles); null = đóng. */
+  readonly shotIndex = signal<number | null>(null);
+  readonly shots = computed<LightboxItem[]>(() =>
+    this.queuedFiles().map((q, i) => ({ url: q.url, name: `Ảnh ${i + 1}` })));
+
+  /**
+   * Chèn "[Ảnh n]" vào ĐÚNG vị trí con trỏ trong ô Mô tả.
+   * Nhờ vậy ảnh gắn được với đúng bước gây lỗi thay vì nằm rời ở cuối form.
+   * Mô tả vẫn là VĂN BẢN THUẦN nên file xuất Excel/Word và bản in PDF không phải sửa gì.
+   */
+  private insertShotMarker(no: number): void {
+    const el = this.descBox()?.nativeElement;
+    const marker = `[Ảnh ${no}]`;
+    const cur = this.f.description ?? '';
+    if (!el || document.activeElement !== el) {
+      // Con trỏ không ở ô Mô tả → nối vào cuối, vẫn giữ được liên kết ảnh ↔ mô tả.
+      this.f.description = cur ? `${cur}\n${marker}` : marker;
+      return;
+    }
+    const a = el.selectionStart ?? cur.length;
+    const b = el.selectionEnd ?? a;
+    this.f.description = cur.slice(0, a) + marker + cur.slice(b);
+    // Đưa con trỏ ra sau đánh dấu để gõ tiếp được ngay.
+    queueMicrotask(() => {
+      el.selectionStart = el.selectionEnd = a + marker.length;
+      el.focus();
+    });
+  }
 
   // ----- Bộ lọc (chip đa chọn — signal để computed lọc CHẠY LẠI khi đổi; đồng bộ với Kanban/Log) -----
   readonly STATUS_KEYS = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'];
@@ -245,8 +292,11 @@ export class PrjBugs implements OnInit {
     }
     if (add.length) {
       ev.preventDefault();
+      const from = this.queuedFiles().length;
       this.queuedFiles.update((q) => [...q, ...add]);
-      this.toast.success('Đã dán ảnh', `${add.length} ảnh — sẽ tải lên khi lưu.`);
+      // Chèn đánh dấu vào mô tả để biết ảnh nào ứng với bước nào.
+      add.forEach((_, i) => this.insertShotMarker(from + i + 1));
+      this.toast.success('Đã dán ảnh', `${add.length} ảnh — đã chèn [Ảnh ${from + 1}] vào Mô tả.`);
     }
   }
   removeQueued(i: number): void {
