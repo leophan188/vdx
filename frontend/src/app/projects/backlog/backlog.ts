@@ -320,7 +320,29 @@ export class PrjBacklog implements OnInit {
   /** Lọc theo TRẠNG THÁI — bật hết = không lọc. Giữ cả task cha của task khớp. */
   readonly allStatuses: TaskStatus[] = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'];
   readonly statusFilter = signal<Set<TaskStatus>>(new Set(this.allStatuses));
-  /** Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả; '__UNASSIGNED__' = chưa gán) — lưu theo dự án. */
+  /** Lọc theo MỨC ĐỘ ƯU TIÊN — bật hết = không lọc. Giữ cả task cha của task khớp. */
+  readonly allPriorities: TaskPriority[] = ['URGENT', 'HIGH', 'MEDIUM', 'LOW'];
+  readonly priorityFilter = signal<Set<TaskPriority>>(new Set(this.allPriorities));
+  /** Chip lọc ưu tiên — tên khác prioritySel (đã dùng cho dropdown trong form). */
+  readonly priorityFilterSel = this.allPriorities.map((v) => ({
+    value: v, label: { URGENT: 'Khẩn cấp', HIGH: 'Cao', MEDIUM: 'Trung bình', LOW: 'Thấp' }[v]
+  }));
+  isPriorityOn(v: TaskPriority): boolean { return this.priorityFilter().has(v); }
+  togglePriority(v: TaskPriority): void {
+    const s = new Set(this.priorityFilter());
+    s.has(v) ? s.delete(v) : s.add(v);
+    if (s.size === 0) this.allPriorities.forEach((x) => s.add(x)); // bỏ hết = bật lại tất cả
+    this.priorityFilter.set(s);
+    savePref(this.prioKey(), [...s]);
+  }
+  private prioKey(): string { return 'bpm.backlog.priorityFilter.' + (this.projectId() || 'x'); }
+
+
+  /**
+   * Lọc theo NGƯỜI THỰC HIỆN (rỗng = tất cả; '__UNASSIGNED__' = chưa gán) — lưu theo dự án.
+   * ẨN hẳn ô lọc này khi màn cha đã ghim sẵn một người (vd "Việc của tôi" — đã theo user
+   * đăng nhập rồi, hiện thêm ô lọc người chỉ gây rối và cho phép xem việc người khác).
+   */
   readonly filterAssignee = signal('');
   /** Đang xuất Excel backlog. */
   readonly exporting = signal(false);
@@ -373,6 +395,8 @@ export class PrjBacklog implements OnInit {
     if (saved && saved.length) this.typeFilter.set(new Set(saved));
     const savedSt = loadPref<TaskStatus[] | null>(this.statusKey(), null);
     if (savedSt && savedSt.length) this.statusFilter.set(new Set(savedSt));
+    const savedPr = loadPref<TaskPriority[] | null>(this.prioKey(), null);
+    if (savedPr && savedPr.length) this.priorityFilter.set(new Set(savedPr));
     // "Backlog của tôi": mặc định lọc theo tôi (không đọc/ghi pref chung của dự án để khỏi ảnh hưởng màn QLDA).
     const preset = this.presetAssignee();
     this.filterAssignee.set(preset ? preset : loadPref<string>(this.asgKey(), ''));
@@ -468,6 +492,16 @@ export class PrjBacklog implements OnInit {
       }
     }
 
+    // Lọc ƯU TIÊN: cùng cách với trạng thái — giữ cả cấp cha để không mất ngữ cảnh cây.
+    const priorities = this.priorityFilter();
+    let priorityKeep: Set<string> | null = null;
+    if (priorities.size < this.allPriorities.length) {
+      priorityKeep = new Set<string>();
+      for (const t of this.tasks()) {
+        if (priorities.has(t.priority)) addAncestors(priorityKeep, t);
+      }
+    }
+
     // TÌM theo từ khoá (tên/mã task) — giữ task khớp + MỌI cấp cha.
     let searchKeep: Set<string> | null = null;
     if (q) {
@@ -527,6 +561,7 @@ export class PrjBacklog implements OnInit {
       if (!types.has(r.task.type)) return false;
       if (assigneeKeep && !assigneeKeep.has(r.task.id)) return false;
       if (statusKeep && !statusKeep.has(r.task.id)) return false;
+      if (priorityKeep && !priorityKeep.has(r.task.id)) return false;
       if (dateKeep && !dateKeep.has(r.task.id)) return false;
       if (flagKeep && !flagKeep.has(r.task.id)) return false;
       return true;
@@ -536,7 +571,8 @@ export class PrjBacklog implements OnInit {
   /** Có đang bật bộ lọc phụ nào không (tìm/ngày/người/chips)? */
   readonly hasActiveFilter = computed<boolean>(() =>
     !!(this.search().trim() || this.dateFrom() || this.dateTo()
-      || this.filterAssignee() || this.quickFlags().size));
+      || this.filterAssignee() || this.quickFlags().size
+      || this.priorityFilter().size < this.allPriorities.length));
 
   /**
    * Ẩn thêm dòng có tổ tiên đang GẬP (trên nền đã lọc) — dùng để HIỂN THỊ trên màn.

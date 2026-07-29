@@ -12,7 +12,7 @@
       <span class="mb-picker__label">Dự án:</span>
       <searchable-select [options]="projectSel()" [value]="selectedId()"
                          (valueChange)="selectedId.set($any($event))" placeholder="Chọn dự án" />
-      <span class="mb-hint">Backlog hiển thị đầy đủ các cấp; đang lọc theo việc của bạn (đổi được trong bộ lọc “Người thực hiện”).</span>
+      <span class="mb-hint">Backlog hiển thị đầy đủ các cấp, chỉ gồm việc của bạn. Lọc thêm theo Loại, Trạng thái, Ưu tiên hoặc khoảng ngày.</span>
     </div>
 
     @if (selectedId()) {

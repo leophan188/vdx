@@ -39,13 +39,21 @@
     <app-type-filter [options]="statusSel" [selected]="statusFilter()"
                      (toggle)="toggleStatus($any($event))" />
   </div>
-  <!-- Lọc người thực hiện (giữ task cha Epic/Story/cha) -->
+  <!-- Lọc theo MỨC ĐỘ ƯU TIÊN (giữ cả cấp cha của task khớp) -->
   <div class="filter-bar__field">
-    <label>Người</label>
-    <searchable-select [options]="assigneeSel()" [value]="filterAssignee()"
-                       (valueChange)="setAssignee($event)"
-                       [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+    <span class="filter-bar__label">Ưu tiên</span>
+    <app-type-filter [options]="priorityFilterSel" [selected]="priorityFilter()"
+                     (toggle)="togglePriority($any($event))" />
   </div>
+  <!-- Lọc người thực hiện — ẨN khi màn cha đã ghim sẵn một người (Việc của tôi) -->
+  @if (!presetAssignee()) {
+    <div class="filter-bar__field">
+      <label>Người</label>
+      <searchable-select [options]="assigneeSel()" [value]="filterAssignee()"
+                         (valueChange)="setAssignee($event)"
+                         [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+    </div>
+  }
   <!-- Lọc theo KHOẢNG NGÀY (task có lịch chạm khoảng) -->
   <div class="filter-bar__field">
     <label>Từ ngày</label>
