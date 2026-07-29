@@ -1,5 +1,6 @@
 import { Component, computed, effect, inject, input, output, signal } from '@angular/core';
 import { TypeFilter, TypeChip } from '../../shared/type-filter/type-filter';
+import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { ProjectService, ProjectActivityItem, TaskActivityAction, ProjectTask } from '../../core/project.service';
 
 /** Metadata hiển thị theo loại hành động. */
@@ -23,12 +24,18 @@ const ACTION_META: Record<string, ActionMeta> = {
  */
 @Component({
   selector: 'app-prj-log',
-  imports: [TypeFilter],
+  imports: [TypeFilter, SearchableSelect],
   templateUrl: './log.html',
   styles: [`
     .lg { display: grid; gap: var(--space-4); font-size: var(--text-sm); color: var(--color-text); }
 
-    .lg__head { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; }
+    .lg__head { display: flex; align-items: flex-end; gap: var(--space-3); flex-wrap: wrap; }
+    .lg__head .filter-bar__field { display: grid; gap: 4px; min-width: 200px; }
+    .lg__head .filter-bar__field label { font-size: var(--text-xs); color: var(--color-text-muted);
+      font-weight: var(--weight-medium); }
+    .lg__search { height: var(--control-h-sm); min-width: 240px; padding: 0 var(--space-3);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); color: var(--color-text); font: inherit; }
     .lg__count { font-size: var(--text-xs); color: var(--color-text-muted);
       background: var(--color-surface-alt); padding: 1px var(--space-2); border-radius: var(--radius-full); }
 
@@ -81,10 +88,40 @@ export class PrjLog {
       .map((a) => ({ value: a, label: `${ACTION_META[a].icon} ${ACTION_META[a].label}` }));
   });
 
+  /** Tìm theo MÃ hoặc TÊN công việc — log dài hàng trăm dòng, không có ô này thì phải cuộn tay. */
+  readonly search = signal('');
+  /**
+   * Lọc theo NGƯỜI thao tác. Nhật ký chỉ lưu tên hiển thị (actorName), không có userId,
+   * nên dropdown dựng từ chính các tên đang có trong log.
+   */
+  readonly actorFilter = signal('');
+  readonly actorOptions = computed<SelectOption[]>(() => {
+    const names = [...new Set(this.items().map((i) => i.actorName).filter(Boolean))];
+    names.sort((a, b) => a.localeCompare(b, 'vi'));
+    return names.map((n) => ({ value: n, label: n }));
+  });
+
+  readonly hasFilter = computed(() =>
+    !!this.search().trim() || !!this.actorFilter() || this.selected().size > 0);
+  clearFilters(): void {
+    this.search.set('');
+    this.actorFilter.set('');
+    this.selected.set(new Set());
+  }
+
   readonly filtered = computed<ProjectActivityItem[]>(() => {
     const sel = this.selected();
-    const all = this.items();
-    return sel.size === 0 ? all : all.filter((i) => sel.has(i.action));
+    const q = this.search().trim().toLowerCase();
+    const who = this.actorFilter();
+    return this.items().filter((i) => {
+      if (sel.size && !sel.has(i.action)) return false;
+      if (who && i.actorName !== who) return false;
+      if (q) {
+        const hay = `${i.taskCode ?? ''} ${i.taskTitle ?? ''}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
   });
 
   constructor() {

@@ -1,13 +1,29 @@
 <section class="lg">
   <div class="lg__head">
+    <div class="filter-bar__field">
+      <input type="search" class="lg__search" placeholder="🔍 Tìm mã / tên công việc…"
+             [value]="search()" (input)="search.set($any($event.target).value)" />
+    </div>
+    <div class="filter-bar__field">
+      <label>Người thực hiện</label>
+      <searchable-select [options]="actorOptions()" [value]="actorFilter()"
+                         (valueChange)="actorFilter.set($event)"
+                         [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+    </div>
     <app-type-filter [options]="filterOptions()" [selected]="selected()" (toggle)="toggleFilter($event)" />
     <span class="lg__count">{{ filtered().length }} hoạt động</span>
+    @if (hasFilter()) {
+      <button type="button" class="btn btn--ghost btn--sm" (click)="clearFilters()">Bỏ lọc</button>
+    }
   </div>
 
   @if (loading()) {
     <div class="lg__loading">Đang tải nhật ký…</div>
   } @else if (filtered().length === 0) {
-    <div class="lg__empty">Chưa có hoạt động nào trong dự án.</div>
+    <div class="lg__empty">
+      @if (hasFilter()) { Không có hoạt động nào khớp bộ lọc. }
+      @else { Chưa có hoạt động nào trong dự án. }
+    </div>
   } @else {
     <div class="lg__list">
       @for (a of filtered(); track a.id) {
