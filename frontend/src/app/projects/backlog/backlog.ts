@@ -15,6 +15,7 @@ import { memberPersonOptions } from '../../shared/person-options';
 import { buildTree, hasChildren, subtreeLeafEstimate, effectiveStart, effectiveDue } from '../../shared/task-tree';
 import { loadPref, savePref } from '../../shared/view-prefs';
 import { TypeFilter } from '../../shared/type-filter/type-filter';
+import { HoursInput } from '../../shared/hours-input/hours-input';
 import { BUG_DESCRIPTION_TEMPLATE, mergeBugFieldsIntoDescription } from '../../shared/bug-template';
 
 /** Một dòng cây (task phẳng + cấp thụt lề, giữ thứ tự DFS). */
@@ -31,7 +32,7 @@ interface TreeRow {
  */
 @Component({
   selector: 'app-prj-backlog',
-  imports: [FormsModule, Modal, SearchableSelect, TypeFilter, WorkEntryDialog],
+  imports: [FormsModule, Modal, SearchableSelect, TypeFilter, WorkEntryDialog, HoursInput],
   templateUrl: './backlog.html',
   styles: [`
     /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.

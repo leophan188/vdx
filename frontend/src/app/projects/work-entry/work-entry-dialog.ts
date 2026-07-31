@@ -2,6 +2,7 @@ import { Component, computed, inject, input, output, signal } from '@angular/cor
 import { Modal } from '../../shared/modal/modal';
 import { WorkEntry, WorkRole } from '../../core/project.service';
 import { todayIso } from '../../shared/format';
+import { HOUR_PRESETS } from '../../shared/hours-input/hours-input';
 
 /**
  * Popup NHẬP GIỜ tại mốc bàn giao (selector app-work-entry).
@@ -104,15 +105,8 @@ export class WorkEntryDialog {
   get today(): string { return todayIso(); }
   /** Trần giờ MỖI LẦN ghi trên task lá — khớp MAX_LEAF_HOURS ở backend. */
   readonly maxHours = 4;
-  /**
-   * Mốc chọn nhanh. Mốc PHÚT quy ra giờ (10' = 0.17h) vì hệ thống chấm công theo GIỜ —
-   * lưu thẳng số phút sẽ phải đổi đơn vị ở mọi báo cáo phía sau.
-   */
-  readonly quickPicks: { label: string; hours: number }[] = [
-    { label: "10'", hours: 0.17 }, { label: "15'", hours: 0.25 }, { label: "20'", hours: 0.33 },
-    { label: "30'", hours: 0.5 },
-    { label: '1h', hours: 1 }, { label: '2h', hours: 2 }, { label: '4h', hours: 4 }
-  ];
+  /** Mốc chọn nhanh — dùng CHUNG với ô ước lượng để hai chỗ không lệch nhau. */
+  readonly quickPicks = HOUR_PRESETS;
 
   /**
    * Giữ NGUYÊN chuỗi người dùng gõ, không ghi ngược số đã parse vào ô.

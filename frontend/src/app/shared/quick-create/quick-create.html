@@ -57,9 +57,9 @@
       <!-- Est (giờ) -->
       <div class="field">
         <label>Est (giờ)</label>
-        <input type="number" min="0" step="0.5" [max]="isGroupType() ? null : 4"
-               [value]="estimateHours()" (input)="estimateHours.set($any($event.target).value)"
-               placeholder="0" />
+        <!-- Epic/Story là cấp nhóm, est tổng hợp từ con nên không áp trần 4h. -->
+        <app-hours-input [value]="estimateHours()" [max]="isGroupType() ? 0 : 4"
+                         (valueChange)="estimateHours.set($event + '')" />
         @if (!isGroupType()) {
           <div class="qc__hint">Tối đa 4h — công việc lớn hơn thì tách nhỏ</div>
         }

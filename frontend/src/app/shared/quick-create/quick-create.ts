@@ -7,6 +7,7 @@ import { SearchableSelect, SelectOption } from '../searchable-select/searchable-
 import { buildParentOptions } from '../../projects/work-stats';
 import { DescEditor, DescShot } from '../../projects/desc-editor/desc-editor';
 import { memberPersonOptions } from '../person-options';
+import { HoursInput } from '../hours-input/hours-input';
 import { todayIso } from '../format';
 import { ToastService } from '../toast/toast.service';
 import { AuthService } from '../../core/auth.service';
@@ -26,7 +27,7 @@ interface PendingImage { file: File; url: string; name: string; }
  */
 @Component({
   selector: 'app-quick-create',
-  imports: [Modal, SearchableSelect, DescEditor],
+  imports: [Modal, SearchableSelect, DescEditor, HoursInput],
   templateUrl: './quick-create.html',
   styles: [`
     /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
