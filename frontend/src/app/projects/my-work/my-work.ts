@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal, viewChild } from '@angular/core';
 import { PageHeader } from '../../shared/page-header/page-header';
-import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
+import { SelectOption } from '../../shared/searchable-select/searchable-select';
 import { AuthService } from '../../core/auth.service';
 import { MeTaskService, ProjectOption } from '../../core/me-task.service';
 import { ProjectService, ProjectTask } from '../../core/project.service';
@@ -13,13 +13,9 @@ import { PrjTaskDetail } from '../task-detail/task-detail';
  */
 @Component({
   selector: 'app-my-project-work',
-  imports: [PageHeader, SearchableSelect, PrjBacklog, PrjTaskDetail],
+  imports: [PageHeader, PrjBacklog, PrjTaskDetail],
   templateUrl: './my-work.html',
   styles: [`
-    .mb-picker { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; margin-bottom: var(--space-4); }
-    .mb-picker__label { font-weight: 600; color: var(--color-text); }
-    .mb-picker searchable-select { min-width: 340px; }
-    .mb-hint { color: var(--color-text-muted); font-size: var(--text-sm); }
     .mb-empty { padding: var(--space-8); text-align: center; color: var(--color-text-muted); }
   `]
 })

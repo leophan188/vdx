@@ -179,6 +179,14 @@ export class PrjBacklog implements OnInit {
   /** "Backlog của tôi": userId để MẶC ĐỊNH lọc theo người này (vẫn hiện task cha). Rỗng → dùng pref chung của dự án. */
   readonly presetAssignee = input<string>('');
 
+  /**
+   * Danh sách dự án cho ô chọn NGAY TRONG thanh lọc — chỉ màn "Backlog của tôi" truyền vào,
+   * vì ở đó một người có việc nằm rải ở nhiều dự án. Rỗng → ẩn ô (màn Quản lý dự án đã cố định dự án).
+   */
+  readonly projectOptions = input<SelectOption[]>([]);
+  /** Người dùng đổi dự án ở thanh lọc → cha đổi projectId, effect ở đây tự tải lại. */
+  readonly projectChange = output<string>();
+
   /** Phát khi bấm tiêu đề một task → cha mở chi tiết task. */
   readonly openTask = output<ProjectTask>();
 

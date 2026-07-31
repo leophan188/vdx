@@ -27,6 +27,17 @@
     <input type="search" class="bl-search" placeholder="🔍 Tìm tên / mã công việc…"
            [value]="search()" (input)="search.set($any($event.target).value)" />
   </div>
+  <!-- Chọn DỰ ÁN — chỉ hiện ở màn "Backlog của tôi", nơi việc nằm rải ở nhiều dự án.
+       Đặt TRONG thanh lọc chứ không tách khối riêng phía trên: thanh lọc là chỗ người dùng
+       đi tìm bộ lọc, còn khối trên đầu bị cuộn khuất ngay khi xem tới danh sách. -->
+  @if (projectOptions().length) {
+    <div class="filter-bar__field">
+      <span class="filter-bar__label">Dự án</span>
+      <searchable-select [options]="projectOptions()" [value]="projectId()"
+                         (valueChange)="projectChange.emit($any($event))"
+                         placeholder="Chọn dự án…" />
+    </div>
+  }
   <!-- Lọc hiển thị theo loại (component chung, lưu cho lần sau) -->
   <div class="filter-bar__field">
     <span class="filter-bar__label">Loại</span>

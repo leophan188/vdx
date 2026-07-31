@@ -1,6 +1,6 @@
 <section class="page">
   <app-page-header title="Backlog của tôi"
-                   subtitle="Chọn dự án để xem backlog đầy đủ (EPIC · Story · task cha/con) — mặc định lọc theo việc của bạn; thêm việc như màn Quản lý dự án."
+                   subtitle="Backlog đầy đủ (EPIC · Story · task cha/con) của dự án đang chọn, mặc định chỉ hiện việc của bạn. Đổi dự án và lọc thêm ngay ở thanh lọc bên dưới."
                    [breadcrumb]="[{ label: 'Cá nhân' }, { label: 'Backlog của tôi' }]" />
 
   @if (loading()) {
@@ -8,15 +8,12 @@
   } @else if (!projects().length) {
     <div class="mb-empty">🗂️ Bạn chưa tham gia dự án nào.</div>
   } @else {
-    <div class="mb-picker">
-      <span class="mb-picker__label">Dự án:</span>
-      <searchable-select [options]="projectSel()" [value]="selectedId()"
-                         (valueChange)="selectedId.set($any($event))" placeholder="Chọn dự án" />
-      <span class="mb-hint">Backlog hiển thị đầy đủ các cấp, chỉ gồm việc của bạn. Lọc thêm theo Loại, Trạng thái, Ưu tiên hoặc khoảng ngày.</span>
-    </div>
-
+    <!-- Ô chọn dự án nằm NGAY TRONG thanh lọc của backlog (xem backlog.html), không tách khối
+         riêng ở đây nữa: khối trên đầu bị cuộn khuất ngay khi người dùng xem tới danh sách,
+         nên nhìn như màn hình không cho chọn dự án. -->
     @if (selectedId()) {
       <app-prj-backlog [projectId]="selectedId()" [presetAssignee]="myUserId()"
+                       [projectOptions]="projectSel()" (projectChange)="selectedId.set($event)"
                        (openTask)="openDetail($event)" />
     }
   }
