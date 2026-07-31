@@ -7,6 +7,7 @@ import { SearchableSelect, SelectOption } from '../searchable-select/searchable-
 import { buildParentOptions } from '../../projects/work-stats';
 import { DescEditor, DescShot } from '../../projects/desc-editor/desc-editor';
 import { memberPersonOptions } from '../person-options';
+import { todayIso } from '../format';
 import { ToastService } from '../toast/toast.service';
 import { AuthService } from '../../core/auth.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
@@ -141,7 +142,7 @@ export class QuickCreate {
    * tester log hàng chục lỗi một ngày.
    */
   readonly logHours = signal<string>('');
-  readonly logDate = signal<string>(new Date().toISOString().slice(0, 10));
+  readonly logDate = signal<string>(todayIso());
   readonly estimateHours = signal('');
   readonly startIso = signal('');
   readonly dueIso = signal('');
@@ -260,12 +261,6 @@ export class QuickCreate {
     }
   }
 
-  /** Hôm nay dạng yyyy-MM-dd (local) cho <input type=date>. */
-  private todayIso(): string {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  }
-
   private reset(): void {
     this.projectId.set('');
     this.parentId.set('');
@@ -282,8 +277,8 @@ export class QuickCreate {
     // Để 1h chứ không phải trần 4h: mặc định bằng trần khiến người tạo ngại sửa xuống,
     // ước lượng toàn dự án bị thổi phồng.
     this.estimateHours.set('1');
-    this.startIso.set(this.todayIso());
-    this.dueIso.set(this.todayIso());
+    this.startIso.set(todayIso());
+    this.dueIso.set(todayIso());
     this.severity.set('');
     this.screen.set('');
     this.environment.set('');

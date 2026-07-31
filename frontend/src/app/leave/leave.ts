@@ -7,6 +7,7 @@ import { Modal } from '../shared/modal/modal';
 import { ConfirmDialog } from '../shared/confirm-dialog/confirm-dialog';
 import { Tabs, TabItem } from '../shared/tabs/tabs';
 import { ToastService } from '../shared/toast/toast.service';
+import { todayIso } from '../shared/format';
 import { AuthService } from '../core/auth.service';
 import { LeaveService, LeaveEntry, LeaveEntryRequest, LeaveSummary, workdays } from '../core/leave.service';
 
@@ -74,7 +75,7 @@ export class Leave implements OnInit {
 
   // ---------- Đăng ký của tôi ----------
   private blankForm(): LeaveEntryRequest {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIso();
     return { fromDate: today, toDate: today, type: 'ANNUAL', reason: '' };
   }
 

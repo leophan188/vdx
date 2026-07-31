@@ -7,6 +7,7 @@ import { Modal } from '../shared/modal/modal';
 import { ConfirmDialog } from '../shared/confirm-dialog/confirm-dialog';
 import { Tabs, TabItem } from '../shared/tabs/tabs';
 import { ToastService } from '../shared/toast/toast.service';
+import { todayIso } from '../shared/format';
 import { AuthService } from '../core/auth.service';
 import { OtService, OtEntry, OtEntryRequest, OtRangeSummary } from '../core/ot.service';
 
@@ -72,7 +73,7 @@ export class Ot implements OnInit {
 
   // ---------- OT của tôi ----------
   private blankForm(): OtEntryRequest {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayIso();
     const t = this.defaultTimes(today);
     return { workDate: today, startTime: t.start, endTime: t.end, hours: null, reason: '', note: '' };
   }

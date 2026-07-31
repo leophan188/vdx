@@ -6,6 +6,7 @@ import { Modal } from '../../shared/modal/modal';
 import { SearchableSelect, SelectOption } from '../../shared/searchable-select/searchable-select';
 import { TypeFilter } from '../../shared/type-filter/type-filter';
 import { memberPersonOptions } from '../../shared/person-options';
+import { todayIso } from '../../shared/format';
 import { buildParentOptions } from '../work-stats';
 import { BUG_DESCRIPTION_TEMPLATE, mergeBugFieldsIntoDescription } from '../../shared/bug-template';
 import { forkJoin, of } from 'rxjs';
@@ -220,7 +221,7 @@ export class PrjBugs implements OnInit {
    * sẽ cộng trùng thành hàng chục giờ trong một ngày. Ghi vai TEST cho người đang log.
    */
   readonly logHours = signal<string>('');
-  readonly logDate = signal<string>(new Date().toISOString().slice(0, 10));
+  readonly logDate = signal<string>(todayIso());
 
   // ----- Chi tiết task (Jira) -----
   readonly detailOpen = signal(false);
@@ -323,7 +324,7 @@ export class PrjBugs implements OnInit {
     this.copiedFrom.set(null);
     this.f = this.emptyForm();
     this.logHours.set('');
-    this.logDate.set(new Date().toISOString().slice(0, 10));
+    this.logDate.set(todayIso());
     this.clearQueued();
     this.modalOpen.set(true);
   }

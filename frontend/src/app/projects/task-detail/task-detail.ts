@@ -762,8 +762,15 @@ export class PrjTaskDetail {
   private doConfirmReopen(work: WorkEntry): void {
     const t = this.current();
     if (!t || this.busyLifecycle()) return;
+    // Ô người sửa để TRỐNG nghĩa là "giữ nguyên người thực hiện" (đúng như nhãn), KHÔNG phải
+    // gỡ người. Trước đây lấy thẳng giá trị rỗng rồi gọi assignTask(null) — reopen xong task
+    // rơi vào Đang làm mà không còn ai phụ trách, biến mất khỏi việc của mọi người.
+    const target = this.reopenAssignee() || t.assigneeUserId || null;
+    if (!target) {
+      this.toast.error('Chưa có người sửa', 'Task chưa gán người thực hiện — chọn người sửa trước khi Reopen.');
+      return;
+    }
     this.busyLifecycle.set(true);
-    const target = this.reopenAssignee() || null;
     const toProgress = () => this.svc.updateTaskStatus(this.projectId(), t.id, 'IN_PROGRESS', work).subscribe({
       next: (u) => {
         this.model.set(u);

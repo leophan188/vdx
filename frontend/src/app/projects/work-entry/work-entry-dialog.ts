@@ -1,6 +1,7 @@
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { Modal } from '../../shared/modal/modal';
 import { WorkEntry, WorkRole } from '../../core/project.service';
+import { todayIso } from '../../shared/format';
 
 /**
  * Popup NHẬP GIỜ tại mốc bàn giao (selector app-work-entry).
@@ -95,7 +96,12 @@ export class WorkEntryDialog {
   readonly confirmed = output<WorkEntry>();
   readonly cancelled = output<void>();
 
-  readonly today = new Date().toISOString().slice(0, 10);
+  /**
+   * Ngày công MẶC ĐỊNH = hôm nay theo lịch máy người dùng, đọc lại MỖI LẦN cần.
+   * Trước đây lưu một lần lúc dựng component bằng giờ UTC: tab để mở qua nửa đêm, hoặc
+   * chấm công trước 07:00 sáng (VN = UTC+7, lúc đó UTC còn ở hôm trước) đều bị ghi lùi ngày.
+   */
+  get today(): string { return todayIso(); }
   /** Trần giờ MỖI LẦN ghi trên task lá — khớp MAX_LEAF_HOURS ở backend. */
   readonly maxHours = 4;
   /**
@@ -130,7 +136,7 @@ export class WorkEntryDialog {
     return m >= 60 ? `${Math.round((m / 60) * 100) / 100} giờ` : `${m} phút`;
   });
   readonly String = String;
-  readonly workDate = signal<string>(this.today);
+  readonly workDate = signal<string>(todayIso());
   readonly note = signal<string>('');
   readonly error = signal<string>('');
 
