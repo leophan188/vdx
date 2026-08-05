@@ -42,7 +42,13 @@ public class ProjectTask {
     @Column(name = "title", length = 500, nullable = false)
     private String title;
 
-    @Column(name = "description", length = 4000)
+    /**
+     * Mô tả. Dùng TEXT chứ KHÔNG phải varchar(4000): ô này đã GỘP nội dung của ba trường
+     * steps_to_reproduce / expected_result / actual_result — cả ba vốn là TEXT. Nhồi ba TEXT
+     * vào 4000 ký tự thì tester viết mô tả lỗi dài một chút là DB từ chối, và lỗi nổ ra tận
+     * tầng insert nên người dùng chỉ thấy "Không tạo được" mà không hiểu vì sao.
+     */
+    @Column(name = "description", columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
