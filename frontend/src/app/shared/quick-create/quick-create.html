@@ -44,7 +44,8 @@
       <app-desc-editor [value]="description()" [shots]="descShots()"
                        placeholder="Mô tả (tuỳ chọn)… — dán ảnh (Ctrl/Cmd+V) để chèn ngay tại chỗ đang gõ"
                        (valueChange)="description.set($event)"
-                       (pastedFiles)="onDescPaste($event)" />
+                       (pastedFiles)="onDescPaste($event)"
+                       (shotClicked)="onDescShotClick($event)" />
     </div>
 
     <div class="qc__row2">
@@ -176,3 +177,6 @@
     </button>
   </div>
 </app-modal>
+
+<!-- Xem to ảnh trong Mô tả — phóng to/thu nhỏ, cuộn chuột, kéo di chuyển. -->
+<app-image-lightbox [items]="lightboxItems()" [index]="shotIndex()" (closed)="shotIndex.set(null)" />

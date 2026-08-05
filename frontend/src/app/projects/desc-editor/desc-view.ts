@@ -31,7 +31,10 @@ interface DescPart { text: string | null; shot: DescShot | null; }
   `,
   styles: [`
     .dv { white-space: pre-wrap; word-break: break-word; line-height: 1.6; }
-    .dv__img { display: block; max-width: min(100%, 420px); max-height: 260px; margin: 6px 0;
+    /* Tem nhỏ cỡ CỐ ĐỊNH, khớp ô soạn thảo (xem desc-editor): ảnh chụp màn hình rộng vài
+       nghìn px, để nguyên là vỡ khung. Bấm vào mở lightbox để phóng to xem chi tiết. */
+    .dv__img { display: inline-block; width: 110px; height: 80px; object-fit: cover;
+      vertical-align: middle; margin: 3px 4px 3px 0; background: var(--color-surface-alt);
       border: 1px solid var(--color-border); border-radius: var(--radius-md); cursor: zoom-in; }
     .dv__img:hover { border-color: var(--color-primary); }
   `]

@@ -9,6 +9,7 @@ import { DescEditor, DescShot } from '../../projects/desc-editor/desc-editor';
 import { memberPersonOptions } from '../person-options';
 import { HoursInput } from '../hours-input/hours-input';
 import { todayIso } from '../format';
+import { ImageLightbox, LightboxItem } from '../image-lightbox/image-lightbox';
 import { ToastService } from '../toast/toast.service';
 import { AuthService } from '../../core/auth.service';
 import { MeBugService, QuickCreateType, QuickCreateRequest } from '../../core/me-bug.service';
@@ -27,7 +28,7 @@ interface PendingImage { file: File; url: string; name: string; }
  */
 @Component({
   selector: 'app-quick-create',
-  imports: [Modal, SearchableSelect, DescEditor, HoursInput],
+  imports: [Modal, SearchableSelect, DescEditor, HoursInput, ImageLightbox],
   templateUrl: './quick-create.html',
   styles: [`
     /* Ô tích BỎ QUA KIỂM THỬ — khối tuỳ chọn có viền, bấm cả khối là chọn.
@@ -124,6 +125,15 @@ export class QuickCreate {
     const add = files.map((file) => ({ file, url: URL.createObjectURL(file), name: file.name }));
     this.previews.update((xs) => [...xs, ...add]);
     return add.map((a, i) => ({ no: from + i + 1, url: a.url }));
+  }
+
+  /** Ảnh đang xem to trong lightbox (index trong previews); null = đóng. */
+  readonly shotIndex = signal<number | null>(null);
+  readonly lightboxItems = computed<LightboxItem[]>(() =>
+    this.previews().map((p, i) => ({ url: p.url, name: `Ảnh ${i + 1}`, kind: 'IMAGE' as const })));
+  /** Bấm tem ảnh nhỏ trong Mô tả → mở lightbox (phóng to / thu nhỏ / kéo di chuyển ở đó). */
+  onDescShotClick(no: number): void {
+    if (no >= 1 && no <= this.previews().length) this.shotIndex.set(no - 1);
   }
 
   /** Dán ảnh khi con trỏ ĐANG Ở ô Mô tả → ảnh hiện ngay tại chỗ đang gõ. */
