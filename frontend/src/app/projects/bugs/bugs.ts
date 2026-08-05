@@ -43,6 +43,11 @@ import { DescEditor, DescShot } from '../desc-editor/desc-editor';
     .bug-progress .bar > i { display: block; height: 100%; background: var(--color-primary); }
     .bug-progress .pct { font-size: .75rem; min-width: 34px; text-align: right; }
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
+    .bug-search { min-width: 230px; height: var(--control-h-sm); padding: 0 var(--space-3);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); color: var(--color-text); font: inherit; }
+    /* Khi đang lọc thì hiện thêm "/ tổng cả dự án" để biết mình đang xem một phần. */
+    .bug-stats__all { font-style: normal; font-weight: 400; opacity: .65; }
     .field-hint { font-size: var(--text-xs); color: var(--color-text-muted); margin-top: 2px; }
     .bug-req { color: var(--overdue, #e5484d); }
     /* Khối ghi công kiểm thử — span cả 2 cột của .form-2col để không phá lưới. */
@@ -119,20 +124,30 @@ export class PrjBugs implements OnInit {
   // ----- Bộ lọc (chip đa chọn — signal để computed lọc CHẠY LẠI khi đổi; đồng bộ với Kanban/Log) -----
   readonly STATUS_KEYS = ['BACKLOG', 'TODO', 'IN_PROGRESS', 'IN_REVIEW', 'DONE', 'CANCELLED'];
   readonly TYPE_KEYS = ['BUG', 'ISSUE'];
+  readonly PRIORITY_KEYS = ['LOW', 'MEDIUM', 'HIGH', 'URGENT'];
+  readonly SEVERITY_KEYS = ['BLOCKER', 'CRITICAL', 'MAJOR', 'MINOR', 'TRIVIAL'];
   readonly statusFilter = signal<Set<string>>(new Set(this.STATUS_KEYS));
   readonly typeFilter = signal<Set<string>>(new Set(this.TYPE_KEYS));
-  toggleStatus(v: string): void {
-    const s = new Set(this.statusFilter());
+  readonly priorityFilter = signal<Set<string>>(new Set(this.PRIORITY_KEYS));
+  /** Mức độ nghiêm trọng — lỗi CHƯA đánh giá (severity rỗng) gom vào khoá "NONE". */
+  readonly severityFilter = signal<Set<string>>(new Set([...this.SEVERITY_KEYS, 'NONE']));
+  /** Tìm theo MÃ hoặc TIÊU ĐỀ — tester hay được báo "lỗi #319" và cần nhảy thẳng tới. */
+  readonly search = signal('');
+  /** Lọc theo người thực hiện (dev đang sửa) và người kiểm thử. Rỗng = tất cả. */
+  readonly assigneeFilter = signal('');
+  readonly testerFilter = signal('');
+
+  /** Bật/tắt một chip trong bộ lọc; bỏ hết thì tự bật lại tất cả (tránh lưới trống khó hiểu). */
+  private toggleIn(sig: ReturnType<typeof signal<Set<string>>>, all: string[], v: string): void {
+    const s = new Set(sig());
     s.has(v) ? s.delete(v) : s.add(v);
-    if (s.size === 0) this.STATUS_KEYS.forEach((x) => s.add(x));
-    this.statusFilter.set(s);
+    if (s.size === 0) all.forEach((x) => s.add(x));
+    sig.set(s);
   }
-  toggleType(v: string): void {
-    const s = new Set(this.typeFilter());
-    s.has(v) ? s.delete(v) : s.add(v);
-    if (s.size === 0) this.TYPE_KEYS.forEach((x) => s.add(x));
-    this.typeFilter.set(s);
-  }
+  toggleStatus(v: string): void { this.toggleIn(this.statusFilter, this.STATUS_KEYS, v); }
+  toggleType(v: string): void { this.toggleIn(this.typeFilter, this.TYPE_KEYS, v); }
+  togglePriority(v: string): void { this.toggleIn(this.priorityFilter, this.PRIORITY_KEYS, v); }
+  toggleSeverity(v: string): void { this.toggleIn(this.severityFilter, [...this.SEVERITY_KEYS, 'NONE'], v); }
 
   readonly typeOptions: { value: TaskType; label: string }[] = [
     { value: 'BUG', label: 'Bug' }, { value: 'ISSUE', label: 'Issue' }
@@ -150,6 +165,12 @@ export class PrjBugs implements OnInit {
     { value: 'BLOCKER', label: 'Blocker' }, { value: 'CRITICAL', label: 'Critical' },
     { value: 'MAJOR', label: 'Major' }, { value: 'MINOR', label: 'Minor' },
     { value: 'TRIVIAL', label: 'Trivial' }
+  ];
+
+  /** Chip lọc mức độ — thêm "Chưa đánh giá" để soi riêng nhóm lỗi log vội, còn thiếu thông tin. */
+  readonly severityFilterOptions: { value: string; label: string }[] = [
+    ...this.severityOptions.map((o) => ({ value: o.value as string, label: o.label })),
+    { value: 'NONE', label: 'Chưa đánh giá' }
   ];
 
   readonly typeSel: SelectOption[] = this.typeOptions.map((o) => ({ value: o.value, label: o.label }));
@@ -192,15 +213,38 @@ export class PrjBugs implements OnInit {
   readonly filtered = computed<ProjectTask[]>(() => {
     const st = this.statusFilter();
     const ty = this.typeFilter();
+    const pr = this.priorityFilter();
+    const sv = this.severityFilter();
+    const asg = this.assigneeFilter();
+    const tst = this.testerFilter();
+    const q = this.search().trim().toLowerCase();
     return this.bugs().filter((t) =>
       (st.size >= this.STATUS_KEYS.length || st.has(t.status)) &&
-      (ty.size >= this.TYPE_KEYS.length || ty.has(t.type)));
+      (ty.size >= this.TYPE_KEYS.length || ty.has(t.type)) &&
+      (pr.size >= this.PRIORITY_KEYS.length || pr.has(t.priority)) &&
+      // Chưa đánh giá mức độ → khoá "NONE", để lọc riêng nhóm lỗi còn thiếu thông tin.
+      (sv.size > this.SEVERITY_KEYS.length || sv.has(t.severity || 'NONE')) &&
+      (!asg || t.assigneeUserId === asg) &&
+      (!tst || t.testerUserId === tst) &&
+      (!q || (t.code || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q)));
   });
 
+  /** Có đang lọc gì không — để nút "Đặt lại" tự hiện/ẩn thay vì lúc nào cũng chiếm chỗ. */
+  readonly hasFilter = computed<boolean>(() =>
+    !!this.search().trim() || !!this.assigneeFilter() || !!this.testerFilter()
+    || this.statusFilter().size < this.STATUS_KEYS.length
+    || this.typeFilter().size < this.TYPE_KEYS.length
+    || this.priorityFilter().size < this.PRIORITY_KEYS.length
+    || this.severityFilter().size <= this.SEVERITY_KEYS.length);
+
+  /**
+   * Thống kê tính trên phần ĐANG LỌC, không phải toàn bộ. Nếu để tổng cố định thì khi lọc
+   * "Blocker của Linh" con số trên đầu vẫn là tổng cả dự án, đọc rất dễ hiểu nhầm.
+   */
   readonly stats = computed(() => {
-    const b = this.bugs();
+    const b = this.filtered();
     const open = b.filter((t) => t.status !== 'DONE').length;
-    return { total: b.length, open, done: b.length - open };
+    return { total: b.length, open, done: b.length - open, all: this.bugs().length };
   });
 
   // ----- Modal báo lỗi / sửa lỗi -----
@@ -317,6 +361,11 @@ export class PrjBugs implements OnInit {
   resetFilter(): void {
     this.statusFilter.set(new Set(this.STATUS_KEYS));
     this.typeFilter.set(new Set(this.TYPE_KEYS));
+    this.priorityFilter.set(new Set(this.PRIORITY_KEYS));
+    this.severityFilter.set(new Set([...this.SEVERITY_KEYS, 'NONE']));
+    this.search.set('');
+    this.assigneeFilter.set('');
+    this.testerFilter.set('');
   }
 
   // ----- Modal -----

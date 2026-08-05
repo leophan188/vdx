@@ -1,12 +1,17 @@
 <!-- TAB Quản lý Bug/Issue (gắn trực tiếp vào task cha) -->
 <div class="bug-stats">
-  <span class="badge badge--neutral">Tổng: <strong>{{ stats().total }}</strong></span>
+  <span class="badge badge--neutral">Tổng: <strong>{{ stats().total }}</strong>@if (hasFilter()) { <i class="bug-stats__all">/ {{ stats().all }}</i> }</span>
   <span class="badge badge--cancel">Đang mở: <strong>{{ stats().open }}</strong></span>
   <span class="badge badge--active">Đã xong: <strong>{{ stats().done }}</strong></span>
 </div>
 
 <!-- Bộ lọc chuẩn — đặt trên lưới, control trái → action phải -->
 <div class="filter-bar">
+  <!-- Tìm theo MÃ hoặc TIÊU ĐỀ — hay được báo miệng "lỗi #319" rồi phải mò trong danh sách dài. -->
+  <div class="filter-bar__field">
+    <input type="search" class="bug-search" placeholder="🔍 Tìm mã / tiêu đề lỗi…"
+           [value]="search()" (input)="search.set($any($event.target).value)" />
+  </div>
   <div class="filter-bar__field">
     <label>Trạng thái</label>
     <app-type-filter [options]="statusOptions" [selected]="statusFilter()" (toggle)="toggleStatus($event)" />
@@ -15,7 +20,31 @@
     <label>Loại</label>
     <app-type-filter [options]="typeOptions" [selected]="typeFilter()" (toggle)="toggleType($event)" />
   </div>
-  <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">Đặt lại</button>
+  <div class="filter-bar__field">
+    <label>Ưu tiên</label>
+    <app-type-filter [options]="priorityOptions" [selected]="priorityFilter()" (toggle)="togglePriority($event)" />
+  </div>
+  <!-- Mức độ nghiêm trọng: có cả "Chưa đánh giá" để soi riêng lỗi log vội còn thiếu thông tin. -->
+  <div class="filter-bar__field">
+    <label>Mức độ</label>
+    <app-type-filter [options]="severityFilterOptions" [selected]="severityFilter()" (toggle)="toggleSeverity($event)" />
+  </div>
+  <!-- Hai vai tách riêng: "đang ở chân dev nào" khác với "ai chịu trách nhiệm kiểm thử". -->
+  <div class="filter-bar__field">
+    <label>Người thực hiện</label>
+    <searchable-select [options]="peopleSel()" [value]="assigneeFilter()"
+                       (valueChange)="assigneeFilter.set($event)"
+                       [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+  </div>
+  <div class="filter-bar__field">
+    <label>Người kiểm thử</label>
+    <searchable-select [options]="peopleSel()" [value]="testerFilter()"
+                       (valueChange)="testerFilter.set($event)"
+                       [allowEmpty]="true" emptyLabel="— Tất cả —" placeholder="— Tất cả —" />
+  </div>
+  @if (hasFilter()) {
+    <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">✕ Đặt lại</button>
+  }
   <span class="filter-bar__spacer"></span>
   <button type="button" class="btn btn--primary" (click)="openReport()">＋ Báo lỗi</button>
 </div>
