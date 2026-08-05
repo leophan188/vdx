@@ -127,8 +127,8 @@
           <div class="bug-work__row">
             <div class="field">
               <label>Giờ tìm ra lỗi <b class="bug-req">*</b></label>
-              <input type="number" min="0.25" max="4" step="0.25" placeholder="Vd: 0.5"
-                     [value]="logHours()" (input)="logHours.set($any($event.target).value)" />
+              <app-hours-input [value]="logHours()" [max]="4" placeholder="Vd: 0.5"
+                               (valueChange)="logHours.set($event ? $event + '' : '')" />
             </div>
             <div class="field">
               <label>Ngày tính công</label>

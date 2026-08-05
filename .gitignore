@@ -13,3 +13,6 @@ vts_db_new.sql
 # Rác hệ điều hành
 .DS_Store
 **/.DS_Store
+
+# Bộ skill của công cụ AI (cài trên máy lập trình viên, không thuộc mã nguồn sản phẩm)
+.agents/

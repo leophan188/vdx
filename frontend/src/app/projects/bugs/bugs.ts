@@ -15,6 +15,7 @@ import { AuthService } from '../../core/auth.service';
 import { PrjTaskDetail } from '../task-detail/task-detail';
 import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
+import { HoursInput } from '../../shared/hours-input/hours-input';
 import { workRoleForTransition } from '../work-stats';
 import {
   ProjectService, ProjectTask, TaskRequest, TaskType, TaskStatus, TaskPriority, BugSeverity, ProjectMember,
@@ -31,7 +32,7 @@ import { DescEditor, DescShot } from '../desc-editor/desc-editor';
 @Component({
   selector: 'app-prj-bugs',
   imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter,
-    WorkEntryDialog, ImageLightbox, DescEditor],
+    WorkEntryDialog, ImageLightbox, DescEditor, HoursInput],
   templateUrl: './bugs.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
