@@ -186,7 +186,7 @@ export class PrjBugs implements OnInit {
     { key: 'code', header: 'Mã', width: '80px', sortable: true },
     { key: 'type', header: 'Loại', width: '84px' },
     { key: 'title', header: 'Tiêu đề', sortable: true },
-    { key: 'status', header: 'Trạng thái', width: '124px' },
+    { key: 'status', header: 'Trạng thái', width: '132px' },
     { key: 'priority', header: 'Ưu tiên', width: '96px' },
     { key: 'severity', header: 'Mức độ', width: '100px' },
     { key: 'assignee', header: 'Người thực hiện', width: '150px' },

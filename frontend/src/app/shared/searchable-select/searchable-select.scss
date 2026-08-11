@@ -1,18 +1,30 @@
-:host { display: block; position: relative; }
+:host { display: block; position: relative; min-width: 0; }
 
 .ss__control {
-  display: flex; align-items: center; gap: 6px;
+  display: flex; align-items: center; gap: 6px; min-width: 0;
   height: var(--control-h); padding: 0 var(--space-2) 0 var(--space-3);
   border: 1px solid var(--color-border); border-radius: var(--radius-md);
   background: var(--color-surface); cursor: text;
 }
 .ss--open .ss__control { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
-.ss__input { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; color: var(--color-text); font: inherit; padding: 0; }
+/*
+ * width: 0 là điểm mấu chốt, không thừa dù đã có flex + min-width.
+ * <input type="text"> mặc định rộng khoảng 20 ký tự (~180px). Trong bảng table-layout:auto,
+ * trình duyệt lấy đúng con số đó làm bề rộng TỐI THIỂU của ô, nên cột phình lên ~310px dù
+ * đã khai báo width 124px — cột Trạng thái chỉ chứa một nhãn ngắn mà chiếm chỗ như cột tiêu
+ * đề. min-width:0 chỉ cho phép co khi chia không gian flex, không đổi được bề rộng tối thiểu
+ * đó; width:0 mới đưa nó về 0 rồi flex:1 kéo giãn lại vừa đúng ô.
+ */
+.ss__input { flex: 1; width: 0; min-width: 0; height: 100%; border: none; background: transparent; color: var(--color-text); font: inherit; padding: 0; }
 .ss__input:focus-visible { outline: none; }
 .ss__caret { color: var(--color-text-muted); font-size: 10px; flex: none; pointer-events: none; }
 
 .ss__menu {
-  position: absolute; z-index: 1200; top: calc(100% + 4px); left: 0; right: 0;
+  /* Menu KHÔNG bó theo bề rộng ô: ô trong lưới nay hẹp (đúng cỡ giá trị), nếu menu bám
+     theo thì "In Progress" hay tên người dài sẽ bị cắt ngay lúc đang chọn. Rộng tối thiểu
+     bằng ô, còn lại nở theo nội dung và chặn trần để không tràn màn hình. */
+  position: absolute; z-index: 1200; top: calc(100% + 4px); left: 0; right: auto;
+  min-width: 100%; width: max-content; max-width: 320px;
   list-style: none; margin: 0; padding: 4px;
   max-height: 280px; overflow: auto;
   background: var(--color-surface); border: 1px solid var(--color-border);
