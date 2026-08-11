@@ -229,7 +229,13 @@ export class PrjBugs implements OnInit {
       (sv.size > this.SEVERITY_KEYS.length || sv.has(t.severity || 'NONE')) &&
       (!asg || t.assigneeUserId === asg) &&
       (!tst || t.testerUserId === tst) &&
-      (!q || (t.code || '').toLowerCase().includes(q) || (t.title || '').toLowerCase().includes(q)));
+      // Tìm cả TÊN NGƯỜI: ô tìm kiếm sẵn có của lưới (quét mọi cột) đã bị tắt vì trùng ô này,
+      // nếu chỉ khớp mã/tiêu đề thì ai quen gõ tên người vào sẽ không ra kết quả nào.
+      (!q || (t.code || '').toLowerCase().includes(q)
+          || (t.title || '').toLowerCase().includes(q)
+          || (t.assigneeName || '').toLowerCase().includes(q)
+          || (t.testerName || '').toLowerCase().includes(q)
+          || (t.reporterName || '').toLowerCase().includes(q)));
   });
 
   /** Có đang lọc gì không — để nút "Đặt lại" tự hiện/ẩn thay vì lúc nào cũng chiếm chỗ. */
