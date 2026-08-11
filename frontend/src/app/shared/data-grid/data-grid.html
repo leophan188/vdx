@@ -27,7 +27,7 @@
             <th [class.is-sortable]="col.sortable"
                 [class.align-right]="col.align === 'right'"
                 [class.align-center]="col.align === 'center'"
-                [style.width]="col.width"
+                [style.width]="widthOf(col)"
                 (click)="toggleSort(col)">
               {{ col.header }}<span class="sort-ind"> {{ sortIndicator(col) }}</span>
             </th>

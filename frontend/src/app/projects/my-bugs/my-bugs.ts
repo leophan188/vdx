@@ -88,15 +88,16 @@ export class MyBugs implements OnInit {
   readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
 
   readonly cols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '90px', sortable: true },
+    // Tiêu đề cố ý không đặt width — data-grid cho cột co giãn nuốt hết chỗ thừa.
+    { key: 'code', header: 'Mã', width: '80px', sortable: true },
     { key: 'title', header: 'Tiêu đề', sortable: true },
-    { key: 'projectName', header: 'Dự án', width: '160px', sortable: true },
-    { key: 'type', header: 'Loại', width: '90px' },
-    { key: 'status', header: 'Trạng thái', width: '120px' },
-    { key: 'assigneeName', header: 'PIC', width: '150px' },
-    { key: 'reporterName', header: 'Người log', width: '150px' },
-    { key: 'role', header: 'Vai trò', width: '110px' },
-    { key: 'dueDate', header: 'Deadline', width: '110px', sortable: true }
+    { key: 'projectName', header: 'Dự án', width: '150px', sortable: true },
+    { key: 'type', header: 'Loại', width: '84px' },
+    { key: 'status', header: 'Trạng thái', width: '118px' },
+    { key: 'assigneeName', header: 'PIC', width: '136px' },
+    { key: 'reporterName', header: 'Người log', width: '136px' },
+    { key: 'role', header: 'Vai trò', width: '96px' },
+    { key: 'dueDate', header: 'Deadline', width: '104px', sortable: true }
   ];
 
   readonly filtered = computed<MyBug[]>(() =>

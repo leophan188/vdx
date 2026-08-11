@@ -28,6 +28,25 @@ export class DataGrid {
 
   readonly columns = input<GridColumn[]>([]);
   readonly rows = input<readonly unknown[]>([]);
+
+  /**
+   * Cột CO GIÃN = cột đầu tiên không khai báo width — theo quy ước đó luôn là cột nội dung
+   * chính (Tiêu đề, Tên dự án, Thành viên…).
+   */
+  private readonly flexKey = computed<string | null>(() =>
+    this.columns().find((c) => !c.width)?.key ?? null);
+
+  /**
+   * Bề rộng cột. Cột co giãn được gán 100% — đây là mẹo bảng HTML để nó NUỐT HẾT chỗ thừa.
+   *
+   * Không có nó thì bảng cư xử sai cả hai chiều: màn rộng thì chỗ dư chia đều cho mọi cột,
+   * làm mấy cột chỉ chứa một cái nhãn ngắn (Loại, Ưu tiên, Mức độ) phình ra vô ích; màn hẹp
+   * thì cột nội dung chính lại là cột DUY NHẤT co được (các cột kia có width cố định và tiêu
+   * đề nowrap) nên gánh toàn bộ phần thiếu và bị bóp gần như mất chữ.
+   */
+  widthOf(col: GridColumn): string | null {
+    return col.width ?? (col.key === this.flexKey() ? '100%' : null);
+  }
   readonly title = input('');
   readonly loading = input(false);
   readonly searchable = input(true);

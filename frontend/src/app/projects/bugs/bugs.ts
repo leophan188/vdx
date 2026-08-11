@@ -179,16 +179,19 @@ export class PrjBugs implements OnInit {
   readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
 
+  // Cột Tiêu đề CỐ Ý không đặt width — data-grid coi cột đầu tiên không có width là cột co
+  // giãn và cho nó nuốt hết chỗ thừa. Các cột còn lại siết sát nội dung thật (đều là nhãn
+  // ngắn hoặc con số), trước đây rộng dư gần 140px lấy mất chỗ của tiêu đề.
   readonly cols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '90px', sortable: true },
-    { key: 'type', header: 'Loại', width: '90px' },
+    { key: 'code', header: 'Mã', width: '80px', sortable: true },
+    { key: 'type', header: 'Loại', width: '84px' },
     { key: 'title', header: 'Tiêu đề', sortable: true },
-    { key: 'status', header: 'Trạng thái', width: '150px' },
-    { key: 'priority', header: 'Ưu tiên', width: '120px' },
-    { key: 'severity', header: 'Mức độ', width: '120px' },
-    { key: 'assignee', header: 'Người thực hiện', width: '160px' },
-    { key: 'progress', header: '%', width: '120px' },
-    { key: 'est', header: 'Est', width: '70px', align: 'right' },
+    { key: 'status', header: 'Trạng thái', width: '124px' },
+    { key: 'priority', header: 'Ưu tiên', width: '96px' },
+    { key: 'severity', header: 'Mức độ', width: '100px' },
+    { key: 'assignee', header: 'Người thực hiện', width: '150px' },
+    { key: 'progress', header: '%', width: '96px' },
+    { key: 'est', header: 'Est', width: '64px', align: 'right' },
     { key: 'act', header: '', width: '70px', align: 'center' }
   ];
 
