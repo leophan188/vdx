@@ -22,7 +22,7 @@ import {
   WorkEntry, WorkRole
 } from '../../core/project.service';
 import { WorkEntryDialog } from '../work-entry/work-entry-dialog';
-import { DescEditor, DescShot } from '../desc-editor/desc-editor';
+import { DescEditor, DescShot, stripShotMarkers } from '../desc-editor/desc-editor';
 
 /**
  * TAB Quản lý Bug/Issue. Bug/Issue gắn TRỰC TIẾP vào task cha (parentId).
@@ -93,20 +93,42 @@ export class PrjBugs implements OnInit {
   readonly queuedFiles = signal<{ file: File; url: string }[]>([]);
   /** Ô Mô tả có ảnh hiện thẳng trong dòng chữ — cần tham chiếu để chèn ảnh tại con trỏ. */
   private readonly descEditor = viewChild(DescEditor);
-  /** Ảnh đang xem to (index trong queuedFiles); null = đóng. */
+  /**
+   * Ảnh ĐÃ ĐÍNH KÈM của bug đang sửa (rỗng khi báo lỗi mới hoặc chép).
+   *
+   * Bắt buộc phải biết danh sách này: đánh dấu "[Ảnh n]" đánh số theo THỨ TỰ ĐÍNH KÈM của
+   * task. Bug đang có 3 ảnh mà ảnh mới thêm lại được đánh số 1 thì mô tả có hai "[Ảnh 1]",
+   * cả hai cùng trỏ về ảnh cũ, còn ảnh vừa thêm không bao giờ hiện.
+   */
+  readonly existingShots = signal<DescShot[]>([]);
+
+  /** Ảnh đang xem to (index trong danh sách gộp cũ + mới); null = đóng. */
   readonly shotIndex = signal<number | null>(null);
+  /** Ảnh cấp cho ô Mô tả: ảnh cũ giữ nguyên số, ảnh mới đánh tiếp phía sau. */
+  readonly descShots = computed<DescShot[]>(() => {
+    const old = this.existingShots();
+    return [...old, ...this.queuedFiles().map((q, i) => ({ no: old.length + i + 1, url: q.url }))];
+  });
   readonly shots = computed<LightboxItem[]>(() =>
-    this.queuedFiles().map((q, i) => ({ url: q.url, name: `Ảnh ${i + 1}` })));
-  /** Ảnh cấp cho ô Mô tả để đổi "[Ảnh n]" thành ảnh thật hiện ngay trong chữ. */
-  readonly descShots = computed<DescShot[]>(() =>
-    this.queuedFiles().map((q, i) => ({ no: i + 1, url: q.url })));
+    this.descShots().map((s) => ({ url: s.url, name: `Ảnh ${s.no}` })));
 
   /** Đưa ảnh vào hàng chờ upload, trả về số thứ tự + URL để chèn vào mô tả. */
   private queueImages(files: File[]): DescShot[] {
-    const from = this.queuedFiles().length;
+    const from = this.existingShots().length + this.queuedFiles().length;
     const add = files.map((file) => ({ file, url: URL.createObjectURL(file) }));
     this.queuedFiles.update((q) => [...q, ...add]);
     return add.map((a, i) => ({ no: from + i + 1, url: a.url }));
+  }
+
+  /** Nạp ảnh đã đính kèm của bug đang sửa, để đánh số ảnh mới tiếp nối chứ không đè lên. */
+  private loadExistingShots(taskId: string): void {
+    this.existingShots.set([]);
+    this.svc.listAttachments(this.projectId(), taskId).subscribe({
+      next: (list) => this.existingShots.set(
+        list.filter((a) => !a.commentId)
+            .map((a, i) => ({ no: i + 1, url: this.svc.attachmentUrl(this.projectId(), taskId, a.id) }))),
+      error: () => this.existingShots.set([])
+    });
   }
 
   /** Dán ảnh khi con trỏ ĐANG Ở ô Mô tả → ảnh hiện ngay tại chỗ đang gõ. */
@@ -125,7 +147,7 @@ export class PrjBugs implements OnInit {
 
   /** Bấm ảnh trong mô tả → xem to (dùng chung lightbox với dải ảnh đính kèm). */
   onDescShotClick(no: number): void {
-    if (no >= 1 && no <= this.queuedFiles().length) this.shotIndex.set(no - 1);
+    if (no >= 1 && no <= this.descShots().length) this.shotIndex.set(no - 1);
   }
 
   // ----- Bộ lọc (chip đa chọn — signal để computed lọc CHẠY LẠI khi đổi; đồng bộ với Kanban/Log) -----
@@ -352,9 +374,14 @@ export class PrjBugs implements OnInit {
       return q.filter((_, idx) => idx !== i);
     });
   }
+  /**
+   * Dọn ảnh của lần mở form trước. Xoá CẢ ảnh cũ đã nạp, nếu không thì mở Sửa bug A rồi
+   * bấm Báo lỗi mới sẽ vẫn còn ảnh của A, và ảnh mới bị đánh số tiếp nối sai.
+   */
   private clearQueued(): void {
     for (const q of this.queuedFiles()) URL.revokeObjectURL(q.url);
     this.queuedFiles.set([]);
+    this.existingShots.set([]);
   }
 
   reload(): void {
@@ -409,6 +436,9 @@ export class PrjBugs implements OnInit {
       severity: t.severity, stepsToReproduce: '', expectedResult: '', actualResult: '',
       environment: t.environment ?? ''
     };
+    // Dọn ảnh còn sót của lần mở form trước, rồi nạp ảnh CŨ để ảnh thêm mới đánh số tiếp nối.
+    this.clearQueued();
+    this.loadExistingShots(t.id);
     this.modalOpen.set(true);
   }
 
@@ -425,7 +455,10 @@ export class PrjBugs implements OnInit {
     this.f = {
       parentId: t.parentId,
       title: `${t.title} (Copy)`,
-      description: mergeBugFieldsIntoDescription(t),
+      // GỠ đánh dấu "[Ảnh n]" vì ảnh KHÔNG được chép sang. Giữ lại thì đánh dấu mồ côi vẫn
+      // nằm trong mô tả, đến khi thêm ảnh mới (cũng được đánh số 1) là trùng số — một ảnh
+      // hiện ra ở hai chỗ.
+      description: stripShotMarkers(mergeBugFieldsIntoDescription(t)),
       type: t.type, status: 'BACKLOG', priority: t.priority,
       assigneeUserId: t.assigneeUserId,
       testerUserId: t.testerUserId ?? this.auth.currentUser()?.userId ?? null,

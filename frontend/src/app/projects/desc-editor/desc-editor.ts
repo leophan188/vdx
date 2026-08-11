@@ -4,6 +4,18 @@ import { Component, ElementRef, effect, input, output, viewChild } from '@angula
 export interface DescShot { no: number; url: string; }
 
 /**
+ * Gỡ mọi đánh dấu "[Ảnh n]" khỏi mô tả, dọn luôn dòng trống thừa để lại.
+ *
+ * Dùng khi CHÉP nội dung sang task khác mà không chép ảnh: giữ đánh dấu mồ côi thì đến lúc
+ * thêm ảnh mới (được đánh số từ 1) sẽ trùng số với đánh dấu cũ, làm một ảnh hiện ở hai chỗ.
+ */
+export function stripShotMarkers(text: string | null | undefined): string {
+  return (text ?? '')
+    .replace(/[ \t]*\[Ảnh \d+\][ \t]*/g, '')
+    .replace(/\n{3,}/g, '\n\n');
+}
+
+/**
  * Ô MÔ TẢ có ảnh hiện THẲNG trong dòng chữ (selector app-desc-editor).
  *
  * <h3>Vì sao không lưu HTML</h3>

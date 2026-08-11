@@ -105,7 +105,8 @@
   <form id="bug-form" class="bug-form" (ngSubmit)="save()">
     @if (copiedFrom()) {
       <p class="hint">⧉ Đang chép từ <strong>{{ copiedFrom() }}</strong> — trạng thái đặt lại Backlog,
-        ngày để trống, <strong>ảnh đính kèm không được chép</strong>. Sửa lại tiêu đề/mô tả cho đúng lỗi mới.</p>
+        ngày để trống, <strong>ảnh đính kèm không được chép</strong> nên các đánh dấu ảnh trong mô tả
+        cũng đã được gỡ. Sửa lại tiêu đề/mô tả cho đúng lỗi mới.</p>
     }
     <div class="field">
       <label>Task cha *</label>
