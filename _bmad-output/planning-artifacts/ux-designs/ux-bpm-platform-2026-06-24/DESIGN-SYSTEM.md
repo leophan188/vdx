@@ -125,6 +125,53 @@ Module Tài khoản là **bản mẫu hoàn chỉnh** cho mọi module CRUD sau 
 10–11. **Chi tiết + Lịch sử** — modal `[wide]` + `<app-tabs>`: tab Thông tin (`.desc-grid`) + tab Lịch sử (audit trail của đối tượng).
 12. **Thông báo** — toast success/info/warning/error cho mọi thao tác.
 
+## 4c. Bề rộng cột lưới & bộ lọc (rút từ lỗi thật, ĐỌC TRƯỚC KHI DỰNG LƯỚI MỚI)
+
+### Quy tắc cột
+
+1. **Cột nội dung chính KHÔNG khai báo `width`.** `data-grid` coi cột đầu tiên không có
+   `width` là cột co giãn và tự gán `width: 100%` cho nó — mẹo bảng HTML để cột đó nuốt hết
+   chỗ thừa. Trong `cols`, đặt cột chính (Tiêu đề / Tên / Nhân sự / Dự án) ở vị trí sớm và
+   để trống `width`.
+2. **Mọi cột còn lại PHẢI có `width`,** đặt sát nội dung thật (nhãn ngắn 84–132px, ngày
+   104px, số 64px). Cột thiếu `width` mà đứng sau cột chính sẽ tranh chỗ một cách khó đoán.
+3. **Đừng lấy bề rộng theo tiêu đề cột.** `thead th` là `white-space: nowrap`, nên tiêu đề
+   dài ("Mức độ nghiêm trọng") tự làm sàn bề rộng. Tiêu đề dài thì rút gọn chữ, đừng nới cột.
+
+> **Vì sao quan trọng:** thiếu quy tắc 1 thì lưới sai theo CẢ HAI chiều — màn rộng, chỗ dư
+> chia đều nên cột chỉ chứa một nhãn ngắn phình ra vô ích; màn hẹp, cột chính là cột duy
+> nhất co được nên gánh toàn bộ phần thiếu và bị bóp mất chữ.
+
+### Control đặt trong ô lưới
+
+`<searchable-select>` trong ô lưới đã tự tính bề rộng theo độ dài giá trị (`inputSize()`).
+**Đừng đặt `width` cứng cho nó bằng CSS.** Ba cách sai đã gặp:
+
+| Cách | Hậu quả |
+|---|---|
+| Để mặc định | `<input>` rộng cứng ~20 ký tự → cột phình ~310px dù chỉ chứa nhãn "Backlog" |
+| CSS `width: 0` | Bề rộng nội tại về 0 → bảng co cột quá đà, "Backlog" cụt còn "Back" |
+| **`size` = độ dài nhãn ✔** | Vừa đủ chứa giá trị. Cộng 2 ký tự đệm vì `size` đo theo ký tự TRUNG BÌNH, chữ hoa và dấu tiếng Việt rộng hơn |
+
+Hệ quả kèm theo: ô hẹp thì **menu thả xuống không được bó theo ô** (`min-width: 100%` +
+`width: max-content`), nếu không "In Progress" hay tên người dài bị cắt ngay lúc đang chọn.
+
+### Bộ lọc nhiều lựa chọn
+
+Dùng `<app-type-filter [options] [selected] (toggle)>` — dropdown có checkbox, **không trải
+chip ra thanh lọc**. Backlog từng có 6+6+4 = 16 chip chiếm gần hai hàng màn hình.
+
+- Mặc định **chọn hết**, nút hiện "Tất cả" = không lọc gì.
+- Nút **phải đổi màu khi đang lọc**. Giấu danh sách đi thì rất dễ quên mình đang lọc rồi
+  nhìn lưới thiếu dòng mà kết luận sai — trạng thái này bắt buộc đập vào mắt.
+- Bỏ chọn hết thì cha tự bật lại tất cả (tránh lưới trống khó hiểu).
+
+### Nội dung dài trong ô
+
+Tiêu đề công việc thực tế có dạng `[Nhiệm vụ] Section 3: Lỗi mặc định hiển thị sai khi…` —
+**đoạn phân biệt nằm ở CUỐI**. Cắt một dòng bằng `text-overflow: ellipsis` sẽ xoá đúng phần
+cần đọc. Cho xuống **tối đa 2 dòng** (`-webkit-line-clamp: 2`) rồi mới cắt.
+
 ## 5. Quy tắc tái dụng (bắt buộc với mọi epic sau)
 
 1. **Token-only:** màu/space/bo/chữ phải đọc từ `var(--…)`. PR hardcode hex/px sẽ bị trả.
@@ -132,6 +179,8 @@ Module Tài khoản là **bản mẫu hoàn chỉnh** cho mọi module CRUD sau 
 3. **Đỏ = quá hạn**, không dùng đỏ cho mục đích khác (dùng `--color-text-muted`/`.btn--danger` cho xóa).
 4. **Một bộ icon line** nhất quán; không trộn họ icon, không gradient/bóng đậm.
 5. **Thêm pattern mới → thêm vào `/styleguide`** ngay, để cả nhóm thấy và tái dụng.
+5b. **Lưới:** cột nội dung chính để trống `width`, mọi cột khác phải có `width` sát nội dung;
+   bộ lọc nhiều lựa chọn dùng `<app-type-filter>` chứ không trải chip. Chi tiết ở **§4c**.
 6. Tương phản **AA**; mọi control có trạng thái `:focus-visible` rõ.
 
 ## 6. Accessibility (NFR — chuẩn AA)
