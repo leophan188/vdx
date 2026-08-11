@@ -34,6 +34,22 @@ export class SearchableSelect {
   readonly selectedOption = computed(() => this.options().find((o) => o.value === this.value()) ?? null);
   readonly selectedLabel = computed(() => this.selectedOption()?.label ?? '');
 
+  /**
+   * Bề rộng ô nhập tính theo ĐỘ DÀI GIÁ TRỊ đang hiển thị, qua thuộc tính size.
+   *
+   * Mặc định input rộng cứng ~20 ký tự, nên trong bảng nó ép cột phình lên ~310px dù cột
+   * chỉ chứa nhãn ngắn như "Backlog". Nếu chữa bằng CSS width:0 thì ngược lại: bề rộng nội
+   * tại về 0, bảng co cột xuống dưới cả cỡ chữ và "Backlog" bị cắt còn "Back".
+   *
+   * size khiến bề rộng bám đúng nội dung — vừa đủ chứa giá trị, không dư không thiếu. Cộng
+   * 2 ký tự đệm vì size đo theo bề rộng ký tự TRUNG BÌNH, chữ hoa và dấu tiếng Việt rộng
+   * hơn mức đó. Chặn trần 26 để tên người dài không kéo cột đi quá xa.
+   */
+  readonly inputSize = computed<number>(() => {
+    const shown = this.selectedLabel() || this.placeholder();
+    return Math.min(26, Math.max(6, shown.length + 2));
+  });
+
   readonly filtered = computed<SelectOption[]>(() => {
     const q = noDiacritics(this.query().trim());
     if (!this.typing() || !q) return this.options();

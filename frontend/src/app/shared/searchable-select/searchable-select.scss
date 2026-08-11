@@ -8,14 +8,12 @@
 }
 .ss--open .ss__control { border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-primary-soft); }
 /*
- * width: 0 là điểm mấu chốt, không thừa dù đã có flex + min-width.
- * <input type="text"> mặc định rộng khoảng 20 ký tự (~180px). Trong bảng table-layout:auto,
- * trình duyệt lấy đúng con số đó làm bề rộng TỐI THIỂU của ô, nên cột phình lên ~310px dù
- * đã khai báo width 124px — cột Trạng thái chỉ chứa một nhãn ngắn mà chiếm chỗ như cột tiêu
- * đề. min-width:0 chỉ cho phép co khi chia không gian flex, không đổi được bề rộng tối thiểu
- * đó; width:0 mới đưa nó về 0 rồi flex:1 kéo giãn lại vừa đúng ô.
+ * KHÔNG đặt width:0 ở đây. Bề rộng nội tại của ô nhập được điều khiển bằng thuộc tính size
+ * (xem inputSize() trong searchable-select.ts) để bám đúng độ dài giá trị. Đặt width:0 sẽ
+ * ghi đè size, đưa bề rộng nội tại về 0 và bảng co cột xuống dưới cả cỡ chữ — "Backlog" bị
+ * cắt còn "Back". flex:1 vẫn giữ để ô nở kín khi khung cha rộng hơn.
  */
-.ss__input { flex: 1; width: 0; min-width: 0; height: 100%; border: none; background: transparent; color: var(--color-text); font: inherit; padding: 0; }
+.ss__input { flex: 1; min-width: 0; height: 100%; border: none; background: transparent; color: var(--color-text); font: inherit; padding: 0; }
 .ss__input:focus-visible { outline: none; }
 .ss__caret { color: var(--color-text-muted); font-size: 10px; flex: none; pointer-events: none; }
 

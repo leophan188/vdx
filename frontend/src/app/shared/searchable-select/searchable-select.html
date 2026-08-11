@@ -4,6 +4,7 @@
       <span class="ss__badge" [style.--bc]="selectedOption()!.badgeColor || 'var(--color-primary)'">{{ b }}</span>
     }
     <input class="ss__input" type="text" [value]="query()" [placeholder]="placeholder()"
+           [attr.size]="inputSize()"
            (input)="onType($any($event.target).value)" (focus)="openIt()" autocomplete="off" />
     <span class="ss__caret">▾</span>
   </div>
