@@ -60,11 +60,20 @@ interface TreeRow {
     .bl-chip--on { background: var(--color-primary-soft); border-color: var(--color-primary);
       color: var(--color-primary); font-weight: 600; }
     .bl-tree { border: 1px solid var(--color-border); border-radius: var(--radius-md); overflow-x: auto; background: var(--color-surface); }
+    /*
+     * Cột CÔNG VIỆC là thứ người dùng đọc nhiều nhất nên được ưu tiên chỗ:
+     * - Trước đây minmax(220px, 1.6fr), mà trong ô còn tay kéo + nút gập + mã task chiếm
+     *   ~110px, nên tên việc chỉ còn vài chục pixel rồi bị cắt bằng dấu ba chấm.
+     * - Ba cột Từ ngày / Đến ngày / Duration (148+148+84 = 380px) nay gộp làm MỘT cột
+     *   "Thời gian" rộng 152px, hai ô ngày xếp chồng. Tiết kiệm ~245px dồn hết cho tên.
+     * Nhờ vậy tên tối thiểu 340px (gấp rưỡi cũ) mà min-width của lưới không tăng thêm,
+     * tức không phải cuộn ngang nhiều hơn trước.
+     */
     .bl-head, .bl-row {
       display: grid;
-      grid-template-columns: minmax(220px, 1.6fr) 92px 118px 150px 62px 110px 148px 148px 84px 96px 116px;
+      grid-template-columns: minmax(340px, 2.4fr) 84px 116px 148px 62px 100px 152px 92px 104px;
       align-items: center; gap: var(--space-2);
-      padding: var(--space-2) var(--space-3); min-width: 1284px;
+      padding: var(--space-2) var(--space-3); min-width: 1286px;
     }
     .bl-head { font-weight: 600; font-size: var(--font-size-sm); color: var(--color-text-muted);
       background: var(--color-surface-alt); border-bottom: 1px solid var(--color-border); }
@@ -107,7 +116,8 @@ interface TreeRow {
     .bl-row--dragover { box-shadow: inset 0 2px 0 0 var(--color-primary); background: color-mix(in srgb, var(--color-primary) 8%, transparent); }
     .bl-drag { cursor: grab; color: var(--color-text-muted); font-size: .8rem; padding: 0 2px; user-select: none; flex: none; }
     .bl-drag:active { cursor: grabbing; }
-    .bl-title { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    /* align-items: flex-start để tên xuống 2 dòng thì tay kéo/nút gập vẫn thẳng dòng đầu. */
+    .bl-title { display: flex; align-items: flex-start; gap: 4px; min-width: 0; }
     /* Nút thu gọn/mở to & dễ bấm hơn (vùng chạm 28px, có nền hover). */
     .bl-toggle { background: none; border: 0; cursor: pointer; width: 28px; height: 28px; font-size: 1.05rem;
       line-height: 1; color: var(--color-text-muted); padding: 0; flex: 0 0 auto; border-radius: var(--radius-sm, 6px);
@@ -116,8 +126,17 @@ interface TreeRow {
     .bl-leaf { display: inline-block; width: 28px; text-align: center; color: var(--color-border); flex: 0 0 auto; }
     .bl-code { font-family: var(--font-mono, monospace); font-size: var(--font-size-xs); color: var(--color-text-muted);
       flex: 0 0 auto; margin-right: 2px; }
-    .bl-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; }
+    /* Tên việc cho xuống TỐI ĐA 2 DÒNG thay vì cắt cụt một dòng: tiêu đề task thực tế hay
+       dài kiểu "[Nhiệm vụ] Section 3: Lỗi mặc định hiển thị sai khi…", một dòng thì đoạn
+       phân biệt nằm ở cuối lại chính là đoạn bị cắt mất. Quá 2 dòng mới hiện dấu ba chấm. */
+    .bl-name { cursor: pointer; min-width: 0; line-height: 1.4; overflow: hidden;
+      display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; line-clamp: 2;
+      overflow-wrap: anywhere; padding-top: 5px; }
     .bl-name:hover { color: var(--color-primary); text-decoration: underline; }
+    /* Ô THỜI GIAN gộp: hai ngày xếp chồng + số ngày công ở dòng cuối. */
+    .bl-when { display: grid; gap: 3px; min-width: 0; }
+    .bl-when__dur { font-size: var(--text-xs); color: var(--color-text-muted);
+      font-variant-numeric: tabular-nums; }
     .bl-actions { display: flex; gap: 2px; justify-content: flex-end; }
     .bl-empty { padding: var(--space-4); text-align: center; color: var(--color-text-muted); }
     .bl-num { text-align: right; font-variant-numeric: tabular-nums; }

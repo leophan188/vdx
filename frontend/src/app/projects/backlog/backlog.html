@@ -105,9 +105,7 @@
     <span>Người thực hiện</span>
     <span class="bl-num">Est (giờ)</span>
     <span>% Hoàn thành</span>
-    <span>Từ ngày</span>
-    <span>Đến ngày</span>
-    <span>Duration</span>
+    <span>Thời gian</span>
     <span>Ưu tiên</span>
     <span class="bl-actions">Thao tác</span>
   </div>
@@ -195,19 +193,22 @@
           <span class="bl-progress__label">{{ round(r.task.progressPct) }}%</span>
         </span>
 
-        <!-- Từ ngày → Đến ngày: rollup (cha) = tự tổng hợp read-only; lá = chọn/sửa ngay trên lưới -->
-        @if (isRollup(r.task)) {
-          <span class="bl-date bl-num--muted" title="Tự tổng hợp từ task con">{{ startOf(r.task) || '—' }}</span>
-          <span class="bl-date bl-num--muted" title="Tự tổng hợp từ task con">{{ dueOf(r.task) || '—' }}</span>
-        } @else {
-          <input type="date" class="bl-date-input" [value]="iso(r.task.startDate)"
-                 (change)="saveDateInline(r.task, 'start', $any($event.target).value)"
-                 title="Ngày bắt đầu — chọn để cập nhật (Est trống sẽ tự tính = số ngày × 8)" />
-          <input type="date" class="bl-date-input" [value]="iso(r.task.dueDate)"
-                 (change)="saveDateInline(r.task, 'due', $any($event.target).value)"
-                 title="Ngày kết thúc — chọn để cập nhật (Est trống sẽ tự tính = số ngày × 8)" />
-        }
-        <span class="bl-date bl-num--muted">{{ durationOf(r.task) }}</span>
+        <!-- THỜI GIAN (gộp Từ ngày / Đến ngày / Duration vào một cột để nhường chỗ cho cột
+             Công việc). Rollup (cha) = tự tổng hợp read-only; lá = chọn/sửa ngay trên lưới. -->
+        <span class="bl-when">
+          @if (isRollup(r.task)) {
+            <span class="bl-date bl-num--muted" title="Tự tổng hợp từ task con">{{ startOf(r.task) || '—' }}</span>
+            <span class="bl-date bl-num--muted" title="Tự tổng hợp từ task con">{{ dueOf(r.task) || '—' }}</span>
+          } @else {
+            <input type="date" class="bl-date-input" [value]="iso(r.task.startDate)"
+                   (change)="saveDateInline(r.task, 'start', $any($event.target).value)"
+                   title="Ngày bắt đầu — chọn để cập nhật (Est trống sẽ tự tính = số ngày × 8)" />
+            <input type="date" class="bl-date-input" [value]="iso(r.task.dueDate)"
+                   (change)="saveDateInline(r.task, 'due', $any($event.target).value)"
+                   title="Ngày kết thúc — chọn để cập nhật (Est trống sẽ tự tính = số ngày × 8)" />
+          }
+          <span class="bl-when__dur" title="Số ngày công">{{ durationOf(r.task) }}</span>
+        </span>
 
         <!-- Ưu tiên -->
         <span><span class="badge" [class]="priorityBadge(r.task.priority)">{{ priorityLabel(r.task.priority) }}</span></span>
