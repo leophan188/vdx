@@ -57,6 +57,14 @@ export class DataGrid {
   readonly expandable = input(false);
   /** Hiện nút "Xuất Excel" (mặc định bật cho MỌI lưới). */
   readonly exportable = input(true);
+  /**
+   * Ẩn HẲN thanh tiêu đề lưới (tên + đếm + tìm kiếm + nút xuất).
+   *
+   * Dùng khi màn đã có sẵn những thứ đó ở phía trên: số lượng nằm ở khối thống kê đầu trang,
+   * ô tìm kiếm nằm trong thanh lọc chung. Giữ lại thanh này chỉ tổ lặp thông tin và ăn mất
+   * một hàng màn hình. Nhớ tự đặt nút xuất Excel ở ngoài và gọi {@link exportExcel}.
+   */
+  readonly toolbar = input(true);
   /** Tên file khi xuất (không kèm .xlsx); rỗng → dùng title/tiêu đề mặc định. */
   readonly exportName = input('');
 

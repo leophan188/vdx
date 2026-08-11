@@ -46,14 +46,17 @@
     <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">✕ Đặt lại</button>
   }
   <span class="filter-bar__spacer"></span>
+  <!-- Nút xuất đứng cùng hàng với Báo lỗi thay vì nằm trong thanh tiêu đề lưới, để bỏ hẳn
+       được thanh đó (số lượng đã có ở khối thống kê đầu trang, tìm kiếm đã có ở thanh lọc). -->
+  <button type="button" class="btn btn--ghost" [disabled]="!filtered().length"
+          title="Xuất danh sách đang lọc ra Excel (.xlsx)" (click)="exportExcel()">⬇ Excel</button>
   <button type="button" class="btn btn--primary" (click)="openReport()">＋ Báo lỗi</button>
 </div>
 
 <!-- Tắt ô tìm kiếm sẵn có của lưới: thanh lọc phía trên đã có ô "Tìm mã / tiêu đề lỗi".
      Hai ô tìm kiếm trên cùng màn khiến người dùng phải đoán gõ vào ô nào, và gõ nhầm ô thì
      kết quả khác nhau vì hai ô lọc theo phạm vi khác nhau. -->
-<data-grid [columns]="cols" [rows]="filtered()" [searchable]="false"
-           [title]="'Bug / Issue (' + filtered().length + ')'"
+<data-grid #grid [columns]="cols" [rows]="filtered()" [toolbar]="false"
            [pageSize]="50" [pageSizes]="[50, 100, 200]"
            [emptyText]="loading() ? 'Đang tải…' : 'Chưa có lỗi nào được báo cáo.'">
   <ng-template gridCell="code" let-t>

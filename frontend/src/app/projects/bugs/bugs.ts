@@ -116,6 +116,13 @@ export class PrjBugs implements OnInit {
     this.toast.success('Đã dán ảnh', `${shots.length} ảnh — đã chèn vào Mô tả.`);
   }
 
+  /**
+   * Lưới — cần tham chiếu vì nút xuất Excel nay nằm ở thanh lọc (cùng hàng với Báo lỗi),
+   * còn logic xuất vẫn thuộc data-grid để mọi màn xuất ra cùng một định dạng.
+   */
+  private readonly grid = viewChild<DataGrid>('grid');
+  exportExcel(): void { void this.grid()?.exportExcel(); }
+
   /** Bấm ảnh trong mô tả → xem to (dùng chung lightbox với dải ảnh đính kèm). */
   onDescShotClick(no: number): void {
     if (no >= 1 && no <= this.queuedFiles().length) this.shotIndex.set(no - 1);
