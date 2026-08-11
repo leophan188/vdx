@@ -330,8 +330,9 @@
                 @if (editingId() === c.id) {
                   <div class="cmt__edit">
                     <div class="cmt__author">{{ c.authorName }}</div>
-                    <textarea rows="2" [value]="editDraft()"
-                              (input)="editDraft.set($any($event.target).value)"></textarea>
+                    <textarea rows="2" [value]="editDraft()" title="Enter xuống dòng · Ctrl+Enter lưu"
+                              (input)="editDraft.set($any($event.target).value)"
+                              (keydown)="onEditKey($event, c)"></textarea>
                     <div class="cmt__editacts">
                       <button type="button" class="btn btn--primary btn--sm" (click)="saveEdit(c)">Lưu</button>
                       <button type="button" class="btn btn--ghost btn--sm" (click)="cancelEdit()">Huỷ</button>
@@ -355,8 +356,12 @@
                   }
                   @if (c.mine) {
                     <div class="cmt__acts">
-                      <button type="button" class="linkbtn" (click)="startEdit(c)">Sửa</button>
-                      <button type="button" class="linkbtn linkbtn--danger" (click)="deleteComment(c)">Xoá</button>
+                      <!-- Icon kèm title/aria-label: chữ "Sửa · Xoá" lặp ở mọi bình luận làm
+                           luồng đọc bị ngắt liên tục, mà nhãn vẫn phải giữ cho trình đọc màn hình. -->
+                      <button type="button" class="cmt__ico" title="Sửa bình luận"
+                              aria-label="Sửa bình luận" (click)="startEdit(c)">✏️</button>
+                      <button type="button" class="cmt__ico cmt__ico--danger" title="Xoá bình luận"
+                              aria-label="Xoá bình luận" (click)="deleteComment(c)">🗑</button>
                     </div>
                   }
                 }
@@ -366,7 +371,7 @@
             }
           </div>
           <div class="td__newcmt">
-            <textarea rows="2" placeholder="Viết bình luận… (Enter để gửi · Ctrl+V để dán ảnh)"
+            <textarea rows="2" placeholder="Viết bình luận… (Enter xuống dòng · Ctrl+Enter gửi · Ctrl+V dán ảnh)"
                       [value]="draft()" (input)="draft.set($any($event.target).value)"
                       (keydown)="onCommentKey($event)"></textarea>
             <label class="btn btn--ghost btn--sm" title="Đính ảnh vào bình luận">

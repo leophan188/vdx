@@ -200,7 +200,14 @@ type SubTab = 'info' | 'comments' | 'activity';
     .cmt__pend-del { position: absolute; top: 2px; right: 2px; width: 20px; height: 20px; padding: 0;
       border: none; border-radius: 50%; background: rgba(0,0,0,.6); color: #fff; font-size: .7rem;
       line-height: 20px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
-    .cmt__acts { display: flex; gap: 8px; }
+    .cmt__acts { display: flex; gap: 4px; }
+    /* Nút icon: vùng chạm 26px cho dễ bấm, mờ lúc thường để không tranh chú ý với nội dung
+       bình luận, rõ lên khi rê chuột. */
+    .cmt__ico { width: 26px; height: 26px; padding: 0; border: none; border-radius: var(--radius-sm, 6px);
+      background: none; cursor: pointer; font-size: .82rem; line-height: 1; opacity: .55;
+      display: inline-flex; align-items: center; justify-content: center; }
+    .cmt__ico:hover { opacity: 1; background: var(--color-surface-alt); }
+    .cmt__ico--danger:hover { background: var(--overdue-bg, #fee); }
     .linkbtn { background: none; border: none; padding: 0; cursor: pointer; color: var(--color-primary); font-size: .75rem; }
     .linkbtn--danger { color: var(--color-error); }
     .cmt__edit { display: grid; gap: 6px; }
@@ -914,8 +921,21 @@ export class PrjTaskDetail {
     for (const p of this.cmtImages()) URL.revokeObjectURL(p.url);
     this.cmtImages.set([]);
   }
+  /**
+   * Enter = XUỐNG DÒNG, gửi bằng Ctrl/Cmd+Enter.
+   *
+   * Trước đây Enter gửi luôn: bình luận mô tả lỗi thường phải xuống dòng, gõ nửa chừng bấm
+   * Enter là gửi mất một mẩu dở dang, sửa lại thì bình luận dính nhãn "(đã sửa)". Ô SỬA
+   * bình luận lại để Enter xuống dòng bình thường — cùng một khung soạn thảo mà hai hành vi
+   * khác nhau, gõ theo thói quen là sai.
+   */
   onCommentKey(e: KeyboardEvent): void {
-    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); this.submitComment(); }
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.submitComment(); }
+  }
+
+  /** Ô sửa bình luận: cùng quy ước — Enter xuống dòng, Ctrl/Cmd+Enter lưu. */
+  onEditKey(e: KeyboardEvent, c: TaskComment): void {
+    if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); this.saveEdit(c); }
   }
   startEdit(c: TaskComment): void { this.editingId.set(c.id); this.editDraft.set(c.body); }
   cancelEdit(): void { this.editingId.set(null); this.editDraft.set(''); }
