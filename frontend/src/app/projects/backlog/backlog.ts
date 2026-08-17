@@ -331,13 +331,29 @@ export class PrjBacklog implements OnInit {
   }
   /** Loại con đang chọn CÓ cần cha không (khác EPIC). Method thường để bám theo f.type. */
   needsParent(): boolean { return this.parentTypeOf(this.f.type) !== null; }
-  /** Danh sách cha hợp lệ theo f.type (loại các task không đúng loại cha yêu cầu). */
+  /**
+   * Danh sách cha hợp lệ theo f.type, CỘNG THÊM cha hiện tại nếu nó không còn hợp lệ.
+   *
+   * Dữ liệu cũ có thể vi phạm quy tắc phân cấp hiện hành (thực tế: 2 Story đang nằm dưới
+   * một Story khác, trong khi Story chỉ được phép có cha là Epic). Nếu chỉ đưa ra danh sách
+   * hợp lệ thì cha thật không có trong đó, ô hiện TRỐNG và người sửa tưởng task mất cha —
+   * lưu lại là dễ gán nhầm sang cha khác.
+   *
+   * Vẫn KHÔNG nới quy tắc: cha sai chuẩn chỉ xuất hiện đúng cho task đang sửa, các lựa chọn
+   * còn lại vẫn theo đúng phân cấp.
+   */
   parentOptions(): SelectOption[] {
     const allow = this.parentTypeOf(this.f.type);
     if (!allow) return [];
     const editing = this.editingId();
-    return buildParentOptions(this.tasks(),
-      this.tasks().filter((t) => allow.includes(t.type) && t.id !== editing));
+    const all = this.tasks();
+    const ok = all.filter((t) => allow.includes(t.type) && t.id !== editing);
+    const cur = this.f.parentId;
+    if (cur && !ok.some((t) => t.id === cur)) {
+      const parent = all.find((t) => t.id === cur);
+      if (parent) ok.unshift(parent);
+    }
+    return buildParentOptions(all, ok);
   }
   /** Khi đổi loại trong modal → tính lại cha hợp lệ; reset parentId nếu không còn hợp lệ. */
   onTypeChange(type: TaskType): void {
