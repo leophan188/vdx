@@ -44,14 +44,16 @@ public class HrHighlightsService {
     /** Ngưỡng nhắc onboarding (ngày). */
     private static final int ONBOARD_NOTIFY_THRESHOLD = 7;
     /**
-     * Cửa sổ nhìn trước cho TRI ÂN THÂM NIÊN (ngày) — rộng hơn hẳn sinh nhật, có chủ đích.
+     * Cửa sổ nhìn trước CHUNG cho cả ba thẻ nhân sự: sinh nhật, tri ân thâm niên, onboard.
      *
-     * Sinh nhật thì ai cũng có nên 7 ngày là đủ dày. Thâm niên chỉ tính người đã tròn 1 năm
-     * (hiện 51/111 người), trải trên 365 ngày nên cửa sổ 7 ngày trung bình chỉ ra ~1 người
-     * và rất hay RỖNG — thực tế lúc làm tính năng, người gần nhất còn 9 ngày nên thẻ không
-     * hiện gì. 30 ngày cho khoảng 4-5 người, đủ để chuẩn bị quà và lời chúc trước.
+     * Một hằng số duy nhất để ba thẻ cạnh nhau không nói ba khoảng thời gian khác nhau.
+     * Đã thử 30 ngày cho thâm niên thì ra 7 người cùng lúc, chiếm quá nhiều chỗ cột phải.
+     *
+     * Đổi lại thẻ thâm niên sẽ RỖNG khá thường xuyên (51/111 người đủ điều kiện, trải trên
+     * 365 ngày → trung bình một tuần chỉ ~1 người); vì vậy thẻ vẫn phải LUÔN hiện kèm dòng
+     * trạng thái rỗng, đừng ẩn đi kẻo người dùng tưởng mất tính năng.
      */
-    private static final int ANNIV_LOOKAHEAD_DAYS = 30;
+    private static final int LOOKAHEAD_DAYS = 7;
     /** Vai trò nhận thông báo onboarding (admin/HR). */
     private static final String ROLE_ADMIN = "ADMIN";
 
@@ -88,15 +90,17 @@ public class HrHighlightsService {
                 if (bd.equals(todayMd)) {
                     birthdaysToday.add(birthdayView(e, 0));
                 }
-                if (inDays >= 0 && inDays <= 6) {
+                if (inDays > 0 && inDays <= LOOKAHEAD_DAYS) {
                     birthdaysThisWeek.add(birthdayView(e, inDays));
                 }
             }
 
-            // ----- ONBOARDING (joinDate tương lai) -----
+            // ----- ONBOARDING (joinDate tương lai, trong cửa sổ 7 ngày) -----
+            // Trước đây KHÔNG chặn trên: người vào làm sau nửa năm cũng nằm trên thẻ, đẩy
+            // người sắp vào thật xuống dưới. Nay cùng cửa sổ 7 ngày với hai thẻ còn lại.
             if (e.getJoinDate() != null && e.getJoinDate().isAfter(today)) {
                 int daysUntil = (int) ChronoUnit.DAYS.between(today, e.getJoinDate());
-                if (daysUntil > 0) {
+                if (daysUntil > 0 && daysUntil <= LOOKAHEAD_DAYS) {
                     onboardingSoon.add(new OnboardingView(e.getEmpCode(), e.getFullName(), e.getDeptCode(),
                             e.getJobPosition(), e.getTitle(), e.getUserAccountId(), e.getJoinDate(), daysUntil));
                     maybeNotifyOnboarding(e, daysUntil);
@@ -124,7 +128,7 @@ public class HrHighlightsService {
                         anniversariesToday.add(anniversaryView(e, years, 0));
                         maybeCelebrateAnniversary(e, today, years);
                     }
-                    if (inDays > 0 && inDays <= ANNIV_LOOKAHEAD_DAYS) {
+                    if (inDays > 0 && inDays <= LOOKAHEAD_DAYS) {
                         anniversariesUpcoming.add(anniversaryView(e, years, inDays));
                     }
                 }

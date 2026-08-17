@@ -46,8 +46,8 @@
 
       <!-- Việc 1: Sinh nhật hôm nay (nhân sự đang hoạt động) — thẻ lễ hội ấm -->
       <section class="ochome-card ochome-widget ochome-hr ochome-hr--bday">
-        <div class="ochome-widget__head"><span>🎂 SINH NHẬT HÔM NAY</span></div>
-        @if (birthdaysToday().length) {
+        <div class="ochome-widget__head"><span>🎂 SINH NHẬT</span></div>
+        @if (birthdaysToday().length || birthdaysThisWeek().length) {
           <ul class="ochome-hr__list">
             @for (b of birthdaysToday(); track b.empCode) {
               <li class="ochome-hr__item">
@@ -59,12 +59,27 @@
                 <div class="ochome-hr__info">
                   <strong class="ochome-hr__name">{{ b.fullName }}</strong>
                   <span class="ochome-hr__sub">{{ b.jobPosition || '—' }}@if (b.title) { · {{ b.title }} } · {{ b.deptCode }}</span>
+                  <span class="ochome-hr__badge ochome-hr__badge--bday">🎉 Sinh nhật hôm nay</span>
+                </div>
+              </li>
+            }
+            @for (b of birthdaysThisWeek(); track b.empCode) {
+              <li class="ochome-hr__item">
+                @if (avatarUrl(b.userId); as src) {
+                  <img class="ochome-hr__ava" [src]="src" [alt]="b.fullName" (error)="onAvatarError(b.userId)" />
+                } @else {
+                  <app-avatar class="ochome-hr__ava-fallback" [name]="b.fullName" [size]="60" />
+                }
+                <div class="ochome-hr__info">
+                  <strong class="ochome-hr__name">{{ b.fullName }}</strong>
+                  <span class="ochome-hr__sub">{{ b.jobPosition || '—' }}@if (b.title) { · {{ b.title }} } · {{ b.deptCode }}</span>
+                  <span class="ochome-hr__badge">còn {{ b.inDays }} ngày — {{ b.day }}/{{ b.month }}</span>
                 </div>
               </li>
             }
           </ul>
         } @else {
-          <p class="ochome-hr__empty">Hôm nay không có sinh nhật.</p>
+          <p class="ochome-hr__empty">Không có sinh nhật trong 7 ngày tới.</p>
         }
       </section>
 
@@ -105,7 +120,7 @@
             }
           </ul>
         } @else {
-          <p class="ochome-hr__empty">Chưa có ai tới mốc thâm niên trong 30 ngày tới.</p>
+          <p class="ochome-hr__empty">Chưa có ai tới mốc thâm niên trong 7 ngày tới.</p>
         }
       </section>
 

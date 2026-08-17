@@ -27,6 +27,8 @@ export class Home implements OnInit {
   readonly birthdaysToday = signal<BirthdayView[]>([]);
   readonly onboardingSoon = signal<OnboardingView[]>([]);
   /** Tri ân thâm niên: đúng hôm nay, và trong 7 ngày tới để chuẩn bị trước. */
+  /** Sinh nhật sắp tới trong 7 ngày (không gồm hôm nay — hôm nay đã có danh sách riêng). */
+  readonly birthdaysThisWeek = signal<BirthdayView[]>([]);
   readonly anniversariesToday = signal<AnniversaryView[]>([]);
   readonly anniversariesUpcoming = signal<AnniversaryView[]>([]);
   readonly hrLoaded = signal(false);
@@ -133,6 +135,7 @@ export class Home implements OnInit {
       next: (h) => {
         this.birthdaysToday.set(h.birthdaysToday ?? []);
         this.onboardingSoon.set(h.onboardingSoon ?? []);
+        this.birthdaysThisWeek.set(h.birthdaysThisWeek ?? []);
         this.anniversariesToday.set(h.anniversariesToday ?? []);
         // Loại người đã hiện ở ô "hôm nay" để không xuất hiện hai lần trên cùng màn.
         this.anniversariesUpcoming.set((h.anniversariesUpcoming ?? []).filter((a) => a.inDays > 0));
