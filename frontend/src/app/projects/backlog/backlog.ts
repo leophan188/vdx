@@ -355,6 +355,17 @@ export class PrjBacklog implements OnInit {
     }
     return buildParentOptions(all, ok);
   }
+  /**
+   * Cha hiện tại có lệch phân cấp chuẩn không → trả về NHÃN LOẠI của cha, rỗng nếu bình thường.
+   * Dùng để cảnh báo mềm trong form (không chặn lưu).
+   */
+  parentOffStandard(): string {
+    const allow = this.parentTypeOf(this.f.type);
+    if (!allow || !this.f.parentId) return '';
+    const parent = this.tasks().find((t) => t.id === this.f.parentId);
+    return parent && !allow.includes(parent.type) ? this.typeLabel(parent.type) : '';
+  }
+
   /** Khi đổi loại trong modal → tính lại cha hợp lệ; reset parentId nếu không còn hợp lệ. */
   onTypeChange(type: TaskType): void {
     this.f.type = type;
@@ -839,9 +850,19 @@ export class PrjBacklog implements OnInit {
   save(): void {
     if (!this.f.title?.trim()) { this.toast.warning('Thiếu tiêu đề công việc'); return; }
     // Validate cha theo phân cấp: mọi loại KHÁC EPIC bắt buộc chọn cha ĐÚNG loại.
+    //
+    // MIỄN TRỪ cho dữ liệu cũ: nếu đang SỬA mà không đụng gì tới Loại lẫn ô cha thì cho lưu,
+    // dù cha hiện tại vi phạm quy tắc. Thực tế có 2 Story nằm dưới một Story khác; bắt đúng
+    // luật ở đây thì người dùng không sửa nổi tiêu đề hay mô tả của chúng, mà muốn qua được
+    // lại phải đổi cha — tức ép sửa cấu trúc dự án chỉ để sửa một dòng chữ.
+    // Ràng buộc vẫn giữ nguyên cho task tạo mới và cho mọi lần đổi Loại/đổi cha.
     const allow = this.parentTypeOf(this.f.type);
     if (allow) {
-      const ok = this.f.parentId && this.tasks().some((t) => t.id === this.f.parentId && allow.includes(t.type));
+      const cur = this.tasks().find((t) => t.id === this.editingId());
+      const untouched = !!cur && cur.type === this.f.type
+        && (cur.parentId ?? null) === (this.f.parentId ?? null);
+      const ok = untouched
+        || (this.f.parentId && this.tasks().some((t) => t.id === this.f.parentId && allow.includes(t.type)));
       if (!ok) { this.toast.error(`Vui lòng chọn ${this.parentTypeLabel(this.f.type)} cha`); return; }
     } else {
       this.f.parentId = null; // EPIC → luôn là gốc
@@ -1123,7 +1144,10 @@ export class PrjBacklog implements OnInit {
   }
 
   // ----- nhãn / badge -----
-  typeLabel(t: TaskType): string { return this.typeOptions.find((o) => o.value === t)?.label ?? t; }
+  // Nhận cả null/undefined vì f.type trong form có thể chưa đặt (TaskRequest cho phép rỗng).
+  typeLabel(t: TaskType | null | undefined): string {
+    return t ? (this.typeOptions.find((o) => o.value === t)?.label ?? t) : '';
+  }
   statusLabel(s: TaskStatus): string { return this.statusOptions.find((o) => o.value === s)?.label ?? s; }
   priorityLabel(p: TaskPriority): string { return this.priorityOptions.find((o) => o.value === p)?.label ?? p; }
 

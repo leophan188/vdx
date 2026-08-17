@@ -263,6 +263,13 @@
             <input type="text" value="—" disabled />
             <span class="field-hint">Chưa có {{ parentTypeLabel(f.type) }} — hãy tạo trước.</span>
           }
+          <!-- Dữ liệu cũ có thể lệch phân cấp chuẩn. Nói rõ ra để người sửa không tưởng hỏng
+               và cũng không vô tình đổi cha khi chỉ định sửa tiêu đề. -->
+          @if (parentOffStandard()) {
+            <span class="field-hint">⚠️ Cha hiện tại là <strong>{{ parentOffStandard() }}</strong>,
+              không đúng phân cấp chuẩn ({{ typeLabel(f.type) }} chỉ nên thuộc {{ parentTypeLabel(f.type) }}).
+              Vẫn lưu được nếu bạn không đổi ô này.</span>
+          }
         </div>
       }
 
