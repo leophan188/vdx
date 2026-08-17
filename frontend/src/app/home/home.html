@@ -69,11 +69,11 @@
       </section>
 
       <!-- TRI ÂN THÂM NIÊN — kỷ niệm ngày vào làm từ tròn 1 năm trở lên.
-           Chỉ hiện khi có người, khác thẻ Sinh nhật (luôn hiện kèm câu "hôm nay không có"):
-           thâm niên thưa hơn nhiều nên để thẻ rỗng thường trực sẽ chiếm chỗ vô ích. -->
-      @if (anniversariesToday().length || anniversariesThisWeek().length) {
-        <section class="ochome-card ochome-widget ochome-hr ochome-hr--anniv">
-          <div class="ochome-widget__head"><span>🎖️ TRI ÂN THÂM NIÊN</span></div>
+           LUÔN hiện thẻ (như thẻ Sinh nhật), kể cả khi chưa tới ai: ẩn đi thì người dùng
+           tưởng chưa có tính năng, mà thâm niên vốn thưa nên thẻ sẽ vắng mặt phần lớn thời gian. -->
+      <section class="ochome-card ochome-widget ochome-hr ochome-hr--anniv">
+        <div class="ochome-widget__head"><span>🎖️ TRI ÂN THÂM NIÊN</span></div>
+        @if (anniversariesToday().length || anniversariesUpcoming().length) {
           <ul class="ochome-hr__list">
             @for (a of anniversariesToday(); track a.empCode) {
               <li class="ochome-hr__item">
@@ -89,7 +89,7 @@
                 </div>
               </li>
             }
-            @for (a of anniversariesThisWeek(); track a.empCode) {
+            @for (a of anniversariesUpcoming(); track a.empCode) {
               <li class="ochome-hr__item">
                 @if (avatarUrl(a.userId); as src) {
                   <img class="ochome-hr__ava" [src]="src" [alt]="a.fullName" (error)="onAvatarError(a.userId)" />
@@ -104,8 +104,10 @@
               </li>
             }
           </ul>
-        </section>
-      }
+        } @else {
+          <p class="ochome-hr__empty">Chưa có ai tới mốc thâm niên trong 30 ngày tới.</p>
+        }
+      </section>
 
       <!-- Việc 1: Sắp onboard (joinDate trong tương lai) -->
       @if (onboardingSoon().length) {

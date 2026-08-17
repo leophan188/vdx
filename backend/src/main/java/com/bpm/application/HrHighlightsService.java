@@ -43,6 +43,15 @@ public class HrHighlightsService {
 
     /** Ngưỡng nhắc onboarding (ngày). */
     private static final int ONBOARD_NOTIFY_THRESHOLD = 7;
+    /**
+     * Cửa sổ nhìn trước cho TRI ÂN THÂM NIÊN (ngày) — rộng hơn hẳn sinh nhật, có chủ đích.
+     *
+     * Sinh nhật thì ai cũng có nên 7 ngày là đủ dày. Thâm niên chỉ tính người đã tròn 1 năm
+     * (hiện 51/111 người), trải trên 365 ngày nên cửa sổ 7 ngày trung bình chỉ ra ~1 người
+     * và rất hay RỖNG — thực tế lúc làm tính năng, người gần nhất còn 9 ngày nên thẻ không
+     * hiện gì. 30 ngày cho khoảng 4-5 người, đủ để chuẩn bị quà và lời chúc trước.
+     */
+    private static final int ANNIV_LOOKAHEAD_DAYS = 30;
     /** Vai trò nhận thông báo onboarding (admin/HR). */
     private static final String ROLE_ADMIN = "ADMIN";
 
@@ -69,7 +78,7 @@ public class HrHighlightsService {
         List<BirthdayView> birthdaysThisWeek = new ArrayList<>();
         List<OnboardingView> onboardingSoon = new ArrayList<>();
         List<AnniversaryView> anniversariesToday = new ArrayList<>();
-        List<AnniversaryView> anniversariesThisWeek = new ArrayList<>();
+        List<AnniversaryView> anniversariesUpcoming = new ArrayList<>();
 
         for (Employee e : all) {
             // ----- SINH NHẬT (chỉ người đang hoạt động) -----
@@ -115,8 +124,8 @@ public class HrHighlightsService {
                         anniversariesToday.add(anniversaryView(e, years, 0));
                         maybeCelebrateAnniversary(e, today, years);
                     }
-                    if (inDays >= 0 && inDays <= 6) {
-                        anniversariesThisWeek.add(anniversaryView(e, years, inDays));
+                    if (inDays > 0 && inDays <= ANNIV_LOOKAHEAD_DAYS) {
+                        anniversariesUpcoming.add(anniversaryView(e, years, inDays));
                     }
                 }
             }
@@ -124,10 +133,10 @@ public class HrHighlightsService {
 
         birthdaysThisWeek.sort(Comparator.comparingInt(BirthdayView::inDays));
         onboardingSoon.sort(Comparator.comparingInt(OnboardingView::daysUntil));
-        anniversariesThisWeek.sort(Comparator.comparingInt(AnniversaryView::inDays));
+        anniversariesUpcoming.sort(Comparator.comparingInt(AnniversaryView::inDays));
 
         return new HrHighlightsDto(birthdaysToday, birthdaysThisWeek, onboardingSoon,
-                anniversariesToday, anniversariesThisWeek);
+                anniversariesToday, anniversariesUpcoming);
     }
 
     private static AnniversaryView anniversaryView(Employee e, int years, int inDays) {

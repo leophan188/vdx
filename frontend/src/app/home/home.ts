@@ -28,7 +28,7 @@ export class Home implements OnInit {
   readonly onboardingSoon = signal<OnboardingView[]>([]);
   /** Tri ân thâm niên: đúng hôm nay, và trong 7 ngày tới để chuẩn bị trước. */
   readonly anniversariesToday = signal<AnniversaryView[]>([]);
-  readonly anniversariesThisWeek = signal<AnniversaryView[]>([]);
+  readonly anniversariesUpcoming = signal<AnniversaryView[]>([]);
   readonly hrLoaded = signal(false);
 
   // ===== Việc 3: Widget Thông báo / Sự kiện sắp tới dùng DATA THẬT từ feed =====
@@ -135,7 +135,7 @@ export class Home implements OnInit {
         this.onboardingSoon.set(h.onboardingSoon ?? []);
         this.anniversariesToday.set(h.anniversariesToday ?? []);
         // Loại người đã hiện ở ô "hôm nay" để không xuất hiện hai lần trên cùng màn.
-        this.anniversariesThisWeek.set((h.anniversariesThisWeek ?? []).filter((a) => a.inDays > 0));
+        this.anniversariesUpcoming.set((h.anniversariesUpcoming ?? []).filter((a) => a.inDays > 0));
         this.hrLoaded.set(true);
       },
       error: () => { this.hrLoaded.set(true); }

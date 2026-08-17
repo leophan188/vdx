@@ -48,7 +48,7 @@ export interface HrHighlights {
   birthdaysThisWeek: BirthdayView[];
   onboardingSoon: OnboardingView[];
   anniversariesToday: AnniversaryView[];
-  anniversariesThisWeek: AnniversaryView[];
+  anniversariesUpcoming: AnniversaryView[];
 }
 
 /**

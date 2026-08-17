@@ -14,7 +14,7 @@ public record HrHighlightsDto(
         List<BirthdayView> birthdaysThisWeek,
         List<OnboardingView> onboardingSoon,
         List<AnniversaryView> anniversariesToday,
-        List<AnniversaryView> anniversariesThisWeek
+        List<AnniversaryView> anniversariesUpcoming
 ) {
 
     /**
