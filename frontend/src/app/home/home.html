@@ -124,10 +124,12 @@
         }
       </section>
 
-      <!-- Việc 1: Sắp onboard (joinDate trong tương lai) -->
-      @if (onboardingSoon().length) {
-        <section class="ochome-card ochome-widget ochome-hr">
-          <div class="ochome-widget__head"><span>🚀 SẮP ONBOARD</span></div>
+      <!-- SẮP ONBOARD (joinDate trong 7 ngày tới).
+           LUÔN hiện thẻ như hai thẻ trên: cửa sổ 7 ngày khiến thẻ rỗng khá thường xuyên,
+           ẩn đi thì người dùng tưởng mất tính năng. -->
+      <section class="ochome-card ochome-widget ochome-hr">
+        <div class="ochome-widget__head"><span>🚀 SẮP ONBOARD</span></div>
+        @if (onboardingSoon().length) {
           <ul class="ochome-hr__list">
             @for (o of onboardingSoon(); track o.empCode) {
               <li class="ochome-hr__item ochome-hr__item--onboard">
@@ -139,15 +141,17 @@
                 <div class="ochome-hr__info">
                   <strong class="ochome-hr__name">{{ o.fullName }}</strong>
                   <span class="ochome-hr__sub">{{ o.jobPosition || '—' }}@if (o.title) { · {{ o.title }} } · {{ o.deptCode }}</span>
-                  <span class="ochome-hr__badge" [class.ochome-hr__badge--soon]="o.daysUntil <= 7">
+                  <span class="ochome-hr__badge" [class.ochome-hr__badge--soon]="o.daysUntil <= 3">
                     còn {{ o.daysUntil }} ngày Onboard
                   </span>
                 </div>
               </li>
             }
           </ul>
-        </section>
-      }
+        } @else {
+          <p class="ochome-hr__empty">Không có ai onboard trong 7 ngày tới.</p>
+        }
+      </section>
 
       <!-- Việc 3: Thông báo (data thật từ feed, category ANNOUNCEMENT) -->
       <section class="ochome-card ochome-widget">
