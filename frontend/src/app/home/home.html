@@ -68,6 +68,45 @@
         }
       </section>
 
+      <!-- TRI ÂN THÂM NIÊN — kỷ niệm ngày vào làm từ tròn 1 năm trở lên.
+           Chỉ hiện khi có người, khác thẻ Sinh nhật (luôn hiện kèm câu "hôm nay không có"):
+           thâm niên thưa hơn nhiều nên để thẻ rỗng thường trực sẽ chiếm chỗ vô ích. -->
+      @if (anniversariesToday().length || anniversariesThisWeek().length) {
+        <section class="ochome-card ochome-widget ochome-hr ochome-hr--anniv">
+          <div class="ochome-widget__head"><span>🎖️ TRI ÂN THÂM NIÊN</span></div>
+          <ul class="ochome-hr__list">
+            @for (a of anniversariesToday(); track a.empCode) {
+              <li class="ochome-hr__item">
+                @if (avatarUrl(a.userId); as src) {
+                  <img class="ochome-hr__ava" [src]="src" [alt]="a.fullName" (error)="onAvatarError(a.userId)" />
+                } @else {
+                  <app-avatar class="ochome-hr__ava-fallback" [name]="a.fullName" [size]="60" />
+                }
+                <div class="ochome-hr__info">
+                  <strong class="ochome-hr__name">{{ a.fullName }}</strong>
+                  <span class="ochome-hr__sub">{{ a.jobPosition || '—' }}@if (a.title) { · {{ a.title }} } · {{ a.deptCode }}</span>
+                  <span class="ochome-hr__badge ochome-hr__badge--anniv">🎉 Tròn {{ a.years }} năm hôm nay</span>
+                </div>
+              </li>
+            }
+            @for (a of anniversariesThisWeek(); track a.empCode) {
+              <li class="ochome-hr__item">
+                @if (avatarUrl(a.userId); as src) {
+                  <img class="ochome-hr__ava" [src]="src" [alt]="a.fullName" (error)="onAvatarError(a.userId)" />
+                } @else {
+                  <app-avatar class="ochome-hr__ava-fallback" [name]="a.fullName" [size]="60" />
+                }
+                <div class="ochome-hr__info">
+                  <strong class="ochome-hr__name">{{ a.fullName }}</strong>
+                  <span class="ochome-hr__sub">{{ a.jobPosition || '—' }}@if (a.title) { · {{ a.title }} } · {{ a.deptCode }}</span>
+                  <span class="ochome-hr__badge">còn {{ a.inDays }} ngày — tròn {{ a.years }} năm</span>
+                </div>
+              </li>
+            }
+          </ul>
+        </section>
+      }
+
       <!-- Việc 1: Sắp onboard (joinDate trong tương lai) -->
       @if (onboardingSoon().length) {
         <section class="ochome-card ochome-widget ochome-hr">

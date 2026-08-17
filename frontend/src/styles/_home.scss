@@ -210,6 +210,19 @@
 .ochome-hr--bday .ochome-widget__head span { color: #db2777; }
 .ochome-hr--bday .ochome-hr__item + .ochome-hr__item { border-top-color: rgba(236, 72, 153, 0.22); }
 
+/* Thẻ TRI ÂN THÂM NIÊN — tông vàng đồng/hổ phách để phân biệt ngay với thẻ sinh nhật (hồng)
+   và thẻ onboard (mặc định). Ba sự kiện nhân sự đứng cạnh nhau nên màu phải tách được. */
+.ochome-hr--anniv {
+  border-color: rgba(217, 119, 6, 0.45);
+  background:
+    linear-gradient(135deg, rgba(217, 119, 6, 0.13), rgba(180, 83, 9, 0.09) 55%, rgba(250, 204, 21, 0.12)),
+    var(--color-surface);
+}
+.ochome-hr--anniv .ochome-widget__head span { color: #b45309; }
+.ochome-hr--anniv .ochome-hr__item + .ochome-hr__item { border-top-color: rgba(217, 119, 6, 0.22); }
+/* Mốc ĐÚNG HÔM NAY nổi hơn mốc "còn X ngày" trong cùng danh sách. */
+.ochome-hr__badge--anniv { background: rgba(217, 119, 6, 0.18); color: #b45309; }
+
 /* ===================== Phân loại bài đăng (Tin tức / Sự kiện / Thông báo) ===================== */
 .ochome-cat {
   display: inline-flex; align-items: center; margin: 0 2px; padding: 1px 9px; border-radius: 999px;

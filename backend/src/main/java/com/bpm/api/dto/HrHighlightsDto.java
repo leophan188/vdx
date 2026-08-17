@@ -12,7 +12,9 @@ import java.util.List;
 public record HrHighlightsDto(
         List<BirthdayView> birthdaysToday,
         List<BirthdayView> birthdaysThisWeek,
-        List<OnboardingView> onboardingSoon
+        List<OnboardingView> onboardingSoon,
+        List<AnniversaryView> anniversariesToday,
+        List<AnniversaryView> anniversariesThisWeek
 ) {
 
     /**
@@ -45,6 +47,26 @@ public record HrHighlightsDto(
             String userId,
             LocalDate joinDate,
             int daysUntil
+    ) {
+    }
+
+    /**
+     * TRI ÂN THÂM NIÊN — kỷ niệm ngày vào làm, chỉ tính từ TRÒN 1 NĂM trở lên.
+     *
+     * {@code years} = số năm gắn bó (≥ 1). {@code inDays} = số ngày tới kỷ niệm (0 = hôm nay).
+     * Người vào làm đúng hôm nay có years = 0 nên KHÔNG vào đây — đó là sự kiện onboard,
+     * hai thứ khác nhau và không được lẫn.
+     */
+    public record AnniversaryView(
+            String empCode,
+            String fullName,
+            String deptCode,
+            String jobPosition,
+            String title,
+            String userId,
+            LocalDate joinDate,
+            int years,
+            int inDays
     ) {
     }
 }

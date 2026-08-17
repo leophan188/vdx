@@ -1,7 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { AuthService } from '../core/auth.service';
 import { PostService, PostView, PostCategory } from '../core/post.service';
-import { HrHighlightsService, BirthdayView, OnboardingView } from '../core/hr-highlights.service';
+import { HrHighlightsService, BirthdayView, OnboardingView, AnniversaryView } from '../core/hr-highlights.service';
 import { ToastService } from '../shared/toast/toast.service';
 import { Avatar } from '../shared/avatar/avatar';
 import { PostCard } from './post-card';
@@ -26,6 +26,9 @@ export class Home implements OnInit {
   // ===== Việc B + C: điểm nhấn nhân sự (sinh nhật hôm nay + sắp onboard) =====
   readonly birthdaysToday = signal<BirthdayView[]>([]);
   readonly onboardingSoon = signal<OnboardingView[]>([]);
+  /** Tri ân thâm niên: đúng hôm nay, và trong 7 ngày tới để chuẩn bị trước. */
+  readonly anniversariesToday = signal<AnniversaryView[]>([]);
+  readonly anniversariesThisWeek = signal<AnniversaryView[]>([]);
   readonly hrLoaded = signal(false);
 
   // ===== Việc 3: Widget Thông báo / Sự kiện sắp tới dùng DATA THẬT từ feed =====
@@ -130,6 +133,9 @@ export class Home implements OnInit {
       next: (h) => {
         this.birthdaysToday.set(h.birthdaysToday ?? []);
         this.onboardingSoon.set(h.onboardingSoon ?? []);
+        this.anniversariesToday.set(h.anniversariesToday ?? []);
+        // Loại người đã hiện ở ô "hôm nay" để không xuất hiện hai lần trên cùng màn.
+        this.anniversariesThisWeek.set((h.anniversariesThisWeek ?? []).filter((a) => a.inDays > 0));
         this.hrLoaded.set(true);
       },
       error: () => { this.hrLoaded.set(true); }

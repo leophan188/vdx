@@ -1,6 +1,7 @@
 package com.bpm.application;
 
 import com.bpm.api.dto.HrHighlightsDto;
+import com.bpm.api.dto.HrHighlightsDto.AnniversaryView;
 import com.bpm.api.dto.HrHighlightsDto.BirthdayView;
 import com.bpm.api.dto.HrHighlightsDto.OnboardingView;
 import com.bpm.domain.UserAccount;
@@ -23,6 +24,8 @@ import java.util.List;
  * Điểm nhấn nhân sự cho trang chủ (Việc B + C):
  *  - SINH NHẬT hôm nay: nhân sự đang hoạt động (isActive) có birthDate trùng NGÀY/THÁNG hôm nay.
  *  - ONBOARDING: nhân sự có joinDate trong TƯƠNG LAI (joinDate > hôm nay) → "còn X ngày Onboard".
+ *  - TRI ÂN THÂM NIÊN: kỷ niệm ngày vào làm, chỉ tính từ TRÒN 1 NĂM trở lên. Người vào làm
+ *    đúng hôm nay có 0 năm nên không lọt vào đây — đó là sự kiện onboard, không được lẫn.
  *
  * <p>Công thức:
  *  - Sinh nhật: so khớp {@link MonthDay} (bỏ qua năm) → đúng cả người sinh 29/02 (rơi vào 28/02 năm thường? —
@@ -65,6 +68,8 @@ public class HrHighlightsService {
         List<BirthdayView> birthdaysToday = new ArrayList<>();
         List<BirthdayView> birthdaysThisWeek = new ArrayList<>();
         List<OnboardingView> onboardingSoon = new ArrayList<>();
+        List<AnniversaryView> anniversariesToday = new ArrayList<>();
+        List<AnniversaryView> anniversariesThisWeek = new ArrayList<>();
 
         for (Employee e : all) {
             // ----- SINH NHẬT (chỉ người đang hoạt động) -----
@@ -97,12 +102,51 @@ public class HrHighlightsService {
             if (e.getJoinDate() != null && e.getJoinDate().isEqual(today)) {
                 maybeCelebrateOnboard(e, today);
             }
+
+            // ----- TRI ÂN THÂM NIÊN (kỷ niệm ngày vào làm, từ TRÒN 1 NĂM trở lên) -----
+            if (e.isActive() && e.getJoinDate() != null) {
+                MonthDay jd = MonthDay.of(e.getJoinDate().getMonthValue(), e.getJoinDate().getDayOfMonth());
+                int inDays = daysUntilNextAnniversary(today, jd);
+                // Số năm ĐẠT ĐƯỢC tại lần kỷ niệm sắp tới, không phải số năm tính tới hôm nay:
+                // người vào 01/09/2023, hôm nay 30/08 thì ngày mai tròn 2 năm — phải hiện "2 năm".
+                int years = yearsAtNextAnniversary(today, e.getJoinDate(), inDays);
+                if (years >= 1) {
+                    if (inDays == 0) {
+                        anniversariesToday.add(anniversaryView(e, years, 0));
+                        maybeCelebrateAnniversary(e, today, years);
+                    }
+                    if (inDays >= 0 && inDays <= 6) {
+                        anniversariesThisWeek.add(anniversaryView(e, years, inDays));
+                    }
+                }
+            }
         }
 
         birthdaysThisWeek.sort(Comparator.comparingInt(BirthdayView::inDays));
         onboardingSoon.sort(Comparator.comparingInt(OnboardingView::daysUntil));
+        anniversariesThisWeek.sort(Comparator.comparingInt(AnniversaryView::inDays));
 
-        return new HrHighlightsDto(birthdaysToday, birthdaysThisWeek, onboardingSoon);
+        return new HrHighlightsDto(birthdaysToday, birthdaysThisWeek, onboardingSoon,
+                anniversariesToday, anniversariesThisWeek);
+    }
+
+    private static AnniversaryView anniversaryView(Employee e, int years, int inDays) {
+        return new AnniversaryView(e.getEmpCode(), e.getFullName(), e.getDeptCode(), e.getJobPosition(),
+                e.getTitle(), e.getUserAccountId(), e.getJoinDate(), years, inDays);
+    }
+
+    /**
+     * Số năm gắn bó ĐẠT ĐƯỢC tại lần kỷ niệm kế tiếp.
+     *
+     * Lấy năm của ngày kỷ niệm kế tiếp trừ năm vào làm. Nếu tính theo "hôm nay trừ ngày vào"
+     * thì hôm trước ngày kỷ niệm sẽ ra thiếu một năm, hiển thị "sắp tròn 1 năm" cho người
+     * ngày mai tròn 2 năm.
+     */
+    private static int yearsAtNextAnniversary(LocalDate today, LocalDate joinDate, int inDays) {
+        if (inDays < 0) {
+            return -1; // không xác định được ngày kỷ niệm (dữ liệu ngày lạ)
+        }
+        return today.plusDays(inDays).getYear() - joinDate.getYear();
     }
 
     private static BirthdayView birthdayView(Employee e, int inDays) {
@@ -200,6 +244,37 @@ public class HrHighlightsService {
         } catch (Exception ex) {
             log.warn("[HrHighlights] Không tạo được tin chào mừng cho {}: {}", e.getEmpCode(), ex.toString());
         }
+    }
+
+    /**
+     * Tự tạo 1 tin NỔI BẬT tri ân thâm niên khi hôm nay đúng ngày kỷ niệm vào làm (≥ 1 năm).
+     * Idempotent theo marker ngày, cùng cơ chế với tin sinh nhật / chào mừng.
+     */
+    private void maybeCelebrateAnniversary(Employee e, LocalDate today, int years) {
+        UserAccount admin = systemAuthor();
+        if (admin == null) {
+            return;
+        }
+        String marker = "​#celebrate-anniv-" + e.getEmpCode() + "-" + today;
+        String dept = e.getDeptCode() == null || e.getDeptCode().isBlank() ? "" : " (" + e.getDeptCode() + ")";
+        String body = milestoneIcon(years) + " Tri ân " + years + " năm gắn bó — " + e.getFullName() + dept + "! "
+                + "Cảm ơn bạn đã đồng hành cùng Plan X suốt chặng đường vừa qua, "
+                + "góp sức vào từng bước trưởng thành của cả đội ngũ. "
+                + "Chúc bạn thật nhiều sức khoẻ và tiếp tục gặt hái thành công! 🙏✨";
+        try {
+            postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
+                    blankToNull(e.getUserAccountId()), marker);
+        } catch (Exception ex) {
+            log.warn("[HrHighlights] Không tạo được tin tri ân thâm niên cho {}: {}", e.getEmpCode(), ex.toString());
+        }
+    }
+
+    /** Mốc tròn 5/10 năm dùng icon đậm hơn để nổi bật giữa các mốc thường. */
+    private static String milestoneIcon(int years) {
+        if (years >= 10) {
+            return "🏆";
+        }
+        return years >= 5 ? "🎖️" : "💐";
     }
 
     /** Chuỗi rỗng/blank → null (để subjectUserId chuẩn). */

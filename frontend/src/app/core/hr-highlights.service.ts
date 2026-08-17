@@ -27,10 +27,28 @@ export interface OnboardingView {
   daysUntil: number;
 }
 
+/**
+ * TRI ÂN THÂM NIÊN — kỷ niệm ngày vào làm, chỉ từ TRÒN 1 NĂM trở lên.
+ * `years` là số năm đạt được tại lần kỷ niệm này; `inDays` = 0 nghĩa là đúng hôm nay.
+ */
+export interface AnniversaryView {
+  empCode: string;
+  fullName: string;
+  deptCode: string | null;
+  jobPosition: string | null;
+  title: string | null;
+  userId: string | null;
+  joinDate: string;
+  years: number;
+  inDays: number;
+}
+
 export interface HrHighlights {
   birthdaysToday: BirthdayView[];
   birthdaysThisWeek: BirthdayView[];
   onboardingSoon: OnboardingView[];
+  anniversariesToday: AnniversaryView[];
+  anniversariesThisWeek: AnniversaryView[];
 }
 
 /**
