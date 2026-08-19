@@ -3,6 +3,7 @@ package com.bpm;
 import com.bpm.application.ExcelReportService;
 import com.bpm.domain.report.ExcelReportEngine;
 import com.bpm.domain.report.ExcelReportEngine.OtSummaryRow;
+import com.bpm.domain.report.ReportResult;
 import com.bpm.domain.report.ReportRun;
 import com.bpm.domain.report.ReportTemplate;
 import com.bpm.domain.report.ValidationResult;
@@ -133,6 +134,29 @@ class ExcelReportServiceTest {
         // dòng lỗi có cả "Ngày" và "Số giờ OT"
         assertThat(vr.getIssues()).anyMatch(i -> "Ngày".equals(i.column()));
         assertThat(vr.getIssues()).anyMatch(i -> "Số giờ OT".equals(i.column()));
+    }
+
+    /**
+     * Vòng khép kín của tool Sun: biểu mẫu người dùng tải về → import lại chạy được ngay,
+     * kết quả được lưu JSON và đọc lại đúng 3 bảng để hiển thị trên màn hình.
+     */
+    @Test
+    void run_sunEffort_savesResultForScreen() {
+        byte[] sample = svc.sampleTemplate("NO_LUC_DU_AN_SUN");
+
+        ReportRun r = svc.run("NO_LUC_DU_AN_SUN", sample, "no-luc-du-an.xlsx", "tester");
+        assertThat(r.getStatus()).isEqualTo("SUCCESS");
+        assertThat(r.hasOutput()).isTrue();
+        assertThat(r.hasResult()).isTrue();
+
+        ReportResult result = svc.resultOf(r.getId());
+        assertThat(result).isNotNull();
+        assertThat(result.tables()).extracting(ReportResult.Table::title)
+                .containsExactly("Tổng theo nhân sự", "Tổng theo dự án", "Chi phí theo nhân sự dự án");
+        // 2 dòng ví dụ của cùng 1 người trên cùng 1 dự án → 1 dòng ở cả ba bảng
+        assertThat(result.tables().get(0).rows()).hasSize(1);
+        assertThat(result.metrics()).isNotEmpty();
+        assertThat(result.warnings()).isEmpty();
     }
 
     @Test

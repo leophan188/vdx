@@ -34,7 +34,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/processes', 'Quy trình'],
   ['/forms', 'Biểu mẫu'],
   ['/tracking', 'Theo dõi quy trình'],
-  ['/excel-reports', 'Import Excel'],
+  ['/excel-reports', 'Công cụ'],
 ];
 
 /** Một mục điều hướng con (trong flyout). */
@@ -61,7 +61,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Reports vận hành', icon: '📈', link: '/reports', feature: 'REPORTS' },
   ] },
   { key: 'tools', label: 'Công cụ', icon: '🧰', items: [
-    { label: 'Import Excel', icon: '🧰', link: '/excel-reports', feature: 'IMPORT' },
+    { label: 'Import Excel → Kết quả', icon: '🧰', link: '/excel-reports', feature: 'IMPORT' },
   ] },
   { key: 'admin', label: 'Quản trị hệ thống', icon: '⚙️', items: [
     { label: 'Quản lý nhân sự', icon: '👥', link: '/employees', feature: 'HR' },

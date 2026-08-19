@@ -1,12 +1,12 @@
-<!-- Import Excel → Báo cáo (Epic 4, UX-DR7). -->
+<!-- Công cụ: chọn loại tool → import Excel → xem kết quả → xuất .xlsx (Epic 4, UX-DR7). -->
 <section class="page">
-  <app-page-header title="Import Excel → Báo cáo"
-                   subtitle="Chọn mẫu báo cáo, tải file Excel đầu vào, kiểm tra định dạng và tải kết quả .xlsx."
-                   [breadcrumb]="[{ label: 'Báo cáo' }, { label: 'Import Excel' }]" />
+  <app-page-header title="Công cụ"
+                   subtitle="Chọn loại tool, tải biểu mẫu về điền, import file Excel rồi xem kết quả ngay trên màn hình."
+                   [breadcrumb]="[{ label: 'Công cụ' }, { label: 'Import Excel' }]" />
 
   <div class="xlrep-card">
     <label class="field">
-      <span>Mẫu báo cáo</span>
+      <span>Loại Tool</span>
       <select [value]="selectedKey()" (change)="onTemplateChange($any($event.target).value)">
         @for (t of templates(); track t.key) {
           <option [value]="t.key">{{ t.title }}</option>
@@ -17,10 +17,12 @@
     @if (selectedTemplate; as tpl) {
       <p class="hint">{{ tpl.description }}</p>
       <div class="field">
-        <span>Cột bắt buộc</span>
+        <span>Cột trong biểu mẫu</span>
         <div class="xlrep-cols">
-          @for (c of tpl.requiredColumns; track c.header) {
-            <span class="badge badge--neutral">{{ c.header }} ({{ c.type }})</span>
+          @for (c of tpl.columns; track c.header) {
+            <span class="badge" [class.badge--neutral]="c.required" [class.badge--pending]="!c.required">
+              {{ c.header }} ({{ c.type }}){{ c.required ? '' : ' — tuỳ chọn' }}
+            </span>
           }
         </div>
       </div>
@@ -59,14 +61,75 @@
       <button type="button" class="btn btn--primary"
               [disabled]="running() || !file() || (validation() && !validation()!.valid)"
               (click)="run()">
-        {{ running() ? 'Đang chạy…' : '▶ Chạy báo cáo' }}
+        {{ running() ? 'Đang chạy…' : '▶ Chạy tool' }}
+      </button>
+      <button type="button" class="btn" [disabled]="!selectedKey()" (click)="downloadSample()">
+        ⬇ Tải biểu mẫu Excel
       </button>
     </div>
   </div>
 
+  @if (result(); as res) {
+    <div class="xlrep-card xlrep-result">
+      <div class="xlrep-actions" style="justify-content: space-between">
+        <strong>Kết quả</strong>
+        <button type="button" class="btn btn--primary" [disabled]="!resultRunId()" (click)="exportResult()">
+          ⬇ Xuất Excel (đầy đủ các sheet)
+        </button>
+      </div>
+
+      <div class="xlrep-metrics">
+        @for (m of res.metrics; track m.label) {
+          <div class="xlrep-metric">
+            <span class="hint">{{ m.label }}</span>
+            <b>{{ m.value }}</b>
+          </div>
+        }
+      </div>
+
+      @if (res.warnings.length) {
+        <div class="alert alert--info">
+          {{ res.warnings.length }} cảnh báo — kết quả vẫn tính bình thường, nhưng nên rà lại dữ liệu đầu vào.
+        </div>
+        <ul class="xlrep-warnings">
+          @for (w of res.warnings; track $index) {
+            <li>{{ w }}</li>
+          }
+        </ul>
+      }
+
+      <div class="xlrep-tabs">
+        @for (t of res.tables; track t.key; let i = $index) {
+          <button type="button" class="btn"
+                  [class.btn--primary]="activeTable() === i"
+                  (click)="activeTable.set(i)">
+            {{ t.title }} ({{ t.rows.length }})
+          </button>
+        }
+      </div>
+
+      @if (table(); as t) {
+        <data-grid [columns]="tableCols()" [rows]="tableRows()" [title]="t.title"
+                   [exportName]="t.title" emptyText="Không có dòng nào.">
+          <ng-template gridCell="c0" let-r>{{ cell(r.c0) }}</ng-template>
+          <ng-template gridCell="c1" let-r>{{ cell(r.c1) }}</ng-template>
+          <ng-template gridCell="c2" let-r>{{ cell(r.c2) }}</ng-template>
+          <ng-template gridCell="c3" let-r>{{ cell(r.c3) }}</ng-template>
+          <ng-template gridCell="c4" let-r>{{ cell(r.c4) }}</ng-template>
+          <ng-template gridCell="c5" let-r>{{ cell(r.c5) }}</ng-template>
+          <ng-template gridCell="c6" let-r>{{ cell(r.c6) }}</ng-template>
+          <ng-template gridCell="c7" let-r>{{ cell(r.c7) }}</ng-template>
+          <ng-template gridCell="c8" let-r>{{ cell(r.c8) }}</ng-template>
+          <ng-template gridCell="c9" let-r>{{ cell(r.c9) }}</ng-template>
+        </data-grid>
+      }
+    </div>
+  }
+
   <data-grid [columns]="historyCols" [rows]="history()" title="Lịch sử lần chạy"
              [emptyText]="loadingHistory() ? 'Đang tải…' : 'Chưa có lần chạy nào.'">
     <ng-template gridCell="runAt" let-r>{{ fmt(r.runAt) }}</ng-template>
+    <ng-template gridCell="templateKey" let-r>{{ templateTitle(r.templateKey) }}</ng-template>
     <ng-template gridCell="status" let-r>
       @if (r.status === 'SUCCESS') {
         <span class="badge badge--done">Thành công</span>
@@ -75,9 +138,13 @@
       }
     </ng-template>
     <ng-template gridCell="actions" let-r>
+      @if (r.hasResult) {
+        <button type="button" class="btn btn--icon" title="Xem kết quả" (click)="viewResult(r)">👁</button>
+      }
       @if (r.hasOutput) {
         <button type="button" class="btn btn--icon" title="Tải .xlsx" (click)="downloadRun(r)">⬇</button>
-      } @else {
+      }
+      @if (!r.hasOutput && !r.hasResult) {
         <span class="hint">{{ r.message }}</span>
       }
     </ng-template>

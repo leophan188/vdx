@@ -58,7 +58,7 @@ public final class ExcelReportEngine {
 
         Map<String, Integer> colIndex = headerIndex(header);
         for (ReportTemplate.Column col : template.getRequiredColumns()) {
-            if (!colIndex.containsKey(norm(col.header()))) {
+            if (resolve(colIndex, col.header()) == null) {
                 vr.addFileLevel("Thiếu cột bắt buộc: \"" + col.header() + "\".");
             }
         }
@@ -75,8 +75,7 @@ public final class ExcelReportEngine {
             }
             dataRows++;
             for (ReportTemplate.Column col : template.getRequiredColumns()) {
-                int ci = colIndex.get(norm(col.header()));
-                Cell cell = row.getCell(ci);
+                Cell cell = row.getCell(resolve(colIndex, col.header()));
                 String err = checkCell(cell, col.type());
                 if (err != null) {
                     vr.add(r + 1, col.header(), err); // r 0-based → hiển thị 1-based
@@ -134,8 +133,9 @@ public final class ExcelReportEngine {
                 continue;
             }
             Map<String, Object> values = new LinkedHashMap<>();
-            for (ReportTemplate.Column col : template.getRequiredColumns()) {
-                Cell cell = row.getCell(colIndex.get(norm(col.header())));
+            for (ReportTemplate.Column col : template.getColumns()) {
+                Integer ci = resolve(colIndex, col.header());
+                Cell cell = ci == null ? null : row.getCell(ci); // cột tuỳ chọn có thể không có trong file
                 values.put(col.header(), switch (col.type()) {
                     case NUMBER -> numericOrNull(cell);
                     case DATE -> dateOrNull(cell);
@@ -226,6 +226,40 @@ public final class ExcelReportEngine {
         }
     }
 
+    /** Kết quả OT dạng trung lập để hiển thị thẳng lên màn hình (FR-D03). */
+    public static ReportResult toResult(List<OtSummaryRow> rows) {
+        double totalHours = rows.stream().mapToDouble(OtSummaryRow::totalHours).sum();
+        List<List<Object>> data = new ArrayList<>();
+        for (OtSummaryRow r : rows) {
+            data.add(List.of(r.period(), r.orgUnit(), r.empCode(), r.empName(), r.totalHours()));
+        }
+        List<ReportResult.Metric> metrics = List.of(
+                new ReportResult.Metric("Tổng giờ OT", SunEffortEngine.decimal(totalHours)),
+                new ReportResult.Metric("Số dòng tổng hợp", String.valueOf(rows.size())));
+        List<ReportResult.Table> tables = List.of(new ReportResult.Table("otSummary", "Tổng hợp OT",
+                List.of("Kỳ", "Phòng ban", "Mã NV", "Họ tên", "Tổng giờ OT"),
+                List.of("TEXT", "TEXT", "TEXT", "TEXT", "NUMBER"),
+                data));
+        return new ReportResult(metrics, tables, List.of());
+    }
+
+    /** Biểu mẫu trống mặc định: một sheet có đúng các cột khai báo của mẫu (dùng cho mẫu chưa có biểu mẫu riêng). */
+    public static byte[] writeSampleTemplate(ReportTemplate template) {
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("Dữ liệu");
+            Row hr = sheet.createRow(0);
+            List<ReportTemplate.Column> cols = template.getColumns();
+            for (int c = 0; c < cols.size(); c++) {
+                hr.createCell(c).setCellValue(cols.get(c).header());
+                sheet.autoSizeColumn(c);
+            }
+            wb.write(bos);
+            return bos.toByteArray();
+        } catch (IOException e) {
+            throw new IllegalStateException("Không tạo được biểu mẫu: " + e.getMessage(), e);
+        }
+    }
+
     /**
      * Trung hoà formula/CSV injection: ô bắt đầu bằng = + - @ (hoặc tab/CR) được tiền tố dấu nháy đơn
      * để Excel/CSV coi là văn bản, không thực thi (NFR-09).
@@ -262,7 +296,8 @@ public final class ExcelReportEngine {
             return true;
         }
         for (ReportTemplate.Column col : template.getRequiredColumns()) {
-            Cell cell = row.getCell(colIndex.get(norm(col.header())));
+            Integer ci = resolve(colIndex, col.header());
+            Cell cell = ci == null ? null : row.getCell(ci);
             if (cell != null && cell.getCellType() != CellType.BLANK
                     && !FORMATTER.formatCellValue(cell).isBlank()) {
                 return false;
@@ -271,8 +306,28 @@ public final class ExcelReportEngine {
         return true;
     }
 
+    /**
+     * Tìm chỉ số cột theo header khai báo: khớp chính xác trước, sau đó chấp nhận header trong file
+     * DÀI HƠN nhưng cùng phần đầu (vd khai báo "Thời gian thực hiện" khớp
+     * "Thời gian thực hiện (chỉ điền số giờ, không điền ký tự khác)"). Trả null nếu không có cột.
+     */
+    static Integer resolve(Map<String, Integer> colIndex, String header) {
+        String want = norm(header);
+        Integer exact = colIndex.get(want);
+        if (exact != null) {
+            return exact;
+        }
+        for (Map.Entry<String, Integer> e : colIndex.entrySet()) {
+            if (e.getKey().startsWith(want)) {
+                return e.getValue();
+            }
+        }
+        return null;
+    }
+
+    /** Chuẩn hoá header để so khớp: bỏ khoảng trắng thừa/xuống dòng trong ô, không phân biệt hoa thường. */
     private static String norm(String s) {
-        return s == null ? "" : s.trim().toLowerCase();
+        return s == null ? "" : s.trim().replaceAll("\\s+", " ").toLowerCase();
     }
 
     private static String stringValue(Cell cell) {

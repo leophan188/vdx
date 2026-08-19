@@ -45,6 +45,14 @@ public class ReportRun {
     @Column(name = "message", length = 1000)
     private String message;
 
+    /**
+     * Kết quả dạng JSON ({@link ReportResult}) để mở lại trên màn hình từ lịch sử.
+     * NULL với các lần chạy cũ (trước khi có tính năng) và với lần chạy FAILED — mọi chỗ đọc phải chịu được null.
+     */
+    @Lob
+    @Column(name = "result_json")
+    private String resultJson;
+
     protected ReportRun() {
     }
 
@@ -68,6 +76,11 @@ public class ReportRun {
     public byte[] getOutputBytes() { return outputBytes; }
     public String getStatus() { return status; }
     public String getMessage() { return message; }
+    public String getResultJson() { return resultJson; }
+
+    public void setResultJson(String resultJson) { this.resultJson = resultJson; }
 
     public boolean hasOutput() { return outputBytes != null && outputBytes.length > 0; }
+
+    public boolean hasResult() { return resultJson != null && !resultJson.isBlank(); }
 }

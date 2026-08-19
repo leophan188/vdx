@@ -49,6 +49,7 @@ export const routes: Routes = [
     ]
   },
   { path: 'excel-reports', component: ExcelReports, canActivate: [featureGuard('IMPORT')] },
+  { path: 'tools', pathMatch: 'full', redirectTo: 'excel-reports' }, // lối vào theo tên gọi "Công cụ"
   { path: 'system-config', loadComponent: () => import('./system-config/system-config').then((m) => m.SystemConfig), canActivate: [featureGuard('SYSTEM')] },
   { path: 'permissions', loadComponent: () => import('./permissions/permission-matrix').then((m) => m.PermissionMatrix), canActivate: [featureGuard('PERMISSION')] },
   { path: 'my-tasks', loadComponent: () => import('./projects/my-work/my-work').then((m) => m.MyProjectWork), canActivate: [featureGuard('MYTASKS')] },

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { HttpErrorResponse } from '@angular/common/http';
 import { PageHeader } from '../shared/page-header/page-header';
 import { DataGrid, GridColumn } from '../shared/data-grid/data-grid';
@@ -6,14 +6,20 @@ import { GridCellDirective } from '../shared/data-grid/grid-cell.directive';
 import { ToastService } from '../shared/toast/toast.service';
 import {
   ExcelReportService,
+  ReportResult,
   ReportTemplate,
+  ResultTable,
   ValidationResult,
   ReportRunView
 } from '../core/excel-report.service';
 
+/** Một dòng kết quả đã đổi sang dạng object để <data-grid> render (c0, c1, … theo thứ tự cột). */
+type ResultRow = Record<string, string | number>;
+
 /**
- * Màn Import Excel → Báo cáo (Epic 4, UX-DR7): chọn mẫu → tải file → hiển thị lỗi định dạng →
- * chạy → tải kết quả .xlsx → bảng lịch sử lần chạy. Theo design-system GĐ1.
+ * Màn Công cụ (Epic 4, UX-DR7): chọn LOẠI TOOL → tải biểu mẫu mẫu → import file → hiển thị lỗi định dạng →
+ * chạy → xem kết quả ngay trên màn hình (nhiều bảng) → xuất .xlsx → bảng lịch sử lần chạy.
+ * Khối kết quả bám model trung lập của backend nên thêm loại tool mới KHÔNG phải sửa màn này.
  */
 @Component({
   selector: 'app-excel-reports',
@@ -29,7 +35,14 @@ import {
     .xlrep-issues table { width: 100%; border-collapse: collapse; font-size: var(--font-size-sm); }
     .xlrep-issues th, .xlrep-issues td { padding: var(--space-1) var(--space-2);
       text-align: left; border-bottom: 1px solid var(--color-border); }
-    .xlrep-actions { display: flex; gap: var(--space-2); align-items: center; }
+    .xlrep-actions { display: flex; gap: var(--space-2); align-items: center; flex-wrap: wrap; }
+    .xlrep-metrics { display: flex; flex-wrap: wrap; gap: var(--space-3); }
+    .xlrep-metric { border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      padding: var(--space-2) var(--space-3); min-width: 150px; background: var(--color-bg); }
+    .xlrep-metric b { display: block; font-size: var(--font-size-lg); }
+    .xlrep-tabs { display: flex; gap: var(--space-1); flex-wrap: wrap; }
+    .xlrep-warnings { max-height: 180px; overflow: auto; margin: 0; padding-left: var(--space-4);
+      font-size: var(--font-size-sm); }
   `]
 })
 export class ExcelReports implements OnInit {
@@ -44,14 +57,49 @@ export class ExcelReports implements OnInit {
   readonly history = signal<ReportRunView[]>([]);
   readonly loadingHistory = signal(true);
 
+  /** Kết quả đang xem (của lần chạy vừa xong hoặc mở lại từ lịch sử). */
+  readonly result = signal<ReportResult | null>(null);
+  readonly resultRunId = signal<string | null>(null);
+  readonly activeTable = signal(0);
+
   readonly historyCols: GridColumn[] = [
     { key: 'runAt', header: 'Thời điểm', width: '160px' },
-    { key: 'templateKey', header: 'Mẫu', width: '160px' },
+    { key: 'templateKey', header: 'Loại tool', width: '200px' },
     { key: 'runBy', header: 'Người chạy', width: '140px' },
     { key: 'inputFileName', header: 'File vào' },
     { key: 'status', header: 'Trạng thái', align: 'center', width: '120px' },
-    { key: 'actions', header: '', width: '130px' }
+    { key: 'actions', header: '', width: '150px' }
   ];
+
+  /** Bảng kết quả đang mở. */
+  readonly table = computed<ResultTable | null>(() => {
+    const r = this.result();
+    return r && r.tables.length ? r.tables[Math.min(this.activeTable(), r.tables.length - 1)] : null;
+  });
+
+  /** Cột của bảng đang mở, quy về key c0…cN; cột số canh phải. */
+  readonly tableCols = computed<GridColumn[]>(() => {
+    const t = this.table();
+    if (!t) return [];
+    return t.columns.map((header, i) => ({
+      key: `c${i}`,
+      header,
+      sortable: true,
+      align: t.types[i] === 'TEXT' ? 'left' : 'right',
+      // cột đầu tiên kiểu TEXT là cột nội dung chính → để data-grid tự co giãn (không đặt width)
+      width: t.types[i] === 'TEXT' && i === t.types.indexOf('TEXT') ? undefined : '160px'
+    }));
+  });
+
+  readonly tableRows = computed<ResultRow[]>(() => {
+    const t = this.table();
+    if (!t) return [];
+    return t.rows.map((row) => {
+      const obj: ResultRow = {};
+      row.forEach((v, i) => (obj[`c${i}`] = v));
+      return obj;
+    });
+  });
 
   ngOnInit(): void {
     this.svc.templates().subscribe({
@@ -59,7 +107,7 @@ export class ExcelReports implements OnInit {
         this.templates.set(t);
         if (t.length) this.selectedKey.set(t[0].key);
       },
-      error: () => this.toast.error('Không tải được danh sách mẫu báo cáo')
+      error: () => this.toast.error('Không tải được danh sách loại tool')
     });
     this.reloadHistory();
   }
@@ -71,6 +119,7 @@ export class ExcelReports implements OnInit {
   onTemplateChange(key: string): void {
     this.selectedKey.set(key);
     this.validation.set(null);
+    this.clearResult();
   }
 
   onFile(ev: Event): void {
@@ -78,6 +127,7 @@ export class ExcelReports implements OnInit {
     const f = input.files && input.files.length ? input.files[0] : null;
     this.file.set(f);
     this.validation.set(null);
+    this.clearResult();
     if (f) this.validate();
   }
 
@@ -96,22 +146,71 @@ export class ExcelReports implements OnInit {
   run(): void {
     const f = this.file();
     if (!f || !this.selectedKey()) {
-      this.toast.warning('Hãy chọn mẫu và tải file lên');
+      this.toast.warning('Hãy chọn loại tool và tải file lên');
       return;
     }
     this.running.set(true);
     this.svc.run(this.selectedKey(), f).subscribe({
       next: (r) => {
         this.running.set(false);
-        this.toast.success('Đã tạo báo cáo', 'Bạn có thể tải kết quả .xlsx');
+        this.showResult(r.id, r.result);
+        this.toast.success('Đã tính xong', 'Xem kết quả bên dưới hoặc xuất ra .xlsx');
         this.reloadHistory();
-        this.downloadRun(r);
       },
       error: (e: HttpErrorResponse) => {
         this.running.set(false);
-        this.toast.error('Chạy báo cáo thất bại', e.error?.message ?? 'Kiểm tra lại định dạng file');
+        this.clearResult();
+        this.toast.error('Chạy tool thất bại', e.error?.message ?? 'Kiểm tra lại định dạng file');
         this.reloadHistory();
       }
+    });
+  }
+
+  /** Tải biểu mẫu Excel trống của loại tool đang chọn. */
+  downloadSample(): void {
+    const key = this.selectedKey();
+    if (!key) return;
+    this.svc.sample(key).subscribe({
+      next: (blob) => this.saveBlob(blob, `bieu-mau-${key.toLowerCase()}.xlsx`),
+      error: () => this.toast.error('Không tải được biểu mẫu')
+    });
+  }
+
+  /** Mở lại kết quả của một lần chạy trong lịch sử. */
+  viewResult(r: ReportRunView): void {
+    if (!r.hasResult) {
+      this.toast.warning('Lần chạy này không lưu kết quả', 'Hãy tải file .xlsx để xem.');
+      return;
+    }
+    this.svc.result(r.id).subscribe({
+      next: (res) => {
+        this.showResult(r.id, res);
+        document.querySelector('.xlrep-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      },
+      error: () => this.toast.error('Không mở được kết quả lần chạy này')
+    });
+  }
+
+  private showResult(runId: string, res: ReportResult | null): void {
+    this.result.set(res);
+    this.resultRunId.set(res ? runId : null);
+    this.activeTable.set(0);
+  }
+
+  private clearResult(): void {
+    this.result.set(null);
+    this.resultRunId.set(null);
+    this.activeTable.set(0);
+  }
+
+  /** Xuất file .xlsx đầy đủ (mọi sheet) của kết quả đang xem. */
+  exportResult(): void {
+    const id = this.resultRunId();
+    if (!id) return;
+    const run = this.history().find((h) => h.id === id);
+    this.svc.download(id).subscribe({
+      next: (blob) => this.saveBlob(blob, `ket-qua-${(run?.templateKey ?? 'tool').toLowerCase()}.xlsx`),
+      error: () => this.toast.error('Không tải được file kết quả')
     });
   }
 
@@ -129,9 +228,14 @@ export class ExcelReports implements OnInit {
       return;
     }
     this.svc.download(r.id).subscribe({
-      next: (blob) => this.saveBlob(blob, `bao-cao-${r.templateKey.toLowerCase()}.xlsx`),
+      next: (blob) => this.saveBlob(blob, `ket-qua-${r.templateKey.toLowerCase()}.xlsx`),
       error: () => this.toast.error('Không tải được file kết quả')
     });
+  }
+
+  /** Tên loại tool hiển thị trong bảng lịch sử (thay vì khoá kỹ thuật). */
+  templateTitle(key: string): string {
+    return this.templates().find((t) => t.key === key)?.title ?? key;
   }
 
   private saveBlob(blob: Blob, name: string): void {
@@ -141,6 +245,13 @@ export class ExcelReports implements OnInit {
     a.download = name;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  /** Số trong ô kết quả hiển thị kiểu VN (1.234,56); chuỗi giữ nguyên. */
+  cell(value: string | number | undefined): string {
+    if (value == null || value === '') return '';
+    if (typeof value !== 'number') return String(value);
+    return value.toLocaleString('vi-VN', { maximumFractionDigits: 2 });
   }
 
   fmt(iso: string): string {

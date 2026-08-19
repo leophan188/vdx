@@ -5,13 +5,18 @@ import { Observable } from 'rxjs';
 export interface ReportColumn {
   header: string;
   type: 'TEXT' | 'NUMBER' | 'DATE';
+  required: boolean;
 }
 
+/** Một loại tool (mẫu xử lý) khai báo sẵn ở backend. */
 export interface ReportTemplate {
   key: string;
   title: string;
   description: string;
+  /** Chỉ các cột bắt buộc. */
   requiredColumns: ReportColumn[];
+  /** Toàn bộ cột kể cả cột tuỳ chọn. */
+  columns: ReportColumn[];
 }
 
 export interface ValidationIssue {
@@ -26,6 +31,29 @@ export interface ValidationResult {
   issues: ValidationIssue[];
 }
 
+/** Ô số nổi bật trên đầu khối kết quả. */
+export interface ResultMetric {
+  label: string;
+  value: string;
+}
+
+/** Một bảng kết quả — tương ứng một sheet trong file .xlsx tải về. */
+export interface ResultTable {
+  key: string;
+  title: string;
+  columns: string[];
+  /** Song song với columns: TEXT | NUMBER | MONEY (dùng để canh phải + định dạng số). */
+  types: ('TEXT' | 'NUMBER' | 'MONEY')[];
+  rows: (string | number)[][];
+}
+
+/** Kết quả một lần chạy, dạng trung lập → mọi loại tool dùng chung một giao diện hiển thị. */
+export interface ReportResult {
+  metrics: ResultMetric[];
+  tables: ResultTable[];
+  warnings: string[];
+}
+
 export interface ReportRunView {
   id: string;
   templateKey: string;
@@ -35,9 +63,12 @@ export interface ReportRunView {
   status: 'SUCCESS' | 'FAILED';
   message: string | null;
   hasOutput: boolean;
+  hasResult: boolean;
+  /** Chỉ có trong phản hồi của run(); danh sách lịch sử không kèm để nhẹ. */
+  result: ReportResult | null;
 }
 
-/** Công cụ Import Excel → Báo cáo (Epic 4). Dùng phiên (cookie) → withCredentials. */
+/** Công cụ Import Excel → Kết quả (Epic 4). Dùng phiên (cookie) → withCredentials. */
 @Injectable({ providedIn: 'root' })
 export class ExcelReportService {
   private http = inject(HttpClient);
@@ -67,5 +98,16 @@ export class ExcelReportService {
 
   download(id: string): Observable<Blob> {
     return this.http.get(`${this.base}/${id}/download`, { withCredentials: true, responseType: 'blob' });
+  }
+
+  /** Kết quả của một lần chạy cũ (để xem lại trên màn hình từ bảng lịch sử). */
+  result(id: string): Observable<ReportResult> {
+    return this.http.get<ReportResult>(`${this.base}/${id}/result`, { withCredentials: true });
+  }
+
+  /** Biểu mẫu Excel trống của loại tool, để người dùng điền rồi import lại. */
+  sample(templateKey: string): Observable<Blob> {
+    return this.http.get(`${this.base}/templates/${templateKey}/sample`,
+      { withCredentials: true, responseType: 'blob' });
   }
 }

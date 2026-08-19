@@ -3,11 +3,14 @@ package com.bpm.application;
 import com.bpm.domain.audit.AuditPort;
 import com.bpm.domain.report.ExcelReportEngine;
 import com.bpm.domain.report.ExcelReportEngine.OtSummaryRow;
+import com.bpm.domain.report.ReportResult;
 import com.bpm.domain.report.ReportRun;
 import com.bpm.domain.report.ReportTemplate;
 import com.bpm.domain.report.SafeWorkbookReader;
+import com.bpm.domain.report.SunEffortEngine;
 import com.bpm.domain.report.ValidationResult;
 import com.bpm.infrastructure.ReportRunRepository;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
@@ -19,9 +22,11 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Công cụ Import Excel → Báo cáo (Epic 4).
- * listTemplates (FR-D01) · validate (FR-D02 + an toàn NFR-09) · run (FR-D03/D06) · history (FR-D05) · download (FR-D04).
- * Mọi thao tác run ghi audit qua AuditPort (NFR-06). Lõi tính toán nằm ở {@link ExcelReportEngine} (test thuần).
+ * Công cụ Import Excel → Kết quả (Epic 4).
+ * listTemplates (FR-D01) · validate (FR-D02 + an toàn NFR-09) · run (FR-D03/D06) · history (FR-D05) · download (FR-D04)
+ * · sampleTemplate (tải biểu mẫu trống) · resultOf (mở lại kết quả trên màn hình).
+ * Mọi thao tác run ghi audit qua AuditPort (NFR-06). Lõi tính toán nằm ở {@link ExcelReportEngine} /
+ * {@link SunEffortEngine} (test thuần).
  */
 @Service
 public class ExcelReportService {
@@ -30,13 +35,19 @@ public class ExcelReportService {
 
     private final ReportRunRepository runRepo;
     private final AuditPort auditPort;
+    private final ObjectMapper objectMapper;
 
-    public ExcelReportService(ReportRunRepository runRepo, AuditPort auditPort) {
+    public ExcelReportService(ReportRunRepository runRepo, AuditPort auditPort, ObjectMapper objectMapper) {
         this.runRepo = runRepo;
         this.auditPort = auditPort;
+        this.objectMapper = objectMapper;
     }
 
-    /** Danh sách mẫu báo cáo cố định (FR-D01). */
+    /** Kết quả tính toán: file .xlsx để tải về + dữ liệu để hiển thị trên màn hình. */
+    private record Computed(byte[] output, ReportResult result) {
+    }
+
+    /** Danh sách loại tool cố định (FR-D01). */
     public List<ReportTemplate> listTemplates() {
         return Arrays.asList(ReportTemplate.values());
     }
@@ -67,9 +78,11 @@ public class ExcelReportService {
             if (!vr.isValid()) {
                 throw new IllegalArgumentException("File đầu vào không hợp lệ — vui lòng kiểm định dạng và tải lại.");
             }
-            byte[] output = computeAndWrite(template, wb);
-            ReportRun runRecord = runRepo.save(new ReportRun(template.getKey(), actor, fileName, output,
-                    "SUCCESS", "Tạo báo cáo thành công."));
+            Computed computed = compute(template, wb);
+            ReportRun runRecord = new ReportRun(template.getKey(), actor, fileName, computed.output(),
+                    "SUCCESS", "Tạo báo cáo thành công.");
+            runRecord.setResultJson(toJson(computed.result()));
+            runRecord = runRepo.save(runRecord);
             auditPort.record("EXCEL_REPORT_RUN", "ReportRun", runRecord.getId(), actor,
                     "template=" + template.getKey() + ", input=" + fileName);
             log.info("[excel-report] {} chạy mẫu {} từ {} → run {}", actor, template.getKey(), fileName, runRecord.getId());
@@ -85,14 +98,52 @@ public class ExcelReportService {
         }
     }
 
-    /** Tính toán theo mẫu (mở rộng theo template ở đây) + ghi .xlsx. */
-    private byte[] computeAndWrite(ReportTemplate template, Workbook wb) {
+    /** Tính toán theo loại tool (mở rộng tool mới ở đây) → file .xlsx + dữ liệu hiển thị. */
+    private Computed compute(ReportTemplate template, Workbook wb) {
         if (template == ReportTemplate.CHAM_CONG_OT) {
             List<ExcelReportEngine.InputRow> rows = ExcelReportEngine.readRows(template, wb);
             List<OtSummaryRow> summary = ExcelReportEngine.computeOtSummary(rows);
-            return ExcelReportEngine.writeOtReport(summary);
+            return new Computed(ExcelReportEngine.writeOtReport(summary), ExcelReportEngine.toResult(summary));
         }
-        throw new IllegalArgumentException("Chưa hỗ trợ tính toán cho mẫu: " + template.getKey());
+        if (template == ReportTemplate.NO_LUC_DU_AN_SUN) {
+            SunEffortEngine.SunReport report = SunEffortEngine.compute(wb);
+            return new Computed(SunEffortEngine.write(report), SunEffortEngine.toResult(report));
+        }
+        throw new IllegalArgumentException("Chưa hỗ trợ tính toán cho loại tool: " + template.getKey());
+    }
+
+    /** Biểu mẫu Excel trống để người dùng tải về điền (đúng cấu trúc từng loại tool). */
+    public byte[] sampleTemplate(String templateKey) {
+        ReportTemplate template = ReportTemplate.byKey(templateKey);
+        if (template == ReportTemplate.NO_LUC_DU_AN_SUN) {
+            return SunEffortEngine.writeSampleTemplate();
+        }
+        return ExcelReportEngine.writeSampleTemplate(template);
+    }
+
+    /** Kết quả của một lần chạy để hiển thị lại trên màn hình; null nếu lần chạy cũ/thất bại không có dữ liệu. */
+    @Transactional(readOnly = true)
+    public ReportResult resultOf(String runId) {
+        ReportRun r = runRepo.findById(runId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lần chạy: " + runId));
+        if (!r.hasResult()) {
+            return null;
+        }
+        try {
+            return objectMapper.readValue(r.getResultJson(), ReportResult.class);
+        } catch (Exception e) {
+            log.warn("[excel-report] không đọc được result_json của run {}: {}", runId, e.getMessage());
+            return null;
+        }
+    }
+
+    private String toJson(ReportResult result) {
+        try {
+            return objectMapper.writeValueAsString(result);
+        } catch (Exception e) {
+            log.warn("[excel-report] không ghi được result_json: {}", e.getMessage());
+            return null; // kết quả vẫn tải được qua file .xlsx
+        }
     }
 
     /** Lịch sử lần chạy (FR-D05). */

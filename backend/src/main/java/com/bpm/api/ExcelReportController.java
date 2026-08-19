@@ -1,6 +1,7 @@
 package com.bpm.api;
 
 import com.bpm.application.ExcelReportService;
+import com.bpm.domain.report.ReportResult;
 import com.bpm.domain.report.ReportRun;
 import com.bpm.domain.report.ReportTemplate;
 import com.bpm.domain.report.ValidationResult;
@@ -38,14 +39,17 @@ public class ExcelReportController {
 
     // ===== DTO =====
 
-    public record ColumnDto(String header, String type) {
+    public record ColumnDto(String header, String type, boolean required) {
     }
 
-    public record TemplateDto(String key, String title, String description, List<ColumnDto> requiredColumns) {
+    public record TemplateDto(String key, String title, String description, List<ColumnDto> requiredColumns,
+                              List<ColumnDto> columns) {
         static TemplateDto of(ReportTemplate t) {
             return new TemplateDto(t.getKey(), t.getTitle(), t.getDescription(),
                     t.getRequiredColumns().stream()
-                            .map(c -> new ColumnDto(c.header(), c.type().name())).toList());
+                            .map(c -> new ColumnDto(c.header(), c.type().name(), true)).toList(),
+                    t.getColumns().stream()
+                            .map(c -> new ColumnDto(c.header(), c.type().name(), c.required())).toList());
         }
     }
 
@@ -60,10 +64,16 @@ public class ExcelReportController {
     }
 
     public record RunDto(String id, String templateKey, String runBy, String runAt,
-                         String inputFileName, String status, String message, boolean hasOutput) {
+                         String inputFileName, String status, String message, boolean hasOutput,
+                         boolean hasResult, ReportResult result) {
+        /** Bản tóm tắt cho bảng lịch sử — không kèm dữ liệu kết quả để danh sách nhẹ. */
         static RunDto of(ReportRun r) {
+            return of(r, null);
+        }
+
+        static RunDto of(ReportRun r, ReportResult result) {
             return new RunDto(r.getId(), r.getTemplateKey(), r.getRunBy(), r.getRunAt().toString(),
-                    r.getInputFileName(), r.getStatus(), r.getMessage(), r.hasOutput());
+                    r.getInputFileName(), r.getStatus(), r.getMessage(), r.hasOutput(), r.hasResult(), result);
         }
     }
 
@@ -82,11 +92,33 @@ public class ExcelReportController {
         return ValidationDto.of(service.validate(templateKey, file.getBytes(), file.getOriginalFilename()));
     }
 
-    /** Chạy tính toán → tạo báo cáo + lưu lịch sử (FR-D03/D05/D06). */
+    /** Chạy tính toán → trả kết quả để hiển thị ngay + lưu lịch sử (FR-D03/D05/D06). */
     @PostMapping(value = "/run", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public RunDto run(@RequestParam("templateKey") String templateKey,
                       @RequestParam("file") MultipartFile file, Authentication auth) throws IOException {
-        return RunDto.of(service.run(templateKey, file.getBytes(), file.getOriginalFilename(), actor(auth)));
+        ReportRun r = service.run(templateKey, file.getBytes(), file.getOriginalFilename(), actor(auth));
+        return RunDto.of(r, service.resultOf(r.getId()));
+    }
+
+    /** Mở lại kết quả của một lần chạy cũ trên màn hình; 404 nếu lần chạy đó không lưu kết quả. */
+    @GetMapping("/{id}/result")
+    public ResponseEntity<ReportResult> result(@PathVariable String id) {
+        ReportResult result = service.resultOf(id);
+        return result == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(result);
+    }
+
+    /** Tải biểu mẫu Excel trống của một loại tool để người dùng điền rồi import lại. */
+    @GetMapping("/templates/{key}/sample")
+    public ResponseEntity<byte[]> sample(@PathVariable String key) {
+        ReportTemplate template = ReportTemplate.byKey(key);
+        String fname = "bieu-mau-" + template.getKey().toLowerCase() + ".xlsx";
+        String encoded = URLEncoder.encode(fname, StandardCharsets.UTF_8).replace("+", "%20");
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"" + fname + "\"; filename*=UTF-8''" + encoded)
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(service.sampleTemplate(key));
     }
 
     /** Lịch sử lần chạy (FR-D05). */
