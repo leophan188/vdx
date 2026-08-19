@@ -71,19 +71,9 @@ public class ProjectController {
         return a != null ? a.getName() : "anonymous";
     }
 
-    /** Cấp ADMIN: tài khoản ROLE_ADMIN HOẶC nhóm phân quyền TOÀN QUYỀN (có đủ mọi chức năng FEAT_*). */
+    /** Cấp ADMIN: tài khoản ROLE_ADMIN HOẶC nhóm phân quyền TOÀN QUYỀN — định nghĩa dùng chung ở {@link ApiAuth}. */
     private static boolean isAdmin(Authentication a) {
-        if (a == null) {
-            return false;
-        }
-        java.util.Set<String> auths = new java.util.HashSet<>();
-        for (GrantedAuthority ga : a.getAuthorities()) {
-            if ("ROLE_ADMIN".equals(ga.getAuthority())) {
-                return true;
-            }
-            auths.add(ga.getAuthority());
-        }
-        return auths.containsAll(Feature.allAuthorities());
+        return ApiAuth.isAdmin(a);
     }
 
     /** Admin luôn true; ngược lại phải có authority FEAT_{key}. */

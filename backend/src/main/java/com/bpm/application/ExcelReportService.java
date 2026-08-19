@@ -10,6 +10,7 @@ import com.bpm.domain.report.SunEffortEngine;
 import com.bpm.domain.report.ValidationResult;
 import com.bpm.infrastructure.ReportRunRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.security.access.AccessDeniedException;
 import org.apache.poi.ss.usermodel.Sheet;
 import org.apache.poi.ss.usermodel.Workbook;
 import org.slf4j.Logger;
@@ -115,11 +116,17 @@ public class ExcelReportService {
         return ExcelReportEngine.writeSampleTemplate(template);
     }
 
-    /** Kết quả của một lần chạy để hiển thị lại trên màn hình; null nếu lần chạy cũ/thất bại không có dữ liệu. */
+    /**
+     * Kết quả của một lần chạy để hiển thị lại trên màn hình; null nếu lần chạy cũ/thất bại không có dữ liệu.
+     * {@code actor == null} = lời gọi nội bộ ngay sau khi chạy (đã chắc chắn là chủ sở hữu).
+     */
     @Transactional(readOnly = true)
-    public ReportResult resultOf(String runId) {
+    public ReportResult resultOf(String runId, String actor, boolean isAdmin) {
         ReportRun r = runRepo.findById(runId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lần chạy: " + runId));
+        if (actor != null) {
+            requireOwnerOrAdmin(r, actor, isAdmin);
+        }
         if (!r.hasResult()) {
             return null;
         }
@@ -140,21 +147,37 @@ public class ExcelReportService {
         }
     }
 
-    /** Lịch sử lần chạy (FR-D05). */
+    /**
+     * Lịch sử lần chạy (FR-D05). Người dùng thường CHỈ thấy file mình import;
+     * admin thấy toàn bộ. Dữ liệu import là chi phí/lương nên không mặc định chia sẻ chéo.
+     */
     @Transactional(readOnly = true)
-    public List<ReportRun> history() {
-        return runRepo.findAllByOrderByRunAtDesc();
+    public List<ReportRun> history(String actor, boolean isAdmin) {
+        return isAdmin ? runRepo.findAllByOrderByRunAtDesc() : runRepo.findByRunByOrderByRunAtDesc(actor);
     }
 
-    /** Tải lại file kết quả của một lần chạy (FR-D04). */
+    /** Tải lại file kết quả của một lần chạy (FR-D04) — chỉ chủ sở hữu hoặc admin. */
     @Transactional(readOnly = true)
-    public ReportRun download(String runId) {
+    public ReportRun download(String runId, String actor, boolean isAdmin) {
         ReportRun r = runRepo.findById(runId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy lần chạy: " + runId));
+        requireOwnerOrAdmin(r, actor, isAdmin);
         if (!r.hasOutput()) {
             throw new IllegalArgumentException("Lần chạy này không có file kết quả (chạy thất bại).");
         }
         return r;
+    }
+
+    /**
+     * Chặn xem file/kết quả của người khác. Ghi log để còn lần theo nếu có người dò id lần chạy.
+     * Dùng chung một thông báo cho "không có quyền" — không tiết lộ lần chạy đó của ai.
+     */
+    private void requireOwnerOrAdmin(ReportRun r, String actor, boolean isAdmin) {
+        if (isAdmin || (actor != null && actor.equals(r.getRunBy()))) {
+            return;
+        }
+        log.warn("[excel-report] {} bị từ chối xem run {} (của {})", actor, r.getId(), r.getRunBy());
+        throw new AccessDeniedException("Bạn chỉ xem được file do chính mình import.");
     }
 
     /** Chống OOM: tổng số dòng trên sheet đầu vượt ngưỡng → từ chối (NFR-09). */

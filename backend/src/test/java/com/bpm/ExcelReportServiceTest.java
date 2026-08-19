@@ -5,6 +5,7 @@ import com.bpm.domain.report.ExcelReportEngine;
 import com.bpm.domain.report.ReportResult;
 import com.bpm.domain.report.ReportRun;
 import com.bpm.domain.report.ValidationResult;
+import org.springframework.security.access.AccessDeniedException;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
 import org.apache.poi.ss.usermodel.Row;
@@ -111,7 +112,7 @@ class ExcelReportServiceTest {
         assertThat(r.hasOutput()).isTrue();
         assertThat(r.hasResult()).isTrue();
 
-        ReportResult result = svc.resultOf(r.getId());
+        ReportResult result = svc.resultOf(r.getId(), "tester", false);
         assertThat(result.tables()).extracting(ReportResult.Table::title)
                 .containsExactly("Tổng theo nhân sự", "Tổng theo dự án", "Chi phí theo nhân sự dự án");
         assertThat(result.tables().get(0).rows()).hasSize(2);   // 2 nhân sự
@@ -133,7 +134,7 @@ class ExcelReportServiceTest {
         ReportRun r = svc.run(SUN, sample, "bieu-mau.xlsx", "tester");
         assertThat(r.getStatus()).isEqualTo("SUCCESS");
 
-        ReportResult result = svc.resultOf(r.getId());
+        ReportResult result = svc.resultOf(r.getId(), "tester", false);
         assertThat(result).isNotNull();
         // 2 dòng ví dụ của cùng 1 người trên cùng 1 dự án → gộp thành 1 dòng
         assertThat(result.tables().get(0).rows()).hasSize(1);
@@ -143,8 +144,8 @@ class ExcelReportServiceTest {
     @Test
     void run_isDeterministic_sameInputSameOutput() throws Exception {
         byte[] input = buildInput(false);
-        ReportResult first = svc.resultOf(svc.run(SUN, input, "a.xlsx", "tester").getId());
-        ReportResult second = svc.resultOf(svc.run(SUN, input, "a.xlsx", "tester").getId());
+        ReportResult first = svc.resultOf(svc.run(SUN, input, "a.xlsx", "tester").getId(), "tester", false);
+        ReportResult second = svc.resultOf(svc.run(SUN, input, "a.xlsx", "tester").getId(), "tester", false);
 
         assertThat(second.tables()).isEqualTo(first.tables());
         assertThat(second.metrics()).isEqualTo(first.metrics());
@@ -170,6 +171,41 @@ class ExcelReportServiceTest {
         assertThatThrownBy(() -> svc.validate("CHAM_CONG_OT", new byte[]{1}, "x.xlsx"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("Không tìm thấy loại tool");
+    }
+
+    /** Chủ file xem/tải được của mình; người khác bị chặn; admin xem được tất cả. */
+    @Test
+    void onlyOwnerOrAdminCanSeeRunOfSomeoneElse() throws Exception {
+        ReportRun mine = svc.run(SUN, buildInput(false), "cua-toi.xlsx", "an");
+
+        assertThat(svc.resultOf(mine.getId(), "an", false)).isNotNull();
+        assertThat(svc.download(mine.getId(), "an", false).hasOutput()).isTrue();
+
+        assertThatThrownBy(() -> svc.resultOf(mine.getId(), "binh", false))
+                .isInstanceOf(AccessDeniedException.class);
+        assertThatThrownBy(() -> svc.download(mine.getId(), "binh", false))
+                .isInstanceOf(AccessDeniedException.class);
+
+        assertThat(svc.resultOf(mine.getId(), "quantri", true)).isNotNull();
+        assertThat(svc.download(mine.getId(), "quantri", true).hasOutput()).isTrue();
+    }
+
+    /** Lịch sử: người thường chỉ thấy lần chạy của chính mình, admin thấy của mọi người. */
+    @Test
+    void historyIsScopedToOwnerUnlessAdmin() throws Exception {
+        svc.run(SUN, buildInput(false), "cua-cuong.xlsx", "cuong");
+        svc.run(SUN, buildInput(false), "cua-dung.xlsx", "dung");
+
+        assertThat(svc.history("cuong", false))
+                .isNotEmpty()
+                .allMatch(r -> "cuong".equals(r.getRunBy()));
+        assertThat(svc.history("dung", false))
+                .isNotEmpty()
+                .allMatch(r -> "dung".equals(r.getRunBy()));
+        assertThat(svc.history("quantri", true)).extracting(ReportRun::getRunBy)
+                .contains("cuong", "dung");
+        // người chưa từng import thì lịch sử rỗng, không thấy file của ai khác
+        assertThat(svc.history("nguoi-la", false)).isEmpty();
     }
 
     @Test

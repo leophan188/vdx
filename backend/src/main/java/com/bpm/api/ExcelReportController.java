@@ -22,7 +22,11 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 
-/** Công cụ Import Excel → Báo cáo (Epic 4, UX-DR7) — ROLE_ADMIN. */
+/**
+ * Công cụ Import Excel → Kết quả (Epic 4, UX-DR7) — cần chức năng FEAT_IMPORT.
+ * Lịch sử/kết quả/file là dữ liệu chi phí nhân sự: người dùng chỉ xem được thứ CHÍNH MÌNH import,
+ * admin xem toàn bộ.
+ */
 @RestController
 @RequestMapping("/api/v1/excel-reports")
 public class ExcelReportController {
@@ -34,7 +38,7 @@ public class ExcelReportController {
     }
 
     private static String actor(Authentication a) {
-        return a != null ? a.getName() : "anonymous";
+        return ApiAuth.actor(a);
     }
 
     // ===== DTO =====
@@ -99,13 +103,13 @@ public class ExcelReportController {
     public RunDto run(@RequestParam("templateKey") String templateKey,
                       @RequestParam("file") MultipartFile file, Authentication auth) throws IOException {
         ReportRun r = service.run(templateKey, file.getBytes(), file.getOriginalFilename(), actor(auth));
-        return RunDto.of(r, service.resultOf(r.getId()));
+        return RunDto.of(r, service.resultOf(r.getId(), null, true)); // vừa chạy xong → chính chủ
     }
 
     /** Mở lại kết quả của một lần chạy cũ trên màn hình; 404 nếu lần chạy đó không lưu kết quả. */
     @GetMapping("/{id}/result")
-    public ResponseEntity<ReportResult> result(@PathVariable String id) {
-        ReportResult result = service.resultOf(id);
+    public ResponseEntity<ReportResult> result(@PathVariable String id, Authentication auth) {
+        ReportResult result = service.resultOf(id, actor(auth), ApiAuth.isAdmin(auth));
         return result == null ? ResponseEntity.notFound().build() : ResponseEntity.ok(result);
     }
 
@@ -125,14 +129,14 @@ public class ExcelReportController {
 
     /** Lịch sử lần chạy (FR-D05). */
     @GetMapping("/history")
-    public List<RunDto> history() {
-        return service.history().stream().map(RunDto::of).toList();
+    public List<RunDto> history(Authentication auth) {
+        return service.history(actor(auth), ApiAuth.isAdmin(auth)).stream().map(RunDto::of).toList();
     }
 
     /** Tải file kết quả .xlsx (FR-D04). */
     @GetMapping("/{id}/download")
-    public ResponseEntity<byte[]> download(@PathVariable String id) {
-        ReportRun r = service.download(id);
+    public ResponseEntity<byte[]> download(@PathVariable String id, Authentication auth) {
+        ReportRun r = service.download(id, actor(auth), ApiAuth.isAdmin(auth));
         String fname = "bao-cao-" + r.getTemplateKey().toLowerCase() + ".xlsx";
         String encoded = URLEncoder.encode(fname, StandardCharsets.UTF_8).replace("+", "%20");
         return ResponseEntity.ok()

@@ -223,7 +223,7 @@ export class ExcelReports implements OnInit {
         this.showResult(r.id, res);
         document.querySelector('.xlrep-result')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
       },
-      error: () => this.toast.error('Không mở được kết quả lần chạy này')
+      error: (e: HttpErrorResponse) => this.toast.error('Không mở được kết quả lần chạy này', this.denyMsg(e))
     });
   }
 
@@ -246,7 +246,7 @@ export class ExcelReports implements OnInit {
     const run = this.history().find((h) => h.id === id);
     this.svc.download(id).subscribe({
       next: (blob) => this.saveBlob(blob, `ket-qua-${(run?.templateKey ?? 'tool').toLowerCase()}.xlsx`),
-      error: () => this.toast.error('Không tải được file kết quả')
+      error: (e: HttpErrorResponse) => this.toast.error('Không tải được file kết quả', this.denyMsg(e))
     });
   }
 
@@ -265,13 +265,18 @@ export class ExcelReports implements OnInit {
     }
     this.svc.download(r.id).subscribe({
       next: (blob) => this.saveBlob(blob, `ket-qua-${r.templateKey.toLowerCase()}.xlsx`),
-      error: () => this.toast.error('Không tải được file kết quả')
+      error: (e: HttpErrorResponse) => this.toast.error('Không tải được file kết quả', this.denyMsg(e))
     });
   }
 
   /** Tên loại tool hiển thị trong bảng lịch sử (thay vì khoá kỹ thuật). */
   templateTitle(key: string): string {
     return this.templates().find((t) => t.key === key)?.title ?? key;
+  }
+
+  /** 403 = file của người khác; nói thẳng lý do thay vì để người dùng tưởng hệ thống lỗi. */
+  private denyMsg(e: HttpErrorResponse): string {
+    return e?.status === 403 ? 'Bạn chỉ xem được file do chính mình import.' : (e?.error?.message ?? '');
   }
 
   private saveBlob(blob: Blob, name: string): void {

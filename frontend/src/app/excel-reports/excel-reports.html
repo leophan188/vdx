@@ -126,8 +126,9 @@
     </div>
   }
 
+  <p class="hint">Bạn chỉ thấy các file do chính mình import; quản trị viên xem được của tất cả mọi người.</p>
   <data-grid [columns]="historyCols" [rows]="history()" title="Lịch sử lần chạy"
-             [emptyText]="loadingHistory() ? 'Đang tải…' : 'Chưa có lần chạy nào.'">
+             [emptyText]="loadingHistory() ? 'Đang tải…' : 'Bạn chưa import file nào.'">
     <ng-template gridCell="runAt" let-r><span class="xlrep-cell">{{ fmt(r.runAt) }}</span></ng-template>
     <ng-template gridCell="templateKey" let-r>
       <span class="xlrep-cell" [title]="templateTitle(r.templateKey)">{{ templateTitle(r.templateKey) }}</span>
