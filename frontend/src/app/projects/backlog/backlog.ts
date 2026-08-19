@@ -271,6 +271,12 @@ export class PrjBacklog implements OnInit {
   dueIso = '';
   /** Nhập nhanh: tích chọn → sau khi Lưu KHÔNG đóng popup, giữ form để thêm task tiếp. */
   keepAdding = false;
+  /**
+   * Giờ tester đã bỏ ra để TÌM ra lỗi — bắt buộc khi tạo BUG/ISSUE (backend chặn nếu thiếu).
+   * Gửi ngay trong lệnh tạo để không mất giờ, giống màn Tạo nhanh và màn Bug/Issue.
+   */
+  logHours = '';
+  logDate = '';
 
   readonly typeOptions: { value: TaskType; label: string }[] = [
     { value: 'EPIC', label: 'Epic' }, { value: 'STORY', label: 'Story' },
@@ -815,12 +821,16 @@ export class PrjBacklog implements OnInit {
     // task con của BUG/ISSUE kế thừa screen từ cha (gợi ý) — để trống mặc định.
     // Mặc định Ngày bắt đầu = Ngày kết thúc = HÔM NAY (vẫn cho sửa).
     this.startIso = this.dueIso = this.todayIso();
+    this.logHours = '';
+    this.logDate = this.todayIso();
     this.modalOpen.set(true);
   }
 
   openEdit(t: ProjectTask): void {
     this.editingId.set(t.id);
     this.clearImages();
+    this.logHours = '';                 // sửa lỗi cũ thì không hỏi lại giờ tìm lỗi
+    this.logDate = this.todayIso();
     this.f = {
       parentId: t.parentId,
       title: t.title,
@@ -874,8 +884,18 @@ export class PrjBacklog implements OnInit {
       this.toast.error('Ước lượng không được quá 4 giờ', 'Hãy tách nhỏ công việc');
       return;
     }
-    this.saving.set(true);
     const bug = this.isBugLike(this.f.type);
+    // Tạo BUG/ISSUE bắt buộc kèm giờ tìm ra lỗi — chặn ở đây để báo ngay tại ô nhập,
+    // thay vì để backend từ chối sau khi người dùng đã điền hết form.
+    const logH = Number(this.logHours);
+    if (bug && !this.editingId()) {
+      if (!logH || logH <= 0) {
+        this.toast.warning('Nhập số giờ đã bỏ ra để tìm & ghi nhận lỗi');
+        return;
+      }
+      if (logH > 4) { this.toast.warning('Mỗi lần ghi giờ không quá 4h'); return; }
+    }
+    this.saving.set(true);
     const sd = this.fromIso(this.startIso);
     const dd = this.fromIso(this.dueIso);
     // Est không nhập → tự tính theo duration × 8, nhưng KẸP theo trần 4h của task lá,
@@ -891,6 +911,9 @@ export class PrjBacklog implements OnInit {
       // Khối "Chi tiết lỗi" chỉ áp dụng cho BUG/ISSUE — loại khác gửi null (xoá dữ liệu cũ nếu đổi loại).
       screen: bug ? (this.f.screen || null) : null,
       severity: bug ? (this.f.severity || null) : null,
+      // Giờ tìm lỗi gửi NGAY trong lệnh tạo (chỉ BUG/ISSUE mới) — atomic, không mất giờ.
+      testHours: bug && !this.editingId() ? logH : null,
+      workDate: bug && !this.editingId() ? (this.logDate || this.todayIso()) : null,
       // 3 trường lỗi đã gộp vào Mô tả → luôn gửi null (không dùng nữa).
       stepsToReproduce: null,
       expectedResult: null,
@@ -914,6 +937,8 @@ export class PrjBacklog implements OnInit {
             const { parentId, type, priority, assigneeUserId } = this.f;
             this.f = { ...this.emptyForm(), parentId, type, priority, assigneeUserId };
             this.startIso = this.dueIso = '';
+            this.logHours = '';               // giờ tìm lỗi là của TỪNG lỗi, không giữ lại cho lỗi sau
+            this.logDate = this.todayIso();
             setTimeout(() => document.querySelector<HTMLInputElement>('#bl-form input[name=title]')?.focus(), 0);
           } else {
             this.modalOpen.set(false);
