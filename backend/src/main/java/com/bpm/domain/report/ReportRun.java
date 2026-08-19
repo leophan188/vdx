@@ -3,7 +3,6 @@ package com.bpm.domain.report;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
@@ -34,8 +33,12 @@ public class ReportRun {
     @Column(name = "input_file_name", length = 260)
     private String inputFileName;
 
-    @Lob
-    @Column(name = "output_bytes")
+    /**
+     * KHÔNG dùng @Lob — Hibernate 6 map @Lob không kèm length thành TINYBLOB/TINYTEXT (255 byte) trên MariaDB,
+     * file .xlsx vài KB là lỗi ngay khi lưu. Đặt length lớn để MariaDB tạo LONGBLOB, H2 tạo VARBINARY lớn
+     * (cùng cách xử lý đã dùng ở ProjectDiary#content và Post#body).
+     */
+    @Column(name = "output_bytes", length = 100_000_000)
     private byte[] outputBytes;
 
     /** SUCCESS | FAILED. */
@@ -49,8 +52,7 @@ public class ReportRun {
      * Kết quả dạng JSON ({@link ReportResult}) để mở lại trên màn hình từ lịch sử.
      * NULL với các lần chạy cũ (trước khi có tính năng) và với lần chạy FAILED — mọi chỗ đọc phải chịu được null.
      */
-    @Lob
-    @Column(name = "result_json")
+    @Column(name = "result_json", length = 100_000_000)
     private String resultJson;
 
     protected ReportRun() {
