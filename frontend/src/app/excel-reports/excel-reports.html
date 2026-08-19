@@ -20,8 +20,8 @@
         <span>Cột trong biểu mẫu</span>
         <div class="xlrep-cols">
           @for (c of tpl.columns; track c.header) {
-            <span class="badge" [class.badge--neutral]="c.required" [class.badge--pending]="!c.required">
-              {{ c.header }} ({{ c.type }}){{ c.required ? '' : ' — tuỳ chọn' }}
+            <span class="badge" [class.badge--neutral]="c.valueRequired" [class.badge--pending]="!c.valueRequired">
+              {{ c.header }} ({{ c.type }}){{ !c.required ? ' — tuỳ chọn' : (c.valueRequired ? '' : ' — có thể trống') }}
             </span>
           }
         </div>

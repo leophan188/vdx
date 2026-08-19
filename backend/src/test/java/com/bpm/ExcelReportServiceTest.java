@@ -22,12 +22,12 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
-/** Công cụ Import Excel — chỉ còn một loại tool: Tính toán nỗ lực dự án (Sun). */
+/** Công cụ Import Excel — chỉ còn một loại tool: Phân bổ chi phí nhân sự (Sun ITS). */
 @SpringBootTest
 @ActiveProfiles("test")
 class ExcelReportServiceTest {
 
-    private static final String SUN = "NO_LUC_DU_AN_SUN";
+    private static final String SUN = "PHAN_BO_CHI_PHI_SUN_ITS";
     private static final double RATE = 2_818_181.82d;
 
     @Autowired
@@ -99,7 +99,7 @@ class ExcelReportServiceTest {
         assertThat(svc.listTemplates()).singleElement()
                 .satisfies(t -> {
                     assertThat(t.getKey()).isEqualTo(SUN);
-                    assertThat(t.getTitle()).isEqualTo("Tính toán nỗ lực dự án (Sun)");
+                    assertThat(t.getTitle()).isEqualTo("Phân bổ chi phí nhân sự (Sun ITS)");
                 });
     }
 

@@ -5,7 +5,10 @@ import { Observable } from 'rxjs';
 export interface ReportColumn {
   header: string;
   type: 'TEXT' | 'NUMBER' | 'DATE';
+  /** File bắt buộc phải có cột này. */
   required: boolean;
+  /** Từng ô không được để trống. */
+  valueRequired: boolean;
 }
 
 /** Một loại tool (mẫu xử lý) khai báo sẵn ở backend. */

@@ -21,7 +21,7 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Công cụ Import Excel → Kết quả (Epic 4). Hiện có một loại tool: Tính toán nỗ lực dự án (Sun).
+ * Công cụ Import Excel → Kết quả (Epic 4). Hiện có một loại tool: Phân bổ chi phí nhân sự (Sun ITS).
  * listTemplates (FR-D01) · validate (FR-D02 + an toàn NFR-09) · run (FR-D03/D06) · history (FR-D05) · download (FR-D04)
  * · sampleTemplate (tải biểu mẫu trống) · resultOf (mở lại kết quả trên màn hình).
  * Mọi thao tác run ghi audit qua AuditPort (NFR-06). Phần đọc/validate dùng chung ở {@link ExcelReportEngine}, công thức riêng ở
@@ -99,7 +99,7 @@ public class ExcelReportService {
 
     /** Tính toán theo loại tool (mở rộng tool mới ở đây) → file .xlsx + dữ liệu hiển thị. */
     private Computed compute(ReportTemplate template, Workbook wb) {
-        if (template == ReportTemplate.NO_LUC_DU_AN_SUN) {
+        if (template == ReportTemplate.PHAN_BO_CHI_PHI_SUN_ITS) {
             SunEffortEngine.SunReport report = SunEffortEngine.compute(wb);
             return new Computed(SunEffortEngine.write(report), SunEffortEngine.toResult(report));
         }
@@ -109,7 +109,7 @@ public class ExcelReportService {
     /** Biểu mẫu Excel trống để người dùng tải về điền (đúng cấu trúc từng loại tool). */
     public byte[] sampleTemplate(String templateKey) {
         ReportTemplate template = ReportTemplate.byKey(templateKey);
-        if (template == ReportTemplate.NO_LUC_DU_AN_SUN) {
+        if (template == ReportTemplate.PHAN_BO_CHI_PHI_SUN_ITS) {
             return SunEffortEngine.writeSampleTemplate();
         }
         return ExcelReportEngine.writeSampleTemplate(template);

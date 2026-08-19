@@ -23,7 +23,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Lõi tool "Tính toán nỗ lực dự án (Sun)" — test thuần, không cần Spring. */
+/** Lõi tool "Phân bổ chi phí nhân sự (Sun ITS)" — test thuần, không cần Spring. */
 class SunEffortEngineTest {
 
     private static final double SON_RATE = 2_818_181.82d;
@@ -157,7 +157,7 @@ class SunEffortEngineTest {
     @Test
     void validate_acceptsSampleTemplateFilledIn() throws Exception {
         try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(SunEffortEngine.writeSampleTemplate()))) {
-            ValidationResult vr = ExcelReportEngine.validate(ReportTemplate.NO_LUC_DU_AN_SUN, wb);
+            ValidationResult vr = ExcelReportEngine.validate(ReportTemplate.PHAN_BO_CHI_PHI_SUN_ITS, wb);
             assertThat(vr.isValid()).isTrue();
             assertThat(vr.getDataRows()).isEqualTo(2);
         }
@@ -192,12 +192,80 @@ class SunEffortEngineTest {
             wb.write(bos);
 
             try (Workbook reopened = new XSSFWorkbook(new ByteArrayInputStream(bos.toByteArray()))) {
-                assertThat(ExcelReportEngine.validate(ReportTemplate.NO_LUC_DU_AN_SUN, reopened).isValid()).isTrue();
+                assertThat(ExcelReportEngine.validate(ReportTemplate.PHAN_BO_CHI_PHI_SUN_ITS, reopened).isValid()).isTrue();
                 SunEffortEngine.SunReport rep = SunEffortEngine.compute(reopened);
                 assertThat(rep.byPerson()).hasSize(1);
                 assertThat(rep.byPerson().get(0).totalMd()).isEqualTo(1.0);
             }
         }
+    }
+
+    /**
+     * File chấm công thật để Total MD / Expense / Manday là CÔNG THỨC (=K2, =H2*J2, =62000000/22).
+     * Phải đọc theo giá trị Excel đã tính sẵn, không được coi ô công thức là "không phải số".
+     */
+    @Test
+    void validate_and_compute_readFormulaCells() throws Exception {
+        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
+            Sheet sheet = wb.createSheet("Raw normalized");
+            CellStyle dateStyle = wb.createCellStyle();
+            dateStyle.setDataFormat(wb.getCreationHelper().createDataFormat().getFormat("yyyy-mm-dd"));
+
+            String[] headers = {"Date", "Email", "Họ và tên", "Position", "Level", "Vendor",
+                    "Project Name", "Total MD", "Expense (VNĐ)", "Manday (VNĐ)",
+                    "MD nhân sự tự khai", "Thời gian thực hiện (chỉ điền số giờ, không điền ký tự khác)"};
+            Row hr = sheet.createRow(0);
+            for (int c = 0; c < headers.length; c++) {
+                hr.createCell(c).setCellValue(headers[c]);
+            }
+
+            Row dr = sheet.createRow(1);
+            Cell d = dr.createCell(0);
+            d.setCellValue(java.sql.Date.valueOf(LocalDate.of(2026, 7, 1)));
+            d.setCellStyle(dateStyle);
+            dr.createCell(1).setCellValue("sondn3@vmogroup.com");
+            dr.createCell(2).setCellValue("Đàm Ngọc Sơn");
+            dr.createCell(3).setCellValue("DEV");
+            dr.createCell(4).setCellValue("Middle");
+            dr.createCell(5).setCellValue("VMO");
+            dr.createCell(6).setCellValue("HR Platform");
+            formula(dr, 7, "K2", 1.0);                 // Total MD  = MD tự khai
+            formula(dr, 8, "H2*J2", SON_RATE);         // Expense   = MD × đơn giá
+            formula(dr, 9, "62000000/22", SON_RATE);   // Manday    = lương tháng / 22
+            formula(dr, 10, "L2/8", 1.0);              // MD tự khai = giờ / 8
+            dr.createCell(11).setCellValue(8);
+            wb.write(bos);
+
+            try (Workbook reopened = new XSSFWorkbook(new ByteArrayInputStream(bos.toByteArray()))) {
+                ValidationResult vr = ExcelReportEngine.validate(ReportTemplate.PHAN_BO_CHI_PHI_SUN_ITS, reopened);
+                assertThat(vr.getIssues()).isEmpty();
+                assertThat(vr.isValid()).isTrue();
+
+                SunEffortEngine.SunReport rep = SunEffortEngine.compute(reopened);
+                assertThat(rep.byPerson()).singleElement()
+                        .satisfies(p -> {
+                            assertThat(p.totalMd()).isEqualTo(1.0);
+                            assertThat(p.expense()).isEqualTo(round2(SON_RATE));
+                        });
+                assertThat(rep.warnings()).isEmpty();
+            }
+        }
+    }
+
+    /** Ô công thức KÈM giá trị đã tính sẵn — đúng như Excel ghi ra file. */
+    private static void formula(Row row, int col, String f, double cached) {
+        Cell cell = row.createCell(col);
+        cell.setCellFormula(f);
+        cell.setCellValue(cached);
+    }
+
+    @Test
+    void parseNumber_acceptsVietnameseAndEnglishGrouping() {
+        assertThat(ExcelReportEngine.parseNumber("2.818.181,82")).isEqualTo(2_818_181.82d);
+        assertThat(ExcelReportEngine.parseNumber("2,818,181.82")).isEqualTo(2_818_181.82d);
+        assertThat(ExcelReportEngine.parseNumber("0,5")).isEqualTo(0.5d);
+        assertThat(ExcelReportEngine.parseNumber("1 000")).isEqualTo(1000d);
+        assertThat(ExcelReportEngine.parseNumber("không-phải-số")).isNull();
     }
 
     private static double round2(double v) {

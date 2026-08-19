@@ -72,7 +72,7 @@ public final class ExcelReportEngine {
             dataRows++;
             for (ReportTemplate.Column col : template.getRequiredColumns()) {
                 Cell cell = row.getCell(resolve(colIndex, col.header()));
-                String err = checkCell(cell, col.type());
+                String err = checkCell(cell, col);
                 if (err != null) {
                     vr.add(r + 1, col.header(), err); // r 0-based → hiển thị 1-based
                 }
@@ -85,13 +85,13 @@ public final class ExcelReportEngine {
         return vr;
     }
 
-    private static String checkCell(Cell cell, ReportTemplate.ColumnType type) {
-        boolean empty = cell == null || cell.getCellType() == CellType.BLANK
-                || (cell.getCellType() == CellType.STRING && cell.getStringCellValue().isBlank());
+    private static String checkCell(Cell cell, ReportTemplate.Column col) {
+        boolean empty = cell == null || effectiveType(cell) == CellType.BLANK
+                || (effectiveType(cell) == CellType.STRING && stringValue(cell).isBlank());
         if (empty) {
-            return "Ô để trống (bắt buộc).";
+            return col.valueRequired() ? "Ô để trống (bắt buộc)." : null;
         }
-        switch (type) {
+        switch (col.type()) {
             case NUMBER:
                 Double n = numericOrNull(cell);
                 if (n == null) {
@@ -193,15 +193,24 @@ public final class ExcelReportEngine {
         return idx;
     }
 
+    /**
+     * Dòng KHÔNG phải dữ liệu → bỏ qua (không tính, không báo lỗi): dòng rỗng, hoặc dòng mà mọi cột định danh
+     * (Requirement.KEY) đều trống — điển hình là dòng tổng cuối bảng chỉ có mỗi ô =SUM(...), hoặc dòng ghi chú.
+     * Mẫu không khai báo cột KEY nào thì quay về quy tắc cũ: trống hết các cột bắt buộc mới bỏ qua.
+     */
     private static boolean isBlankRow(Row row, Map<String, Integer> colIndex, ReportTemplate template) {
         if (row == null) {
             return true;
         }
-        for (ReportTemplate.Column col : template.getRequiredColumns()) {
+        List<ReportTemplate.Column> probe = template.getColumns().stream()
+                .filter(ReportTemplate.Column::identity).toList();
+        if (probe.isEmpty()) {
+            probe = template.getRequiredColumns();
+        }
+        for (ReportTemplate.Column col : probe) {
             Integer ci = resolve(colIndex, col.header());
             Cell cell = ci == null ? null : row.getCell(ci);
-            if (cell != null && cell.getCellType() != CellType.BLANK
-                    && !FORMATTER.formatCellValue(cell).isBlank()) {
+            if (cell != null && effectiveType(cell) != CellType.BLANK && !stringValue(cell).isBlank()) {
                 return false;
             }
         }
@@ -232,40 +241,89 @@ public final class ExcelReportEngine {
         return s == null ? "" : s.trim().replaceAll("\\s+", " ").toLowerCase();
     }
 
+    /**
+     * Kiểu THỰC của ô: với ô công thức trả về kiểu của KẾT QUẢ đã được Excel tính sẵn và lưu trong file.
+     * Bảng chấm công thật thường có Total MD / Expense / Manday là công thức (=K2, =H2*J2, =62000000/22),
+     * nếu chỉ nhìn getCellType() thì mọi ô đó đều là FORMULA và bị coi là "không phải số".
+     */
+    private static CellType effectiveType(Cell cell) {
+        if (cell == null) {
+            return CellType.BLANK;
+        }
+        CellType type = cell.getCellType();
+        return type == CellType.FORMULA ? cell.getCachedFormulaResultType() : type;
+    }
+
     private static String stringValue(Cell cell) {
-        return cell == null ? "" : FORMATTER.formatCellValue(cell).trim();
+        if (cell == null) {
+            return "";
+        }
+        // formatCellValue KHÔNG kèm evaluator sẽ trả về chính chuỗi công thức → tự đọc kết quả đã tính sẵn.
+        if (cell.getCellType() == CellType.FORMULA) {
+            return switch (cell.getCachedFormulaResultType()) {
+                case STRING -> cell.getRichStringCellValue().getString().trim();
+                case NUMERIC -> FORMATTER.formatRawCellContents(cell.getNumericCellValue(),
+                        cell.getCellStyle().getDataFormat(), cell.getCellStyle().getDataFormatString()).trim();
+                case BOOLEAN -> String.valueOf(cell.getBooleanCellValue());
+                default -> "";
+            };
+        }
+        return FORMATTER.formatCellValue(cell).trim();
     }
 
     private static Double numericOrNull(Cell cell) {
         if (cell == null) {
             return null;
         }
-        if (cell.getCellType() == CellType.NUMERIC) {
+        CellType type = effectiveType(cell);
+        if (type == CellType.NUMERIC) {
             return cell.getNumericCellValue();
         }
-        if (cell.getCellType() == CellType.STRING) {
-            String raw = cell.getStringCellValue().trim().replace(',', '.');
-            if (raw.isEmpty()) {
-                return null;
-            }
-            try {
-                return Double.parseDouble(raw);
-            } catch (NumberFormatException e) {
-                return null;
-            }
+        if (type == CellType.STRING) {
+            return parseNumber(stringValue(cell));
         }
         return null;
+    }
+
+    /**
+     * Đọc số từ chuỗi, chấp nhận cách viết Việt Nam (2.818.181,82) lẫn kiểu Anh (2,818,181.82)
+     * và khoảng trắng không ngắt mà Excel hay chèn khi dán số.
+     */
+    public static Double parseNumber(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String s = raw.replace("\u00A0", "").replaceAll("\\s", "");
+        if (s.isEmpty()) {
+            return null;
+        }
+        int lastDot = s.lastIndexOf('.');
+        int lastComma = s.lastIndexOf(',');
+        if (lastDot >= 0 && lastComma >= 0) {
+            // dấu xuất hiện SAU cùng là dấu thập phân, dấu còn lại là phân cách nghìn
+            s = lastComma > lastDot ? s.replace(".", "").replace(',', '.') : s.replace(",", "");
+        } else if (lastComma >= 0) {
+            s = s.indexOf(',') == lastComma ? s.replace(',', '.') : s.replace(",", "");
+        } else if (lastDot >= 0 && s.indexOf('.') != lastDot) {
+            s = s.replace(".", ""); // nhiều dấu chấm → đều là phân cách nghìn
+        }
+        try {
+            return Double.parseDouble(s);
+        } catch (NumberFormatException e) {
+            return null;
+        }
     }
 
     private static LocalDate dateOrNull(Cell cell) {
         if (cell == null) {
             return null;
         }
-        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
+        CellType type = effectiveType(cell);
+        if (type == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
             return cell.getLocalDateTimeCellValue().toLocalDate();
         }
-        if (cell.getCellType() == CellType.STRING) {
-            String raw = cell.getStringCellValue().trim();
+        if (type == CellType.STRING) {
+            String raw = stringValue(cell);
             for (String fmt : new String[]{"yyyy-MM-dd", "dd/MM/yyyy", "d/M/yyyy", "dd-MM-yyyy"}) {
                 try {
                     return LocalDate.parse(raw, java.time.format.DateTimeFormatter.ofPattern(fmt));

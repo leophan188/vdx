@@ -39,7 +39,8 @@ public class ExcelReportController {
 
     // ===== DTO =====
 
-    public record ColumnDto(String header, String type, boolean required) {
+    /** required = file phải có cột này; valueRequired = từng ô không được để trống. */
+    public record ColumnDto(String header, String type, boolean required, boolean valueRequired) {
     }
 
     public record TemplateDto(String key, String title, String description, List<ColumnDto> requiredColumns,
@@ -47,9 +48,10 @@ public class ExcelReportController {
         static TemplateDto of(ReportTemplate t) {
             return new TemplateDto(t.getKey(), t.getTitle(), t.getDescription(),
                     t.getRequiredColumns().stream()
-                            .map(c -> new ColumnDto(c.header(), c.type().name(), true)).toList(),
+                            .map(c -> new ColumnDto(c.header(), c.type().name(), true, c.valueRequired())).toList(),
                     t.getColumns().stream()
-                            .map(c -> new ColumnDto(c.header(), c.type().name(), c.required())).toList());
+                            .map(c -> new ColumnDto(c.header(), c.type().name(), c.required(), c.valueRequired()))
+                            .toList());
         }
     }
 
