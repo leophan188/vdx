@@ -132,11 +132,12 @@ public final class SunEffortEngine {
         if (noProject > 0) {
             warnings.add(noProject + " dòng không điền tên dự án — đã gộp vào nhóm \"" + NO_PROJECT + "\".");
         }
+        warnings.addAll(nameEmailWarnings(raw));
 
         return new SunReport(raw, byPerson(raw), byProject(raw), byPersonProject(raw), warnings);
     }
 
-    /** Gộp theo nhân sự — khoá là email (định danh chắc chắn), hiển thị Họ và tên. */
+    /** Gộp theo nhân sự — MỘT dòng cho mỗi người (xem {@link #personKey}). */
     private static List<PersonTotal> byPerson(List<SunRow> raw) {
         Map<String, double[]> sums = new LinkedHashMap<>();
         Map<String, String> names = new LinkedHashMap<>();
@@ -171,8 +172,9 @@ public final class SunEffortEngine {
     }
 
     /**
-     * Gộp theo cặp (nhân sự × dự án). Thuộc tính mô tả (Position/Level/Vendor/Họ và tên) lấy theo dòng đầu tiên
-     * của cặp; Manday là đơn giá bình quân gia quyền (= tổng chi phí / tổng MD) để đúng cả khi đơn giá đổi giữa kỳ.
+     * Gộp theo cặp (nhân sự × dự án) — cùng khoá nhân sự với bảng "Tổng theo nhân sự" để hai bảng khớp nhau.
+     * Thuộc tính mô tả (Email/Position/Level/Vendor) lấy theo dòng đầu tiên của cặp; Manday là đơn giá bình quân
+     * gia quyền (= tổng chi phí / tổng MD) để đúng cả khi đơn giá đổi giữa kỳ.
      */
     private static List<PersonProjectTotal> byPersonProject(List<SunRow> raw) {
         Map<String, PairAccumulator> acc = new LinkedHashMap<>();
@@ -220,9 +222,60 @@ public final class SunEffortEngine {
         }
     }
 
-    /** Khoá nhân sự: ưu tiên email, thiếu email thì dùng họ tên. */
+    /**
+     * Khoá nhân sự = HỌ TÊN đã chuẩn hoá (bỏ khoảng trắng thừa, không phân biệt hoa thường).
+     *
+     * KHÔNG dùng email làm khoá: bảng chấm công thật có cùng một người bị gõ sai email thành nhiều
+     * biến thể (vinhnq3@vmogroup.com / vinhnq3@vmogroup.com.vn / vinnq3@vmogroup.com), khoá theo email
+     * thì "Tổng theo nhân sự" tách người đó thành 3 dòng — đúng nghĩa đen nhưng sai điều người dùng cần.
+     * Đổi lại, hai người TRÙNG TÊN sẽ bị gộp; {@link #nameEmailWarnings} cảnh báo mọi tên có nhiều email
+     * và mọi email gắn nhiều tên để người dùng còn rà lại dữ liệu gốc.
+     */
     private static String personKey(SunRow r) {
-        return r.email().isBlank() ? "name:" + r.name().toLowerCase() : r.email().toLowerCase();
+        String name = normKey(r.name());
+        return name.isEmpty() || NO_NAME.equalsIgnoreCase(r.name())
+                ? "email:" + normKey(r.email())
+                : "name:" + name;
+    }
+
+    private static String normKey(String s) {
+        return s == null ? "" : s.trim().replaceAll("\\s+", " ").toLowerCase();
+    }
+
+    /**
+     * Soi lệch định danh trong file: một tên gắn nhiều email (gõ sai email) hoặc một email gắn nhiều tên
+     * (gõ sai tên). Không chặn tính toán — chỉ nói rõ chỗ nào đáng ngờ.
+     */
+    private static List<String> nameEmailWarnings(List<SunRow> raw) {
+        Map<String, Map<String, String>> emailsOfName = new LinkedHashMap<>();
+        Map<String, Map<String, String>> namesOfEmail = new LinkedHashMap<>();
+        for (SunRow r : raw) {
+            if (r.email().isBlank() || r.name().isBlank()) {
+                continue;
+            }
+            emailsOfName.computeIfAbsent(normKey(r.name()), k -> new LinkedHashMap<>())
+                    .putIfAbsent(normKey(r.email()), r.email());
+            namesOfEmail.computeIfAbsent(normKey(r.email()), k -> new LinkedHashMap<>())
+                    .putIfAbsent(normKey(r.name()), r.name());
+        }
+        List<String> out = new ArrayList<>();
+        for (SunRow r : raw) {
+            Map<String, String> emails = emailsOfName.get(normKey(r.name()));
+            if (emails != null && emails.size() > 1) {
+                String msg = "\"" + r.name() + "\" có " + emails.size() + " email khác nhau trong file ("
+                        + String.join(", ", emails.values()) + ") — đã gộp chung theo họ tên, hãy rà lại email.";
+                if (!out.contains(msg)) {
+                    out.add(msg);
+                }
+            }
+        }
+        for (Map.Entry<String, Map<String, String>> e : namesOfEmail.entrySet()) {
+            if (e.getValue().size() > 1) {
+                out.add("Email " + e.getKey() + " gắn với " + e.getValue().size() + " họ tên khác nhau ("
+                        + String.join(", ", e.getValue().values()) + ") — mỗi tên được tính thành một người.");
+            }
+        }
+        return out;
     }
 
     private static String dateRange(LocalDate from, LocalDate to) {

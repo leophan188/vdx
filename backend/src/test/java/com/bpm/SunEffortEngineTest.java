@@ -259,6 +259,47 @@ class SunEffortEngineTest {
         cell.setCellValue(cached);
     }
 
+    /**
+     * Bảng chấm công thật có cùng một người bị gõ sai email thành nhiều biến thể.
+     * "Tổng theo nhân sự" phải cho ĐÚNG MỘT dòng cho người đó, kèm cảnh báo để còn sửa dữ liệu gốc.
+     */
+    @Test
+    void compute_mergesOnePersonTypedWithSeveralEmails() {
+        List<ExcelReportEngine.InputRow> rows = List.of(
+                row(2, LocalDate.of(2026, 7, 1), "vinhnq3@vmogroup.com", "Nguyễn Quang Vinh",
+                        "Vận hành MySGR", 17.5, SON_RATE * 17.5, SON_RATE),
+                row(3, LocalDate.of(2026, 7, 2), "vinhnq3@vmogroup.com.vn", "Nguyễn Quang Vinh",
+                        "Vận hành MySGR", 2.0, SON_RATE * 2, SON_RATE),
+                row(4, LocalDate.of(2026, 7, 3), "vinnq3@vmogroup.com", "Nguyễn Quang Vinh",
+                        "Vận hành MySGR", 1.0, SON_RATE, SON_RATE));
+
+        SunEffortEngine.SunReport rep = SunEffortEngine.compute(rows);
+
+        assertThat(rep.byPerson()).singleElement()
+                .satisfies(p -> {
+                    assertThat(p.name()).isEqualTo("Nguyễn Quang Vinh");
+                    assertThat(p.totalMd()).isEqualTo(20.5);           // 17,5 + 2 + 1
+                });
+        // cùng người × cùng dự án → một dòng ở bảng cặp, không tách theo email
+        assertThat(rep.byPersonProject()).singleElement()
+                .satisfies(p -> assertThat(p.totalMd()).isEqualTo(20.5));
+        assertThat(rep.warnings())
+                .anyMatch(w -> w.contains("Nguyễn Quang Vinh") && w.contains("3 email"));
+    }
+
+    /** Khác tên nhưng dùng chung một email → vẫn là hai người, và có cảnh báo. */
+    @Test
+    void compute_keepsDifferentNamesSharingOneEmailApart() {
+        List<ExcelReportEngine.InputRow> rows = List.of(
+                row(2, LocalDate.of(2026, 7, 1), "chung@vmogroup.com", "Người A", "P", 1.0, SON_RATE, SON_RATE),
+                row(3, LocalDate.of(2026, 7, 2), "chung@vmogroup.com", "Người B", "P", 2.0, SON_RATE * 2, SON_RATE));
+
+        SunEffortEngine.SunReport rep = SunEffortEngine.compute(rows);
+
+        assertThat(rep.byPerson()).hasSize(2);
+        assertThat(rep.warnings()).anyMatch(w -> w.contains("2 họ tên khác nhau"));
+    }
+
     @Test
     void parseNumber_acceptsVietnameseAndEnglishGrouping() {
         assertThat(ExcelReportEngine.parseNumber("2.818.181,82")).isEqualTo(2_818_181.82d);
