@@ -43,6 +43,12 @@ type ResultRow = Record<string, string | number>;
     .xlrep-tabs { display: flex; gap: var(--space-1); flex-wrap: wrap; }
     .xlrep-warnings { max-height: 180px; overflow: auto; margin: 0; padding-left: var(--space-4);
       font-size: var(--font-size-sm); }
+    /* Ô lưới giữ ĐÚNG MỘT dòng: chuỗi dài (tên tool, tên file) cắt bằng … và xem đủ ở tooltip,
+       thay vì xuống 5 dòng làm hàng cao ngất và khó dò ngang. */
+    .xlrep-cell { display: block; max-width: 100%; overflow: hidden;
+      text-overflow: ellipsis; white-space: nowrap; }
+    /* Nút hành động trong lưới nằm NGANG, sát mép phải cột. */
+    .xlrep-rowacts { display: flex; gap: var(--space-1); justify-content: flex-end; align-items: center; }
   `]
 })
 export class ExcelReports implements OnInit {
@@ -62,13 +68,17 @@ export class ExcelReports implements OnInit {
   readonly resultRunId = signal<string | null>(null);
   readonly activeTable = signal(0);
 
+  /**
+   * DESIGN-SYSTEM §4c: đúng MỘT cột nội dung chính không khai báo width (ở đây là "File vào" —
+   * chuỗi dài nhất và đáng đọc nhất), đặt sớm; mọi cột còn lại có width sát nội dung thật.
+   */
   readonly historyCols: GridColumn[] = [
-    { key: 'runAt', header: 'Thời điểm', width: '160px' },
-    { key: 'templateKey', header: 'Loại tool', width: '200px' },
-    { key: 'runBy', header: 'Người chạy', width: '140px' },
+    { key: 'runAt', header: 'Thời điểm', width: '128px' },
+    { key: 'templateKey', header: 'Loại tool', width: '210px' },
     { key: 'inputFileName', header: 'File vào' },
-    { key: 'status', header: 'Trạng thái', align: 'center', width: '120px' },
-    { key: 'actions', header: '', width: '150px' }
+    { key: 'runBy', header: 'Người chạy', width: '128px' },
+    { key: 'status', header: 'Trạng thái', align: 'center', width: '112px' },
+    { key: 'actions', header: '', align: 'right', width: '84px' }
   ];
 
   /** Bảng kết quả đang mở. */
@@ -77,19 +87,45 @@ export class ExcelReports implements OnInit {
     return r && r.tables.length ? r.tables[Math.min(this.activeTable(), r.tables.length - 1)] : null;
   });
 
-  /** Cột của bảng đang mở, quy về key c0…cN; cột số canh phải. */
+  /**
+   * Cột của bảng đang mở, quy về key c0…cN. Theo DESIGN-SYSTEM §4c: bề rộng bám nội dung THẬT
+   * (số hẹp, tiền vừa, email/khoảng ngày rộng), và chỉ cột chữ ĐẦU TIÊN chưa có bề rộng riêng
+   * mới được co giãn — các cột chữ còn lại phải có width, nếu không chúng tranh chỗ khó đoán.
+   */
   readonly tableCols = computed<GridColumn[]>(() => {
     const t = this.table();
     if (!t) return [];
-    return t.columns.map((header, i) => ({
-      key: `c${i}`,
-      header,
-      sortable: true,
-      align: t.types[i] === 'TEXT' ? 'left' : 'right',
-      // cột đầu tiên kiểu TEXT là cột nội dung chính → để data-grid tự co giãn (không đặt width)
-      width: t.types[i] === 'TEXT' && i === t.types.indexOf('TEXT') ? undefined : '160px'
-    }));
+    let flexTaken = false;
+    return t.columns.map((header, i) => {
+      const type = t.types[i];
+      let width = this.fixedWidth(header, type);
+      if (!width) {
+        if (flexTaken) {
+          width = '180px';
+        } else {
+          flexTaken = true; // cột co giãn duy nhất
+        }
+      }
+      const col: GridColumn = { key: `c${i}`, header, sortable: true };
+      if (type !== 'TEXT') col.align = 'right';
+      if (width) col.width = width;
+      return col;
+    });
   });
+
+  /** Bề rộng cố định theo loại/tên cột; trả về rỗng nghĩa là "ứng viên cột co giãn". */
+  private fixedWidth(header: string, type: string): string | null {
+    if (type === 'MONEY') return '148px';
+    if (type === 'NUMBER') return '104px';
+    switch (header.trim().toLowerCase()) {
+      case 'email': return '230px';
+      case 'date': return '190px';       // chứa khoảng ngày "01/07/2026 – 31/07/2026"
+      case 'position':
+      case 'level':
+      case 'vendor': return '112px';
+      default: return null;
+    }
+  }
 
   readonly tableRows = computed<ResultRow[]>(() => {
     const t = this.table();

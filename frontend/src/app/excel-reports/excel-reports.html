@@ -111,16 +111,16 @@
       @if (table(); as t) {
         <data-grid [columns]="tableCols()" [rows]="tableRows()" [title]="t.title"
                    [exportName]="t.title" emptyText="Không có dòng nào.">
-          <ng-template gridCell="c0" let-r>{{ cell(r.c0) }}</ng-template>
-          <ng-template gridCell="c1" let-r>{{ cell(r.c1) }}</ng-template>
-          <ng-template gridCell="c2" let-r>{{ cell(r.c2) }}</ng-template>
-          <ng-template gridCell="c3" let-r>{{ cell(r.c3) }}</ng-template>
-          <ng-template gridCell="c4" let-r>{{ cell(r.c4) }}</ng-template>
-          <ng-template gridCell="c5" let-r>{{ cell(r.c5) }}</ng-template>
-          <ng-template gridCell="c6" let-r>{{ cell(r.c6) }}</ng-template>
-          <ng-template gridCell="c7" let-r>{{ cell(r.c7) }}</ng-template>
-          <ng-template gridCell="c8" let-r>{{ cell(r.c8) }}</ng-template>
-          <ng-template gridCell="c9" let-r>{{ cell(r.c9) }}</ng-template>
+          <ng-template gridCell="c0" let-r><span class="xlrep-cell" [title]="cell(r.c0)">{{ cell(r.c0) }}</span></ng-template>
+          <ng-template gridCell="c1" let-r><span class="xlrep-cell" [title]="cell(r.c1)">{{ cell(r.c1) }}</span></ng-template>
+          <ng-template gridCell="c2" let-r><span class="xlrep-cell" [title]="cell(r.c2)">{{ cell(r.c2) }}</span></ng-template>
+          <ng-template gridCell="c3" let-r><span class="xlrep-cell" [title]="cell(r.c3)">{{ cell(r.c3) }}</span></ng-template>
+          <ng-template gridCell="c4" let-r><span class="xlrep-cell" [title]="cell(r.c4)">{{ cell(r.c4) }}</span></ng-template>
+          <ng-template gridCell="c5" let-r><span class="xlrep-cell" [title]="cell(r.c5)">{{ cell(r.c5) }}</span></ng-template>
+          <ng-template gridCell="c6" let-r><span class="xlrep-cell" [title]="cell(r.c6)">{{ cell(r.c6) }}</span></ng-template>
+          <ng-template gridCell="c7" let-r><span class="xlrep-cell" [title]="cell(r.c7)">{{ cell(r.c7) }}</span></ng-template>
+          <ng-template gridCell="c8" let-r><span class="xlrep-cell" [title]="cell(r.c8)">{{ cell(r.c8) }}</span></ng-template>
+          <ng-template gridCell="c9" let-r><span class="xlrep-cell" [title]="cell(r.c9)">{{ cell(r.c9) }}</span></ng-template>
         </data-grid>
       }
     </div>
@@ -128,25 +128,33 @@
 
   <data-grid [columns]="historyCols" [rows]="history()" title="Lịch sử lần chạy"
              [emptyText]="loadingHistory() ? 'Đang tải…' : 'Chưa có lần chạy nào.'">
-    <ng-template gridCell="runAt" let-r>{{ fmt(r.runAt) }}</ng-template>
-    <ng-template gridCell="templateKey" let-r>{{ templateTitle(r.templateKey) }}</ng-template>
+    <ng-template gridCell="runAt" let-r><span class="xlrep-cell">{{ fmt(r.runAt) }}</span></ng-template>
+    <ng-template gridCell="templateKey" let-r>
+      <span class="xlrep-cell" [title]="templateTitle(r.templateKey)">{{ templateTitle(r.templateKey) }}</span>
+    </ng-template>
+    <ng-template gridCell="inputFileName" let-r>
+      <span class="xlrep-cell" [title]="r.inputFileName">{{ r.inputFileName || '—' }}</span>
+    </ng-template>
+    <ng-template gridCell="runBy" let-r><span class="xlrep-cell" [title]="r.runBy">{{ r.runBy }}</span></ng-template>
     <ng-template gridCell="status" let-r>
       @if (r.status === 'SUCCESS') {
         <span class="badge badge--done">Thành công</span>
       } @else {
-        <span class="badge badge--cancel">Thất bại</span>
+        <span class="badge badge--cancel" [title]="r.message">Thất bại</span>
       }
     </ng-template>
     <ng-template gridCell="actions" let-r>
-      @if (r.hasResult) {
-        <button type="button" class="btn btn--icon" title="Xem kết quả" (click)="viewResult(r)">👁</button>
-      }
-      @if (r.hasOutput) {
-        <button type="button" class="btn btn--icon" title="Tải .xlsx" (click)="downloadRun(r)">⬇</button>
-      }
-      @if (!r.hasOutput && !r.hasResult) {
-        <span class="hint">{{ r.message }}</span>
-      }
+      <span class="xlrep-rowacts">
+        @if (r.hasResult) {
+          <button type="button" class="btn btn--icon" title="Xem kết quả" (click)="viewResult(r)">👁</button>
+        }
+        @if (r.hasOutput) {
+          <button type="button" class="btn btn--icon" title="Tải .xlsx" (click)="downloadRun(r)">⬇</button>
+        }
+        @if (!r.hasOutput && !r.hasResult) {
+          <span class="hint">—</span>
+        }
+      </span>
     </ng-template>
   </data-grid>
 </section>
