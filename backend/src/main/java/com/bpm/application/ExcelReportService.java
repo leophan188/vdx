@@ -2,7 +2,6 @@ package com.bpm.application;
 
 import com.bpm.domain.audit.AuditPort;
 import com.bpm.domain.report.ExcelReportEngine;
-import com.bpm.domain.report.ExcelReportEngine.OtSummaryRow;
 import com.bpm.domain.report.ReportResult;
 import com.bpm.domain.report.ReportRun;
 import com.bpm.domain.report.ReportTemplate;
@@ -22,10 +21,10 @@ import java.util.Arrays;
 import java.util.List;
 
 /**
- * Công cụ Import Excel → Kết quả (Epic 4).
+ * Công cụ Import Excel → Kết quả (Epic 4). Hiện có một loại tool: Tính toán nỗ lực dự án (Sun).
  * listTemplates (FR-D01) · validate (FR-D02 + an toàn NFR-09) · run (FR-D03/D06) · history (FR-D05) · download (FR-D04)
  * · sampleTemplate (tải biểu mẫu trống) · resultOf (mở lại kết quả trên màn hình).
- * Mọi thao tác run ghi audit qua AuditPort (NFR-06). Lõi tính toán nằm ở {@link ExcelReportEngine} /
+ * Mọi thao tác run ghi audit qua AuditPort (NFR-06). Phần đọc/validate dùng chung ở {@link ExcelReportEngine}, công thức riêng ở
  * {@link SunEffortEngine} (test thuần).
  */
 @Service
@@ -100,11 +99,6 @@ public class ExcelReportService {
 
     /** Tính toán theo loại tool (mở rộng tool mới ở đây) → file .xlsx + dữ liệu hiển thị. */
     private Computed compute(ReportTemplate template, Workbook wb) {
-        if (template == ReportTemplate.CHAM_CONG_OT) {
-            List<ExcelReportEngine.InputRow> rows = ExcelReportEngine.readRows(template, wb);
-            List<OtSummaryRow> summary = ExcelReportEngine.computeOtSummary(rows);
-            return new Computed(ExcelReportEngine.writeOtReport(summary), ExcelReportEngine.toResult(summary));
-        }
         if (template == ReportTemplate.NO_LUC_DU_AN_SUN) {
             SunEffortEngine.SunReport report = SunEffortEngine.compute(wb);
             return new Computed(SunEffortEngine.write(report), SunEffortEngine.toResult(report));

@@ -2,10 +2,8 @@ package com.bpm;
 
 import com.bpm.application.ExcelReportService;
 import com.bpm.domain.report.ExcelReportEngine;
-import com.bpm.domain.report.ExcelReportEngine.OtSummaryRow;
 import com.bpm.domain.report.ReportResult;
 import com.bpm.domain.report.ReportRun;
-import com.bpm.domain.report.ReportTemplate;
 import com.bpm.domain.report.ValidationResult;
 import org.apache.poi.ss.usermodel.Cell;
 import org.apache.poi.ss.usermodel.CellStyle;
@@ -18,50 +16,60 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.time.LocalDate;
-import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/** Công cụ Import Excel — chỉ còn một loại tool: Tính toán nỗ lực dự án (Sun). */
 @SpringBootTest
 @ActiveProfiles("test")
 class ExcelReportServiceTest {
 
+    private static final String SUN = "NO_LUC_DU_AN_SUN";
+    private static final double RATE = 2_818_181.82d;
+
     @Autowired
     ExcelReportService svc;
 
-    /** Dựng workbook đầu vào mẫu CHAM_CONG_OT trong test. */
+    /** Dựng file đầu vào tool Sun; withBadRow = thêm dòng sai kiểu Date/Total MD. */
     private byte[] buildInput(boolean withBadRow) throws Exception {
         try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            Sheet sheet = wb.createSheet("ChamCong");
+            Sheet sheet = wb.createSheet("Raw normalized");
             CellStyle dateStyle = wb.createCellStyle();
             dateStyle.setDataFormat(wb.getCreationHelper().createDataFormat().getFormat("yyyy-mm-dd"));
 
-            String[] headers = {"Mã NV", "Họ tên", "Phòng ban", "Ngày", "Số giờ OT"};
+            String[] headers = {"Date", "Email", "Họ và tên", "Position", "Level", "Vendor",
+                    "Project Name", "Total MD", "Expense (VNĐ)", "Manday (VNĐ)"};
             Row hr = sheet.createRow(0);
             for (int c = 0; c < headers.length; c++) {
                 hr.createCell(c).setCellValue(headers[c]);
             }
 
-            // NV001 cùng phòng/kỳ: 2 + 3 = 5h
-            row(sheet, dateStyle, 1, "NV001", "An", "Kỹ thuật", LocalDate.of(2026, 6, 1), 2.0);
-            row(sheet, dateStyle, 2, "NV001", "An", "Kỹ thuật", LocalDate.of(2026, 6, 2), 3.0);
-            // NV002 cùng kỳ: 4h
-            row(sheet, dateStyle, 3, "NV002", "Bình", "Kinh doanh", LocalDate.of(2026, 6, 5), 4.0);
-            // NV001 sang kỳ khác (7/2026): 1.5h → tách dòng riêng
-            row(sheet, dateStyle, 4, "NV001", "An", "Kỹ thuật", LocalDate.of(2026, 7, 1), 1.5);
+            // Sơn: 1 MD + 0,5 MD trên HR Platform, 0,5 MD trên MySGR → tổng 2 MD
+            row(sheet, dateStyle, 1, LocalDate.of(2026, 7, 1), "sondn3@vmogroup.com", "Đàm Ngọc Sơn",
+                    "HR Platform", 1.0);
+            row(sheet, dateStyle, 2, LocalDate.of(2026, 7, 10), "sondn3@vmogroup.com", "Đàm Ngọc Sơn",
+                    "HR Platform", 0.5);
+            row(sheet, dateStyle, 3, LocalDate.of(2026, 7, 10), "sondn3@vmogroup.com", "Đàm Ngọc Sơn",
+                    "Nâng cấp MySGR - E360", 0.5);
+            // Tùng: 1 MD trên MySGR
+            row(sheet, dateStyle, 4, LocalDate.of(2026, 7, 2), "tungdt4@vmogroup.com", "Đinh Thanh Tùng",
+                    "Nâng cấp MySGR - E360", 1.0);
 
-            int next = 5;
             if (withBadRow) {
-                Row bad = sheet.createRow(next++);
-                bad.createCell(0).setCellValue("NV003");
-                bad.createCell(1).setCellValue("Cường");
-                bad.createCell(2).setCellValue("Kế toán");
-                bad.createCell(3).setCellValue("không-phải-ngày");
-                bad.createCell(4).setCellValue("không-phải-số");
+                Row bad = sheet.createRow(5);
+                bad.createCell(0).setCellValue("không-phải-ngày");
+                bad.createCell(1).setCellValue("x@vmogroup.com");
+                bad.createCell(2).setCellValue("Sai Kiểu");
+                bad.createCell(3).setCellValue("DEV");
+                bad.createCell(4).setCellValue("Middle");
+                bad.createCell(5).setCellValue("VMO");
+                bad.createCell(6).setCellValue("HR Platform");
+                bad.createCell(7).setCellValue("không-phải-số");
+                bad.createCell(8).setCellValue(RATE);
+                bad.createCell(9).setCellValue(RATE);
             }
 
             wb.write(bos);
@@ -69,101 +77,99 @@ class ExcelReportServiceTest {
         }
     }
 
-    private static void row(Sheet sheet, CellStyle dateStyle, int r, String code, String name,
-                            String org, LocalDate date, double hours) {
+    private static void row(Sheet sheet, CellStyle dateStyle, int r, LocalDate date, String email,
+                            String name, String project, double md) {
         Row row = sheet.createRow(r);
-        row.createCell(0).setCellValue(code);
-        row.createCell(1).setCellValue(name);
-        row.createCell(2).setCellValue(org);
-        Cell d = row.createCell(3);
+        Cell d = row.createCell(0);
         d.setCellValue(java.sql.Date.valueOf(date));
         d.setCellStyle(dateStyle);
-        row.createCell(4).setCellValue(hours);
+        row.createCell(1).setCellValue(email);
+        row.createCell(2).setCellValue(name);
+        row.createCell(3).setCellValue("DEV");
+        row.createCell(4).setCellValue("Middle");
+        row.createCell(5).setCellValue("VMO");
+        row.createCell(6).setCellValue(project);
+        row.createCell(7).setCellValue(md);
+        row.createCell(8).setCellValue(Math.round(md * RATE * 100.0) / 100.0);
+        row.createCell(9).setCellValue(RATE);
     }
 
     @Test
-    void run_chamCongOt_sumsHoursPerEmployeePeriod() throws Exception {
-        byte[] input = buildInput(false);
-        ReportRun r = svc.run("CHAM_CONG_OT", input, "chamcong.xlsx", "tester");
-
-        assertThat(r.getStatus()).isEqualTo("SUCCESS");
-        assertThat(r.hasOutput()).isTrue();
-
-        // Đọc lại file kết quả để assert số liệu
-        try (Workbook out = new XSSFWorkbook(new ByteArrayInputStream(r.getOutputBytes()))) {
-            Sheet s = out.getSheetAt(0);
-            // header + 3 dòng tổng hợp (NV001/6, NV002/6, NV001/7)
-            assertThat(s.getLastRowNum()).isEqualTo(3);
-
-            // dòng 1: kỳ 2026-06, Kinh doanh, NV002 = 4.0  (sắp xếp theo kỳ→phòng→mã)
-            assertThat(s.getRow(1).getCell(0).getStringCellValue()).isEqualTo("2026-06");
-            assertThat(s.getRow(1).getCell(2).getStringCellValue()).isEqualTo("NV002");
-            assertThat(s.getRow(1).getCell(4).getNumericCellValue()).isEqualTo(4.0);
-
-            // dòng 2: kỳ 2026-06, Kỹ thuật, NV001 = 5.0
-            assertThat(s.getRow(2).getCell(2).getStringCellValue()).isEqualTo("NV001");
-            assertThat(s.getRow(2).getCell(4).getNumericCellValue()).isEqualTo(5.0);
-
-            // dòng 3: kỳ 2026-07, Kỹ thuật, NV001 = 1.5
-            assertThat(s.getRow(3).getCell(0).getStringCellValue()).isEqualTo("2026-07");
-            assertThat(s.getRow(3).getCell(4).getNumericCellValue()).isEqualTo(1.5);
-        }
+    void listTemplates_onlyHasSunTool() {
+        assertThat(svc.listTemplates()).singleElement()
+                .satisfies(t -> {
+                    assertThat(t.getKey()).isEqualTo(SUN);
+                    assertThat(t.getTitle()).isEqualTo("Tính toán nỗ lực dự án (Sun)");
+                });
     }
 
     @Test
-    void run_isDeterministic_sameInputSameOutput() throws Exception {
-        byte[] input = buildInput(false);
-        ReportRun r1 = svc.run("CHAM_CONG_OT", input, "a.xlsx", "tester");
+    void run_sunEffort_sumsPerPersonAndPerProject() throws Exception {
+        ReportRun r = svc.run(SUN, buildInput(false), "no-luc.xlsx", "tester");
 
-        // Lõi engine thuần: cùng dữ liệu → cùng danh sách tổng hợp
-        try (Workbook wb = new XSSFWorkbook(new ByteArrayInputStream(input))) {
-            List<OtSummaryRow> sum = ExcelReportEngine.computeOtSummary(
-                    ExcelReportEngine.readRows(ReportTemplate.CHAM_CONG_OT, wb));
-            assertThat(sum).hasSize(3);
-            assertThat(sum.get(0).totalHours()).isEqualTo(4.0);   // NV002
-            assertThat(sum.get(1).totalHours()).isEqualTo(5.0);   // NV001 kỳ 6
-            assertThat(sum.get(2).totalHours()).isEqualTo(1.5);   // NV001 kỳ 7
-        }
-        assertThat(r1.hasOutput()).isTrue();
-    }
-
-    @Test
-    void validate_flagsBadTypeRows() throws Exception {
-        ValidationResult vr = svc.validate("CHAM_CONG_OT", buildInput(true), "bad.xlsx");
-        assertThat(vr.isValid()).isFalse();
-        // dòng lỗi có cả "Ngày" và "Số giờ OT"
-        assertThat(vr.getIssues()).anyMatch(i -> "Ngày".equals(i.column()));
-        assertThat(vr.getIssues()).anyMatch(i -> "Số giờ OT".equals(i.column()));
-    }
-
-    /**
-     * Vòng khép kín của tool Sun: biểu mẫu người dùng tải về → import lại chạy được ngay,
-     * kết quả được lưu JSON và đọc lại đúng 3 bảng để hiển thị trên màn hình.
-     */
-    @Test
-    void run_sunEffort_savesResultForScreen() {
-        byte[] sample = svc.sampleTemplate("NO_LUC_DU_AN_SUN");
-
-        ReportRun r = svc.run("NO_LUC_DU_AN_SUN", sample, "no-luc-du-an.xlsx", "tester");
         assertThat(r.getStatus()).isEqualTo("SUCCESS");
         assertThat(r.hasOutput()).isTrue();
         assertThat(r.hasResult()).isTrue();
 
         ReportResult result = svc.resultOf(r.getId());
-        assertThat(result).isNotNull();
         assertThat(result.tables()).extracting(ReportResult.Table::title)
                 .containsExactly("Tổng theo nhân sự", "Tổng theo dự án", "Chi phí theo nhân sự dự án");
-        // 2 dòng ví dụ của cùng 1 người trên cùng 1 dự án → 1 dòng ở cả ba bảng
-        assertThat(result.tables().get(0).rows()).hasSize(1);
-        assertThat(result.metrics()).isNotEmpty();
+        assertThat(result.tables().get(0).rows()).hasSize(2);   // 2 nhân sự
+        assertThat(result.tables().get(1).rows()).hasSize(2);   // 2 dự án
+        assertThat(result.tables().get(2).rows()).hasSize(3);   // 3 cặp người × dự án
         assertThat(result.warnings()).isEmpty();
+        // Tổng nỗ lực = 1 + 0,5 + 0,5 + 1 = 3 MD
+        assertThat(result.metrics().get(0).value()).isEqualTo("3");
+    }
+
+    /**
+     * Vòng khép kín: biểu mẫu người dùng tải về → import lại chạy được ngay,
+     * kết quả lưu JSON và đọc lại đúng để hiển thị trên màn hình.
+     */
+    @Test
+    void sampleTemplate_canBeImportedBack() {
+        byte[] sample = svc.sampleTemplate(SUN);
+
+        ReportRun r = svc.run(SUN, sample, "bieu-mau.xlsx", "tester");
+        assertThat(r.getStatus()).isEqualTo("SUCCESS");
+
+        ReportResult result = svc.resultOf(r.getId());
+        assertThat(result).isNotNull();
+        // 2 dòng ví dụ của cùng 1 người trên cùng 1 dự án → gộp thành 1 dòng
+        assertThat(result.tables().get(0).rows()).hasSize(1);
+        assertThat(result.warnings()).isEmpty();
+    }
+
+    @Test
+    void run_isDeterministic_sameInputSameOutput() throws Exception {
+        byte[] input = buildInput(false);
+        ReportResult first = svc.resultOf(svc.run(SUN, input, "a.xlsx", "tester").getId());
+        ReportResult second = svc.resultOf(svc.run(SUN, input, "a.xlsx", "tester").getId());
+
+        assertThat(second.tables()).isEqualTo(first.tables());
+        assertThat(second.metrics()).isEqualTo(first.metrics());
+    }
+
+    @Test
+    void validate_flagsBadTypeRows() throws Exception {
+        ValidationResult vr = svc.validate(SUN, buildInput(true), "bad.xlsx");
+        assertThat(vr.isValid()).isFalse();
+        assertThat(vr.getIssues()).anyMatch(i -> "Date".equals(i.column()));
+        assertThat(vr.getIssues()).anyMatch(i -> "Total MD".equals(i.column()));
     }
 
     @Test
     void run_rejectsNonXlsx() {
         byte[] notExcel = "hello,world".getBytes();
-        assertThatThrownBy(() -> svc.run("CHAM_CONG_OT", notExcel, "data.csv", "tester"))
+        assertThatThrownBy(() -> svc.run(SUN, notExcel, "data.csv", "tester"))
                 .isInstanceOf(IllegalArgumentException.class);
+    }
+
+    @Test
+    void byKey_rejectsRemovedTool() {
+        assertThatThrownBy(() -> svc.validate("CHAM_CONG_OT", new byte[]{1}, "x.xlsx"))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Không tìm thấy loại tool");
     }
 
     @Test

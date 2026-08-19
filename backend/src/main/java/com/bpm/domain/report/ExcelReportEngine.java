@@ -33,10 +33,6 @@ public final class ExcelReportEngine {
     public record InputRow(int sheetRow, Map<String, Object> values) {
     }
 
-    /** Dòng kết quả gộp OT theo (kỳ, phòng ban, mã NV). */
-    public record OtSummaryRow(String period, String orgUnit, String empCode, String empName, double totalHours) {
-    }
-
     // ============================ VALIDATE ============================
 
     /**
@@ -116,7 +112,7 @@ public final class ExcelReportEngine {
         }
     }
 
-    // ============================ COMPUTE (mẫu CHAM_CONG_OT) ============================
+    // ============================ ĐỌC DỮ LIỆU ============================
 
     /**
      * Đọc các dòng dữ liệu đã chuẩn hoá từ sheet đầu tiên theo cột bắt buộc của mẫu.
@@ -147,101 +143,7 @@ public final class ExcelReportEngine {
         return out;
     }
 
-    /**
-     * Công thức mẫu CHAM_CONG_OT: gộp tổng "Số giờ OT" theo khoá (kỳ YYYY-MM, phòng ban, mã NV).
-     * Sắp xếp ổn định theo kỳ → phòng ban → mã NV để cùng input cho cùng output (FR-D03).
-     */
-    public static List<OtSummaryRow> computeOtSummary(List<InputRow> rows) {
-        Map<String, OtAccumulator> acc = new LinkedHashMap<>();
-        for (InputRow ir : rows) {
-            String empCode = String.valueOf(ir.values().get("Mã NV")).trim();
-            String empName = String.valueOf(ir.values().get("Họ tên")).trim();
-            String orgUnit = String.valueOf(ir.values().get("Phòng ban")).trim();
-            LocalDate date = (LocalDate) ir.values().get("Ngày");
-            Double hours = (Double) ir.values().get("Số giờ OT");
-            String period = date == null ? "" : String.format("%04d-%02d", date.getYear(), date.getMonthValue());
-            String key = period + "" + orgUnit + "" + empCode;
-            acc.computeIfAbsent(key, k -> new OtAccumulator(period, orgUnit, empCode, empName))
-                    .add(hours == null ? 0.0 : hours);
-        }
-        List<OtSummaryRow> result = new ArrayList<>();
-        for (OtAccumulator a : acc.values()) {
-            result.add(new OtSummaryRow(a.period, a.orgUnit, a.empCode, a.empName,
-                    Math.round(a.total * 100.0) / 100.0));
-        }
-        result.sort((x, y) -> {
-            int c = x.period().compareTo(y.period());
-            if (c != 0) return c;
-            c = x.orgUnit().compareTo(y.orgUnit());
-            if (c != 0) return c;
-            return x.empCode().compareTo(y.empCode());
-        });
-        return result;
-    }
-
-    private static final class OtAccumulator {
-        final String period;
-        final String orgUnit;
-        final String empCode;
-        final String empName;
-        double total;
-
-        OtAccumulator(String period, String orgUnit, String empCode, String empName) {
-            this.period = period;
-            this.orgUnit = orgUnit;
-            this.empCode = empCode;
-            this.empName = empName;
-        }
-
-        void add(double h) { this.total += h; }
-    }
-
     // ============================ WRITE (.xlsx, chống injection) ============================
-
-    /** Sinh file .xlsx kết quả tổng hợp OT, các ô text đã trung hoà formula/CSV injection (NFR-09). */
-    public static byte[] writeOtReport(List<OtSummaryRow> rows) {
-        try (Workbook wb = new XSSFWorkbook(); ByteArrayOutputStream bos = new ByteArrayOutputStream()) {
-            Sheet sheet = wb.createSheet("Tong hop OT");
-            String[] headers = {"Kỳ", "Phòng ban", "Mã NV", "Họ tên", "Tổng giờ OT"};
-            Row hr = sheet.createRow(0);
-            for (int c = 0; c < headers.length; c++) {
-                hr.createCell(c).setCellValue(headers[c]);
-            }
-            int r = 1;
-            for (OtSummaryRow row : rows) {
-                Row dr = sheet.createRow(r++);
-                dr.createCell(0).setCellValue(sanitize(row.period()));
-                dr.createCell(1).setCellValue(sanitize(row.orgUnit()));
-                dr.createCell(2).setCellValue(sanitize(row.empCode()));
-                dr.createCell(3).setCellValue(sanitize(row.empName()));
-                dr.createCell(4).setCellValue(row.totalHours()); // số → an toàn
-            }
-            for (int c = 0; c < headers.length; c++) {
-                sheet.autoSizeColumn(c);
-            }
-            wb.write(bos);
-            return bos.toByteArray();
-        } catch (IOException e) {
-            throw new IllegalStateException("Không ghi được file báo cáo: " + e.getMessage(), e);
-        }
-    }
-
-    /** Kết quả OT dạng trung lập để hiển thị thẳng lên màn hình (FR-D03). */
-    public static ReportResult toResult(List<OtSummaryRow> rows) {
-        double totalHours = rows.stream().mapToDouble(OtSummaryRow::totalHours).sum();
-        List<List<Object>> data = new ArrayList<>();
-        for (OtSummaryRow r : rows) {
-            data.add(List.of(r.period(), r.orgUnit(), r.empCode(), r.empName(), r.totalHours()));
-        }
-        List<ReportResult.Metric> metrics = List.of(
-                new ReportResult.Metric("Tổng giờ OT", SunEffortEngine.decimal(totalHours)),
-                new ReportResult.Metric("Số dòng tổng hợp", String.valueOf(rows.size())));
-        List<ReportResult.Table> tables = List.of(new ReportResult.Table("otSummary", "Tổng hợp OT",
-                List.of("Kỳ", "Phòng ban", "Mã NV", "Họ tên", "Tổng giờ OT"),
-                List.of("TEXT", "TEXT", "TEXT", "TEXT", "NUMBER"),
-                data));
-        return new ReportResult(metrics, tables, List.of());
-    }
 
     /** Biểu mẫu trống mặc định: một sheet có đúng các cột khai báo của mẫu (dùng cho mẫu chưa có biểu mẫu riêng). */
     public static byte[] writeSampleTemplate(ReportTemplate template) {

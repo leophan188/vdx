@@ -5,25 +5,13 @@ import java.util.List;
 /**
  * Loại tool CỐ ĐỊNH khai báo trong code (Epic 4, FR-D01/D03/D06).
  * Mỗi loại định nghĩa: khoá, tên hiển thị, danh sách cột đầu vào + kiểu dữ liệu + bắt buộc hay tuỳ chọn.
- * Bộ công thức nằm trong {@link ExcelReportEngine} / {@link SunEffortEngine} (tách khỏi registry để dễ test, lặp lại được).
+ * Phần đọc/validate file dùng chung ở {@link ExcelReportEngine}; công thức riêng của từng tool nằm ở
+ * engine riêng ({@link SunEffortEngine}) để test thuần, lặp lại được.
  *
- * CHAM_CONG_OT: Tổng hợp chấm công / OT — tổng số giờ OT gộp theo nhân viên / phòng ban / kỳ (YYYY-MM).
  * NO_LUC_DU_AN_SUN: Tính toán nỗ lực dự án (Sun) — đọc sheet "Raw normalized" rồi gộp thành
  * 3 bảng kết quả (theo nhân sự · theo dự án · theo cặp nhân sự × dự án).
  */
 public enum ReportTemplate {
-
-    CHAM_CONG_OT(
-            "CHAM_CONG_OT",
-            "Tổng hợp chấm công / OT",
-            "Gộp tổng số giờ OT theo nhân viên, phòng ban và kỳ (tháng) từ file chấm công.",
-            List.of(
-                    new Column("Mã NV", ColumnType.TEXT),
-                    new Column("Họ tên", ColumnType.TEXT),
-                    new Column("Phòng ban", ColumnType.TEXT),
-                    new Column("Ngày", ColumnType.DATE),
-                    new Column("Số giờ OT", ColumnType.NUMBER)
-            )),
 
     NO_LUC_DU_AN_SUN(
             "NO_LUC_DU_AN_SUN",
