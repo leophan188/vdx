@@ -313,7 +313,7 @@ export class PrjBacklog implements OnInit {
       case 'EPIC': return null;               // gốc, không có cha
       case 'STORY': return ['EPIC'];
       case 'TASK': return ['STORY', 'EPIC'];   // Task gắn dưới Story HOẶC thẳng lên Epic
-      case 'SUBTASK': return ['TASK'];
+      case 'SUBTASK': return ['TASK', 'SUBTASK'];   // Sub-task lồng nhiều cấp
       case 'BUG':
       case 'ISSUE': return ['TASK', 'SUBTASK'];
       default: return null;
@@ -325,7 +325,8 @@ export class PrjBacklog implements OnInit {
       case 'EPIC': return 'STORY';
       case 'STORY': return 'TASK';
       case 'TASK': return 'SUBTASK';
-      case 'SUBTASK': return 'BUG';
+      // Bấm "+" trên Sub-task → mặc định tách tiếp Sub-task con (Bug vẫn chọn tay được).
+      case 'SUBTASK': return 'SUBTASK';
       default: return 'TASK';
     }
   }

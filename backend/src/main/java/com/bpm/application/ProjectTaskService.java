@@ -954,7 +954,8 @@ public class ProjectTaskService {
         switch (type) {
             case STORY: return List.of(TaskType.EPIC);
             case TASK: return List.of(TaskType.STORY, TaskType.EPIC);
-            case SUBTASK: return List.of(TaskType.TASK);
+            // Sub-task lồng trong Sub-task: cho phép nhiều cấp (việc lớn tách dần cho tới khi đủ nhỏ để log giờ).
+            case SUBTASK: return List.of(TaskType.TASK, TaskType.SUBTASK);
             case BUG:
             case ISSUE: return List.of(TaskType.TASK, TaskType.SUBTASK);
             default: return null; // EPIC

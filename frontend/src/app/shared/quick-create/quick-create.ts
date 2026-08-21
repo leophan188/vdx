@@ -195,7 +195,7 @@ export class QuickCreate {
       case 'EPIC': return null;
       case 'STORY': return ['EPIC'];
       case 'TASK': return ['STORY', 'EPIC'];   // Task gắn dưới Story HOẶC thẳng lên Epic
-      case 'SUBTASK': return ['TASK'];
+      case 'SUBTASK': return ['TASK', 'SUBTASK'];   // Sub-task lồng nhiều cấp
       case 'BUG':
       case 'ISSUE': return ['TASK', 'SUBTASK'];
       default: return null;
