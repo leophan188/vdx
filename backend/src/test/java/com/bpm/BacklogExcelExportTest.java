@@ -99,11 +99,11 @@ class BacklogExcelExportTest {
         assertThat(prev).isEqualTo(8);   // cấp 4 (Sub-task cấp 2) → 4 × 2 nấc
     }
 
-    /** STT: Epic = A, B… · Story = 1, 2… đếm liên tục cả file · cấp dưới = cha + "." + thứ tự. */
+    /** STT: Epic = A, B… · Story đánh lại từ 1 trong mỗi Epic · cấp dưới = cha + "." + thứ tự. */
     @Test
     void sttNumbersByLevel() throws Exception {
         List<ProjectDto.TaskResponse> all = buildTree("EXP4");
-        // thêm Epic thứ hai có Story riêng để kiểm số Story chạy liên tục, không reset về 1
+        // Epic thứ hai có Story riêng: số Story phải quay lại 1, và con của nó không lẫn số với Epic A
         var epic2 = task("EPIC", null, "Epic B", null);
         var story2 = task("STORY", epic2.id(), "Story B1", null);
         task("TASK", story2.id(), "Task B1-1", 1.0);
@@ -121,8 +121,9 @@ class BacklogExcelExportTest {
         assertThat(stt.get("Sub-task cấp 1")).isEqualTo("1.1.1");
         assertThat(stt.get("Sub-task cấp 2")).isEqualTo("1.1.1.1");
         assertThat(stt.get("Epic B")).isEqualTo("B");
-        assertThat(stt.get("Story B1")).isEqualTo("2");      // liên tục, không quay lại 1
-        assertThat(stt.get("Task B1-1")).isEqualTo("2.1");
+        assertThat(stt.get("Story B1")).isEqualTo("1");      // đánh lại từ 1 trong Epic B
+        // "1.1" của Epic B là dòng ĐẦU của Story đó, không được tiếp tục đếm từ Epic A
+        assertThat(stt.get("Task B1-1")).isEqualTo("1.1");
     }
 
     /** Nhiều con cùng cấp thì thứ tự tăng dần: 1.1, 1.2, 1.3. */

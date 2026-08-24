@@ -382,16 +382,20 @@ public class ProjectReportExportService {
 
     /**
      * Đánh STT theo cấp trong cây, dùng cho file xuất:
-     * Epic = A, B, C… · Story = 1, 2, 3… (đếm LIÊN TỤC cả file để không có hai "1" ở hai Epic khác nhau)
+     * Epic = A, B, C… · Story = 1, 2, 3… ĐẾM LẠI TỪ 1 trong mỗi Epic
      * · Task/Sub-task/Bug = số của cha + "." + thứ tự trong cha (1.1, 1.2, rồi 1.1.1 cho sub-task lồng).
      *
-     * Task treo thẳng dưới Epic (không qua Story) nhận số theo Epic: A.1, A.2 — vẫn không trùng với 1.1.
+     * Vì Story đếm lại theo Epic nên "1.1" xuất hiện ở nhiều Epic khác nhau — bộ đếm con phải khoá theo
+     * ID của cha, KHÔNG theo chuỗi STT, nếu không con của "1.1" ở Epic B sẽ tiếp tục đếm từ số của Epic A.
+     *
+     * Task treo thẳng dưới Epic (không qua Story) nhận số theo Epic: A.1, A.2.
      * Dòng bị mất cha do bộ lọc thì {@link #tree} coi là gốc, ở đây cấp cho nó một số như Story.
      */
     private static java.util.Map<String, String> numbering(List<Node> nodes) {
         java.util.Map<String, String> out = new java.util.HashMap<>();
-        java.util.Map<Integer, String> sttAtLevel = new java.util.HashMap<>();  // cấp → STT của dòng gần nhất ở cấp đó
-        java.util.Map<String, Integer> childCount = new java.util.HashMap<>();  // STT cha → đã cấp bao nhiêu con
+        java.util.Map<Integer, String> sttAtLevel = new java.util.HashMap<>();  // cấp → STT của dòng gần nhất
+        java.util.Map<Integer, String> idAtLevel = new java.util.HashMap<>();   // cấp → id dòng gần nhất
+        java.util.Map<String, Integer> childCount = new java.util.HashMap<>();  // id cha → đã cấp bao nhiêu con
         int epicSeq = 0;
         int storySeq = 0;
         for (Node n : nodes) {
@@ -399,14 +403,17 @@ public class ProjectReportExportService {
             String stt;
             if (n.level() == 0 && "EPIC".equals(type)) {
                 stt = letters(++epicSeq);
+                storySeq = 0;                       // sang Epic mới → Story đánh lại từ 1
             } else if ("STORY".equals(type) || n.level() == 0) {
                 stt = String.valueOf(++storySeq);
             } else {
-                String parent = sttAtLevel.getOrDefault(n.level() - 1, "");
-                int idx = childCount.merge(parent, 1, Integer::sum);
-                stt = parent.isEmpty() ? String.valueOf(idx) : parent + "." + idx;
+                String parentId = idAtLevel.get(n.level() - 1);
+                String parentStt = sttAtLevel.getOrDefault(n.level() - 1, "");
+                int idx = childCount.merge(parentId == null ? "?" : parentId, 1, Integer::sum);
+                stt = parentStt.isEmpty() ? String.valueOf(idx) : parentStt + "." + idx;
             }
             sttAtLevel.put(n.level(), stt);
+            idAtLevel.put(n.level(), n.t().id());
             out.put(n.t().id(), stt);
         }
         return out;
