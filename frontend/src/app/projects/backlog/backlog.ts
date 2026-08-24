@@ -424,8 +424,9 @@ export class PrjBacklog implements OnInit {
   exportExcel(): void {
     if (this.exporting()) return;
     this.exporting.set(true);
-    // Xuất ĐÚNG theo bộ lọc đang áp (loại/trạng thái/người/tìm) — gửi danh sách task đang khớp lọc.
-    const ids = this.filteredRows().map((r) => r.task.id);
+    // Xuất ĐÚNG những gì đang thấy trên lưới: theo bộ lọc VÀ theo trạng thái gập.
+    // Dùng filteredRows() thì nhóm đang gập vẫn xuất hết con — file khác hẳn màn hình.
+    const ids = this.visible().map((r) => r.task.id);
     this.svc.exportBacklog(this.projectId(), ids).subscribe({
       next: (b) => { ProjectService.downloadBlob(b, 'backlog.xlsx'); this.exporting.set(false); },
       error: () => { this.exporting.set(false); this.toast.error('Không xuất được Excel backlog'); }

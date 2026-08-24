@@ -417,7 +417,16 @@ public class ProjectReportExportService {
             {"Loại", "Công việc", "Trạng thái", "Người thực hiện", "Est (h)", "% HT", "Bắt đầu", "Kết thúc", "Ưu tiên"};
 
     /** Xuất BACKLOG (cây công việc) ra Excel định dạng đẹp. */
-    public byte[] backlogXlsx(String projectName, List<ProjectDto.TaskResponse> tasks) {
+    /**
+     * Xuất backlog ra Excel.
+     *
+     * @param rows các dòng ĐANG HIỂN THỊ trên lưới (đã lọc + đã bỏ dòng nằm dưới nhóm bị gập) — file phải
+     *             khớp đúng những gì người dùng nhìn thấy, gập nhóm nào thì file không có con của nhóm đó.
+     * @param all  TOÀN BỘ công việc của dự án, chỉ dùng để tự tổng hợp est/ngày cho task cha. Nếu tính rollup
+     *             trên {@code rows} thì nhóm đang gập sẽ mất hết con và est/ngày của nó ra rỗng.
+     */
+    public byte[] backlogXlsx(String projectName, List<ProjectDto.TaskResponse> rows,
+                              List<ProjectDto.TaskResponse> all) {
         try (XSSFWorkbook wb = new XSSFWorkbook(); ByteArrayOutputStream out = new ByteArrayOutputStream()) {
             XSSFCellStyle title = style(wb, true, 16, WHITE, BRAND, false, HorizontalAlignment.CENTER);
             XSSFCellStyle subtitle = style(wb, false, 11, null, null, false, HorizontalAlignment.CENTER);
@@ -433,11 +442,11 @@ public class ProjectReportExportService {
             int rr = 0;
             merged(sh, rr++, last, "DANH SÁCH CÔNG VIỆC (BACKLOG)", title, 28);
             merged(sh, rr++, last, projectName, subtitle, 18);
-            List<Node> nodes = tree(tasks);
-            long doneLeaf = tasks.stream().filter(t -> t.leaf() && "DONE".equals(t.status())).count();
-            long leaf = tasks.stream().filter(ProjectDto.TaskResponse::leaf).count();
-            double est = tasks.stream().filter(ProjectDto.TaskResponse::leaf).mapToDouble(ProjectDto.TaskResponse::estimateHours).sum();
-            merged(sh, rr++, last, "Tổng: " + tasks.size() + " công việc · " + leaf + " task lá (" + doneLeaf + " đã xong) · Est "
+            List<Node> nodes = tree(rows);
+            long doneLeaf = rows.stream().filter(t -> t.leaf() && "DONE".equals(t.status())).count();
+            long leaf = rows.stream().filter(ProjectDto.TaskResponse::leaf).count();
+            double est = rows.stream().filter(ProjectDto.TaskResponse::leaf).mapToDouble(ProjectDto.TaskResponse::estimateHours).sum();
+            merged(sh, rr++, last, "Tổng: " + rows.size() + " công việc · " + leaf + " task lá (" + doneLeaf + " đã xong) · Est "
                     + trimNum(est) + " giờ", subtitle, 16);
             rr++;
 
@@ -445,22 +454,25 @@ public class ProjectReportExportService {
             for (int c = 0; c < BL_COLS.length; c++) put(h, c, BL_COLS[c], header);
             // Bản đồ cây để TỰ TỔNG HỢP est/ngày cho task CHA (khớp web: cha = rollup từ LÁ con, bỏ Huỷ).
             java.util.Map<String, java.util.List<ProjectDto.TaskResponse>> childrenOf = new java.util.HashMap<>();
-            for (ProjectDto.TaskResponse t : tasks) childrenOf.computeIfAbsent(t.parentId(), k -> new java.util.ArrayList<>()).add(t);
+            for (ProjectDto.TaskResponse t : all) childrenOf.computeIfAbsent(t.parentId(), k -> new java.util.ArrayList<>()).add(t);
             java.time.format.DateTimeFormatter DMY = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            java.util.Map<String, XSSFCellStyle> nameStyles = new java.util.HashMap<>();
             for (Node n : nodes) {
                 ProjectDto.TaskResponse t = n.t();
                 boolean grp = !t.leaf();
                 Row row = sh.createRow(rr++);
-                // Thò thụt cây: mỗi cấp thêm khoảng thụt + "› " cho nhóm để nhìn rõ cha–con như web.
-                String indent = "    ".repeat(Math.min(n.level(), 6));
-                String name = indent + (grp && n.level() > 0 ? "› " : "") + nz(t.title());
+                // Thụt cây bằng INDENT THẬT của Excel (không chèn dấu "›" hay khoảng trắng vào tiêu đề):
+                // dấu "›" trước đây chỉ hiện ở dòng CÓ CON nên nhìn như lỗi, còn khoảng trắng thì mất khi
+                // người dùng sort/copy sang chỗ khác. Mỗi cấp thụt 2 nấc, kể cả sub-task lồng sub-task.
+                XSSFCellStyle nameStyle = indentStyle(wb, nameStyles, n.level(), grp);
+                String name = nz(t.title());
                 // Cha → est/ngày TỰ TỔNG HỢP từ lá con (bỏ Huỷ); lá → dùng giá trị riêng.
                 double estVal = grp ? rollupEstT(t, childrenOf) : t.estimateHours();
                 java.time.LocalDate rs, re;
                 if (grp) { java.time.LocalDate[] rng = rollupRangeT(t, childrenOf); rs = rng[0]; re = rng[1]; }
                 else { rs = parse(t.startDate()); re = parse(t.dueDate()); }
                 put(row, 0, typeLabel(t.type()), grp ? epicC : center);
-                put(row, 1, name, grp ? epic : cell);
+                put(row, 1, name, nameStyle);
                 put(row, 2, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
                 put(row, 3, nz(t.assigneeName()), grp ? epic : cell);
                 put(row, 4, estVal > 0 ? trimNum(estVal) : "", grp ? epicC : center);
@@ -874,6 +886,19 @@ public class ProjectReportExportService {
     }
 
     // ===================== Helpers XLSX =====================
+    /**
+     * Style ô "Công việc" có thụt lề theo CẤP trong cây (dùng indent thật của Excel).
+     * Cache theo (cấp, nhóm/lá) vì POI giới hạn tổng số CellStyle của một workbook.
+     */
+    private static XSSFCellStyle indentStyle(XSSFWorkbook wb, java.util.Map<String, XSSFCellStyle> cache,
+                                             int level, boolean group) {
+        return cache.computeIfAbsent(level + (group ? "-g" : "-l"), k -> {
+            XSSFCellStyle st = style(wb, group, 10, null, group ? LABEL_BG : null, true, HorizontalAlignment.LEFT);
+            st.setIndention((short) Math.min(level * 2, 15)); // Excel chỉ nhận tối đa 15 nấc
+            return st;
+        });
+    }
+
     private static XSSFCellStyle style(XSSFWorkbook wb, boolean bold, int size, byte[] fontColor, byte[] fill,
                                        boolean border, HorizontalAlignment align) {
         XSSFCellStyle st = wb.createCellStyle();

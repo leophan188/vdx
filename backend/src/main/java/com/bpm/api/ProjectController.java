@@ -181,12 +181,14 @@ public class ProjectController {
                                                 @RequestBody(required = false) ExportFilter filter, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
         ProjectDto.ProjectResponse p = projectService.detail(id);
-        List<ProjectDto.TaskResponse> tasks = taskService.list(id);
+        List<ProjectDto.TaskResponse> all = taskService.list(id);
+        List<ProjectDto.TaskResponse> rows = all;
         if (filter != null && filter.taskIds() != null && !filter.taskIds().isEmpty()) {
             java.util.Set<String> keep = new java.util.HashSet<>(filter.taskIds());
-            tasks = tasks.stream().filter(t -> keep.contains(t.id())).toList();
+            rows = all.stream().filter(t -> keep.contains(t.id())).toList();
         }
-        byte[] bytes = reportExportService.backlogXlsx("[" + p.code() + "] " + p.name(), tasks);
+        // rows = đúng các dòng đang hiển thị; all = để tự tổng hợp est/ngày cho task cha (kể cả nhóm đang gập).
+        byte[] bytes = reportExportService.backlogXlsx("[" + p.code() + "] " + p.name(), rows, all);
         return xlsxResponse(bytes, "backlog-" + p.code() + ".xlsx");
     }
 
