@@ -380,6 +380,49 @@ public class ProjectReportExportService {
     // ===================== BACKLOG (cây công việc) =====================
     private record Node(ProjectDto.TaskResponse t, int level) {}
 
+    /**
+     * Đánh STT theo cấp trong cây, dùng cho file xuất:
+     * Epic = A, B, C… · Story = 1, 2, 3… (đếm LIÊN TỤC cả file để không có hai "1" ở hai Epic khác nhau)
+     * · Task/Sub-task/Bug = số của cha + "." + thứ tự trong cha (1.1, 1.2, rồi 1.1.1 cho sub-task lồng).
+     *
+     * Task treo thẳng dưới Epic (không qua Story) nhận số theo Epic: A.1, A.2 — vẫn không trùng với 1.1.
+     * Dòng bị mất cha do bộ lọc thì {@link #tree} coi là gốc, ở đây cấp cho nó một số như Story.
+     */
+    private static java.util.Map<String, String> numbering(List<Node> nodes) {
+        java.util.Map<String, String> out = new java.util.HashMap<>();
+        java.util.Map<Integer, String> sttAtLevel = new java.util.HashMap<>();  // cấp → STT của dòng gần nhất ở cấp đó
+        java.util.Map<String, Integer> childCount = new java.util.HashMap<>();  // STT cha → đã cấp bao nhiêu con
+        int epicSeq = 0;
+        int storySeq = 0;
+        for (Node n : nodes) {
+            String type = n.t().type();
+            String stt;
+            if (n.level() == 0 && "EPIC".equals(type)) {
+                stt = letters(++epicSeq);
+            } else if ("STORY".equals(type) || n.level() == 0) {
+                stt = String.valueOf(++storySeq);
+            } else {
+                String parent = sttAtLevel.getOrDefault(n.level() - 1, "");
+                int idx = childCount.merge(parent, 1, Integer::sum);
+                stt = parent.isEmpty() ? String.valueOf(idx) : parent + "." + idx;
+            }
+            sttAtLevel.put(n.level(), stt);
+            out.put(n.t().id(), stt);
+        }
+        return out;
+    }
+
+    /** 1 → A, 26 → Z, 27 → AA (kiểu tên cột Excel). */
+    private static String letters(int n) {
+        StringBuilder sb = new StringBuilder();
+        while (n > 0) {
+            int r = (n - 1) % 26;
+            sb.insert(0, (char) ('A' + r));
+            n = (n - 1) / 26;
+        }
+        return sb.toString();
+    }
+
     /** Sắp xếp task thành CÂY (cha → con), giữ thứ tự orderIndex/seq. */
     private static List<Node> tree(List<ProjectDto.TaskResponse> tasks) {
         java.util.Map<String, List<ProjectDto.TaskResponse>> byParent = new java.util.LinkedHashMap<>();
@@ -414,7 +457,8 @@ public class ProjectReportExportService {
     }
 
     private static final String[] BL_COLS =
-            {"Loại", "Công việc", "Trạng thái", "Người thực hiện", "Est (h)", "% HT", "Bắt đầu", "Kết thúc", "Ưu tiên"};
+            {"STT", "Loại", "Công việc", "Trạng thái", "Người thực hiện", "Est (h)", "% HT",
+             "Bắt đầu", "Kết thúc", "Ưu tiên"};
 
     /** Xuất BACKLOG (cây công việc) ra Excel định dạng đẹp. */
     /**
@@ -456,6 +500,7 @@ public class ProjectReportExportService {
             java.util.Map<String, java.util.List<ProjectDto.TaskResponse>> childrenOf = new java.util.HashMap<>();
             for (ProjectDto.TaskResponse t : all) childrenOf.computeIfAbsent(t.parentId(), k -> new java.util.ArrayList<>()).add(t);
             java.time.format.DateTimeFormatter DMY = java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy");
+            java.util.Map<String, String> sttOf = numbering(nodes);
             java.util.Map<String, XSSFCellStyle> nameStyles = new java.util.HashMap<>();
             for (Node n : nodes) {
                 ProjectDto.TaskResponse t = n.t();
@@ -471,17 +516,18 @@ public class ProjectReportExportService {
                 java.time.LocalDate rs, re;
                 if (grp) { java.time.LocalDate[] rng = rollupRangeT(t, childrenOf); rs = rng[0]; re = rng[1]; }
                 else { rs = parse(t.startDate()); re = parse(t.dueDate()); }
-                put(row, 0, typeLabel(t.type()), grp ? epicC : center);
-                put(row, 1, name, nameStyle);
-                put(row, 2, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
-                put(row, 3, nz(t.assigneeName()), grp ? epic : cell);
-                put(row, 4, estVal > 0 ? trimNum(estVal) : "", grp ? epicC : center);
-                put(row, 5, Math.round(t.progressPct()) + "%", grp ? epicC : center);
-                put(row, 6, rs != null ? rs.format(DMY) : "", grp ? epicC : center);
-                put(row, 7, re != null ? re.format(DMY) : "", grp ? epicC : center);
-                put(row, 8, priorityVi(t.priority()), grp ? epicC : center);
+                put(row, 0, sttOf.get(t.id()), grp ? epicC : center);
+                put(row, 1, typeLabel(t.type()), grp ? epicC : center);
+                put(row, 2, name, nameStyle);
+                put(row, 3, statusVi(t.status()), sst.getOrDefault(t.status(), grp ? epicC : center));
+                put(row, 4, nz(t.assigneeName()), grp ? epic : cell);
+                put(row, 5, estVal > 0 ? trimNum(estVal) : "", grp ? epicC : center);
+                put(row, 6, Math.round(t.progressPct()) + "%", grp ? epicC : center);
+                put(row, 7, rs != null ? rs.format(DMY) : "", grp ? epicC : center);
+                put(row, 8, re != null ? re.format(DMY) : "", grp ? epicC : center);
+                put(row, 9, priorityVi(t.priority()), grp ? epicC : center);
             }
-            int[] w = {2600, 18000, 3800, 4800, 2200, 2200, 3000, 3000, 3000};
+            int[] w = {2400, 2600, 18000, 3800, 4800, 2200, 2200, 3000, 3000, 3000};
             for (int c = 0; c < BL_COLS.length; c++) sh.setColumnWidth(c, w[c]);
             sh.createFreezePane(0, 4);
             wb.write(out);

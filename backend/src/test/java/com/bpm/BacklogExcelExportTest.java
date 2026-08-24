@@ -26,8 +26,9 @@ class BacklogExcelExportTest {
 
     /** Dòng dữ liệu đầu tiên: 3 dòng tiêu đề + 1 dòng trống + 1 dòng header. */
     private static final int FIRST_DATA_ROW = 5;
-    private static final int COL_NAME = 1;
-    private static final int COL_EST = 4;
+    private static final int COL_STT = 0;
+    private static final int COL_NAME = 2;
+    private static final int COL_EST = 5;
 
     @Autowired ProjectService projectService;
     @Autowired ProjectTaskService taskService;
@@ -96,6 +97,53 @@ class BacklogExcelExportTest {
             prev = indent;
         }
         assertThat(prev).isEqualTo(8);   // cấp 4 (Sub-task cấp 2) → 4 × 2 nấc
+    }
+
+    /** STT: Epic = A, B… · Story = 1, 2… đếm liên tục cả file · cấp dưới = cha + "." + thứ tự. */
+    @Test
+    void sttNumbersByLevel() throws Exception {
+        List<ProjectDto.TaskResponse> all = buildTree("EXP4");
+        // thêm Epic thứ hai có Story riêng để kiểm số Story chạy liên tục, không reset về 1
+        var epic2 = task("EPIC", null, "Epic B", null);
+        var story2 = task("STORY", epic2.id(), "Story B1", null);
+        task("TASK", story2.id(), "Task B1-1", 1.0);
+        all = taskService.list(projectId);
+
+        List<Row> rows = dataRows(exportService.backlogXlsx("Dự án", all, all));
+        java.util.Map<String, String> stt = new java.util.LinkedHashMap<>();
+        for (Row r : rows) {
+            stt.put(r.getCell(COL_NAME).getStringCellValue(), r.getCell(COL_STT).getStringCellValue());
+        }
+
+        assertThat(stt.get("Epic A")).isEqualTo("A");
+        assertThat(stt.get("Story A")).isEqualTo("1");
+        assertThat(stt.get("Task A")).isEqualTo("1.1");
+        assertThat(stt.get("Sub-task cấp 1")).isEqualTo("1.1.1");
+        assertThat(stt.get("Sub-task cấp 2")).isEqualTo("1.1.1.1");
+        assertThat(stt.get("Epic B")).isEqualTo("B");
+        assertThat(stt.get("Story B1")).isEqualTo("2");      // liên tục, không quay lại 1
+        assertThat(stt.get("Task B1-1")).isEqualTo("2.1");
+    }
+
+    /** Nhiều con cùng cấp thì thứ tự tăng dần: 1.1, 1.2, 1.3. */
+    @Test
+    void sttIncrementsAmongSiblings() throws Exception {
+        buildTree("EXP5");
+        var story = taskService.list(projectId).stream()
+                .filter(t -> "Story A".equals(t.title())).findFirst().orElseThrow();
+        task("TASK", story.id(), "Task thứ hai", 1.0);
+        task("TASK", story.id(), "Task thứ ba", 1.0);
+        List<ProjectDto.TaskResponse> all = taskService.list(projectId);
+
+        List<Row> rows = dataRows(exportService.backlogXlsx("Dự án", all, all));
+        java.util.Map<String, String> stt = new java.util.LinkedHashMap<>();
+        for (Row r : rows) {
+            stt.put(r.getCell(COL_NAME).getStringCellValue(), r.getCell(COL_STT).getStringCellValue());
+        }
+
+        assertThat(stt.get("Task A")).isEqualTo("1.1");
+        assertThat(stt.get("Task thứ hai")).isEqualTo("1.2");
+        assertThat(stt.get("Task thứ ba")).isEqualTo("1.3");
     }
 
     /**
