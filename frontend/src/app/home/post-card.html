@@ -49,6 +49,10 @@
         }
       </span>
       @if (celebrantName()) { <strong class="ochome-celebrate-hero__name">{{ celebrantName() }}</strong> }
+      @if (celebrantDept()) { <span class="ochome-celebrate-hero__dept">{{ celebrantDept() }}</span> }
+      @if (anniversaryYears()) {
+        <span class="ochome-celebrate-hero__badge"><b>{{ anniversaryYears() }}</b> năm gắn bó</span>
+      }
     </div>
   }
 

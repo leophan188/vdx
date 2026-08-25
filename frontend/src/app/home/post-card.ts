@@ -36,6 +36,19 @@ export interface CommentNode extends CommentView {
     .ochome-celebrate-hero ::ng-deep .avatar { width: 116px !important; height: 116px !important; font-size: 40px !important;
       border: 3px solid var(--color-surface); border-radius: 50%; }
     .ochome-celebrate-hero__name { font-size: 20px; font-weight: 800; color: var(--color-text); letter-spacing: .2px; }
+    /* Phòng ban của người được chúc — chip nhỏ dưới tên, giúp nhận ra ngay người của bộ phận nào. */
+    .ochome-celebrate-hero__dept { margin-top: -4px; padding: 2px 10px; border-radius: 999px;
+      font-size: 12px; font-weight: 700; letter-spacing: .3px;
+      color: var(--cel-a, var(--color-text-muted));
+      background: color-mix(in srgb, var(--cel-a, currentColor) 14%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cel-a, currentColor) 35%, transparent); }
+    /* Huy hiệu SỐ NĂM gắn bó — điểm nhấn riêng của thiệp thâm niên, đọc được từ xa. */
+    .ochome-celebrate-hero__badge { display: inline-flex; align-items: baseline; gap: 4px;
+      margin-top: 2px; padding: 5px 16px; border-radius: 999px;
+      background: linear-gradient(135deg, var(--cel-a), var(--cel-b) 60%, var(--cel-c));
+      color: #fff; font-weight: 800; letter-spacing: .4px; text-shadow: 0 1px 2px rgba(0,0,0,.2);
+      box-shadow: 0 6px 18px color-mix(in srgb, var(--cel-a) 35%, transparent); }
+    .ochome-celebrate-hero__badge b { font-size: 22px; line-height: 1; }
     /* Bài CHÚC MỪNG = "thiệp": nội dung căn GIỮA, bề ngang gọn (khớp thiết kế bảng tin). */
     .ochome-post--celebrate .ochome-post__text { text-align: center; max-width: 580px; margin: 0 auto 6px; line-height: 1.7; }
     .ochome-post--celebrate .ochome-celebrate-hero { margin-bottom: 8px; }
@@ -108,7 +121,36 @@ export class PostCard {
     if (bd) return bd[1].trim();
     const ob = body.match(/Chào mừng\s+([^!]+?)\s+gia nhập/i);
     if (ob) return ob[1].trim();
+    // Thâm niên: "🏆 Tri ân 5 năm gắn bó — Nguyễn Văn A (PDX.1)!" — trước đây không bắt nên thiệp thiếu tên.
+    const an = body.match(/gắn bó\s*—\s*([^(!]+?)\s*(?:\(|!)/i);
+    if (an) return an[1].trim();
     return '';
+  });
+
+  /** Số năm gắn bó (chỉ tin thâm niên) — dựng huy hiệu nổi bật trên thiệp. 0 = không phải tin này. */
+  readonly anniversaryYears = computed(() => {
+    if (this.celebrationKind() !== 'anniv') {
+      return 0;
+    }
+    const m = (this.current().body ?? '').match(/Tri ân\s+(\d+)\s+năm/i);
+    return m ? Number(m[1]) : 0;
+  });
+
+  /**
+   * Phòng ban của nhân sự được chúc — trích từ chính nội dung tin (backend đã ghép sẵn),
+   * nên không phải gọi thêm API. Bỏ qua chữ "công ty" vì đó chỉ là phương án dự phòng khi thiếu mã bộ phận.
+   */
+  readonly celebrantDept = computed(() => {
+    const body = (this.current().body ?? '').replace(/\u200b/g, '');
+    let m: RegExpMatchArray | null = null;
+    switch (this.celebrationKind()) {
+      case 'bd': m = body.match(/sinh nhật\s+[^—!]+—\s*([^!]+?)\s*!/i); break;
+      case 'ob': m = body.match(/gia nhập\s+([^!]+?)\s*!/i); break;
+      case 'anniv': m = body.match(/gắn bó\s*—[^(!]*\(([^)]+)\)/i); break;
+      default: return '';
+    }
+    const dept = m ? m[1].trim() : '';
+    return /^công ty$/i.test(dept) ? '' : dept;
   });
 
   readonly showComments = signal(false);
