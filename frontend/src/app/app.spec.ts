@@ -40,13 +40,26 @@ describe('App', () => {
     expect(compiled.querySelectorAll('.main-nav a').length).toBe(0);
   });
 
-  it('hiện menu quản trị khi có ROLE_ADMIN (AC-4)', () => {
+  /**
+   * Điều hướng nay là: TOOLBAR ngang chọn MODULE → sidebar hiện chức năng con của module đó.
+   * Nên không còn cảnh mọi link nằm cùng lúc trong .main-nav (thiết kế menu phẳng cũ);
+   * điều đáng khẳng định là admin thấy ĐỦ module, trong đó có "Quản trị hệ thống".
+   */
+  it('hiện đủ module khi có ROLE_ADMIN (AC-4)', () => {
     const auth = TestBed.inject(AuthService);
     auth.currentUser.set({ username: 'admin', authorities: [{ authority: 'ROLE_ADMIN' }] });
     const fixture = TestBed.createComponent(App);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    // Cá nhân 6 · Dự án 1 · Báo cáo 2 · Công cụ 1 · Quản trị 9 (+Phân quyền) = 19
-    expect(compiled.querySelectorAll('.main-nav a').length).toBe(19);
+
+    const modules = Array.from(compiled.querySelectorAll('.topbar__module'))
+      .map((b) => b.textContent?.trim() ?? '');
+    expect(modules.length).toBe(5);
+    expect(modules.some((m) => m.includes('Quản trị hệ thống'))).toBe(true);
+
+    // Sidebar hiện chức năng con của module đang chọn (mặc định "Cá nhân"), không phải toàn bộ link.
+    const links = compiled.querySelectorAll('.main-nav a');
+    expect(links.length).toBeGreaterThan(0);
+    expect(links.length).toBeLessThan(modules.length * 10);
   });
 });
