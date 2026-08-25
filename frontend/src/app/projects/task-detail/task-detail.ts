@@ -89,8 +89,10 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__work-var { color: var(--status-done); }
     .td__work-var.is-over { color: var(--overdue, #e5484d); }
     .td__work-list { display: grid; gap: 2px; }
+    /* align-items: start — ghi chú dài xuống nhiều dòng thì các cột còn lại bám mép trên,
+       không bị đẩy trôi xuống giữa dòng cao. */
     .td__work-row { display: grid; grid-template-columns: 114px minmax(90px, 1fr) 92px 52px 2fr 24px;
-      align-items: center; gap: 8px; padding: 4px 8px; border-radius: 6px;
+      align-items: start; gap: 8px; padding: 6px 8px; border-radius: 6px;
       background: var(--color-surface); font-size: var(--text-sm); }
     .td__work-role { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; text-align: center;
       white-space: nowrap; color: var(--act, var(--status-active));
@@ -98,8 +100,10 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__work-who { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .td__work-date { color: var(--color-text-muted); font-size: var(--text-xs); font-variant-numeric: tabular-nums; }
     .td__work-h { text-align: right; font-variant-numeric: tabular-nums; }
+    /* Ghi chú (lý do reopen, mô tả việc đã làm) hiện ĐỦ chữ: cắt bằng "…" thì phần quan trọng nhất
+       — lý do bị trả lại — nằm ở cuối câu và không đọc được, phải rê chuột mới thấy. */
     .td__work-note { color: var(--color-text-muted); font-size: var(--text-xs);
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+      white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
     .td__work-del { border: 0; background: none; cursor: pointer; color: var(--color-text-muted);
       font-size: 1.1rem; line-height: 1; padding: 0; }
     .td__work-del:hover { color: var(--overdue, #e5484d); }
