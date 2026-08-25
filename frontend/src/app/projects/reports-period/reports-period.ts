@@ -689,12 +689,12 @@ export class PrjReportsPeriod {
    * nên mỗi dòng vỡ thành 5-6 dòng chữ. Modal cũng chuyển sang xwide cho rộng.
    */
   readonly personCols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '70px', sortable: true },
-    { key: 'type', header: 'Loại', width: '78px' },
+    { key: 'code', header: 'Mã', width: '92px', sortable: true },
+    { key: 'type', header: 'Loại', width: '104px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '150px' },
-    { key: 'status', header: 'Trạng thái', width: '104px' },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '92px', sortable: true },
+    { key: 'assigneeName', header: 'Người làm', width: '168px' },
+    { key: 'status', header: 'Trạng thái', width: '132px' },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '108px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
   ];
   /**

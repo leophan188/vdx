@@ -58,7 +58,7 @@ export class Leave implements OnInit {
   // ===== Tab Tổng hợp (FEAT_LEAVE_MANAGE) =====
   readonly empCols: GridColumn[] = [
     { key: 'userName', header: 'Tên', sortable: true },
-    { key: 'orgUnitName', header: 'Bộ phận', sortable: true },
+    { key: 'orgUnitName', header: 'Bộ phận', sortable: true, width: '200px' },
     { key: 'annualDays', header: 'Phép năm (ngày)', align: 'center', sortable: true, width: '140px' },
     { key: 'unpaidDays', header: 'Không lương (ngày)', align: 'center', sortable: true, width: '150px' },
     { key: 'totalDays', header: 'Tổng (ngày)', align: 'center', sortable: true, width: '120px' },

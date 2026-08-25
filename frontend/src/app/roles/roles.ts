@@ -26,7 +26,7 @@ export class Roles implements OnInit {
 
   readonly cols: GridColumn[] = [
     { key: 'code', header: 'Mã', sortable: true, width: '180px' },
-    { key: 'name', header: 'Tên vai trò', sortable: true },
+    { key: 'name', header: 'Tên vai trò', sortable: true, width: '220px' },
     { key: 'permissions', header: 'Quyền' },
     { key: 'actions', header: 'Thao tác', align: 'right', width: '160px' }
   ];

@@ -62,7 +62,7 @@ export class PrjMembers {
   readonly cols: GridColumn[] = [
     { key: 'member', header: 'Thành viên' },
     { key: 'role', header: 'Vai trò', width: '120px' },
-    { key: 'period', header: 'Thời gian (BĐ → KT)', width: '180px' },
+    { key: 'period', header: 'Thời gian (BĐ → KT)', width: '200px' },
     { key: 'effort', header: '% Effort', width: '90px', align: 'center', sortable: true },
     { key: 'manday', header: 'Man-day', width: '110px', align: 'center', sortable: true },
     { key: 'mm', header: 'Man-month', width: '110px', align: 'center', sortable: true },

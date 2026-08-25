@@ -22,7 +22,7 @@ export class Inbox implements OnInit, OnDestroy {
 
   readonly cols: GridColumn[] = [
     { key: 'stepName', header: 'Việc / Bước', sortable: true },
-    { key: 'processName', header: 'Quy trình', sortable: true },
+    { key: 'processName', header: 'Quy trình', sortable: true, width: '220px' },
     { key: 'createdAt', header: 'Nhận lúc', width: '150px' },
     { key: 'sla', header: 'SLA', align: 'center', width: '90px' },
     { key: 'actions', header: '', width: '120px' }

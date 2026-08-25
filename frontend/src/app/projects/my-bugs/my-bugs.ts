@@ -91,12 +91,12 @@ export class MyBugs implements OnInit {
     // Tiêu đề cố ý không đặt width — data-grid cho cột co giãn nuốt hết chỗ thừa.
     { key: 'code', header: 'Mã', width: '80px', sortable: true },
     { key: 'title', header: 'Tiêu đề', sortable: true },
-    { key: 'projectName', header: 'Dự án', width: '150px', sortable: true },
+    { key: 'projectName', header: 'Dự án', width: '180px', sortable: true },
     { key: 'type', header: 'Loại', width: '84px' },
-    { key: 'status', header: 'Trạng thái', width: '118px' },
-    { key: 'assigneeName', header: 'PIC', width: '136px' },
-    { key: 'reporterName', header: 'Người log', width: '136px' },
-    { key: 'role', header: 'Vai trò', width: '96px' },
+    { key: 'status', header: 'Trạng thái', width: '132px' },
+    { key: 'assigneeName', header: 'PIC', width: '168px' },
+    { key: 'reporterName', header: 'Người log', width: '168px' },
+    { key: 'role', header: 'Vai trò', width: '110px' },
     { key: 'dueDate', header: 'Deadline', width: '104px', sortable: true }
   ];
 

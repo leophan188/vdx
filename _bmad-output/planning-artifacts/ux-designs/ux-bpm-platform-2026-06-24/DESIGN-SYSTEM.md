@@ -138,6 +138,24 @@ Module Tài khoản là **bản mẫu hoàn chỉnh** cho mọi module CRUD sau 
 3. **Đừng lấy bề rộng theo tiêu đề cột.** `thead th` là `white-space: nowrap`, nên tiêu đề
    dài ("Mức độ nghiêm trọng") tự làm sàn bề rộng. Tiêu đề dài thì rút gọn chữ, đừng nới cột.
 
+### Cỡ cột chuẩn (đo theo NỘI DUNG thật, không theo cảm tính)
+
+`grid td` không `nowrap`, nên cột hẹp không cắt chữ mà đẩy chữ xuống dòng: hàng cao lên,
+badge bị bóp, rất khó dò ngang. Các cỡ dưới đây đã trừ padding ô (2×12px) và padding badge:
+
+| Nội dung | Cỡ tối thiểu | Ghi chú |
+|---|---|---|
+| Badge trạng thái | **132px** | nhãn dài nhất "In Progress"; 104–118px là bóp chữ |
+| Badge loại | **104px** | nhãn dài nhất "Sub-task" |
+| Họ tên tiếng Việt | **168px** | "Nguyễn Thị Thu Hằng" ~19 ký tự |
+| Ngày `dd/MM/yyyy` | 108px | |
+| Ngày + giờ | 152px | |
+| Mã / code | 92px | |
+| Số, %, đếm | 88–110px | |
+
+Tên bộ phận, tên quy trình, tên bước… là chuỗi tự do: cho 200–260px, đừng để trống `width`
+(chỉ MỘT cột trong lưới được để trống — xem quy tắc 1).
+
 > **Vì sao quan trọng:** thiếu quy tắc 1 thì lưới sai theo CẢ HAI chiều — màn rộng, chỗ dư
 > chia đều nên cột chỉ chứa một nhãn ngắn phình ra vô ích; màn hẹp, cột chính là cột duy
 > nhất co được nên gánh toàn bộ phần thiếu và bị bóp mất chữ.

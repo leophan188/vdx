@@ -634,11 +634,11 @@ export class PrjOverview {
   /** Nhãn/màu cho popup + bảng. */
   readonly detailCols: GridColumn[] = [
     { key: 'code', header: 'Mã', width: '84px', sortable: true },
-    { key: 'type', header: 'Loại', width: '82px' },
+    { key: 'type', header: 'Loại', width: '104px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '160px' },
-    { key: 'status', header: 'Trạng thái', width: '108px' },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '96px', sortable: true },
+    { key: 'assigneeName', header: 'Người làm', width: '168px' },
+    { key: 'status', header: 'Trạng thái', width: '132px' },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '108px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
   ];
   typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }

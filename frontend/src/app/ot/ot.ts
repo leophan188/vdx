@@ -58,7 +58,7 @@ export class Ot implements OnInit {
   // ===== Tab Tổng hợp theo KHOẢNG NGÀY (FEAT_OT_MANAGE) =====
   readonly empCols: GridColumn[] = [
     { key: 'userName', header: 'Tên', sortable: true },
-    { key: 'orgUnitName', header: 'Bộ phận', sortable: true },
+    { key: 'orgUnitName', header: 'Bộ phận', sortable: true, width: '200px' },
     { key: 'totalHours', header: 'Tổng giờ OT', align: 'center', sortable: true, width: '130px' },
     { key: 'entryCount', header: 'Số lần', align: 'center', width: '90px' }
   ];

@@ -33,7 +33,7 @@ export class Positions implements OnInit {
 
   readonly cols: GridColumn[] = [
     { key: 'title', header: 'Vị trí', sortable: true },
-    { key: 'holder', header: 'Người giữ hiện hành' },
+    { key: 'holder', header: 'Người giữ hiện hành', width: '260px' },
     { key: 'actions', header: 'Thao tác', align: 'right', width: '280px' }
   ];
 

@@ -21,7 +21,7 @@ export class MyRequests implements OnInit {
     { key: 'processName', header: 'Quy trình', sortable: true, width: '210px' },
     { key: 'processVersion', header: 'PB', align: 'center', width: '64px', sortable: true },
     { key: 'status', header: 'Trạng thái', width: '130px' },
-    { key: 'currentStep', header: 'Đang ở bước' },
+    { key: 'currentStep', header: 'Đang ở bước', width: '220px' },
     { key: 'startedAt', header: 'Tạo lúc', width: '130px' },
     { key: 'actions', header: '', width: '120px' }
   ];

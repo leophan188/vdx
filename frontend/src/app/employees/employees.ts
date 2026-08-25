@@ -57,7 +57,7 @@ export class Employees implements OnInit {
   // Tối giản: 1 cột "Nhân sự" (Mã · Tên · Vị trí · Bộ phận) + Level + Trạng thái + thao tác.
   readonly cols: GridColumn[] = [
     { key: 'employee', header: 'Nhân sự' },
-    { key: 'projects', header: 'Dự án đang join', width: '180px' },
+    { key: 'projects', header: 'Dự án đang join', width: '220px' },
     { key: 'effort', header: 'Tổng effort', width: '110px', align: 'center', sortable: true },
     { key: 'joinDate', header: 'Ngày vào', width: '110px', sortable: true },
     { key: 'birthDate', header: 'Ngày sinh', width: '110px', sortable: true },

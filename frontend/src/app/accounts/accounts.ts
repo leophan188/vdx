@@ -46,7 +46,7 @@ export class Accounts implements OnInit {
   }
 
   readonly cols: GridColumn[] = [
-    { key: 'username', header: 'Tên đăng nhập', sortable: true },
+    { key: 'username', header: 'Tên đăng nhập', sortable: true, width: '170px' },
     { key: 'fullName', header: 'Họ tên', sortable: true },
     { key: 'role', header: 'Vai trò', sortable: true, width: '110px' },
     { key: 'roleCode', header: 'Vai trò chức năng', sortable: true, width: '170px' },
