@@ -37,16 +37,21 @@ export class DataGrid {
     this.columns().find((c) => !c.width)?.key ?? null);
 
   /**
-   * Bề rộng cột. Cột co giãn được gán 100% — đây là mẹo bảng HTML để nó NUỐT HẾT chỗ thừa.
+   * Bề rộng cột. Bảng chạy `table-layout: fixed` nên bề rộng khai báo được tôn trọng nguyên vẹn;
+   * cột co giãn cố tình BỎ TRỐNG để nhận đúng phần chỗ còn lại.
    *
-   * Không có nó thì bảng cư xử sai cả hai chiều: màn rộng thì chỗ dư chia đều cho mọi cột,
-   * làm mấy cột chỉ chứa một cái nhãn ngắn (Loại, Ưu tiên, Mức độ) phình ra vô ích; màn hẹp
-   * thì cột nội dung chính lại là cột DUY NHẤT co được (các cột kia có width cố định và tiêu
-   * đề nowrap) nên gánh toàn bộ phần thiếu và bị bóp gần như mất chữ.
+   * Trước đây cột co giãn được gán 100% cho hợp với auto-layout, nhưng khi đó một ô nowrap
+   * (tiêu đề công việc dài) vẫn đẩy bảng rộng ra và ép các cột khác xuống dưới bề rộng khai báo.
    */
   widthOf(col: GridColumn): string | null {
-    return col.width ?? (col.key === this.flexKey() ? '100%' : null);
+    return col.width ?? null;
   }
+
+  /**
+   * Bề rộng tối thiểu của cả bảng — đặt cho lưới NHIỀU cột (vd xem trước import nhân sự): tổng bề
+   * rộng cột vượt màn thì cuộn ngang có chủ đích, còn hơn để fixed layout bóp đều mọi cột.
+   */
+  readonly minWidth = input('');
   readonly title = input('');
   readonly loading = input(false);
   readonly searchable = input(true);

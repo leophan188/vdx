@@ -374,7 +374,7 @@
           <span class="stat-card__label">Vai trò mới</span><span class="stat-card__value">{{ p.newRoles }}</span></div></div>
       </div>
 
-      <data-grid [columns]="previewCols" [rows]="previewRows()" title="Xem trước thay đổi"
+      <data-grid [columns]="previewCols" [rows]="previewRows()" minWidth="2200px" title="Xem trước thay đổi"
                  [pageSize]="50" [pageSizes]="[50, 100, 200]"
                  emptyText="Không có thay đổi nào.">
         <ng-template gridCell="action" let-r>

@@ -21,7 +21,7 @@
   }
 
   <div class="grid__scroll">
-    <table>
+    <table [style.min-width]="minWidth() || null">
       <thead>
         <tr>
           @if (expandable()) { <th class="grid__expander-col"></th> }

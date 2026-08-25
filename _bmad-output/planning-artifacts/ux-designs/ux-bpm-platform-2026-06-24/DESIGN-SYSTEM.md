@@ -138,6 +138,18 @@ Module Tài khoản là **bản mẫu hoàn chỉnh** cho mọi module CRUD sau 
 3. **Đừng lấy bề rộng theo tiêu đề cột.** `thead th` là `white-space: nowrap`, nên tiêu đề
    dài ("Mức độ nghiêm trọng") tự làm sàn bề rộng. Tiêu đề dài thì rút gọn chữ, đừng nới cột.
 
+### Lưới chạy `table-layout: fixed`
+
+Bảng của `data-grid` dùng **fixed layout**: bề rộng cột lấy đúng theo `width` khai báo, KHÔNG
+theo độ dài nội dung. Hệ quả cần nhớ khi dựng lưới mới:
+
+- Cột co giãn để **trống** `width` — nó nhận phần chỗ còn lại. Đừng gán `100%`.
+- Ô có `white-space: nowrap` (tiêu đề dài, breadcrumb) nay bị **cắt gọn trong cột** thay vì đẩy
+  cả bảng rộng ra. Với auto-layout trước đây, một ô nowrap là bề rộng tối thiểu không co được:
+  bảng tràn sinh cuộn ngang, còn cột họ tên khai báo 190px lại hiển thị ~90px.
+- Lưới **nhiều cột** (tổng bề rộng vượt màn) thì truyền `minWidth` cho `<data-grid>` để cuộn ngang
+  có chủ đích, thay vì để fixed layout bóp đều mọi cột.
+
 ### Cỡ cột chuẩn (đo theo NỘI DUNG thật, không theo cảm tính)
 
 `grid td` không `nowrap`, nên cột hẹp không cắt chữ mà đẩy chữ xuống dòng: hàng cao lên,

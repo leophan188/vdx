@@ -189,7 +189,12 @@ a.breadcrumb__item:hover { color: var(--color-primary); }
   background: var(--color-surface); font-size: var(--text-sm);
 }
 .grid__scroll { overflow: auto; max-height: 62vh; -webkit-overflow-scrolling: touch; }
-.grid table { width: 100%; border-collapse: collapse; font-size: var(--text-base); }
+/* table-layout: fixed — bề rộng cột lấy theo khai báo, KHÔNG theo độ dài nội dung.
+   Với auto-layout, một ô "white-space: nowrap" (tiêu đề công việc, breadcrumb) trở thành bề rộng
+   tối thiểu không co được: bảng bị đẩy rộng ra sinh cuộn ngang, còn các cột khác bị ép xuống dưới
+   bề rộng đã khai báo — cột họ tên đặt 190px mà hiển thị ~90px, tên rớt xuống hai dòng. */
+.grid table { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: var(--text-base); }
+.grid td { overflow-wrap: anywhere; }
 .grid thead th {
   position: sticky; top: 0; z-index: 1; background: var(--color-surface-alt);
   text-align: left; padding: var(--space-2) var(--space-3);
