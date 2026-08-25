@@ -26,6 +26,8 @@ interface CatRow extends CatStat {
   items: ProjectTask[];
   byStatus: StatusBuckets;
   overdueItems: ProjectTask[];
+  /** Việc CÒN LẠI phải xử lý = tổng trừ Hoàn thành và Huỷ (Huỷ nằm ngoài phạm vi, không phải việc tồn). */
+  openItems: ProjectTask[];
 }
 
 /** Một dòng bảng tổng hợp theo NHÂN SỰ (loại × trạng thái), mọi ô đều mở được popup. */
@@ -240,6 +242,10 @@ function emptyTypeBuckets(): TypeBuckets {
     .ov2__cat-btn:hover:not(:disabled) { background: var(--color-primary-soft, var(--color-border)); }
     .ov2__cat-btn:disabled { cursor: default; opacity: .65; }
     .ov2__cat-btn b { font-variant-numeric: tabular-nums; }
+    /* "Đang mở" là con số tổng hợp của cả thẻ (không phải một trạng thái) → tách khỏi nhóm bên dưới. */
+    .ov2__cat-btn--open { font-weight: var(--weight-semibold); margin-bottom: var(--space-1);
+      border-bottom: 1px solid var(--color-border); border-radius: var(--radius-md) var(--radius-md) 0 0; }
+    .ov2__cat-btn--open b { color: var(--cat, var(--color-primary)); }
     .ov2__cat-total-btn { margin-left: auto; border: 0; background: none; padding: 0; cursor: pointer;
       font: inherit; font-size: 1.8rem; font-weight: 800; line-height: 1; color: var(--cat, var(--color-primary));
       font-variant-numeric: tabular-nums; }
@@ -484,7 +490,11 @@ export class PrjOverview {
       const list = items.filter((t) => catOf(t.type) === c.key);
       const byStatus = emptyStatusBuckets();
       for (const t of list) byStatus[t.status].push(t);
-      return { ...c, items: list, byStatus, overdueItems: list.filter((t) => isOverdue(t.dueDate, t.status)) };
+      return {
+        ...c, items: list, byStatus,
+        overdueItems: list.filter((t) => isOverdue(t.dueDate, t.status)),
+        openItems: list.filter((t) => t.status !== 'DONE' && t.status !== 'CANCELLED')
+      };
     });
   });
 
