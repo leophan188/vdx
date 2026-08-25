@@ -69,11 +69,11 @@
           <div class="ov2__cat-sub">{{ c.done }}/{{ c.total }} hoàn thành · {{ c.donePct }}%</div>
           <ul class="ov2__cat-list">
             <!-- Việc CÒN LẠI phải xử lý — đặt trên cùng vì đây là con số hay phải trả lời nhất;
-                 Huỷ không tính vào đây (nằm ngoài phạm vi), nên Đang mở + Done + Huỷ = Tổng. -->
+                 Cancelled không tính vào đây (nằm ngoài phạm vi), nên Open + Done + Cancelled = Tổng. -->
             <li>
               <button type="button" class="ov2__cat-btn ov2__cat-btn--open" [disabled]="!c.openItems.length"
-                      (click)="openDetail(c.label + ' · Đang mở', c.openItems)">
-                <span>📂 Đang mở</span><b>{{ c.openItems.length }}</b>
+                      (click)="openDetail(c.label + ' · Open', c.openItems)">
+                <span>📂 Open</span><b>{{ c.openItems.length }}</b>
               </button>
             </li>
             @for (s of catListMeta; track s.key) {
@@ -393,7 +393,7 @@
         <h3 class="ovp__h">Thống kê theo loại</h3>
         <table class="ovp__cat">
           <thead><tr>
-            <th class="l">Loại</th><th>Tổng</th><th>Đang mở</th><th>Hoàn thành</th><th>Đang làm</th><th>Kiểm thử</th><th>Chưa làm</th><th>Huỷ</th><th>% HT</th>
+            <th class="l">Loại</th><th>Tổng</th><th>Open</th><th>Hoàn thành</th><th>Đang làm</th><th>Kiểm thử</th><th>Chưa làm</th><th>Huỷ</th><th>% HT</th>
           </tr></thead>
           <tbody>
             @for (c of catStats(); track c.key) {
