@@ -3,6 +3,10 @@
   <span class="badge badge--neutral">Tổng: <strong>{{ stats().total }}</strong>@if (hasFilter()) { <i class="bug-stats__all">/ {{ stats().all }}</i> }</span>
   <span class="badge badge--cancel">Đang mở: <strong>{{ stats().open }}</strong></span>
   <span class="badge badge--active">Đã xong: <strong>{{ stats().done }}</strong></span>
+  <!-- Chỉ hiện khi có lỗi đã huỷ, để người đọc thấy vì sao Đang mở + Đã xong chưa bằng Tổng. -->
+  @if (stats().cancelled) {
+    <span class="badge badge--neutral">Đã huỷ: <strong>{{ stats().cancelled }}</strong></span>
+  }
 </div>
 
 <!-- Bộ lọc chuẩn — đặt trên lưới, control trái → action phải -->

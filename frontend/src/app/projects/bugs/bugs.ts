@@ -282,10 +282,16 @@ export class PrjBugs implements OnInit {
    * Thống kê tính trên phần ĐANG LỌC, không phải toàn bộ. Nếu để tổng cố định thì khi lọc
    * "Blocker của Linh" con số trên đầu vẫn là tổng cả dự án, đọc rất dễ hiểu nhầm.
    */
+  /**
+   * "Đang mở" = còn phải xử lý. Lỗi ĐÃ HUỶ nằm ngoài phạm vi nên KHÔNG tính vào đây — trước đây
+   * đếm mọi thứ khác DONE nên bug huỷ vẫn bị coi là việc đang mở, con số này luôn cao hơn thực tế.
+   * Đếm huỷ riêng để tổng vẫn cộng đủ: total = open + done + cancelled.
+   */
   readonly stats = computed(() => {
     const b = this.filtered();
-    const open = b.filter((t) => t.status !== 'DONE').length;
-    return { total: b.length, open, done: b.length - open, all: this.bugs().length };
+    const done = b.filter((t) => t.status === 'DONE').length;
+    const cancelled = b.filter((t) => t.status === 'CANCELLED').length;
+    return { total: b.length, open: b.length - done - cancelled, done, cancelled, all: this.bugs().length };
   });
 
   // ----- Modal báo lỗi / sửa lỗi -----
