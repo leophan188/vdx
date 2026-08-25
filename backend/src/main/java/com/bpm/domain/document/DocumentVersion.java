@@ -3,7 +3,6 @@ package com.bpm.domain.document;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
-import jakarta.persistence.Lob;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
@@ -24,8 +23,12 @@ public class DocumentVersion {
     @Column(name = "version", nullable = false)
     private int version;
 
-    @Lob
-    @Column(name = "content", nullable = false, updatable = false)
+    /**
+     * KHÔNG dùng @Lob — Hibernate 6 map @Lob không kèm length thành TINYBLOB (255 byte) trên MariaDB,
+     * file .docx vài trăm KB là lỗi ngay khi lưu. Đặt length lớn để MariaDB tạo LONGBLOB, H2 tạo cột lớn
+     * (cùng cách đã xử lý ở ReportRun#outputBytes, ProjectDiary#content, Post#body).
+     */
+    @Column(name = "content", nullable = false, length = 100_000_000, updatable = false)
     private byte[] content;
 
     @Column(name = "saved_at", nullable = false, updatable = false)
