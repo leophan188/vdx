@@ -27,9 +27,10 @@ export interface CommentNode extends CommentView {
     .ochome-comment__replybox { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 6px 38px; }
     .ochome-mention { color: var(--color-primary); font-weight: 600; white-space: nowrap; }
     .ochome-celebrate-hero { display: flex; flex-direction: column; align-items: center; gap: 10px; margin: 8px 0 14px; }
+    /* Vòng quanh ảnh lấy màu của LOẠI tin (biến --cel-* đặt ở .ochome-post--bd/ob/anniv). */
     .ochome-celebrate-hero__ring { display: inline-flex; padding: 5px; border-radius: 50%;
-      background: linear-gradient(135deg, #db2777, #ea580c 55%, #f59e0b);
-      box-shadow: 0 8px 24px rgba(219,39,119,.35); }
+      background: linear-gradient(135deg, var(--cel-a, #db2777), var(--cel-b, #ea580c) 55%, var(--cel-c, #f59e0b));
+      box-shadow: 0 8px 24px color-mix(in srgb, var(--cel-a, #db2777) 35%, transparent); }
     .ochome-celebrate-hero__img { width: 116px; height: 116px; border-radius: 50%; object-fit: cover;
       border: 3px solid var(--color-surface); display: block; }
     .ochome-celebrate-hero ::ng-deep .avatar { width: 116px !important; height: 116px !important; font-size: 40px !important;
@@ -66,6 +67,35 @@ export class PostCard {
     return body.startsWith('🎂') || body.startsWith('🎉')
       || body.includes('#celebrate')
       || (p.category === 'EVENT' && p.pinned);
+  });
+
+  /**
+   * LOẠI tin chúc mừng, để mỗi loại có nhận diện riêng thay vì dùng chung một khung hồng-cam.
+   * Ưu tiên marker hệ thống (#celebrate-bd / -ob / -anniv do HrHighlightsService gắn); bài cũ hoặc
+   * bài đăng tay không có marker thì đoán theo chữ trong nội dung.
+   */
+  readonly celebrationKind = computed<'bd' | 'ob' | 'anniv' | null>(() => {
+    if (!this.isCelebration()) {
+      return null;
+    }
+    const body = this.current().body ?? '';
+    if (/#celebrate-bd-/i.test(body)) return 'bd';
+    if (/#celebrate-ob-/i.test(body)) return 'ob';
+    if (/#celebrate-anniv-/i.test(body)) return 'anniv';
+    if (/sinh nhật/i.test(body)) return 'bd';
+    if (/gia nhập|onboard|chào mừng/i.test(body)) return 'ob';
+    if (/thâm niên|tri ân|kỷ niệm|gắn bó/i.test(body)) return 'anniv';
+    return null;
+  });
+
+  /** Nhãn dải băng đầu bài theo loại. */
+  readonly celebrationLabel = computed(() => {
+    switch (this.celebrationKind()) {
+      case 'bd': return '🎂 Chúc mừng sinh nhật';
+      case 'ob': return '🌱 Chào thành viên mới';
+      case 'anniv': return '🏆 Tri ân thâm niên';
+      default: return '🎉 Chúc mừng · Sự kiện';
+    }
   });
 
   /**

@@ -80,23 +80,46 @@
 .ochome-post__more circle { fill: currentColor; stroke: none; }
 .ochome-post__text { margin: 12px 0; font-size: 14px; line-height: 1.6; white-space: pre-line; }
 
-/* -------- Việc 2: Bài CHÚC MỪNG nổi bật (sinh nhật / onboarding) -------- */
+/* -------- Bài CHÚC MỪNG (sinh nhật / thành viên mới / thâm niên) --------
+   Ba loại tin dùng CHUNG bố cục thiệp nhưng phải nhìn ra ngay là loại nào: trước đây cả ba đều
+   hồng-cam giống hệt, lướt bảng tin không phân biệt nổi. Mỗi loại đặt bộ màu riêng qua --cel-*
+   (viền, nền, dải băng, vòng quanh ảnh, biểu tượng chìm) — phần bố cục vẫn dùng chung. */
 .ochome-post--celebrate {
   position: relative; overflow: hidden;
   padding-top: 0;                                  /* banner chiếm mép trên */
-  border: 1px solid rgba(236, 72, 153, 0.55);
-  border-left: 4px solid #db2777;
+  /* Mặc định (tin chúc mừng không rõ loại): hồng-cam như cũ */
+  --cel-a: #db2777; --cel-b: #ea580c; --cel-c: #f59e0b; --cel-ico: '🎉';
+  border: 1px solid color-mix(in srgb, var(--cel-a) 55%, transparent);
+  border-left: 4px solid var(--cel-a);
   background:
-    radial-gradient(130% 120% at 92% -10%, rgba(245, 158, 11, 0.30), transparent 55%),
-    linear-gradient(135deg, rgba(236, 72, 153, 0.26), rgba(234, 88, 12, 0.18) 55%, rgba(245, 158, 11, 0.22)),
+    radial-gradient(130% 120% at 92% -10%, color-mix(in srgb, var(--cel-c) 30%, transparent), transparent 55%),
+    linear-gradient(135deg,
+      color-mix(in srgb, var(--cel-a) 26%, transparent),
+      color-mix(in srgb, var(--cel-b) 18%, transparent) 55%,
+      color-mix(in srgb, var(--cel-c) 22%, transparent)),
     var(--color-surface);
-  box-shadow: 0 8px 26px rgba(236, 72, 153, 0.24);
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--cel-a) 24%, transparent);
 }
+/* SINH NHẬT — hồng/đỏ, bánh kem */
+.ochome-post--bd    { --cel-a: #db2777; --cel-b: #f43f5e; --cel-c: #fb923c; --cel-ico: '🎂'; }
+/* THÀNH VIÊN MỚI — xanh lá/xanh biển, mầm cây: tươi mới, tách hẳn khỏi hai loại kia */
+.ochome-post--ob    { --cel-a: #0d9488; --cel-b: #0ea5e9; --cel-c: #34d399; --cel-ico: '🌱'; }
+/* THÂM NIÊN — vàng hổ phách, cúp: sắc "huân chương", trang trọng hơn */
+.ochome-post--anniv { --cel-a: #b45309; --cel-b: #f59e0b; --cel-c: #fcd34d; --cel-ico: '🏆'; }
+
+/* Biểu tượng chìm góc phải — nhận ra loại tin kể cả khi chưa đọc chữ */
+.ochome-post--celebrate::after {
+  content: var(--cel-ico);
+  position: absolute; right: 14px; bottom: 4px; z-index: 0;
+  font-size: 104px; line-height: 1; opacity: .08; pointer-events: none; user-select: none;
+}
+.ochome-post--celebrate > * { position: relative; z-index: 1; }
+
 /* Dải banner đầu bài (full-width, KHÔNG đè nút quản trị) */
 .ochome-celebrate-banner {
   margin: 0 -16px 12px;                            /* tràn mép trái/phải của .ochome-post (padding 16px) */
   padding: 7px 16px;
-  background: linear-gradient(135deg, #db2777, #ea580c 60%, #f59e0b);
+  background: linear-gradient(135deg, var(--cel-a), var(--cel-b) 60%, var(--cel-c));
   display: flex; align-items: center;
 }
 .ochome-celebrate-banner__txt {

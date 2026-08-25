@@ -1,8 +1,11 @@
 <article class="ochome-card ochome-post" [class.ochome-post--hidden]="current().hidden"
-         [class.ochome-post--celebrate]="isCelebration()">
+         [class.ochome-post--celebrate]="isCelebration()"
+         [class.ochome-post--bd]="celebrationKind() === 'bd'"
+         [class.ochome-post--ob]="celebrationKind() === 'ob'"
+         [class.ochome-post--anniv]="celebrationKind() === 'anniv'">
   @if (isCelebration()) {
     <div class="ochome-celebrate-banner">
-      <span class="ochome-celebrate-banner__txt">🎉 Chúc mừng · Sự kiện</span>
+      <span class="ochome-celebrate-banner__txt">{{ celebrationLabel() }}</span>
     </div>
   }
   <header class="ochome-post__head">
