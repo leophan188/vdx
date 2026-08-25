@@ -84,6 +84,9 @@ export class PrjBugs implements OnInit {
   private auth = inject(AuthService);
 
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
 
   readonly tasks = signal<ProjectTask[]>([]);
   readonly loading = signal(true);
@@ -218,7 +221,7 @@ export class PrjBugs implements OnInit {
     { key: 'status', header: 'Trạng thái', width: '132px' },
     { key: 'priority', header: 'Ưu tiên', width: '96px' },
     { key: 'severity', header: 'Mức độ', width: '116px' },
-    { key: 'assignee', header: 'Người thực hiện', width: '168px' },
+    { key: 'assignee', header: 'Người thực hiện', width: '190px' },
     { key: 'progress', header: '%', width: '96px' },
     { key: 'est', header: 'Est', width: '64px', align: 'right' },
     { key: 'act', header: '', width: '70px', align: 'center' }
@@ -313,6 +316,7 @@ export class PrjBugs implements OnInit {
   constructor() {
     effect(() => {
       const id = this.projectId();
+      this.refreshKey();
       if (id) this.reload();
     });
   }

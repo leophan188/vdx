@@ -194,6 +194,9 @@ export class PrjBacklog implements OnInit {
   private toast = inject(ToastService);
 
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
 
   /** "Backlog của tôi": userId để MẶC ĐỊNH lọc theo người này (vẫn hiện task cha). Rỗng → dùng pref chung của dự án. */
   readonly presetAssignee = input<string>('');
@@ -702,7 +705,12 @@ export class PrjBacklog implements OnInit {
     // Tải lại khi projectId đổi.
     effect(() => {
       const id = this.projectId();
-      if (id) this.reload();
+      const k = this.refreshKey();
+      // Lần đầu: tải kèm cờ loading. Quay lại từ popup chi tiết: tải NGẦM để giữ nguyên
+      // bộ lọc, nhóm đang gập và vị trí cuộn — người dùng chỉ xem một task rồi đóng.
+      if (id) {
+        k > 0 ? this.silentReload() : this.reload();
+      }
     });
   }
 
@@ -722,6 +730,12 @@ export class PrjBacklog implements OnInit {
       error: () => { this.toast.error('Không tải được danh sách công việc.'); this.loading.set(false); }
     });
   }
+
+  /**
+   * Tải lại dữ liệu mà GIỮ NGUYÊN trạng thái màn (bộ lọc, nhóm đang gập, trang, vị trí cuộn).
+   * Dùng khi màn cha cần đồng bộ sau lúc sửa task ở popup chi tiết.
+   */
+  refreshSilently(): void { this.silentReload(); }
 
   /** Tải lại danh sách KHÔNG bật cờ loading (tránh nhấp nháy) — dùng sau thao tác inline để rollup %/est của cha cập nhật ngay. */
   private silentReload(): void {

@@ -162,6 +162,9 @@ export class PrjTimeline implements OnInit {
   ngOnInit(): void { this.loadViewPrefs(); }
 
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
 
   private svc = inject(ProjectService);
   private toast = inject(ToastService);
@@ -311,6 +314,7 @@ export class PrjTimeline implements OnInit {
     // Tải lại khi projectId đổi (effect đọc input signal).
     effect(() => {
       const pid = this.projectId();
+      this.refreshKey();
       if (!pid) return;
       this.loading.set(true);
       this.svc.listTasks(pid).subscribe({

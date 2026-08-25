@@ -327,6 +327,9 @@ export class PrjOverview {
   private svc = inject(ProjectService);
 
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
   /** Chuyển sang tab khác (link "Xem chi tiết →"). */
   readonly openTab = output<string>();
 
@@ -636,7 +639,7 @@ export class PrjOverview {
     { key: 'code', header: 'Mã', width: '84px', sortable: true },
     { key: 'type', header: 'Loại', width: '104px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '168px' },
+    { key: 'assigneeName', header: 'Người làm', width: '190px' },
     { key: 'status', header: 'Trạng thái', width: '132px' },
     { key: 'dueDate', header: 'Hạn', align: 'center', width: '108px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
@@ -760,6 +763,7 @@ export class PrjOverview {
   constructor() {
     effect(() => {
       const id = this.projectId();
+      this.refreshKey();          // sửa task ở popup → tải lại dữ liệu, KHÔNG dựng lại màn
       if (id) this.load(id);
     });
   }

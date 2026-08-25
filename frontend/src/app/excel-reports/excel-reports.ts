@@ -76,7 +76,7 @@ export class ExcelReports implements OnInit {
     { key: 'runAt', header: 'Thời điểm', width: '128px' },
     { key: 'templateKey', header: 'Loại tool', width: '210px' },
     { key: 'inputFileName', header: 'File vào' },
-    { key: 'runBy', header: 'Người chạy', width: '128px' },
+    { key: 'runBy', header: 'Người chạy', width: '160px' },
     { key: 'status', header: 'Trạng thái', align: 'center', width: '112px' },
     { key: 'actions', header: '', align: 'right', width: '84px' }
   ];

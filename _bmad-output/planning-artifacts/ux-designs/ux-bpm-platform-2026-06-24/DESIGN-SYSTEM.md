@@ -147,7 +147,7 @@ badge bị bóp, rất khó dò ngang. Các cỡ dưới đây đã trừ paddin
 |---|---|---|
 | Badge trạng thái | **132px** | nhãn dài nhất "In Progress"; 104–118px là bóp chữ |
 | Badge loại | **104px** | nhãn dài nhất "Sub-task" |
-| Họ tên tiếng Việt | **168px** | "Nguyễn Thị Thu Hằng" ~19 ký tự |
+| Họ tên tiếng Việt | **190px** | tên 4 chữ ("Nguyễn Hoàng Minh Phương") vẫn nằm gọn một dòng |
 | Ngày `dd/MM/yyyy` | 108px | |
 | Ngày + giờ | 152px | |
 | Mã / code | 92px | |

@@ -63,6 +63,9 @@ const ACTION_META: Record<string, ActionMeta> = {
 })
 export class PrjLog {
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
 
   private svc = inject(ProjectService);
 
@@ -127,6 +130,7 @@ export class PrjLog {
   constructor() {
     effect(() => {
       const pid = this.projectId();
+      this.refreshKey();
       if (!pid) return;
       this.loading.set(true);
       this.svc.projectActivity(pid).subscribe({

@@ -319,6 +319,9 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
 })
 export class PrjReportsPeriod {
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
   readonly projectName = input<string>('');
 
   private svc = inject(ProjectService);
@@ -676,7 +679,7 @@ export class PrjReportsPeriod {
   readonly cols: GridColumn[] = [
     { key: 'code', header: 'Mã', width: '90px', sortable: true },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '180px' },
+    { key: 'assigneeName', header: 'Người làm', width: '190px' },
     { key: 'estimateHours', header: 'Est (h)', align: 'center', width: '90px', sortable: true },
     { key: 'dueDate', header: 'Hạn', align: 'center', width: '120px', sortable: true },
     { key: 'progressPct', header: '% hoàn thành', width: '170px', sortable: true }
@@ -692,7 +695,7 @@ export class PrjReportsPeriod {
     { key: 'code', header: 'Mã', width: '92px', sortable: true },
     { key: 'type', header: 'Loại', width: '104px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '168px' },
+    { key: 'assigneeName', header: 'Người làm', width: '190px' },
     { key: 'status', header: 'Trạng thái', width: '132px' },
     { key: 'dueDate', header: 'Hạn', align: 'center', width: '108px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
@@ -713,6 +716,7 @@ export class PrjReportsPeriod {
   constructor() {
     effect(() => {
       const pid = this.projectId();
+      this.refreshKey();
       const p = this.period();
       const d = this.reportDate();
       if (!pid) return;

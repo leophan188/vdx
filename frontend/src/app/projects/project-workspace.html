@@ -5,20 +5,22 @@
 
   <!-- Menu tab dự án nằm ở SIDEBAR trái của app (theo module). Nội dung full chiều ngang. -->
   @if (id(); as pid) {
-    <!-- @for keyed theo refresh() để tạo lại tab (tải lại) sau khi đổi từ chi tiết task -->
-    @for (n of [refresh()]; track n) {
-      @switch (tab()) {
-        @case ('overview') { <app-prj-overview [projectId]="pid" (openTab)="selectTab($event)" /> }
-        @case ('members') { <app-prj-members [projectId]="pid" /> }
-        @case ('backlog') { <app-prj-backlog [projectId]="pid" (openTask)="openDetail($event)" /> }
-        @case ('kanban') { <app-prj-kanban [projectId]="pid" (openTask)="openDetail($event)" /> }
-        @case ('timeline') { <app-prj-timeline [projectId]="pid" /> }
-        @case ('bugs') { <app-prj-bugs [projectId]="pid" /> }
-        @case ('reports-period') { <app-prj-reports-period [projectId]="pid" [projectName]="project()?.name || ''" /> }
-        @case ('timesheet') { <app-prj-timesheet [projectId]="pid" /> }
-        @case ('log') { <app-prj-log [projectId]="pid" (openTask)="openDetail($event)" /> }
-        @case ('diary') { <app-prj-diary [projectId]="pid" /> }
-      }
+    <!--
+      Sửa task ở popup chi tiết → truyền [refreshKey] để tab tải lại DỮ LIỆU.
+      TUYỆT ĐỐI không bọc @for keyed theo refresh() như trước: cách đó huỷ rồi dựng lại component,
+      nên mở một task ra xem xong đóng lại là mất sạch bộ lọc, nhóm đang gập, trang và vị trí cuộn.
+    -->
+    @switch (tab()) {
+      @case ('overview') { <app-prj-overview [projectId]="pid" [refreshKey]="refresh()" (openTab)="selectTab($event)" /> }
+      @case ('members') { <app-prj-members [projectId]="pid" /> }
+      @case ('backlog') { <app-prj-backlog [projectId]="pid" [refreshKey]="refresh()" (openTask)="openDetail($event)" /> }
+      @case ('kanban') { <app-prj-kanban [projectId]="pid" [refreshKey]="refresh()" (openTask)="openDetail($event)" /> }
+      @case ('timeline') { <app-prj-timeline [projectId]="pid" [refreshKey]="refresh()" /> }
+      @case ('bugs') { <app-prj-bugs [projectId]="pid" [refreshKey]="refresh()" /> }
+      @case ('reports-period') { <app-prj-reports-period [projectId]="pid" [refreshKey]="refresh()" [projectName]="project()?.name || ''" /> }
+      @case ('timesheet') { <app-prj-timesheet [projectId]="pid" [refreshKey]="refresh()" /> }
+      @case ('log') { <app-prj-log [projectId]="pid" [refreshKey]="refresh()" (openTask)="openDetail($event)" /> }
+      @case ('diary') { <app-prj-diary [projectId]="pid" /> }
     }
 
     <!-- Chi tiết task (kiểu Jira): trạng thái + bình luận + ảnh đính kèm -->

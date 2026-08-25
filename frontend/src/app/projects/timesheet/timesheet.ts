@@ -139,6 +139,9 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
 })
 export class PrjTimesheet {
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
 
   private svc = inject(ProjectService);
 
@@ -160,6 +163,7 @@ export class PrjTimesheet {
     // Chỉ TẢI dữ liệu khi projectId đổi (không đọc from/to ở đây → tránh vòng lặp).
     effect(() => {
       const pid = this.projectId();
+      this.refreshKey();
       if (!pid) return;
       const from = this.from();
       const to = this.to();

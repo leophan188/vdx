@@ -21,7 +21,7 @@ export class Documents implements OnInit {
     { key: 'name', header: 'Tên tài liệu', sortable: true },
     { key: 'version', header: 'Phiên bản', align: 'center', width: '110px' },
     { key: 'updatedAt', header: 'Cập nhật', width: '150px' },
-    { key: 'updatedBy', header: 'Bởi', width: '168px' },
+    { key: 'updatedBy', header: 'Bởi', width: '190px' },
     { key: 'actions', header: '', width: '140px' }
   ];
 

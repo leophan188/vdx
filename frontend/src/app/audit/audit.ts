@@ -35,7 +35,7 @@ export class Audit implements OnInit {
     { key: 'createdAt', header: 'Thời điểm', sortable: true, width: '200px' },
     { key: 'action', header: 'Hành động', sortable: true, width: '180px' },
     { key: 'object', header: 'Đối tượng', width: '240px' },
-    { key: 'actor', header: 'Người thực hiện', sortable: true, width: '150px' },
+    { key: 'actor', header: 'Người thực hiện', sortable: true, width: '190px' },
     { key: 'detail', header: 'Chi tiết' }
   ];
 

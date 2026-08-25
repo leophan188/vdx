@@ -129,7 +129,7 @@ export class Employees implements OnInit {
     { key: 'action', header: 'Loại', width: '110px' },
     { key: 'empCode', header: 'ID', width: '80px', sortable: true },
     { key: 'status', header: 'Trạng thái', width: '120px' },
-    { key: 'fullName', header: 'Họ tên', width: '150px', sortable: true },
+    { key: 'fullName', header: 'Họ tên', width: '190px', sortable: true },
     { key: 'jobPosition', header: 'Vị trí công việc', width: '180px' },
     { key: 'title', header: 'Chức danh', width: '120px' },
     { key: 'deptCode', header: 'Mã bộ phận', width: '110px' },
@@ -146,7 +146,7 @@ export class Employees implements OnInit {
 
   readonly logCols: GridColumn[] = [
     { key: 'runAt', header: 'Thời điểm', width: '160px' },
-    { key: 'runBy', header: 'Người chạy', width: '130px' },
+    { key: 'runBy', header: 'Người chạy', width: '160px' },
     { key: 'fileName', header: 'Tệp' },
     { key: 'added', header: 'Thêm', align: 'center', width: '70px' },
     { key: 'updated', header: 'Sửa', align: 'center', width: '70px' },

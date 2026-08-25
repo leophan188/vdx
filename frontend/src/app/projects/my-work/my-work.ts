@@ -61,5 +61,6 @@ export class MyProjectWork implements OnInit {
 
   openDetail(t: ProjectTask): void { this.detailTask.set(t); this.detailOpen.set(true); }
   closeDetail(): void { this.detailOpen.set(false); this.detailTask.set(null); }
-  onTaskChanged(): void { this.backlog()?.reload(); }
+  /** Sửa task ở popup → chỉ làm mới dữ liệu, không đụng bộ lọc/nhóm đang gập/vị trí cuộn. */
+  onTaskChanged(): void { this.backlog()?.refreshSilently(); }
 }

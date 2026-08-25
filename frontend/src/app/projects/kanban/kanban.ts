@@ -142,6 +142,9 @@ export class PrjKanban {
   private dragCleanup: Array<() => void> = [];
 
   readonly projectId = input.required<string>();
+  /** Tăng khi task được sửa ở popup chi tiết → tải lại DỮ LIỆU mà không dựng lại component,
+   *  nhờ vậy bộ lọc / nhóm đang gập / trang / vị trí cuộn giữ nguyên như trước khi mở popup. */
+  readonly refreshKey = input(0);
 
   /** Phát khi bấm thẻ (không phải khi kéo) — để cha mở chi tiết công việc. */
   readonly openTask = output<ProjectTask>();
@@ -283,6 +286,7 @@ export class PrjKanban {
     // Tự tải lại khi projectId đổi.
     effect(() => {
       const id = this.projectId();
+      this.refreshKey();
       if (id) this.reload(id);
     });
   }
