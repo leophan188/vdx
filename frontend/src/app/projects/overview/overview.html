@@ -99,11 +99,12 @@
 
     <!-- Bảng tổng hợp công việc theo NHÂN SỰ × loại × trạng thái — mọi ô số đều mở popup -->
     @if (personRows().length) {
-      <h3 class="ov2__h">Tổng hợp công việc theo nhân sự — {{ personRows().length }} người
+      <h3 class="ov2__h">Tổng hợp công việc theo nhân sự — {{ personCount() }} người
         <span class="ov2__hint">— bấm vào số để xem danh sách công việc</span></h3>
       <p class="ov2__note">Tính theo <b>người đang giữ việc</b>: việc ở <b>Testing</b> tính cho người kiểm thử
         (bug/issue tính cho người log để verify), các trạng thái còn lại tính cho người thực hiện.
         Mỗi việc chỉ thuộc một người tại một thời điểm nên cộng các dòng lại đúng bằng tổng công việc dự án.
+        Người đã tạm ngưng hoặc rời dự án gom vào dòng <b>Nhân sự khác</b> — gom chứ không bỏ, để tổng vẫn khớp.
         Người có tham gia (làm / kiểm thử / log) nhưng hiện <b>không giữ việc nào</b> vẫn có dòng với số 0 —
         công của họ xem ở bảng <b>Thống kê theo vai</b> bên dưới.</p>
       <section class="ov2__panel">
@@ -130,22 +131,25 @@
             @for (p of personRows(); track p.key) {
               <div class="ov2__mrow ov2__mrow--body">
                 <span class="ov2__mname">
-                  @if (p.userId) { <employee-chip [name]="p.name" /> } @else { <span>{{ p.name }}</span> }
+                  @if (p.grouped) {
+                    <span [title]="'Đã tạm ngưng hoặc rời dự án: ' + (p.groupNames || []).join(', ')">
+                      {{ p.name }} ({{ (p.groupNames || []).length }})</span>
+                  } @else if (p.userId) { <employee-chip [name]="p.name" /> } @else { <span>{{ p.name }}</span> }
                 </span>
                 @for (c of workCats; track c.key) {
                   @if (p.byType[c.key].length) {
                     <span><button type="button" class="ov2__num"
-                            (click)="openDetail(p.name + ' · ' + c.label, p.byType[c.key], true)">{{ p.byType[c.key].length }}</button></span>
+                            (click)="openDetail(p.name + ' · ' + c.label, p.byType[c.key], !p.grouped)">{{ p.byType[c.key].length }}</button></span>
                   } @else { <span class="ov2__zero">0</span> }
                 }
                 @for (s of statusMetaAll; track s.key) {
                   @if (p.byStatus[s.key].length) {
                     <span class="ov2__msep"><button type="button" class="ov2__num"
-                            (click)="openDetail(p.name + ' · ' + s.label, p.byStatus[s.key], true)">{{ p.byStatus[s.key].length }}</button></span>
+                            (click)="openDetail(p.name + ' · ' + s.label, p.byStatus[s.key], !p.grouped)">{{ p.byStatus[s.key].length }}</button></span>
                   } @else { <span class="ov2__msep ov2__zero">0</span> }
                 }
                 <span class="ov2__msep"><button type="button" class="ov2__num"
-                        (click)="openDetail('Công việc của ' + p.name, p.items, true)">{{ p.total }}</button></span>
+                        (click)="openDetail('Công việc của ' + p.name, p.items, !p.grouped)">{{ p.total }}</button></span>
                 <span>{{ p.estHours || '—' }}</span>
                 <span>{{ p.actualHours || '—' }}</span>
                 <span [class]="varianceClass(p)">{{ varianceText(p) }}</span>

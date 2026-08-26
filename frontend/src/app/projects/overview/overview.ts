@@ -45,6 +45,10 @@ interface PersonRow {
   donePct: number;
   estHours: number;    // Σ giờ hiệu lực của việc đang giữ
   actualHours: number; // Σ giờ THỰC TẾ người này đã ghi (mọi vai)
+  /** Dòng GOM nhiều người (Nhân sự khác) — popup của nó phải giữ cột "Người làm". */
+  grouped?: boolean;
+  /** Tên những người bị gom, để đưa vào tooltip. */
+  groupNames?: string[];
 }
 
 /** Một dòng tiến độ EPIC / Story kèm số việc con xong / chưa xong. */
@@ -552,10 +556,51 @@ export class PrjOverview {
         .reduce((a, t) => a + effectiveHours(t), 0) * 10) / 10;
       r.actualHours = Math.round((actual.get(r.userId ?? '__none__') ?? 0) * 10) / 10;
     }
-    return rows.sort((a, b) =>
-      (a.unassigned ? 1 : 0) - (b.unassigned ? 1 : 0) || b.total - a.total || a.name.localeCompare(b.name, 'vi')
+    // Chỉ giữ dòng riêng cho người ĐANG ACTIVE trong dự án; người đã tạm ngưng hoặc đã rời gom
+    // vào một dòng "Nhân sự khác". Bảng này để nhìn tải hiện tại của đội — mỗi người đã rời một
+    // dòng làm bảng dài ra và loãng đúng phần cần đọc, nhưng bỏ hẳn thì tổng các dòng không còn
+    // khớp tổng dự án nên vẫn phải gom chứ không xoá.
+    const activeIds = new Set(this.members().filter((m) => m.active).map((m) => m.userId));
+    const kept: PersonRow[] = [];
+    const others: PersonRow[] = [];
+    for (const r of rows) {
+      // members() chưa tải xong → giữ nguyên mọi dòng, đừng gom nhầm cả đội vào "Nhân sự khác".
+      if (!activeIds.size || r.unassigned || (r.userId && activeIds.has(r.userId))) kept.push(r);
+      else others.push(r);
+    }
+    if (others.length) {
+      const g: PersonRow = {
+        key: '__others__', userId: null, name: 'Nhân sự khác', unassigned: false, grouped: true,
+        groupNames: others.map((o) => o.name).sort((a, b) => a.localeCompare(b, 'vi')),
+        items: [], byType: emptyTypeBuckets(), byStatus: emptyStatusBuckets(), overdueItems: [],
+        total: 0, done: 0, donePct: 0, estHours: 0, actualHours: 0
+      };
+      for (const o of others) {
+        g.items.push(...o.items);
+        g.overdueItems.push(...o.overdueItems);
+        for (const c of Object.keys(o.byType) as (keyof TypeBuckets)[]) g.byType[c].push(...o.byType[c]);
+        for (const st of Object.keys(o.byStatus) as (keyof StatusBuckets)[]) g.byStatus[st].push(...o.byStatus[st]);
+        g.estHours += o.estHours;
+        g.actualHours += o.actualHours;
+      }
+      g.total = g.items.length;
+      g.done = g.byStatus.DONE.length;
+      const scope = g.total - g.byStatus.CANCELLED.length;
+      g.donePct = scope > 0 ? Math.round((g.done / scope) * 100) : 0;
+      g.estHours = Math.round(g.estHours * 10) / 10;
+      g.actualHours = Math.round(g.actualHours * 10) / 10;
+      // Chỉ hiện khi nhóm này thực sự còn giữ việc hoặc còn giờ đã ghi.
+      if (g.total || g.actualHours) kept.push(g);
+    }
+    // Thứ tự: người active (nhiều việc trước) → Nhân sự khác → Chưa gán.
+    const rank = (r: PersonRow) => (r.unassigned ? 2 : r.grouped ? 1 : 0);
+    return kept.sort((a, b) =>
+      rank(a) - rank(b) || b.total - a.total || a.name.localeCompare(b.name, 'vi')
     );
   });
+
+  /** Số người ĐANG hoạt động trong bảng — không đếm dòng gom "Nhân sự khác" lẫn "Chưa gán". */
+  readonly personCount = computed(() => this.personRows().filter((r) => !r.grouped && !r.unassigned).length);
 
   /** Dòng "Tổng cộng" của bảng nhân sự (gộp mọi người). */
   readonly personTotal = computed<PersonRow>(() => {
