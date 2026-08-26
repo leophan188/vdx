@@ -37,7 +37,7 @@ export class Ot implements OnInit {
 
   // ===== Tab OT của tôi =====
   readonly entryCols: GridColumn[] = [
-    { key: 'workDate', header: 'Ngày', sortable: true, width: '120px' },
+    { key: 'workDate', header: 'Ngày', sortable: true, width: '124px' },
     { key: 'time', header: 'Giờ', width: '140px' },
     { key: 'hours', header: 'Số giờ', align: 'center', width: '90px' },
     { key: 'reason', header: 'Lý do / Dự án', sortable: true },

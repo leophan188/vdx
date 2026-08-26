@@ -697,7 +697,7 @@ export class PrjReportsPeriod {
     { key: 'title', header: 'Công việc', sortable: true },
     { key: 'assigneeName', header: 'Người làm', width: '190px' },
     { key: 'status', header: 'Trạng thái', width: '132px' },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '108px', sortable: true },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '124px', sortable: true },
     { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
   ];
   /**

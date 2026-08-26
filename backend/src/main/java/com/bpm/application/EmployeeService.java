@@ -205,6 +205,9 @@ public class EmployeeService {
         }
     }
 
+    /** Trạng thái ghi cho người không còn trong file đồng bộ toàn phần. */
+    public static final String STATUS_LEFT = "Đã nghỉ việc";
+
     /** Nhóm trạng thái dùng ở bộ lọc màn Nhân sự — khớp đúng hai ô đếm "Đang làm việc" / "Đã nghỉ / khác". */
     public static final String STATUS_GROUP_ACTIVE = "__ACTIVE__";
     public static final String STATUS_GROUP_INACTIVE = "__INACTIVE__";
@@ -646,6 +649,16 @@ public class EmployeeService {
                 locked++;
                 auditPort.record("EMPLOYEE_ACCOUNT_LOCKED", "UserAccount", acc.getId(), actor,
                         "empCode=" + e.getEmpCode() + " (vắng mặt khỏi file)");
+                // Khoá tài khoản THÔI thì chưa đủ: hồ sơ nhân sự vẫn ghi "Đang làm việc" nên màn Nhân sự
+                // đếm nhầm, người đã nghỉ vẫn nhận tin sinh nhật/thâm niên và vẫn còn quyền vào dự án.
+                // Đánh dấu nghỉ việc rồi cắt quyền dự án cho khớp với việc khoá tài khoản.
+                if (e.isActive()) {
+                    e.setStatus(STATUS_LEFT);
+                    employeeRepo.save(e);
+                    auditPort.record("EMPLOYEE_MARKED_LEFT", "Employee", e.getId(), actor,
+                            "empCode=" + e.getEmpCode() + " (vắng mặt khỏi file đồng bộ toàn phần)");
+                    revokeProjectAccessIfLeft(e, actor);
+                }
             }
         }
 

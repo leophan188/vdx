@@ -160,7 +160,7 @@ badge bị bóp, rất khó dò ngang. Các cỡ dưới đây đã trừ paddin
 | Badge trạng thái | **132px** | nhãn dài nhất "In Progress"; 104–118px là bóp chữ |
 | Badge loại | **104px** | nhãn dài nhất "Sub-task" |
 | Họ tên tiếng Việt | **190px** | tên 4 chữ ("Nguyễn Hoàng Minh Phương") vẫn nằm gọn một dòng |
-| Ngày `dd/MM/yyyy` | 108px | |
+| Ngày `dd/MM/yyyy` | **124px** | 108px vẫn làm "04/06/2025" rớt xuống hai dòng |
 | Ngày + giờ | 152px | |
 | Mã / code | 92px | |
 | Số, %, đếm | 88–110px | |

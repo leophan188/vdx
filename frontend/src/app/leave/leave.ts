@@ -37,8 +37,8 @@ export class Leave implements OnInit {
 
   // ===== Tab Đăng ký của tôi =====
   readonly entryCols: GridColumn[] = [
-    { key: 'fromDate', header: 'Từ ngày', sortable: true, width: '120px' },
-    { key: 'toDate', header: 'Đến ngày', sortable: true, width: '120px' },
+    { key: 'fromDate', header: 'Từ ngày', sortable: true, width: '124px' },
+    { key: 'toDate', header: 'Đến ngày', sortable: true, width: '124px' },
     { key: 'type', header: 'Loại', align: 'center', width: '130px' },
     { key: 'days', header: 'Số ngày', align: 'center', sortable: true, width: '90px' },
     { key: 'reason', header: 'Lý do', sortable: true },

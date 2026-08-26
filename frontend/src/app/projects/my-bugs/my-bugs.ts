@@ -97,7 +97,7 @@ export class MyBugs implements OnInit {
     { key: 'assigneeName', header: 'PIC', width: '190px' },
     { key: 'reporterName', header: 'Người log', width: '190px' },
     { key: 'role', header: 'Vai trò', width: '110px' },
-    { key: 'dueDate', header: 'Deadline', width: '104px', sortable: true }
+    { key: 'dueDate', header: 'Deadline', width: '124px', sortable: true }
   ];
 
   readonly filtered = computed<MyBug[]>(() =>
