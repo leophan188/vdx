@@ -84,7 +84,7 @@
               <div class="td__life-pick">
                 <label class="td__life-hint">Người kiểm thử (chưa gán) — chọn để bàn giao</label>
                 <div class="td__life-pickrow">
-                  <searchable-select [options]="peopleSel()" [value]="testerUserId()"
+                  <searchable-select [options]="testerSel()" [value]="testerUserId()"
                                      (valueChange)="testerUserId.set($event)"
                                      placeholder="Chọn người kiểm thử…" />
                   <button type="button" class="btn btn--primary btn--sm"
@@ -213,7 +213,7 @@
               @if (isRollup()) {
                 <span class="td__muted" title="Tự tổng hợp từ task con">— Tự tổng hợp từ task con</span>
               } @else {
-                <searchable-select [options]="peopleSel()" [value]="t.testerUserId || ''"
+                <searchable-select [options]="testerSel()" [value]="t.testerUserId || ''"
                                    (valueChange)="setTester($event || null)"
                                    [allowEmpty]="true" emptyLabel="— Chưa gán —" placeholder="Chọn người kiểm thử…" />
               }

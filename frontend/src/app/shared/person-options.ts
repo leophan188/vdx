@@ -22,10 +22,14 @@ export function personOptions(people: Person[]): SelectOption[] {
  * Options từ THÀNH VIÊN DỰ ÁN (chỉ người trong dự án) — dùng cho gán người ở bug/issue, task…
  * thay vì toàn bộ nhân sự hệ thống. Cùng định dạng sub mã·chức danh·bộ phận.
  */
-export function memberPersonOptions(members: ProjectMember[]): SelectOption[] {
-  return members.map((m) => ({
-    value: m.userId,
-    label: m.name,
-    sub: personSub(m) || undefined
-  }));
+export function memberPersonOptions(members: ProjectMember[], keepUserId?: string | null): SelectOption[] {
+  // Người đã TẠM NGƯNG không còn vào được dự án nên không nên gán việc mới cho họ. Vẫn giữ trong
+  // danh sách nếu họ đang là người được gán (keepUserId) — bỏ đi thì ô chọn hiện trống, nhìn như mất dữ liệu.
+  return members
+    .filter((m) => m.active || m.userId === keepUserId)
+    .map((m) => ({
+      value: m.userId,
+      label: m.active ? m.name : m.name + ' (đã ngưng)',
+      sub: personSub(m) || undefined
+    }));
 }

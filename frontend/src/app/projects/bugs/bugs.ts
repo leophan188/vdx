@@ -209,7 +209,8 @@ export class PrjBugs implements OnInit {
   readonly statusSel: SelectOption[] = this.statusOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
-  readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
+  /** Bỏ người đã tạm ngưng khỏi danh sách gán việc; giữ lại người đang được chọn trong form. */
+  readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members(), this.f.assigneeUserId ?? null));
 
   // Cột Tiêu đề CỐ Ý không đặt width — data-grid coi cột đầu tiên không có width là cột co
   // giãn và cho nó nuốt hết chỗ thừa. Các cột còn lại siết sát nội dung thật (đều là nhãn

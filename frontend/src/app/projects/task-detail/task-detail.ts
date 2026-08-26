@@ -370,7 +370,18 @@ export class PrjTaskDetail {
     CREATED: '✨', STATUS: '🔄', ASSIGN: '👤', EDIT: '✏️', COMMENT: '💬', ATTACH: '📎', SPENT: '⏱️'
   };
 
-  readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
+  /**
+   * Người để gán việc. Bỏ người đã tạm ngưng, NHƯNG giữ lại người đang là người thực hiện / kiểm thử
+   * của chính việc này — nếu bỏ luôn thì ô chọn hiện trống, nhìn như dữ liệu bị mất.
+   */
+  readonly peopleSel = computed<SelectOption[]>(() => {
+    const t = this.current();
+    const keep = t?.assigneeUserId || t?.testerUserId || null;
+    return memberPersonOptions(this.members(), keep);
+  });
+  /** Riêng ô người kiểm thử giữ đúng người kiểm thử hiện tại. */
+  readonly testerSel = computed<SelectOption[]>(() =>
+    memberPersonOptions(this.members(), this.current()?.testerUserId ?? null));
 
   constructor() {
     // Khi task đầu vào đổi → reset bản sao cục bộ.

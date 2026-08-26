@@ -271,7 +271,11 @@ export class PrjTimesheet {
       member: m, days: new Array(cols.length).fill(0), dayTasks: new Array(cols.length).fill(0),
       total: 0, totalTasks: 0, unscheduled: 0
     });
-    const rows: Row[] = this.members().map((m) => {
+    // Người đã TẠM NGƯNG trong dự án không dựng sẵn dòng: họ không còn làm nên để một hàng 0 giờ
+    // chỉ tổ làm loãng bảng. Nếu trong kỳ họ VẪN có giờ đã ghi thì vòng lặp bên dưới tự dựng dòng —
+    // bỏ hẳn sẽ làm tổng giờ của dự án hụt đi.
+    const memberById = new Map(this.members().map((m) => [m.userId, m]));
+    const rows: Row[] = this.members().filter((m) => m.active).map((m) => {
       const r = mk(m);
       rowByUser.set(m.userId, r);
       return r;
@@ -284,8 +288,11 @@ export class PrjTimesheet {
     for (const w of this.scopedLogs()) {
       let row = rowByUser.get(w.userId);
       if (!row) {
-        // Không còn trong danh sách thành viên → vẫn dựng dòng để không mất giờ.
-        row = mk(ghostMember(w.userId, w.userName));
+        // Đã tạm ngưng (vẫn là thành viên) hoặc đã rời hẳn dự án → vẫn dựng dòng để không mất giờ.
+        const paused = memberById.get(w.userId);
+        row = mk(paused
+          ? { ...paused, name: paused.name + ' (đã ngưng)' }
+          : ghostMember(w.userId, w.userName));
         rowByUser.set(w.userId, row);
         rows.push(row);
       }

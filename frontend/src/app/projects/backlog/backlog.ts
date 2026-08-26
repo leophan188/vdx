@@ -307,7 +307,8 @@ export class PrjBacklog implements OnInit {
   readonly statusSel: SelectOption[] = this.statusOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly prioritySel: SelectOption[] = this.priorityOptions.map((o) => ({ value: o.value, label: o.label }));
   readonly severitySel: SelectOption[] = this.severityOptions.map((o) => ({ value: o.value, label: o.label }));
-  readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members()));
+  /** Bỏ người đã tạm ngưng khỏi danh sách gán việc; giữ lại người đang được chọn trong form. */
+  readonly peopleSel = computed<SelectOption[]>(() => memberPersonOptions(this.members(), this.f.assigneeUserId ?? null));
 
   // ===== Phân cấp cha-con theo LOẠI =====
   /** Loại cha HỢP LỆ cho một loại con (null = không có cha — chỉ EPIC). */
