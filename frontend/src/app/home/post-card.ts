@@ -26,22 +26,21 @@ export interface CommentNode extends CommentView {
     .ochome-comment--reply.is-deep { margin-left: 0; }
     .ochome-comment__replybox { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 6px 38px; }
     .ochome-mention { color: var(--color-primary); font-weight: 600; white-space: nowrap; }
-    /* Thiệp GỌN: ảnh + tên + phòng ban + huy hiệu nằm CÙNG MỘT HÀNG.
-       Bố cục đứng căn giữa trước đây đẩy thẻ cao gần 500px mà phần lớn là khoảng trống,
-       nhất là tin chào thành viên mới (nội dung chỉ 2–3 dòng). */
-    .ochome-celebrate-hero { display: flex; flex-direction: row; flex-wrap: wrap;
-      align-items: center; gap: 12px; margin: 2px 0 10px; }
+    /* Thiệp giữ dáng ĐỨNG căn giữa (xếp ngang trông lệch hẳn về trái), chỉ thu nhỏ mọi kích
+       thước và khoảng cách để bỏ phần diện tích thừa — thẻ cũ cao gần 500px cho 2–3 dòng chữ. */
+    .ochome-celebrate-hero { display: flex; flex-direction: column; align-items: center;
+      gap: 6px; margin: 4px 0 10px; }
     /* Vòng quanh ảnh lấy màu của LOẠI tin (biến --cel-* đặt ở .ochome-post--bd/ob/anniv). */
-    .ochome-celebrate-hero__ring { display: inline-flex; padding: 3px; border-radius: 50%;
+    .ochome-celebrate-hero__ring { display: inline-flex; padding: 4px; border-radius: 50%;
       background: linear-gradient(135deg, var(--cel-a, #db2777), var(--cel-b, #ea580c) 55%, var(--cel-c, #f59e0b));
       box-shadow: 0 8px 24px color-mix(in srgb, var(--cel-a, #db2777) 35%, transparent); }
-    .ochome-celebrate-hero__img { width: 72px; height: 72px; border-radius: 50%; object-fit: cover;
+    .ochome-celebrate-hero__img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover;
       border: 2px solid var(--color-surface); display: block; }
-    .ochome-celebrate-hero ::ng-deep .avatar { width: 72px !important; height: 72px !important; font-size: 26px !important;
+    .ochome-celebrate-hero ::ng-deep .avatar { width: 88px !important; height: 88px !important; font-size: 31px !important;
       border: 2px solid var(--color-surface); border-radius: 50%; }
     .ochome-celebrate-hero__name { font-size: 18px; font-weight: 800; color: var(--color-text); letter-spacing: .2px; }
     /* Phòng ban của người được chúc — chip nhỏ dưới tên, giúp nhận ra ngay người của bộ phận nào. */
-    .ochome-celebrate-hero__dept { margin-top: 0; padding: 2px 10px; border-radius: 999px;
+    .ochome-celebrate-hero__dept { margin-top: -2px; padding: 2px 10px; border-radius: 999px;
       font-size: 12px; font-weight: 700; letter-spacing: .3px;
       color: var(--cel-a, var(--color-text-muted));
       background: color-mix(in srgb, var(--cel-a, currentColor) 14%, transparent);
@@ -53,8 +52,10 @@ export interface CommentNode extends CommentView {
       color: #fff; font-weight: 800; letter-spacing: .4px; text-shadow: 0 1px 2px rgba(0,0,0,.2);
       box-shadow: 0 6px 18px color-mix(in srgb, var(--cel-a) 35%, transparent); }
     .ochome-celebrate-hero__badge b { font-size: 17px; line-height: 1; }
-    /* Nội dung căn TRÁI, dùng hết bề ngang thẻ — căn giữa trong khung 580px để trống hai bên rất nhiều. */
-    .ochome-post--celebrate .ochome-post__text { text-align: left; max-width: none; margin: 0 0 2px; line-height: 1.6; }
+    /* Nội dung căn giữa như thiệp, nhưng khung chữ rộng hơn cũ (580 → 720px) và dòng sát hơn
+       để chữ không bị bó thành nhiều dòng ngắn giữa một thẻ rộng. */
+    .ochome-post--celebrate .ochome-post__text { text-align: center; max-width: 720px;
+      margin: 0 auto 2px; line-height: 1.55; }
   `]
 })
 export class PostCard {
