@@ -8,7 +8,7 @@ import { ToastService } from '../shared/toast/toast.service';
 function emp(empCode: string, fullName: string, status: string, deptCode: string, level: string): Employee {
   return {
     id: 'id-' + empCode, empCode, status, fullName, jobPosition: null, title: null,
-    deptCode, unit: 'KKD', joinDate: null, birthDate: null, phone: null, contractType: null,
+    deptCode, unit: 'KKD', joinDate: null, birthDate: null, leaveDate: null, phone: null, contractType: null,
     bankAccount: null, bankName: null, level, userAccountId: null, external: false,
     orgUnitId: null, orgUnitName: null, positionId: null, positionTitle: null, roleNames: [],
     updatedAt: null, updatedBy: null, projects: [], totalEffort: 0
@@ -48,6 +48,25 @@ describe('Employees — thống kê & bộ lọc', () => {
     expect(cmp.stats().total).toBe(3);
     expect(cmp.stats().active).toBe(2);
     expect(cmp.stats().inactive).toBe(1);
+  });
+
+  it('thâm niên tính theo lịch, người đã nghỉ dừng ở ngày nghỉ', () => {
+    const { cmp } = setup();
+    const left = { ...emp('9001', 'Đã nghỉ', 'Đã nghỉ việc', 'PDX', 'Senior'),
+      joinDate: '15/01/2024', leaveDate: '18/02/2025' };
+    expect(cmp.seniorityText(left)).toBe('1 năm 1 tháng 3 ngày');
+
+    // Không có ngày nghỉ → lùi về lần cập nhật hồ sơ gần nhất.
+    const noLeave = { ...emp('9002', 'Nghỉ cũ', 'Đã nghỉ việc', 'PDX', 'Senior'),
+      joinDate: '01/03/2023', updatedAt: '2024-03-01T00:00:00Z' };
+    expect(cmp.seniorityText(noLeave)).toBe('1 năm');
+
+    // Phần bằng 0 bị bỏ hẳn, không ghi "0 tháng".
+    const exact = { ...emp('9003', 'Tròn năm', 'Đang làm việc', 'PDX', 'Senior'), joinDate: '29/02/2024' };
+    expect(cmp.seniorityText(exact)).not.toContain('0 tháng');
+
+    // Thiếu ngày vào thì không bịa số.
+    expect(cmp.seniorityText(emp('9004', 'Thiếu ngày', 'Đang làm việc', 'PDX', 'Senior'))).toBe('—');
   });
 
   it('mặc định KHÔNG đồng bộ toàn phần (an toàn upload từng phần)', () => {

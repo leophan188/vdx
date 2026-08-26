@@ -62,6 +62,16 @@ public class Employee {
     @Column(name = "birth_date")
     private LocalDate birthDate;
 
+    /**
+     * Ngày rời công ty — chốt lúc hồ sơ chuyển sang trạng thái không còn làm việc, để thâm niên dừng
+     * đúng ngày nghỉ thay vì chạy tiếp tới hôm nay. Nguồn nhân sự KHÔNG có cột này nên giá trị ghi
+     * được là ngày hệ thống ghi nhận, không phải ngày nghỉ trên giấy tờ; ai quay lại làm thì xoá đi.
+     * Để null cho hồ sơ cũ — {@code ddl-auto=update} thêm cột này rỗng, và null ở đây có nghĩa
+     * "không biết", màn hình tự lùi về mốc khác.
+     */
+    @Column(name = "leave_date")
+    private LocalDate leaveDate;
+
     @Column(name = "phone", length = 50)
     private String phone;
 
@@ -132,7 +142,20 @@ public class Employee {
         this.bankAccount = bankAccount;
         this.bankName = bankName;
         this.level = level;
+        syncLeaveDate(LocalDate.now());
         touch(actor);
+    }
+
+    /**
+     * Đồng bộ ngày nghỉ theo trạng thái hiện tại. Chỉ ghi LẦN ĐẦU chuyển sang nghỉ: mỗi lần đồng bộ
+     * lại ghi đè thì ngày nghỉ luôn bằng hôm nay và thâm niên của người đã nghỉ cứ thế tăng mãi.
+     */
+    public void syncLeaveDate(LocalDate today) {
+        if (isActive()) {
+            this.leaveDate = null;
+        } else if (this.leaveDate == null) {
+            this.leaveDate = today;
+        }
     }
 
     public void linkAccount(String userAccountId, String actor) {
@@ -170,6 +193,8 @@ public class Employee {
     public String getId() { return id; }
     public String getEmpCode() { return empCode; }
     public void setEmpCode(String empCode) { this.empCode = empCode; } // chuẩn hoá (giữ số 0 đầu)
+    public LocalDate getLeaveDate() { return leaveDate; }
+    public void setLeaveDate(LocalDate leaveDate) { this.leaveDate = leaveDate; }
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
     public String getFullName() { return fullName; }

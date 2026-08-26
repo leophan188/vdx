@@ -14,6 +14,7 @@ export interface Employee {
   unit: string | null;
   joinDate: string | null;
   birthDate: string | null;
+  leaveDate: string | null;    // dd/MM/yyyy — ngày rời công ty, null khi còn đang làm
   phone: string | null;
   contractType: string | null;
   bankAccount: string | null;

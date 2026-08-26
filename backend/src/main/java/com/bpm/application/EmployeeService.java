@@ -679,6 +679,7 @@ public class EmployeeService {
                 // Đánh dấu nghỉ việc rồi cắt quyền dự án cho khớp với việc khoá tài khoản.
                 if (e.isActive()) {
                     e.setStatus(STATUS_LEFT);
+                    e.syncLeaveDate(LocalDate.now());
                     employeeRepo.save(e);
                     auditPort.record("EMPLOYEE_MARKED_LEFT", "Employee", e.getId(), actor,
                             "empCode=" + e.getEmpCode() + " (vắng mặt khỏi file đồng bộ toàn phần)");

@@ -16,6 +16,42 @@ import {
  * Quản lý nhân sự + Import từ file (Epic 1 GĐ2 — chỉ admin).
  * Lưới + bộ lọc + modal xem chi tiết/sửa tay (14 trường) + modal "Nhập từ file" (xem trước → áp dụng) + nhật ký.
  */
+/** Hàng lưới = Employee kèm số ngày thâm niên (chỉ dùng để sắp xếp cột Thâm niên). */
+type EmployeeRow = Employee & { seniorityDays: number };
+
+/** "dd/MM/yyyy" → Date; chuỗi rỗng/sai định dạng → null. */
+function parseDmy(s: string | null): Date | null {
+  if (!s) return null;
+  const m = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(s.trim());
+  if (!m) return null;
+  const d = new Date(Number(m[3]), Number(m[2]) - 1, Number(m[1]));
+  return isNaN(d.getTime()) ? null : d;
+}
+
+/**
+ * Khoảng cách theo LỊCH (năm/tháng/ngày), không quy đổi 30 ngày = 1 tháng: vào 15/01 tính đến
+ * 14/03 phải là "1 tháng 30 ngày" chứ không phải "1 tháng 28 ngày".
+ */
+function periodBetween(from: Date, to: Date): { years: number; months: number; days: number } {
+  let years = to.getFullYear() - from.getFullYear();
+  let months = to.getMonth() - from.getMonth();
+  let days = to.getDate() - from.getDate();
+  if (days < 0) {
+    months--;
+    days += new Date(to.getFullYear(), to.getMonth(), 0).getDate(); // số ngày của THÁNG TRƯỚC mốc cuối
+  }
+  if (months < 0) {
+    years--;
+    months += 12;
+  }
+  return { years, months, days };
+}
+
+/** Cùng cách hiểu "đang làm việc" như backend (Employee.isActive) — khớp cả "Đang làm việc - thử việc". */
+function isActiveStatus(status: string | null): boolean {
+  return !!status && status.trim().toLowerCase().includes('đang làm');
+}
+
 @Component({
   selector: 'app-employees',
   imports: [FormsModule, PageHeader, DataGrid, GridCellDirective, Modal, SearchableSelect, EmployeeChip, Skeleton, EmptyState],
@@ -60,20 +96,67 @@ export class Employees implements OnInit {
     { key: 'projects', header: 'Dự án đang join', width: '220px' },
     { key: 'effort', header: 'Tổng effort', width: '110px', align: 'center', sortable: true },
     { key: 'joinDate', header: 'Ngày vào', width: '124px', sortable: true },
+    { key: 'seniorityDays', header: 'Thâm niên', width: '176px', sortable: true },
     { key: 'birthDate', header: 'Ngày sinh', width: '124px', sortable: true },
     { key: 'level', header: 'Level', width: '90px', sortable: true },
     { key: 'status', header: 'Trạng thái', width: '140px' },
     { key: 'actions', header: '', width: '120px' }
   ];
 
-  /** Danh sách hiển thị = rows() đã áp thêm bộ lọc thuê-ngoài (client-side). */
-  readonly displayRows = computed<Employee[]>(() => {
+  /**
+   * Danh sách hiển thị = rows() đã áp thêm bộ lọc thuê-ngoài (client-side), kèm số ngày thâm niên
+   * để lưới sắp xếp được theo cột Thâm niên — sắp theo chuỗi "1 năm 2 tháng" thì "10 năm" đứng
+   * trước "2 năm".
+   */
+  readonly displayRows = computed<EmployeeRow[]>(() => {
     const f = this.filterExternalSig();
-    const rs = this.rows();
-    if (f === 'yes') return rs.filter((e) => e.external);
-    if (f === 'no') return rs.filter((e) => !e.external);
-    return rs;
+    let rs = this.rows();
+    if (f === 'yes') rs = rs.filter((e) => e.external);
+    else if (f === 'no') rs = rs.filter((e) => !e.external);
+    return rs.map((e) => ({ ...e, seniorityDays: this.seniorityDays(e) }));
   });
+
+  /**
+   * Mốc kết thúc thâm niên: người đã nghỉ tính đến NGÀY NGHỈ, người đang làm tính đến hôm nay.
+   * Hồ sơ nghỉ từ trước khi hệ thống ghi ngày nghỉ thì lùi về lần cập nhật cuối — đó là thời điểm
+   * bản ghi được đánh dấu nghỉ, xấp xỉ gần nhất còn lại; không có gì cả thì trả null.
+   */
+  private endDateOf(e: Employee): Date | null {
+    if (isActiveStatus(e.status)) return new Date();
+    const leave = parseDmy(e.leaveDate);
+    if (leave) return leave;
+    const upd = e.updatedAt ? new Date(e.updatedAt) : null;
+    return upd && !isNaN(upd.getTime()) ? upd : null;
+  }
+
+  /** Số ngày thâm niên — chỉ để sắp xếp; -1 khi thiếu ngày vào để những dòng đó xuống cuối. */
+  private seniorityDays(e: Employee): number {
+    const from = parseDmy(e.joinDate);
+    const to = this.endDateOf(e);
+    if (!from || !to || to < from) return -1;
+    return Math.floor((to.getTime() - from.getTime()) / 86400000);
+  }
+
+  /** "1 năm 1 tháng 3 ngày" — bỏ hẳn phần bằng 0, dưới một ngày thì ghi "Mới vào". */
+  seniorityText(e: Employee): string {
+    const from = parseDmy(e.joinDate);
+    const to = this.endDateOf(e);
+    if (!from || !to || to < from) return '—';
+    const p = periodBetween(from, to);
+    const parts: string[] = [];
+    if (p.years) parts.push(p.years + ' năm');
+    if (p.months) parts.push(p.months + ' tháng');
+    if (p.days) parts.push(p.days + ' ngày');
+    return parts.length ? parts.join(' ') : 'Mới vào';
+  }
+
+  /** Người đã nghỉ: nói rõ thâm niên chốt đến ngày nào, vì con số không còn chạy tiếp. */
+  seniorityHint(e: Employee): string {
+    if (isActiveStatus(e.status)) return 'Tính đến hôm nay';
+    const leave = e.leaveDate;
+    return leave ? 'Chốt đến ngày nghỉ ' + leave
+      : 'Chốt đến lần cập nhật hồ sơ gần nhất (chưa có ngày nghỉ chính thức)';
+  }
 
   /** Gợi ý cho bộ lọc, suy ra từ dữ liệu đang có. */
   readonly statusOptions = computed(() => this.distinct((e) => e.status));

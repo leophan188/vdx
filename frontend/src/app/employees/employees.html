@@ -66,7 +66,10 @@
       </app-empty-state>
     </div>
   } @else {
+  <!-- Thêm cột Thâm niên (176px) nên tổng bề rộng vượt màn hẹp: khai minWidth để cuộn ngang có chủ
+       đích, thay vì fixed-layout bóp đều mọi cột (DESIGN-SYSTEM §4c). -->
   <data-grid [columns]="cols" [rows]="displayRows()" [title]="'Danh sách nhân sự (' + stats().total + ')'"
+             minWidth="1420px"
              [pageSize]="50" [pageSizes]="[50, 100, 200]" [searchable]="false"
              [emptyText]="'Chưa có nhân sự nào — hãy thêm thủ công hoặc nhập từ file.'">
     <button gridActions type="button" class="btn btn--secondary" (click)="openCreate()">＋ Thêm nhân sự</button>
@@ -92,6 +95,9 @@
       } @else { <span class="hint">0%</span> }
     </ng-template>
     <ng-template gridCell="joinDate" let-e>{{ e.joinDate || '—' }}</ng-template>
+    <ng-template gridCell="seniorityDays" let-e>
+      <span [title]="seniorityHint(e)">{{ seniorityText(e) }}</span>
+    </ng-template>
     <ng-template gridCell="birthDate" let-e>{{ e.birthDate || '—' }}</ng-template>
     <ng-template gridCell="status" let-e>
       <span class="badge" [class]="statusBadge(e.status)">{{ e.status || '—' }}</span>

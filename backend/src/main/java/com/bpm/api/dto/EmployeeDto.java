@@ -20,7 +20,8 @@ public final class EmployeeDto {
      */
     public record EmployeeResponse(
             String id, String empCode, String status, String fullName, String jobPosition, String title,
-            String deptCode, String unit, String joinDate, String birthDate, String phone, String contractType,
+            String deptCode, String unit, String joinDate, String birthDate, String leaveDate,
+            String phone, String contractType,
             String bankAccount, String bankName, String level, boolean external, String userAccountId,
             String orgUnitId, String orgUnitName, String positionId, String positionTitle, List<String> roleNames,
             String updatedAt, String updatedBy,
@@ -43,6 +44,7 @@ public final class EmployeeDto {
                     e.getDeptCode(), e.getUnit(),
                     e.getJoinDate() == null ? null : e.getJoinDate().format(DMY),
                     e.getBirthDate() == null ? null : e.getBirthDate().format(DMY),
+                    e.getLeaveDate() == null ? null : e.getLeaveDate().format(DMY),
                     e.getPhone(), e.getContractType(), e.getBankAccount(), e.getBankName(), e.getLevel(),
                     e.isExternal(), e.getUserAccountId(),
                     e.getOrgUnitId(), org == null ? null : org.orgUnitName(),
