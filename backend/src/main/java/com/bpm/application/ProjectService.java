@@ -145,9 +145,13 @@ public class ProjectService {
             return false;
         }
         if (myId.equals(p.getOwnerUserId())) {
-            return true;
+            return true;   // chủ dự án luôn vào được, không thể tự khoá mình ra ngoài
         }
-        return memberRepo.existsByProjectIdAndUserId(p.getId(), myId);
+        // Thành viên đang TẠM NGƯNG coi như không còn trong dự án — chặn ngay ở cổng quyền,
+        // để ẩn nút trên giao diện thôi thì gọi thẳng API vẫn vào được.
+        return memberRepo.findByProjectIdAndUserId(p.getId(), myId)
+                .map(ProjectMember::isActive)
+                .orElse(false);
     }
 
     private String userIdOf(String username) {
@@ -322,6 +326,25 @@ public class ProjectService {
         memberRepo.delete(m);
         auditPort.record("PROJECT_MEMBER_REMOVED", "ProjectMember", memberId, actor,
                 "projectId=" + projectId + ", userId=" + m.getUserId());
+    }
+
+    /**
+     * Bật/tắt quyền vào dự án của một thành viên mà KHÔNG gỡ khỏi dự án — người rời đội tạm thời
+     * (nghỉ dài, chuyển dự án khác) vẫn giữ nguyên lịch sử công việc, % effort và man-day đã ghi.
+     */
+    @Transactional
+    public ProjectDto.MemberResponse setMemberActive(String projectId, String memberId, boolean active, String actor) {
+        get(projectId);
+        ProjectMember m = memberRepo.findById(memberId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thành viên"));
+        if (!m.getProjectId().equals(projectId)) {
+            throw new IllegalArgumentException("Thành viên không thuộc dự án này");
+        }
+        m.setActive(active);
+        ProjectMember saved = memberRepo.save(m);
+        auditPort.record(active ? "PROJECT_MEMBER_ACTIVATED" : "PROJECT_MEMBER_DEACTIVATED",
+                "ProjectMember", saved.getId(), actor, "projectId=" + projectId);
+        return toMemberDto(saved);
     }
 
     /** Sửa thông tin thành viên (vai trò / % effort / ngày). KHÔNG đổi người. */

@@ -61,7 +61,7 @@ public final class ProjectDto {
             String id, String projectId, String userId, String name, String empCode,
             String jobPosition, String title, String deptCode,
             String roleInProject, String startDate, String endDate,
-            int effortPct, int workdays, int manday, String joinedAt) {
+            int effortPct, int workdays, int manday, String joinedAt, boolean active) {
 
         public static MemberResponse of(ProjectMember m, String name, String empCode,
                                         String jobPosition, String title, String deptCode) {
@@ -71,12 +71,16 @@ public final class ProjectDto {
                     m.getStartDate() == null ? null : m.getStartDate().format(DMY),
                     m.getEndDate() == null ? null : m.getEndDate().format(DMY),
                     m.getEffortPct(), m.workdays(), m.manday(),
-                    m.getJoinedAt() == null ? null : m.getJoinedAt().toString());
+                    m.getJoinedAt() == null ? null : m.getJoinedAt().toString(), m.isActive());
         }
     }
 
     /** Thêm thành viên {userId, role, ngày dd/MM/yyyy, effortPct 1–100 → man-day = ngày công × %}. */
     public record AddMemberRequest(String userId, String role, String startDate, String endDate, Integer effortPct) {
+    }
+
+    /** Bật/tắt quyền vào dự án của một thành viên. */
+    public record MemberActiveRequest(Boolean active) {
     }
 
     /** Sửa thành viên — KHÔNG đổi người, chỉ vai trò/ngày/%effort. */

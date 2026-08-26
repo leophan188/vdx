@@ -155,6 +155,15 @@ public class ProjectController {
                 req.effortPct(), actor(auth));
     }
 
+    /** Bật/tắt nhanh quyền vào dự án của một thành viên (không gỡ khỏi dự án). */
+    @PatchMapping("/{id}/members/{memberId}/active")
+    public ProjectDto.MemberResponse setMemberActive(@PathVariable String id, @PathVariable String memberId,
+                                                     @RequestBody ProjectDto.MemberActiveRequest req,
+                                                     Authentication auth) {
+        projectService.requireCanManage(id, actor(auth), isAdmin(auth));
+        return projectService.setMemberActive(id, memberId, Boolean.TRUE.equals(req.active()), actor(auth));
+    }
+
     @DeleteMapping("/{id}/members/{memberId}")
     public void removeMember(@PathVariable String id, @PathVariable String memberId, Authentication auth) {
         projectService.requireCanManage(id, actor(auth), isAdmin(auth));

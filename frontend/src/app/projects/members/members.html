@@ -11,6 +11,13 @@
   <ng-template gridCell="role" let-m>
     <span class="badge" [class]="roleBadge(m.roleInProject)">{{ roleLabel(m.roleInProject) }}</span>
   </ng-template>
+  <ng-template gridCell="active" let-m>
+    @if (m.active) {
+      <span class="badge badge--done">Đang tham gia</span>
+    } @else {
+      <span class="badge badge--cancel">Tạm ngưng</span>
+    }
+  </ng-template>
   <ng-template gridCell="period" let-m>
     @if (m.startDate || m.endDate) { {{ m.startDate || '—' }} → {{ m.endDate || '—' }} } @else { <span class="hint">— chưa đặt —</span> }
   </ng-template>
@@ -25,6 +32,9 @@
     <strong>{{ mm(m.manday) }}</strong> <span class="hint">MM</span>
   </ng-template>
   <ng-template gridCell="actions" let-m>
+    <button type="button" class="btn btn--icon"
+            [title]="m.active ? 'Tạm ngưng — chặn người này vào dự án' : 'Mở lại quyền vào dự án'"
+            (click)="toggleActive(m)">{{ m.active ? '⏸' : '▶' }}</button>
     <button type="button" class="btn btn--icon" title="Sửa thông tin thành viên" (click)="openEdit(m)">✎</button>
     <button type="button" class="btn btn--icon btn--icon-danger" title="Gỡ khỏi dự án" (click)="remove(m)">🗑</button>
   </ng-template>

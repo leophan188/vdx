@@ -66,7 +66,8 @@ export interface ProjectMember {
   effortPct: number;            // % effort dành cho dự án (1–100)
   workdays: number;             // số ngày làm việc (T2–T6) trong khoảng
   manday: number;               // man-day thực tế = workdays × effort%
-  joinedAt: string | null;      // ISO Instant
+  joinedAt: string | null;      // ISO Instant  /** Còn được vào dự án hay không; false = đang tạm ngưng. */
+  active: boolean;
 }
 
 export interface AddMemberRequest {
@@ -499,6 +500,12 @@ export class ProjectService {
   updateMember(projectId: string, memberId: string, body: UpdateMemberRequest): Observable<ProjectMember> {
     return this.http.put<ProjectMember>(`${this.base}/${projectId}/members/${memberId}`, body, this.opts);
   }
+  /** Bật/tắt quyền vào dự án của một thành viên (không gỡ khỏi dự án). */
+  setMemberActive(projectId: string, memberId: string, active: boolean): Observable<ProjectMember> {
+    return this.http.patch<ProjectMember>(
+      `${this.base}/${projectId}/members/${memberId}/active`, { active }, this.opts);
+  }
+
   removeMember(projectId: string, memberId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${projectId}/members/${memberId}`, this.opts);
   }

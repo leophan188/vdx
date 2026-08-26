@@ -52,6 +52,14 @@ public class ProjectMember {
     @Column(name = "effort_pct", nullable = false, columnDefinition = "int default 100")
     private int effortPct = 100;
 
+    /**
+     * Thành viên còn được vào dự án hay không. Dùng kiểu bọc và cho phép NULL: cột này thêm sau khi
+     * đã có dữ liệu, dòng cũ sẽ mang NULL — coi NULL là ĐANG hoạt động thì không phải backfill,
+     * cũng không có cảnh đọc bản ghi cũ là lỗi.
+     */
+    @Column(name = "active")
+    private Boolean active;
+
     protected ProjectMember() {
     }
 
@@ -93,6 +101,10 @@ public class ProjectMember {
     public void setStartDate(LocalDate startDate) { this.startDate = startDate; }
     public LocalDate getEndDate() { return endDate; }
     public void setEndDate(LocalDate endDate) { this.endDate = endDate; }
+    /** NULL (dữ liệu cũ) = vẫn đang hoạt động. */
+    public boolean isActive() { return active == null || active; }
+    public void setActive(boolean value) { this.active = value; }
+
     public int getEffortPct() { return effortPct; }
     public void setEffortPct(int effortPct) { this.effortPct = effortPct; }
 }

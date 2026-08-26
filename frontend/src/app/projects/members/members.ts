@@ -62,11 +62,12 @@ export class PrjMembers {
   readonly cols: GridColumn[] = [
     { key: 'member', header: 'Thành viên' },
     { key: 'role', header: 'Vai trò', width: '120px' },
+    { key: 'active', header: 'Truy cập', width: '132px', align: 'center' },
     { key: 'period', header: 'Thời gian (BĐ → KT)', width: '200px' },
     { key: 'effort', header: '% Effort', width: '90px', align: 'center', sortable: true },
     { key: 'manday', header: 'Man-day', width: '110px', align: 'center', sortable: true },
     { key: 'mm', header: 'Man-month', width: '110px', align: 'center', sortable: true },
-    { key: 'actions', header: '', width: '80px' }
+    { key: 'actions', header: '', width: '116px' }
   ];
 
   /** Man-month của thành viên = manday / 22 (1 MM ≈ 22 man-day), làm tròn 2 chữ số. */
@@ -184,6 +185,25 @@ export class PrjMembers {
       startDate: this.toDmy(this.selStart), endDate: this.toDmy(this.selEnd),
       effortPct: effort
     }).subscribe({ next: done('Đã thêm thành viên'), error: fail('Không thêm được thành viên') });
+  }
+
+  /**
+   * Tạm ngưng / mở lại quyền vào dự án. Khác hẳn "Gỡ khỏi dự án": giữ nguyên lịch sử công việc,
+   * % effort và man-day đã ghi, nên dùng cho người rời đội tạm thời hoặc đã nghỉ.
+   */
+  toggleActive(m: ProjectMember): void {
+    const next = !m.active;
+    if (!next && !confirm(`Tạm ngưng ${m.name}? Người này sẽ không vào được dự án nữa `
+        + `(dữ liệu công việc vẫn giữ nguyên).`)) {
+      return;
+    }
+    this.svc.setMemberActive(this.projectId(), m.id, next).subscribe({
+      next: () => {
+        this.toast.success(next ? 'Đã mở lại quyền vào dự án' : 'Đã tạm ngưng thành viên', m.name);
+        this.reload(this.projectId());
+      },
+      error: (e) => this.toast.error('Không đổi được trạng thái', e?.error?.message ?? e?.error?.detail ?? '')
+    });
   }
 
   remove(m: ProjectMember): void {

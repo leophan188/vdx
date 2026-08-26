@@ -30,7 +30,8 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
     id: 'ghost-' + userId, projectId: '', userId, name: (name ?? '') + ' (ngoài dự án)',
     empCode: null, jobPosition: null, title: null, deptCode: null,
     roleInProject: 'MEMBER' as ProjectMember['roleInProject'],
-    startDate: null, endDate: null, effortPct: 0, workdays: 0, manday: 0, joinedAt: null
+    startDate: null, endDate: null, effortPct: 0, workdays: 0, manday: 0, joinedAt: null,
+    active: false            // đã rời dự án — chỉ còn xuất hiện vì có giờ đã ghi
   };
 }
 
