@@ -2,15 +2,11 @@ package com.bpm.api;
 
 import com.bpm.api.dto.TaskDto;
 import com.bpm.application.WorkflowService;
-import com.bpm.domain.permission.Feature;
 import org.springframework.security.core.Authentication;
-import org.springframework.security.core.GrantedAuthority;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 /**
  * Hộp thư việc & xử lý việc (Story 3.2/3.4/3.5) — mọi user đăng nhập (không giới hạn ADMIN).
@@ -42,9 +38,7 @@ public class TaskInboxController {
         if (auth == null) {
             return false;
         }
-        Set<String> auths = auth.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority).collect(Collectors.toSet());
-        return auths.contains("ROLE_ADMIN") || auths.containsAll(Feature.allAuthorities());
+        return ApiAuth.isAdmin(auth);   // một định nghĩa admin duy nhất cho cả hệ thống
     }
 
     /** Chi tiết một việc. */

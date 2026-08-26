@@ -22,7 +22,18 @@ public final class ApiAuth {
         return a != null ? a.getName() : "anonymous";
     }
 
-    /** Cấp ADMIN: tài khoản ROLE_ADMIN HOẶC nhóm phân quyền TOÀN QUYỀN (có đủ mọi chức năng FEAT_*). */
+    /**
+     * Cấp ADMIN HỆ THỐNG: tài khoản ROLE_ADMIN, hoặc nhóm phân quyền có chức năng PHÂN QUYỀN.
+     *
+     * Trước đây tiêu chí là "có ĐỦ mọi chức năng FEAT_*", nhưng nhóm "Admin hệ thống" thực tế chỉ được
+     * cấp 23/31 chức năng (không ai gán cho quản trị viên các mục cá nhân như Đăng ký nghỉ, Việc của
+     * tôi…), nên họ KHÔNG được coi là admin và bị chặn khỏi những dự án mình không tham gia. Tiêu chí
+     * đó còn tự vỡ mỗi lần thêm một chức năng mới vào hệ thống: mọi nhóm đang "toàn quyền" lập tức mất
+     * tư cách admin cho tới khi có người vào tick thêm ô mới.
+     *
+     * Dùng quyền PHÂN QUYỀN làm dấu hiệu vì ai sửa được ma trận phân quyền thì đã có thể tự cấp cho
+     * mình mọi chức năng — coi họ là admin không mở thêm rủi ro nào so với thực tế.
+     */
     public static boolean isAdmin(Authentication a) {
         if (a == null) {
             return false;
@@ -34,6 +45,6 @@ public final class ApiAuth {
             }
             auths.add(ga.getAuthority());
         }
-        return auths.containsAll(Feature.allAuthorities());
+        return auths.contains(Feature.PERMISSION.authority()) || auths.containsAll(Feature.allAuthorities());
     }
 }
