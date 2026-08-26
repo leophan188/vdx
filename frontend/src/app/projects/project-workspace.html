@@ -1,6 +1,6 @@
 <section class="page">
   <!-- Mã dự án CỐ Ý không nhắc lại ở dòng phụ: breadcrumb bên phải đã hiện đúng mã đó. -->
-  <app-page-header [compact]="true" [title]="project()?.name || 'Dự án'"
+  <app-page-header [title]="project()?.name || 'Dự án'"
                    [subtitle]="project()?.description || ''"
                    [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
 

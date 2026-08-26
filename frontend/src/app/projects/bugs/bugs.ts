@@ -12,6 +12,7 @@ import { BUG_DESCRIPTION_TEMPLATE, mergeBugFieldsIntoDescription } from '../../s
 import { forkJoin, of } from 'rxjs';
 import { ToastService } from '../../shared/toast/toast.service';
 import { AuthService } from '../../core/auth.service';
+import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { PrjTaskDetail } from '../task-detail/task-detail';
 import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { HoursInput } from '../../shared/hours-input/hours-input';
@@ -30,7 +31,7 @@ import { DescEditor, DescShot, stripShotMarkers } from '../desc-editor/desc-edit
  */
 @Component({
   selector: 'app-prj-bugs',
-  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, TypeFilter,
+  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter,
     WorkEntryDialog, ImageLightbox, DescEditor, HoursInput],
   templateUrl: './bugs.html',
   styles: [`
@@ -45,12 +46,6 @@ import { DescEditor, DescShot, stripShotMarkers } from '../desc-editor/desc-edit
       color: var(--color-text-muted); flex: none; }
     .bug-name__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .bug-name .badge { flex: none; }
-    /* Người thực hiện: chỉ mã + tên trên một hàng. Chip đầy đủ (kèm vị trí, chức danh, bộ phận)
-       trong cột 190px tự xuống ba bốn dòng, một mình nó đội chiều cao cả dòng lưới lên gấp đôi;
-       phần còn lại vẫn xem được ở tooltip. */
-    .bug-who { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bug-who__code { font-family: var(--font-mono, monospace); font-size: var(--text-xs);
-      color: var(--color-text-muted); margin-right: var(--space-1); }
     .bug-search { min-width: 230px; height: var(--control-h-sm); padding: 0 var(--space-3);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
       background: var(--color-surface); color: var(--color-text); font: inherit; }
@@ -240,12 +235,6 @@ export class PrjBugs implements OnInit {
     // 70px không đủ cho hai nút 28px kèm đệm nên nút thứ hai rơi xuống dòng, kéo cả dòng cao gấp đôi.
     { key: 'act', header: '', width: '80px', align: 'center' }
   ];
-
-  /** Vị trí · chức danh · bộ phận của người thực hiện — phần bị lược khỏi ô hẹp, dồn vào tooltip. */
-  assigneeTooltip(t: ProjectTask): string {
-    const parts = [t.assigneeCode, t.assigneeName, t.assigneePosition, t.assigneeTitle, t.assigneeDept];
-    return parts.filter((p) => !!p).join(' · ');
-  }
 
   /**
    * Toàn bộ bug/issue (chưa lọc), MỚI LOG NHẤT LÊN ĐẦU.

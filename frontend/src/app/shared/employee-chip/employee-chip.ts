@@ -1,4 +1,4 @@
-import { Component, input } from '@angular/core';
+import { Component, computed, input } from '@angular/core';
 
 /**
  * Control hiển thị nhân sự gọn: Mã NV · Tên · Vị trí · Chức danh · Bộ phận. Dùng lại ở mọi nơi tham chiếu nhân sự.
@@ -7,7 +7,7 @@ import { Component, input } from '@angular/core';
 @Component({
   selector: 'employee-chip',
   template: `
-    <span class="empchip">
+    <span class="empchip" [title]="full()">
       @if (code()) { <span class="empchip__code">{{ code() }}</span> }
       <span class="empchip__name">{{ name() || '—' }}</span>
       @if (position()) { <span class="empchip__pos">· {{ position() }}</span> }
@@ -23,4 +23,11 @@ export class EmployeeChip {
   readonly position = input<string | null>('');
   readonly title = input<string | null>('');
   readonly dept = input<string | null>('');
+
+  /**
+   * Chuỗi đầy đủ cho tooltip. Chip nằm trong ô lưới bị cắt theo bề rộng cột (xem .scss) — không có
+   * tooltip thì phần vị trí/chức danh/bộ phận biến mất hẳn thay vì chỉ khuất.
+   */
+  readonly full = computed(() =>
+    [this.code(), this.name(), this.position(), this.title(), this.dept()].filter((v) => !!v).join(' · '));
 }

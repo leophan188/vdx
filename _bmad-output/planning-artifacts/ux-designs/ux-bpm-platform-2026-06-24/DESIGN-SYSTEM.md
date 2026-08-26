@@ -137,6 +137,16 @@ Module Tài khoản là **bản mẫu hoàn chỉnh** cho mọi module CRUD sau 
    104px, số 64px). Cột thiếu `width` mà đứng sau cột chính sẽ tranh chỗ một cách khó đoán.
 3. **Đừng lấy bề rộng theo tiêu đề cột.** `thead th` là `white-space: nowrap`, nên tiêu đề
    dài ("Mức độ nghiêm trọng") tự làm sàn bề rộng. Tiêu đề dài thì rút gọn chữ, đừng nới cột.
+4. **Gộp cụm định danh vào MỘT cột.** Mã, Loại và Tên nói về cùng một thứ và luôn được đọc
+   cùng nhau, nhưng tách ra thì hai cột đầu ngốn ~165px chỉ để chở một nhãn ngắn và một mã sáu
+   ký tự — trả chỗ đó cho phần tên. Thứ tự trong ô: `[badge Loại] MÃ Tên…`, badge và mã đặt
+   `flex: none`, tên `flex: 1; min-width: 0`.
+5. **Bỏ cột không thêm thông tin.** Cột `%` hoàn thành ở bug/issue chỉ chạy 0% hoặc 100% bám
+   theo trạng thái — nó nhắc lại cột Trạng thái bằng 96px. Trước khi khai một cột, hỏi cột đó
+   trả lời câu hỏi nào mà cột khác chưa trả lời.
+6. **Cột nút thao tác phải đủ chỗ cho mọi nút trên MỘT hàng.** 28px/nút cộng đệm: hai nút cần
+   80px, ba nút 110px. Thiếu vài pixel thì nút cuối rơi xuống dòng và một mình nó kéo cả dòng
+   cao gấp đôi. Bọc các nút trong `display: flex; white-space: nowrap`.
 
 ### Lưới chạy `table-layout: fixed`
 
@@ -202,6 +212,49 @@ Tiêu đề công việc thực tế có dạng `[Nhiệm vụ] Section 3: Lỗi
 **đoạn phân biệt nằm ở CUỐI**. Cắt một dòng bằng `text-overflow: ellipsis` sẽ xoá đúng phần
 cần đọc. Cho xuống **tối đa 2 dòng** (`-webkit-line-clamp: 2`) rồi mới cắt.
 
+Ngoại lệ — **lưới để quét cả danh sách dài** (backlog, bug/issue, timesheet): ở đây người dùng
+lướt hàng chục dòng để tìm một dòng, nên chiều cao đều nhau quan trọng hơn đọc trọn tiêu đề tại
+chỗ. Cắt **một dòng**, và khi cắt một dòng thì **`title` là bắt buộc** — không có tooltip là
+thông tin biến mất hẳn chứ không phải chỉ khuất.
+
+## 4d. Mật độ hiển thị (áp dụng TOÀN BỘ màn, không màn nào tự chọn khác)
+
+Người dùng lướt hàng trăm dòng mỗi ngày; mỗi pixel chiều cao thừa nhân với số dòng thành số
+dòng phải cuộn thêm. Mật độ **phải giống nhau ở mọi màn** — màn này "nặng" hơn màn kia là thứ
+người dùng cảm thấy ngay dù không gọi được tên.
+
+### Dòng lưới
+
+| | Trước | Nay | Vì sao |
+|---|---|---|---|
+| `.grid td` đệm dọc | 8px | **3px** | |
+| `.grid td` chiều cao | `--row-h` 40px | **bỏ (auto)** | sàn 40px cộng đệm đẩy dòng lên >50px |
+| control trong ô | `--control-h` 36px | **`--control-h-sm` 30px** | select/input trong ô là thứ quyết định chiều cao thật |
+
+Quy về **một dòng ≈ 36–40px**. Đã đặt sẵn trong `_components.scss` cho `.grid` nên lưới mới
+không phải khai gì; **đừng ghi đè đệm ô ở CSS của màn**.
+
+### Thứ tự truy chiều cao khi một lưới cao bất thường
+
+Đệm ô hiếm khi là thủ phạm. Soi theo thứ tự này (rút từ ba lần sửa thật):
+
+1. **Ô nào tự xuống dòng?** `<employee-chip>` đầy đủ (mã · tên · vị trí · chức danh · bộ phận)
+   trong cột 184px từng wrap thành ba bốn dòng. Chip nay `flex-wrap: nowrap` + `overflow: hidden`
+   + tooltip đầy đủ, nên tự cắt theo bề rộng cột thay vì đội chiều cao.
+2. **Nút trong cột thao tác có rơi xuống dòng?** Xem quy tắc cột số 6.
+3. **Ô nào xếp DỌC nhiều phần tử?** Backlog từng xếp ngày bắt đầu, ngày kết thúc và dòng
+   "N ngày" chồng lên nhau: mỗi dòng cao gần 100px. Hai ô ngày nay nằm ngang, số ngày vào tooltip.
+4. Chỉ sau đó mới xét đệm và cỡ control.
+
+### Tiêu đề trang
+
+`<app-page-header>` để tên và mô tả **chung một hàng**, `h1` cỡ `--text-xl` (không phải `2xl`),
+`margin-bottom: --space-3`. Khối tiêu đề hai dòng cỡ lớn ăn gần trăm pixel đầu màn hình.
+
+**Dòng phụ không được nhắc lại thứ đã hiển thị ở chỗ khác.** Workspace dự án từng ghi mã
+`VTS25202` ở dòng phụ trong khi breadcrumb bên phải cũng đang hiện đúng mã đó. Trước khi thêm
+chữ vào `subtitle`, kiểm tra breadcrumb, tab đang chọn và tiêu đề đã nói điều đó chưa.
+
 ## 5. Quy tắc tái dụng (bắt buộc với mọi epic sau)
 
 1. **Token-only:** màu/space/bo/chữ phải đọc từ `var(--…)`. PR hardcode hex/px sẽ bị trả.
@@ -211,6 +264,9 @@ cần đọc. Cho xuống **tối đa 2 dòng** (`-webkit-line-clamp: 2`) rồi 
 5. **Thêm pattern mới → thêm vào `/styleguide`** ngay, để cả nhóm thấy và tái dụng.
 5b. **Lưới:** cột nội dung chính để trống `width`, mọi cột khác phải có `width` sát nội dung;
    bộ lọc nhiều lựa chọn dùng `<app-type-filter>` chứ không trải chip. Chi tiết ở **§4c**.
+5c. **Mật độ:** dòng lưới ≈36–40px và tiêu đề trang một hàng là mặc định TOÀN HỆ, đặt sẵn ở
+   `_components.scss`. Màn mới không khai lại, không ghi đè đệm ô. Ô lưới không được tự xuống
+   dòng — cắt kèm `title`. Chi tiết và cách truy lỗi chiều cao ở **§4d**.
 6. Tương phản **AA**; mọi control có trạng thái `:focus-visible` rõ.
 
 ## 6. Accessibility (NFR — chuẩn AA)

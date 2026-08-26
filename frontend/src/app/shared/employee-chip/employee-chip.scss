@@ -1,6 +1,11 @@
 :host { display: inline-flex; min-width: 0; }
 
-.empchip { display: inline-flex; align-items: center; gap: 8px; flex-wrap: wrap; min-width: 0; }
+/* MỘT hàng, không bao giờ xuống dòng: chip nằm trong ô lưới hẹp (cột người thực hiện 184px) mà
+   được phép wrap thì mã, tên, vị trí, chức danh, bộ phận xếp thành ba bốn dòng — một mình nó đội
+   chiều cao cả dòng lưới lên gấp đôi. Tên co lại và cắt bằng "…", phần đuôi khuất theo bề rộng
+   cột; đầy đủ vẫn xem được ở tooltip (xem full() trong employee-chip.ts). */
+.empchip { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; min-width: 0; overflow: hidden; }
+.empchip > * { white-space: nowrap; }
 .empchip__code {
   font-family: var(--font-mono); font-size: var(--text-xs);
   padding: 1px 6px; border-radius: 6px; background: var(--color-surface-alt); color: var(--color-text-muted); flex: none;

@@ -62,7 +62,7 @@
 <!-- Tắt ô tìm kiếm sẵn có của lưới: thanh lọc phía trên đã có ô "Tìm mã / tiêu đề lỗi".
      Hai ô tìm kiếm trên cùng màn khiến người dùng phải đoán gõ vào ô nào, và gõ nhầm ô thì
      kết quả khác nhau vì hai ô lọc theo phạm vi khác nhau. -->
-<data-grid #grid [columns]="cols" [rows]="filtered()" [toolbar]="false" [dense]="true" minWidth="950px"
+<data-grid #grid [columns]="cols" [rows]="filtered()" [toolbar]="false" minWidth="950px"
            [pageSize]="50" [pageSizes]="[50, 100, 200]"
            [emptyText]="loading() ? 'Đang tải…' : 'Chưa có lỗi nào được báo cáo.'">
   <ng-template gridCell="title" let-t>
@@ -87,9 +87,8 @@
   </ng-template>
   <ng-template gridCell="assignee" let-t>
     @if (t.assigneeUserId) {
-      <span class="bug-who" [title]="assigneeTooltip(t)">
-        <span class="bug-who__code">{{ t.assigneeCode }}</span>{{ t.assigneeName }}
-      </span>
+      <employee-chip [code]="t.assigneeCode" [name]="t.assigneeName"
+                     [position]="t.assigneePosition" [title]="t.assigneeTitle" [dept]="t.assigneeDept" />
     } @else { — Chưa gán — }
   </ng-template>
   <ng-template gridCell="est" let-t>{{ t.estimateHours || 0 }}</ng-template>
