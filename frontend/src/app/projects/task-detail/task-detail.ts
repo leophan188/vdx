@@ -444,9 +444,50 @@ export class PrjTaskDetail {
     const t = this.current();
     if (!t) return;
     this.svc.assignTask(this.projectId(), t.id, userId || null).subscribe({
-      next: (u) => { this.model.set(u); this.toast.success('Đã gán người thực hiện', u.code); this.changed.emit(); this.loadActivity(u.id); },
+      next: (u) => {
+        const before = t.assigneeUserId ?? null;
+        this.model.set(u);
+        this.toast.success('Đã gán người thực hiện', u.code);
+        this.changed.emit();
+        this.loadActivity(u.id);
+        this.offerMoveLogs('DEV', before, u.assigneeUserId ?? null);
+      },
       error: (e) => this.toast.error('Không gán được', e?.error?.message ?? '')
     });
+  }
+
+  /**
+   * Sau khi đổi người của một vai, hỏi xem có nắn luôn các dòng giờ ĐÃ GHI của vai đó sang người mới không.
+   *
+   * Hai tình huống nhìn giống hệt nhau từ phía hệ thống: gán nhầm rồi sửa ngay (giờ phải theo người mới)
+   * và bàn giao thật (giờ của người trước phải ở lại). Vì vậy KHÔNG tự chuyển — hỏi, và chỉ hỏi khi thực
+   * sự có dòng giờ của người cũ, kèm số giờ để người dùng cân nhắc.
+   */
+  private offerMoveLogs(role: WorkRole, oldUserId: string | null, newUserId: string | null): void {
+    const t = this.current();
+    if (!t || !oldUserId || !newUserId || oldUserId === newUserId) {
+      return;
+    }
+    const mine = this.workLogs().filter((w) => w.role === role && w.userId === oldUserId);
+    if (!mine.length) {
+      return;
+    }
+    const hours = Math.round(mine.reduce((sum, w) => sum + (w.hours || 0), 0) * 100) / 100;
+    const oldName = mine[0].userName || 'người trước';
+    const newName = this.peopleSel().find((o) => o.value === newUserId)?.label ?? 'người mới';
+    const ok = confirm(`${mine.length} dòng giờ (${hours}h) của vai ${this.roleLabel(role)} đang ghi cho `
+      + `${oldName}.\n\nChuyển sang ${newName}?\n\n`
+      + `• Chọn OK nếu vừa gán nhầm người.\n`
+      + `• Chọn Cancel nếu ${oldName} đã thực sự làm phần giờ đó rồi bàn giao lại.`);
+    if (!ok) {
+      return;
+    }
+    forkJoin(mine.map((w) => this.svc.reassignWorkLog(this.projectId(), w.id, newUserId)
+      .pipe(catchError(() => of(null))))).subscribe(() => {
+        this.toast.success('Đã chuyển giờ sang người mới', `${hours}h`);
+        this.loadWorkLogs(t.id);
+        this.changed.emit();
+      });
   }
 
   // ===== Tester (người kiểm thử) — lưu qua updateTask (TaskRequest có testerUserId) =====
@@ -455,7 +496,14 @@ export class PrjTaskDetail {
     if (!t) return;
     const body = this.buildRequest(t, { testerUserId: userId || null });
     this.svc.updateTask(this.projectId(), t.id, body).subscribe({
-      next: (u) => { this.model.set(u); this.toast.success('Đã gán người kiểm thử', u.code); this.changed.emit(); this.loadActivity(u.id); },
+      next: (u) => {
+        const before = t.testerUserId ?? null;
+        this.model.set(u);
+        this.toast.success('Đã gán người kiểm thử', u.code);
+        this.changed.emit();
+        this.loadActivity(u.id);
+        this.offerMoveLogs('TEST', before, u.testerUserId ?? null);
+      },
       error: (e) => this.toast.error('Không gán được người kiểm thử', e?.error?.message ?? '')
     });
   }
