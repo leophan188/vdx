@@ -6,7 +6,7 @@
   <button gridActions type="button" class="btn btn--primary" (click)="openAdd()">＋ Thêm thành viên</button>
 
   <ng-template gridCell="member" let-m>
-    <employee-chip [code]="m.empCode" [name]="m.name" [position]="m.jobPosition" [title]="m.title" [dept]="m.deptCode" />
+    <employee-chip [detail]="true" [code]="m.empCode" [name]="m.name" [position]="m.jobPosition" [title]="m.title" [dept]="m.deptCode" />
   </ng-template>
   <ng-template gridCell="role" let-m>
     <span class="badge" [class]="roleBadge(m.roleInProject)">{{ roleLabel(m.roleInProject) }}</span>

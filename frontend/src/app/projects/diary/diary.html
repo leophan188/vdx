@@ -42,7 +42,7 @@
               <div class="dg__team">
                 @for (uid of e.teamUserIds; track uid) {
                   @if (memberOf(uid); as m) {
-                    <employee-chip [code]="m.empCode" [name]="m.name" [position]="m.jobPosition"
+                    <employee-chip [detail]="true" [code]="m.empCode" [name]="m.name" [position]="m.jobPosition"
                                    [title]="m.title" [dept]="m.deptCode" />
                   } @else {
                     <employee-chip [name]="'—'" />

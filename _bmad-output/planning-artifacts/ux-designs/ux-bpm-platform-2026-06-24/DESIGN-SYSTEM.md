@@ -239,8 +239,14 @@ không phải khai gì; **đừng ghi đè đệm ô ở CSS của màn**.
 Đệm ô hiếm khi là thủ phạm. Soi theo thứ tự này (rút từ ba lần sửa thật):
 
 1. **Ô nào tự xuống dòng?** `<employee-chip>` đầy đủ (mã · tên · vị trí · chức danh · bộ phận)
-   trong cột 184px từng wrap thành ba bốn dòng. Chip nay `flex-wrap: nowrap` + `overflow: hidden`
-   + tooltip đầy đủ, nên tự cắt theo bề rộng cột thay vì đội chiều cao.
+   trong cột 184px từng wrap thành ba bốn dòng. Chip nay chỉ hiện **mã + tên**, phần đuôi phải
+   bật bằng `[detail]="true"` ở nơi có chỗ thật (cột chính màn Nhân sự, danh sách thành viên).
+   Hai lỗi đã mắc khi sửa chỗ này, đáng nhớ cho mọi ô bị cắt:
+   - `overflow: hidden` **không cắt gì** nếu phần tử không bị chặn bề rộng — phải chặn ở `:host`
+     bằng `max-width: 100%`, nếu không nó tràn đè sang cột bên cạnh.
+   - Phần được phép co phải là phần **ít quan trọng nhất**. Đặt `min-width: 0` cho tên khiến
+     chính cái tên co về 0 trong khi "· Lập trình viên ·" vẫn còn nguyên. Định danh (mã, tên)
+     để `flex: none`; phần mô tả thêm mới là phần chịu cắt.
 2. **Nút trong cột thao tác có rơi xuống dòng?** Xem quy tắc cột số 6.
 3. **Ô nào xếp DỌC nhiều phần tử?** Backlog từng xếp ngày bắt đầu, ngày kết thúc và dòng
    "N ngày" chồng lên nhau: mỗi dòng cao gần 100px. Hai ô ngày nay nằm ngang, số ngày vào tooltip.
