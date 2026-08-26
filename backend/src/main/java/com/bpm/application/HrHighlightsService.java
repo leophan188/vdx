@@ -57,8 +57,9 @@ public class HrHighlightsService {
     private static final int LOOKAHEAD_DAYS = 7;
     /** Vai trò nhận thông báo onboarding (admin/HR). */
     /**
-     * Tên ĐƠN VỊ xưng trong lời chúc. Bài do hệ thống đăng nên tác giả vẫn hiển thị "Plan X"
-     * (đó là tên phần mềm), nhưng lời chúc là tiếng nói của công ty — phải xưng đúng tên công ty.
+     * Tên ĐƠN VỊ đứng tên tin chúc mừng, dùng cho cả tác giả lẫn lời xưng trong nội dung.
+     * "Plan X" là tên phần mềm, chỉ dùng cho giao diện hệ thống (sidebar, tiêu đề trang);
+     * còn lời chúc sinh nhật / thâm niên là tiếng nói của công ty.
      */
     @Value("${bpm.company-name:VMO DX}")
     private String companyName;
@@ -223,7 +224,8 @@ public class HrHighlightsService {
     /**
      * Tự tạo 1 tin NỔI BẬT (ghim, category EVENT) chúc mừng sinh nhật khi HÔM NAY đúng ngày.
      * Idempotent theo marker ngày: mỗi nhân sự/ngày chỉ 1 bài.
-     * Tác giả = HỆ THỐNG (admin, hiển thị "Plan X"); nội dung NHÚNG ảnh nhân sự qua subjectUserId.
+     * Tác giả = tên CÔNG TY (bài là lời chúc của tập thể, không phải thông báo của phần mềm);
+     * nội dung NHÚNG ảnh nhân sự qua subjectUserId.
      * Không có admin → bỏ qua (không lỗi).
      */
     private void maybeCelebrateBirthday(Employee e, LocalDate today) {
@@ -238,7 +240,7 @@ public class HrHighlightsService {
                 + "Cả nhà " + companyName + " cùng gửi lời chúc tốt đẹp nhất tới bạn! 🎉🎈";
         try {
             // subjectUserId = nhân sự được chúc (null nếu không có tài khoản — vẫn tạo bài, chỉ không có ảnh)
-            postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
+            postService.createSystemPinned(admin.getId(), companyName, body, "EVENT",
                     blankToNull(e.getUserAccountId()), marker);
         } catch (Exception ex) {
             log.warn("[HrHighlights] Không tạo được tin sinh nhật cho {}: {}", e.getEmpCode(), ex.toString());
@@ -260,7 +262,7 @@ public class HrHighlightsService {
                 + "Rất vui được đón thêm một thành viên mới vào đại gia đình " + companyName + ". "
                 + "Chúc bạn nhanh chóng hoà nhập và gặt hái nhiều thành công cùng đội ngũ! 🤝✨";
         try {
-            postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
+            postService.createSystemPinned(admin.getId(), companyName, body, "EVENT",
                     blankToNull(e.getUserAccountId()), marker);
         } catch (Exception ex) {
             log.warn("[HrHighlights] Không tạo được tin chào mừng cho {}: {}", e.getEmpCode(), ex.toString());
@@ -283,7 +285,7 @@ public class HrHighlightsService {
                 + "góp sức vào từng bước trưởng thành của cả đội ngũ. "
                 + "Chúc bạn thật nhiều sức khoẻ và tiếp tục gặt hái thành công! 🙏✨";
         try {
-            postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
+            postService.createSystemPinned(admin.getId(), companyName, body, "EVENT",
                     blankToNull(e.getUserAccountId()), marker);
         } catch (Exception ex) {
             log.warn("[HrHighlights] Không tạo được tin tri ân thâm niên cho {}: {}", e.getEmpCode(), ex.toString());

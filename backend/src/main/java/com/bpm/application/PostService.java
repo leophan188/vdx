@@ -19,6 +19,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.data.domain.Limit;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -37,6 +38,10 @@ import java.util.stream.Collectors;
  */
 @Service
 public class PostService {
+
+    /** Tên đơn vị đứng tên các bài do hệ thống tự đăng (khi nơi gọi không truyền tác giả). */
+    @Value("${bpm.company-name:VMO DX}")
+    private String companyName;
 
     private static final int EDIT_WINDOW_MIN = 15;   // sửa/xoá bình luận trong 15 phút (FR-B06)
     private static final int DEFAULT_BATCH = 20;     // tải-thêm theo lô (NFR-04)
@@ -114,7 +119,7 @@ public class PostService {
         }
         String cat = Post.normalizeCategory(category);
         String fullBody = body + marker;
-        Post p = new Post(authorId, authorName == null ? "Plan X" : authorName, fullBody,
+        Post p = new Post(authorId, authorName == null ? companyName : authorName, fullBody,
                 "[]", "ALL", null, null, "", cat);
         p.setPinned(true);
         p.setSubjectUserId(subjectUserId);
