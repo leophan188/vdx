@@ -157,9 +157,14 @@ public class Employee {
         this.updatedBy = actor;
     }
 
-    /** Nhân sự còn đang làm việc (đối chiếu không phân biệt hoa thường, bỏ khoảng trắng thừa). */
+    /**
+     * Nhân sự còn đang làm việc. Đối chiếu bằng CHỨA "đang làm" chứ không so khớp nguyên chuỗi:
+     * file nhân sự thực tế có biến thể ("Đang làm việc - thử việc"), khớp nguyên chuỗi sẽ coi những
+     * người này là đã nghỉ — cắt nhầm quyền dự án và mất luôn tin sinh nhật của họ.
+     * Đây cũng đúng cách màn Nhân sự đếm ô "Đang làm việc".
+     */
     public boolean isActive() {
-        return status != null && "đang làm việc".equals(status.trim().toLowerCase());
+        return status != null && status.trim().toLowerCase().contains("đang làm");
     }
 
     public String getId() { return id; }

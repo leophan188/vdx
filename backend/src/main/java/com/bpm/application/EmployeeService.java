@@ -75,6 +75,7 @@ public class EmployeeService {
 
     private final com.bpm.infrastructure.hr.GoogleSheetReader sheetReader;
     private final com.bpm.infrastructure.HrSheetConfigRepository sheetConfigRepo;
+    /** Dùng để cắt quyền vào dự án khi nhân sự nghỉ việc. */
     private final com.bpm.infrastructure.ProjectMemberRepository projectMemberRepo;
 
     public EmployeeService(EmployeeRepository employeeRepo, EmployeeImportLogRepository logRepo,
@@ -85,8 +86,8 @@ public class EmployeeService {
                            RoleService roleService, com.bpm.infrastructure.hr.GoogleSheetReader sheetReader,
                            com.bpm.infrastructure.HrSheetConfigRepository sheetConfigRepo,
                            com.bpm.infrastructure.ProjectMemberRepository projectMemberRepo) {
-        this.projectMemberRepo = projectMemberRepo;
         this.sheetConfigRepo = sheetConfigRepo;
+        this.projectMemberRepo = projectMemberRepo;
         this.employeeRepo = employeeRepo;
         this.logRepo = logRepo;
         this.userRepo = userRepo;
@@ -181,12 +182,48 @@ public class EmployeeService {
 
     // ===== CRUD quản lý =====
 
-    /** Danh sách + lọc theo trạng thái / mã bộ phận / level / từ khoá (mã, họ tên, vị trí, chức danh). */
+    /**
+     * Nhân sự đã NGHỈ thì cắt quyền vào mọi dự án đang tham gia (giữ nguyên bản ghi thành viên, chỉ tắt cờ)
+     * — dữ liệu công việc, % effort và man-day đã ghi vẫn còn để báo cáo không hụt số.
+     *
+     * Chỉ TẮT, không tự bật lại khi trạng thái quay về "đang làm việc": quyền vào từng dự án là quyết định
+     * của người quản lý dự án, mở lại tự động có thể trả quyền cho người không còn thuộc đội đó nữa.
+     */
+    private void revokeProjectAccessIfLeft(Employee e, String actor) {
+        if (e == null || e.isActive() || blank(e.getUserAccountId())) {
+            return;
+        }
+        for (var m : projectMemberRepo.findByUserId(e.getUserAccountId())) {
+            if (!m.isActive()) {
+                continue;
+            }
+            m.setActive(false);
+            projectMemberRepo.save(m);
+            auditPort.record("PROJECT_MEMBER_DEACTIVATED", "ProjectMember", m.getId(), actor,
+                    "lý do=nhân sự nghỉ việc, empCode=" + e.getEmpCode() + ", projectId=" + m.getProjectId());
+            log.info("[hr] {} đã nghỉ → cắt quyền dự án {}", e.getEmpCode(), m.getProjectId());
+        }
+    }
+
+    /** Nhóm trạng thái dùng ở bộ lọc màn Nhân sự — khớp đúng hai ô đếm "Đang làm việc" / "Đã nghỉ / khác". */
+    public static final String STATUS_GROUP_ACTIVE = "__ACTIVE__";
+    public static final String STATUS_GROUP_INACTIVE = "__INACTIVE__";
+
+    /**
+     * Danh sách + lọc theo trạng thái / mã bộ phận / level / từ khoá (mã, họ tên, vị trí, chức danh).
+     * {@code status} nhận NHÓM ({@link #STATUS_GROUP_ACTIVE} / {@link #STATUS_GROUP_INACTIVE}) hoặc
+     * một giá trị trạng thái cụ thể. Lọc theo nhóm để bộ lọc khớp với các ô đếm phía trên lưới —
+     * liệt kê từng chuỗi trạng thái thô thì người dùng chọn "Chưa Onboard" mà ô đếm lại gộp vào
+     * "Đã nghỉ / khác", hai chỗ nói hai kiểu.
+     */
     @Transactional(readOnly = true)
     public List<Employee> list(String status, String deptCode, String level, String keyword) {
         String q = keyword == null ? "" : keyword.trim().toLowerCase();
         return employeeRepo.findAllByOrderByEmpCodeAsc().stream()
-                .filter(e -> blank(status) || eq(e.getStatus(), status))
+                .filter(e -> blank(status)
+                        || (STATUS_GROUP_ACTIVE.equals(status) ? e.isActive()
+                            : STATUS_GROUP_INACTIVE.equals(status) ? !e.isActive()
+                            : eq(e.getStatus(), status)))
                 .filter(e -> blank(deptCode) || eq(e.getDeptCode(), deptCode))
                 .filter(e -> blank(level) || eq(e.getLevel(), level))
                 .filter(e -> q.isEmpty()
@@ -261,6 +298,7 @@ public class EmployeeService {
         // Đồng bộ trạng thái tài khoản liên kết theo trạng thái nhân sự (mở/khoá), trừ khi đang giữ việc.
         syncAccountLock(saved, actor);
         auditPort.record("EMPLOYEE_UPDATED", "Employee", saved.getId(), actor, "empCode=" + saved.getEmpCode());
+        revokeProjectAccessIfLeft(saved, actor);   // đổi sang đã nghỉ → cắt quyền vào các dự án
         return saved;
     }
 
@@ -563,6 +601,7 @@ public class EmployeeService {
 
             // Mở/khoá tài khoản theo trạng thái nhân sự, trừ khi đang giữ việc (HANDOVER).
             int outcome = applyAccountLock(emp, acc, actor);
+            revokeProjectAccessIfLeft(emp, actor);   // nghỉ việc → cắt luôn quyền vào các dự án
             if (outcome == LOCKED) {
                 locked++;
             } else if (outcome == HANDOVER) {

@@ -80,8 +80,15 @@ export class Employees implements OnInit {
   readonly deptOptions = computed(() => this.distinct((e) => e.deptCode));
   readonly levelOptions = computed(() => this.distinct((e) => e.level));
 
-  /** Option cho searchable-select bộ lọc. */
-  readonly statusSel = computed<SelectOption[]>(() => this.statusOptions().map((s) => ({ value: s, label: s })));
+  /**
+   * Bộ lọc TRẠNG THÁI theo đúng hai ô đếm phía trên lưới. Trước đây liệt kê từng chuỗi trạng thái thô
+   * ("Chưa Onboard", "Đang làm việc"…) nên người dùng chọn một mục mà ô đếm lại gộp cách khác —
+   * hai chỗ nói hai kiểu. Backend hiểu hai khoá nhóm này (xem EmployeeService.STATUS_GROUP_*).
+   */
+  readonly statusSel = computed<SelectOption[]>(() => [
+    { value: '__ACTIVE__', label: 'Đang làm việc' },
+    { value: '__INACTIVE__', label: 'Đã nghỉ / khác' }
+  ]);
   readonly deptSel = computed<SelectOption[]>(() => this.deptOptions().map((d) => ({ value: d, label: d })));
   readonly levelSel = computed<SelectOption[]>(() => this.levelOptions().map((l) => ({ value: l, label: l })));
 
