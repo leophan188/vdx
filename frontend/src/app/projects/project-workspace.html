@@ -1,8 +1,9 @@
 <section class="page">
-  <!-- Mã dự án CỐ Ý không nhắc lại ở dòng phụ: breadcrumb bên phải đã hiện đúng mã đó. -->
+  <!-- Dòng phụ là MÃ dự án — thứ người dùng đọc để đối chiếu với hợp đồng, báo cáo, timesheet;
+       mô tả dự án thì không ai tra ở đây. Breadcrumb chuyển sang hiện TÊN để không nhắc lại mã. -->
   <app-page-header [title]="project()?.name || 'Dự án'"
-                   [subtitle]="project()?.description || ''"
-                   [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
+                   [subtitle]="project()?.code || ''"
+                   [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.name || '' }]" />
 
   <!-- Menu tab dự án nằm ở SIDEBAR trái của app (theo module). Nội dung full chiều ngang. -->
   @if (id(); as pid) {
