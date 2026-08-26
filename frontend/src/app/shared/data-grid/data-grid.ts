@@ -72,6 +72,12 @@ export class DataGrid {
   readonly toolbar = input(true);
   /** Tên file khi xuất (không kèm .xlsx); rỗng → dùng title/tiêu đề mặc định. */
   readonly exportName = input('');
+  /**
+   * Lưới DÀY: đệm ô mỏng lại và điều khiển trong ô dùng cỡ nhỏ, cho những màn mà người dùng
+   * quét cả danh sách dài (backlog, bug/issue) — chiều cao mặc định 40px cộng đệm chỉ cho thấy
+   * chừng chục dòng một màn.
+   */
+  readonly dense = input(false);
 
   private readonly cellDirs = contentChildren(GridCellDirective);
   private readonly detailDir = contentChild(GridDetailDirective);

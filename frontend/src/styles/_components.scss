@@ -93,6 +93,14 @@ a.breadcrumb__item:hover { color: var(--color-primary); }
 .page-header__sub { color: var(--color-text-muted); font-size: var(--text-sm); margin: var(--space-1) 0 0; }
 .page-header__aside { display: flex; flex-direction: column; align-items: flex-end; gap: var(--space-2); }
 .page-header__actions { display: inline-flex; gap: var(--space-2); }
+/* Biến thể gọn: tên + dòng phụ trên MỘT hàng. */
+.page-header--compact { align-items: center; margin-bottom: var(--space-3); }
+.page-header--compact .page-header__main {
+  display: flex; align-items: baseline; flex-wrap: wrap; gap: var(--space-2) var(--space-3); min-width: 0;
+}
+.page-header--compact .page-header__main h1 { font-size: var(--text-xl); }
+.page-header--compact .page-header__sub { margin: 0; }
+.page-header--compact .page-header__aside { flex-direction: row; align-items: center; }
 /* Avatar + tên trong ô bảng */
 .cell-user { display: inline-flex; align-items: center; gap: var(--space-2); }
 
@@ -206,6 +214,15 @@ a.breadcrumb__item:hover { color: var(--color-primary); }
 .grid thead th .sort-ind { opacity: 0.6; font-size: var(--text-xs); }
 .grid td { padding: var(--space-2) var(--space-3); border-top: 1px solid var(--color-border); height: var(--row-h); color: var(--color-text); vertical-align: middle; }
 .grid tbody tr:nth-child(even):not(.grid__detail-row) td { background: var(--color-surface-zebra); }
+
+/* Lưới DÀY (data-grid [dense]="true"): đệm mỏng, bỏ chiều cao tối thiểu 40px và cho các control
+   trong ô dùng cỡ nhỏ. Một ô select cao 36px nằm giữa hai lớp đệm 8px đẩy mỗi dòng lên hơn 50px —
+   danh sách vài trăm task thì một màn chỉ thấy chục dòng. */
+.grid--dense td { padding: 3px var(--space-3); height: auto; }
+.grid--dense thead th { padding: var(--space-1) var(--space-3); }
+.grid--dense td .ss__control { height: var(--control-h-sm); }
+.grid--dense td input, .grid--dense td select { height: var(--control-h-sm); }
+
 .grid tbody tr:hover:not(.grid__detail-row) td { background: var(--color-primary-soft); }
 .grid tbody tr.is-expanded td { background: var(--color-primary-soft); }
 .grid .align-right { text-align: right; }

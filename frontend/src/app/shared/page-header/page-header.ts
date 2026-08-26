@@ -9,7 +9,7 @@ import { Breadcrumb, Crumb } from '../breadcrumb/breadcrumb';
   selector: 'app-page-header',
   imports: [Breadcrumb],
   template: `
-    <div class="page-header">
+    <div class="page-header" [class.page-header--compact]="compact()">
       <div class="page-header__main">
         <h1>{{ title() }}</h1>
         @if (subtitle()) { <p class="page-header__sub">{{ subtitle() }}</p> }
@@ -25,4 +25,10 @@ export class PageHeader {
   readonly title = input('');
   readonly subtitle = input('');
   readonly breadcrumb = input<Crumb[]>([]);
+  /**
+   * Tiêu đề GỌN: tên và dòng phụ nằm chung một hàng, chữ nhỏ hơn một nấc. Dùng cho những màn có
+   * nội dung dài phía dưới (workspace dự án), nơi khối tiêu đề hai dòng cỡ lớn ăn mất gần trăm
+   * pixel đầu màn hình mà thông tin thì tab và breadcrumb đã nói.
+   */
+  readonly compact = input(false);
 }

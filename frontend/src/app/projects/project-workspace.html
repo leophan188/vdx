@@ -1,6 +1,7 @@
 <section class="page">
-  <app-page-header [title]="project()?.name || 'Dự án'"
-                   [subtitle]="(project()?.code || '') + (project()?.description ? ' · ' + project()!.description : '')"
+  <!-- Mã dự án CỐ Ý không nhắc lại ở dòng phụ: breadcrumb bên phải đã hiện đúng mã đó. -->
+  <app-page-header [compact]="true" [title]="project()?.name || 'Dự án'"
+                   [subtitle]="project()?.description || ''"
                    [breadcrumb]="[{ label: 'Dự án', link: '/projects' }, { label: project()?.code || '' }]" />
 
   <!-- Menu tab dự án nằm ở SIDEBAR trái của app (theo module). Nội dung full chiều ngang. -->

@@ -1,4 +1,4 @@
-<div class="grid">
+<div class="grid" [class.grid--dense]="dense()">
   @if (toolbar()) {
   <div class="grid__toolbar">
     @if (title()) { <span class="grid__title">{{ title() }}</span> }
