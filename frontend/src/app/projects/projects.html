@@ -21,7 +21,7 @@
       <button gridActions type="button" class="btn btn--primary" (click)="openCreate()">＋ Tạo dự án</button>
     }
 
-    <ng-template gridCell="code" let-p><strong>{{ p.code }}</strong></ng-template>
+    <ng-template gridCell="code" let-p><strong class="cell-nowrap">{{ p.code }}</strong></ng-template>
     <ng-template gridCell="name" let-p>
       <a href="javascript:void(0)" (click)="open(p)"><strong>{{ p.name }}</strong></a>
     </ng-template>
@@ -31,7 +31,7 @@
     <ng-template gridCell="completion" let-p>
       <div style="display:flex; align-items:center; gap:8px;">
         <span class="prj-bar"><span class="prj-bar__fill" [style.width.%]="p.completionPct"></span></span>
-        <span>{{ p.completionPct }}%</span>
+        <span class="cell-nowrap">{{ round(p.completionPct) }}%</span>
       </div>
     </ng-template>
     <ng-template gridCell="budget" let-p>{{ formatNumber(p.budget) }}</ng-template>

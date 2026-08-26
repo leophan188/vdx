@@ -599,6 +599,9 @@ export class PrjOverview {
     );
   });
 
+  /** userId của thành viên còn quyền vào dự án — dùng để gom người đã rời ở các bảng theo vai. */
+  readonly activeUserIds = computed(() => this.members().filter((m) => m.active).map((m) => m.userId));
+
   /** Số người ĐANG hoạt động trong bảng — không đếm dòng gom "Nhân sự khác" lẫn "Chưa gán". */
   readonly personCount = computed(() => this.personRows().filter((r) => !r.grouped && !r.unassigned).length);
 

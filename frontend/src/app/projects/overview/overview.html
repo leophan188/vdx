@@ -197,7 +197,8 @@
     <h3 class="ov2__h">Thống kê theo vai — toàn dự án
       <span class="ov2__hint">— bấm vào số để xem danh sách công việc</span></h3>
     <section class="ov2__panel">
-      <app-role-stats [tasks]="tasks()" (picked)="openDetail($event.title, $event.items)" />
+      <app-role-stats [tasks]="tasks()" [activeUserIds]="activeUserIds()"
+                      (picked)="openDetail($event.title, $event.items)" />
     </section>
 
     <!-- Tiến độ % EPIC / Story (thứ tự cây, Story thụt dưới Epic) + số việc xong / chưa xong -->

@@ -6,6 +6,7 @@ import { catOf, WORK_CATS, WorkCat } from '../work-stats';
 /** Một dòng bảng vai DEV — task người đó THỰC HIỆN, tách theo trạng thái. */
 interface DevRow {
   key: string; userId: string | null; name: string; unassigned: boolean;
+  grouped?: boolean; groupNames?: string[];
   todo: ProjectTask[];    // Cần làm + Backlog (chưa khởi động)
   doing: ProjectTask[];   // Đang làm
   review: ProjectTask[];  // đã bàn giao, đang chờ kiểm thử
@@ -21,6 +22,7 @@ interface DevRow {
  */
 interface TestRow {
   key: string; userId: string | null; name: string;
+  grouped?: boolean; groupNames?: string[];
   logged: ProjectTask[];   // bug/issue do người này TẠO
   assigned: ProjectTask[]; // tổng việc mình phụ trách kiểm thử
   done: ProjectTask[];     // đã Hoàn thành
@@ -72,7 +74,10 @@ interface TestRow {
           @for (r of devRows(); track r.key) {
             <div class="rs__row">
               <span class="rs__name">
-                @if (r.userId) { <employee-chip [name]="r.name" /> } @else { <span>{{ r.name }}</span> }
+                @if (r.grouped) {
+                  <span [title]="'Đã tạm ngưng hoặc rời dự án: ' + (r.groupNames || []).join(', ')">
+                    {{ r.name }} ({{ (r.groupNames || []).length }})</span>
+                } @else if (r.userId) { <employee-chip [name]="r.name" /> } @else { <span>{{ r.name }}</span> }
               </span>
               <span>@if (r.todo.length) {
                 <button type="button" class="rs__num" (click)="pick(r.name + ' · To Do', r.todo)">{{ r.todo.length }}</button>
@@ -114,7 +119,10 @@ interface TestRow {
           @for (r of testRows(); track r.key) {
             <div class="rs__row">
               <span class="rs__name">
-                @if (r.userId) { <employee-chip [name]="r.name" /> } @else { <span>{{ r.name }}</span> }
+                @if (r.grouped) {
+                  <span [title]="'Đã tạm ngưng hoặc rời dự án: ' + (r.groupNames || []).join(', ')">
+                    {{ r.name }} ({{ (r.groupNames || []).length }})</span>
+                } @else if (r.userId) { <employee-chip [name]="r.name" /> } @else { <span>{{ r.name }}</span> }
               </span>
               <span>@if (r.logged.length) {
                 <button type="button" class="rs__num" (click)="pick('Bug/Issue do ' + r.name + ' log', r.logged)">{{ r.logged.length }}</button>
@@ -202,6 +210,13 @@ export class RoleStats {
   readonly tasks = input<ProjectTask[]>([]);
   /** Nhãn phạm vi ghép vào tiêu đề, vd "việc xử lý trong kỳ" — rỗng = toàn dự án. */
   readonly scopeLabel = input<string>('');
+  /**
+   * userId của những người ĐANG active trong dự án. Người ngoài danh sách này (đã tạm ngưng hoặc
+   * đã rời) gom vào một dòng "Nhân sự khác" thay vì mỗi người một dòng — bảng này để nhìn tải
+   * hiện tại của đội. Rỗng = chưa tải xong danh sách thành viên → giữ nguyên mọi dòng.
+   */
+  readonly activeUserIds = input<readonly string[]>([]);
+
   /** Bấm một ô số → cha mở popup danh sách. */
   readonly picked = output<{ title: string; items: ProjectTask[] }>();
 
@@ -225,6 +240,14 @@ export class RoleStats {
     if (items.length) this.picked.emit({ title, items });
   }
 
+  private readonly activeSet = computed(() => new Set(this.activeUserIds()));
+
+  /** Dòng này có được đứng riêng không (đang active, hoặc chưa có dữ liệu thành viên để mà lọc). */
+  private standsAlone(r: { userId: string | null; unassigned?: boolean }): boolean {
+    const ids = this.activeSet();
+    return !ids.size || !!r.unassigned || (!!r.userId && ids.has(r.userId));
+  }
+
   readonly devRows = computed<DevRow[]>(() => {
     const map = new Map<string, DevRow>();
     for (const t of this.scoped()) {
@@ -239,10 +262,25 @@ export class RoleStats {
       r.items.push(t);
       bucketOf(r, t.status).push(t);
     }
-    const rows = [...map.values()];
+    const all = [...map.values()];
+    const rows = all.filter((r) => this.standsAlone(r));
+    const others = all.filter((r) => !this.standsAlone(r));
+    if (others.length) {
+      const g: DevRow = {
+        key: '__others__', userId: null, name: 'Nhân sự khác', unassigned: false, grouped: true,
+        groupNames: others.map((o) => o.name).sort((a, b) => a.localeCompare(b, 'vi')),
+        todo: [], doing: [], review: [], done: [], items: [], pct: 0
+      };
+      for (const o of others) {
+        g.todo.push(...o.todo); g.doing.push(...o.doing);
+        g.review.push(...o.review); g.done.push(...o.done); g.items.push(...o.items);
+      }
+      rows.push(g);
+    }
     for (const r of rows) r.pct = r.items.length ? Math.round((r.done.length / r.items.length) * 100) : 0;
+    const rank = (r: DevRow) => (r.unassigned ? 2 : r.grouped ? 1 : 0);
     return rows.sort((a, b) =>
-      (a.unassigned ? 1 : 0) - (b.unassigned ? 1 : 0) || b.items.length - a.items.length
+      rank(a) - rank(b) || b.items.length - a.items.length
       || a.name.localeCompare(b.name, 'vi'));
   });
 
@@ -284,7 +322,21 @@ export class RoleStats {
         else r.waitDev.push(t);                                // Backlog/Cần làm/Đang làm → còn ở chân dev
       }
     }
-    const rows = [...map.values()];
+    const all = [...map.values()];
+    const rows = all.filter((r) => this.standsAlone(r));
+    const others = all.filter((r) => !this.standsAlone(r));
+    if (others.length) {
+      const g: TestRow = {
+        key: '__others__', userId: null, name: 'Nhân sự khác', grouped: true,
+        groupNames: others.map((o) => o.name).sort((a, b) => a.localeCompare(b, 'vi')),
+        logged: [], assigned: [], done: [], waitTest: [], waitDev: [], pct: 0
+      };
+      for (const o of others) {
+        g.logged.push(...o.logged); g.assigned.push(...o.assigned); g.done.push(...o.done);
+        g.waitTest.push(...o.waitTest); g.waitDev.push(...o.waitDev);
+      }
+      rows.push(g);
+    }
     for (const r of rows) {
       // Mẫu số là TOÀN BỘ việc mình phụ trách kiểm thử. Nếu chỉ lấy việc đã tới tay
       // (Hoàn thành + Chờ test) thì người log 50 bug, xong 7, còn 43 bug dev chưa bàn giao
@@ -292,7 +344,7 @@ export class RoleStats {
       r.pct = r.assigned.length ? Math.round((r.done.length / r.assigned.length) * 100) : 0;
     }
     return rows.sort((a, b) =>
-      b.assigned.length - a.assigned.length
+      (a.grouped ? 1 : 0) - (b.grouped ? 1 : 0) || b.assigned.length - a.assigned.length
       || b.logged.length - a.logged.length || a.name.localeCompare(b.name, 'vi'));
   });
 }

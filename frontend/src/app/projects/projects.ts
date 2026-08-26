@@ -37,7 +37,7 @@ export class Projects implements OnInit {
   readonly people = signal<Person[]>([]);
 
   readonly cols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '90px', sortable: true },
+    { key: 'code', header: 'Mã', width: '112px', sortable: true },
     { key: 'name', header: 'Dự án', sortable: true },
     { key: 'status', header: 'Trạng thái', width: '130px' },
     { key: 'completion', header: 'Hoàn thành', width: '180px' },
@@ -45,6 +45,10 @@ export class Projects implements OnInit {
     { key: 'counts', header: 'Task / Thành viên', width: '150px', align: 'center' },
     { key: 'actions', header: '', width: '140px' }
   ];
+
+  /** % hiển thị làm tròn: "67.67%" vừa vỡ ba dòng trong ô hẹp vừa chính xác giả — số liệu gốc
+   *  là ước lượng theo est giờ. */
+  round(v: number | null | undefined): number { return Math.round(v ?? 0); }
 
   readonly statusOptions: SelectOption[] = [
     { value: 'PLANNING', label: 'Lên kế hoạch' },

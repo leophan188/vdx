@@ -121,17 +121,15 @@
       </div>
 
       <div class="ts__dhead">
-        <span>Việc đã làm</span><span>Mã</span><span>Công việc</span><span>Est</span><span>Giờ ghi</span>
+        <span>Việc đã làm</span><span>Công việc</span><span>Est</span><span>Giờ ghi</span>
       </div>
       @for (w of d.logs; track w.id) {
         <div class="ts__drow">
           <span class="ts__drole" [style.--act]="actColor(w)"
                 [title]="(w.role === 'TEST' ? 'Vai kiểm thử' : 'Vai lập trình') + ' — ' + actLabel(w)">{{ actLabel(w) }}</span>
-          <button type="button" class="ts__dcode" title="Mở chi tiết công việc"
-                  (click)="openTask(w)">{{ w.taskCode }}</button>
           <span class="ts__dmain">
             <button type="button" class="ts__dtitle" [title]="w.taskTitle" (click)="openTask(w)">
-              @if (w.taskType) { <i class="ts__dtype">{{ typeLabel(w.taskType) }}</i> }{{ w.taskTitle }}
+              @if (w.taskType) { <i class="ts__dtype">{{ typeLabel(w.taskType) }}</i> }<i class="ts__dcode">{{ w.taskCode }}</i>{{ w.taskTitle }}
             </button>
             @if (w.parentPath) { <span class="ts__dpath" [title]="w.parentPath">↳ {{ w.parentPath }}</span> }
             @if (w.note) { <span class="ts__dnote">📝 {{ w.note }}</span> }

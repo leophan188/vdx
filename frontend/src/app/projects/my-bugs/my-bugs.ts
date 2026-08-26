@@ -94,7 +94,7 @@ export class MyBugs implements OnInit {
     { key: 'status', header: 'Trạng thái', width: '128px' },
     { key: 'assigneeName', header: 'PIC', width: '184px' },
     { key: 'reporterName', header: 'Người log', width: '184px' },
-    { key: 'role', header: 'Vai trò', width: '110px' },
+    { key: 'role', header: 'Vai trò', width: '132px' },
     { key: 'dueDate', header: 'Deadline', width: '124px', sortable: true }
   ];
 

@@ -112,19 +112,20 @@ function ghostMember(userId: string, name: string | null): ProjectMember {
     .ts__dsum b { color: var(--color-text); font-variant-numeric: tabular-nums; }
     .ts__dsum-dev b { color: var(--status-active); }
     .ts__dsum-test b { color: var(--status-done); }
-    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 118px 72px 1fr 62px 66px;
+    /* Mã gộp vào cột Công việc (thiết kế chung — DESIGN-SYSTEM §4c): một cột 72px chỉ để chở ba
+       chữ số, trong khi tiêu đề dài phải cắt bằng "…" ngay giữa câu. */
+    .ts__dhead, .ts__drow { display: grid; grid-template-columns: 118px 1fr 62px 66px;
       align-items: start; gap: 10px; padding: 7px 10px; }
     .ts__dhead { font-size: var(--text-xs); font-weight: var(--weight-semibold); color: var(--color-text-muted);
       text-transform: uppercase; letter-spacing: .02em; padding-bottom: 2px; }
-    .ts__dhead > :nth-child(4), .ts__dhead > :nth-child(5) { text-align: right; }
+    .ts__dhead > :nth-child(3), .ts__dhead > :nth-child(4) { text-align: right; }
     .ts__drow { border-radius: 8px; background: var(--color-surface-alt); font-size: var(--text-sm); }
     /* Nhãn HÀNH ĐỘNG — màu theo loại hành động, không phải theo vai. */
     .ts__drole { font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 999px; text-align: center;
       white-space: nowrap; color: var(--act, var(--status-active));
       background: color-mix(in srgb, var(--act, var(--status-active)) 14%, transparent); }
-    .ts__dcode { border: 0; background: none; padding: 0; cursor: pointer; text-align: left;
-      font: inherit; font-size: var(--text-xs); font-weight: 700; color: var(--color-primary); }
-    .ts__dcode:hover { text-decoration: underline; }
+    .ts__dcode { font-style: normal; font-family: var(--font-mono, monospace); font-size: var(--text-xs);
+      font-weight: 700; color: var(--color-text-muted); margin-right: 6px; }
     .ts__dmain { display: grid; gap: 2px; min-width: 0; }
     .ts__dtitle { border: 0; background: none; padding: 0; cursor: pointer; text-align: left; font: inherit;
       color: var(--color-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

@@ -235,6 +235,7 @@
       @if (!isCollapsed('roles')) {
         <div class="rpp__sec-body">
           <app-role-stats [tasks]="periodTasks()" [scopeLabel]="'việc xử lý ' + periodWord()"
+                          [activeUserIds]="activeUserIds()"
                           (picked)="openRolePick($event)" />
         </div>
       }

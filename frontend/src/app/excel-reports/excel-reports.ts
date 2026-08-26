@@ -73,7 +73,7 @@ export class ExcelReports implements OnInit {
    * chuỗi dài nhất và đáng đọc nhất), đặt sớm; mọi cột còn lại có width sát nội dung thật.
    */
   readonly historyCols: GridColumn[] = [
-    { key: 'runAt', header: 'Thời điểm', width: '128px' },
+    { key: 'runAt', header: 'Thời điểm', width: '152px' },
     { key: 'templateKey', header: 'Loại tool', width: '210px' },
     { key: 'inputFileName', header: 'File vào' },
     { key: 'runBy', header: 'Người chạy', width: '160px' },

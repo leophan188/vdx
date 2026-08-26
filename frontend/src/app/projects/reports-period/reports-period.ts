@@ -7,7 +7,7 @@ import { Modal } from '../../shared/modal/modal';
 import { PrjTaskDetail } from '../task-detail/task-detail';
 import { RoleStats } from '../role-stats/role-stats';
 import {
-  ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority, ProjectTask
+  ProjectService, PeriodReport, ReportTaskItem, TaskStatus, TaskType, TaskPriority, ProjectTask, ProjectMember
 } from '../../core/project.service';
 import { WORK_CATS, catOf, WorkCat, TYPE_META, STATUS_META, isOverdue, ownerOf } from '../work-stats';
 
@@ -322,6 +322,10 @@ export class PrjReportsPeriod {
   readonly projectName = input<string>('');
 
   private svc = inject(ProjectService);
+
+  /** Thành viên dự án — chỉ dùng để biết ai còn active, phục vụ gom "Nhân sự khác" ở bảng theo vai. */
+  readonly members = signal<ProjectMember[]>([]);
+  readonly activeUserIds = computed(() => this.members().filter((m) => m.active).map((m) => m.userId));
 
   /** Bật lớp phủ "trang in" (giống biểu mẫu khách hàng) trước khi window.print(). */
   readonly printMode = signal(false);
@@ -730,6 +734,10 @@ export class PrjReportsPeriod {
     this.svc.listTasks(pid).subscribe({
       next: (t) => { this.tasks.set(t ?? []); this.syncOpenPopups(); },
       error: () => this.tasks.set([])
+    });
+    this.svc.listMembers(pid).subscribe({
+      next: (m) => this.members.set(m ?? []),
+      error: () => this.members.set([])
     });
   }
 
