@@ -66,6 +66,9 @@ bpm:
     timeout-seconds: ${BPM_GSHEET_TIMEOUT:20}
   media:
     dir: ${BPM_MEDIA_DIR:./data/media}                # Epic 2: lưu ảnh/video bài viết trên đĩa
+  # Tên ĐƠN VỊ dùng trong lời chúc tự sinh trên bảng tin. Khác tên hệ thống ("Plan X"):
+  # hệ thống là công cụ, còn lời chúc là tiếng nói của công ty.
+  company-name: ${BPM_COMPANY_NAME:VMO DX}
 
 logging:
   level:

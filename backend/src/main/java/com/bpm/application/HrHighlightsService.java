@@ -10,6 +10,7 @@ import com.bpm.infrastructure.EmployeeRepository;
 import com.bpm.infrastructure.UserAccountRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -55,6 +56,13 @@ public class HrHighlightsService {
      */
     private static final int LOOKAHEAD_DAYS = 7;
     /** Vai trò nhận thông báo onboarding (admin/HR). */
+    /**
+     * Tên ĐƠN VỊ xưng trong lời chúc. Bài do hệ thống đăng nên tác giả vẫn hiển thị "Plan X"
+     * (đó là tên phần mềm), nhưng lời chúc là tiếng nói của công ty — phải xưng đúng tên công ty.
+     */
+    @Value("${bpm.company-name:VMO DX}")
+    private String companyName;
+
     private static final String ROLE_ADMIN = "ADMIN";
 
     private final EmployeeRepository employeeRepo;
@@ -227,7 +235,7 @@ public class HrHighlightsService {
         String dept = e.getDeptCode() == null || e.getDeptCode().isBlank() ? "" : " — " + e.getDeptCode();
         String body = "🎂 Chúc mừng sinh nhật " + e.getFullName() + dept + "! "
                 + "Chúc bạn một tuổi mới thật nhiều sức khoẻ, niềm vui và thành công. "
-                + "Cả nhà Plan X cùng gửi lời chúc tốt đẹp nhất tới bạn! 🎉🎈";
+                + "Cả nhà " + companyName + " cùng gửi lời chúc tốt đẹp nhất tới bạn! 🎉🎈";
         try {
             // subjectUserId = nhân sự được chúc (null nếu không có tài khoản — vẫn tạo bài, chỉ không có ảnh)
             postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
@@ -249,7 +257,7 @@ public class HrHighlightsService {
         String marker = "​#celebrate-ob-" + e.getEmpCode() + "-" + today;
         String dept = e.getDeptCode() == null || e.getDeptCode().isBlank() ? "công ty" : e.getDeptCode();
         String body = "🎉 Chào mừng " + e.getFullName() + " gia nhập " + dept + "! "
-                + "Rất vui được đón thêm một thành viên mới vào đại gia đình Plan X. "
+                + "Rất vui được đón thêm một thành viên mới vào đại gia đình " + companyName + ". "
                 + "Chúc bạn nhanh chóng hoà nhập và gặt hái nhiều thành công cùng đội ngũ! 🤝✨";
         try {
             postService.createSystemPinned(admin.getId(), "Plan X", body, "EVENT",
@@ -271,7 +279,7 @@ public class HrHighlightsService {
         String marker = "​#celebrate-anniv-" + e.getEmpCode() + "-" + today;
         String dept = e.getDeptCode() == null || e.getDeptCode().isBlank() ? "" : " (" + e.getDeptCode() + ")";
         String body = milestoneIcon(years) + " Tri ân " + years + " năm gắn bó — " + e.getFullName() + dept + "! "
-                + "Cảm ơn bạn đã đồng hành cùng Plan X suốt chặng đường vừa qua, "
+                + "Cảm ơn bạn đã đồng hành cùng " + companyName + " suốt chặng đường vừa qua, "
                 + "góp sức vào từng bước trưởng thành của cả đội ngũ. "
                 + "Chúc bạn thật nhiều sức khoẻ và tiếp tục gặt hái thành công! 🙏✨";
         try {
