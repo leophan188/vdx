@@ -34,23 +34,25 @@ export interface CommentNode extends CommentView {
       align-items: center; gap: 8px; margin: 4px 0 10px; padding: 22px 26px;
       border-radius: 18px; overflow: hidden;
       border: 1px solid color-mix(in srgb, var(--cel-a) 45%, transparent);
+      /* Nền pha màu loại tin vào NỀN CỦA THEME (--color-surface): light ra pastel sáng, dark ra
+         đậm — trước đây trộn vào màu tối cố định nên light mode hiện một mảng đen giữa trang sáng. */
       background:
-        radial-gradient(60% 90% at 22% 45%, color-mix(in srgb, var(--cel-b) 26%, transparent), transparent 70%),
-        linear-gradient(135deg, color-mix(in srgb, var(--cel-a) 22%, #0b0f14) 0%,
-                                 color-mix(in srgb, var(--cel-a) 10%, #0b0f14) 55%,
-                                 color-mix(in srgb, var(--cel-c) 14%, #0b0f14) 100%); }
+        radial-gradient(60% 90% at 22% 45%, color-mix(in srgb, var(--cel-b) 16%, transparent), transparent 70%),
+        linear-gradient(135deg, color-mix(in srgb, var(--cel-a) 16%, var(--color-surface)) 0%,
+                                 color-mix(in srgb, var(--cel-a) 7%, var(--color-surface)) 55%,
+                                 color-mix(in srgb, var(--cel-c) 12%, var(--color-surface)) 100%); }
     /* Dải sóng mềm ở đáy thiệp */
     .cel::before { content: ''; position: absolute; left: -10%; right: -10%; bottom: -58%;
       height: 100%; border-radius: 50%; pointer-events: none;
-      background: color-mix(in srgb, var(--cel-a) 16%, transparent); }
+      background: color-mix(in srgb, var(--cel-a) 12%, transparent); }
 
     /* --- Cột trái: ảnh + vầng sáng + hoạ tiết rắc --- */
     .cel__stage { position: relative; display: flex; align-items: center; justify-content: center;
       min-height: 190px; z-index: 1; }
     .cel__ring { position: relative; display: inline-flex; padding: 5px; border-radius: 50%;
       background: linear-gradient(135deg, var(--cel-a), var(--cel-c));
-      box-shadow: 0 0 0 6px color-mix(in srgb, var(--cel-a) 18%, transparent),
-                  0 0 46px 10px color-mix(in srgb, var(--cel-b) 45%, transparent); }
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--cel-a) 14%, transparent),
+                  0 0 40px 8px color-mix(in srgb, var(--cel-b) 30%, transparent); }
     .cel__img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover;
       border: 4px solid color-mix(in srgb, #fff 88%, var(--cel-a)); display: block; }
     .cel__ring ::ng-deep .avatar { width: 150px !important; height: 150px !important;
@@ -62,13 +64,13 @@ export interface CommentNode extends CommentView {
       filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--cel-a) 60%, transparent)); }
     /* Hoạ tiết rắc quanh ảnh — toạ độ cố định để bố cục không nhảy mỗi lần render */
     .cel__bit { position: absolute; font-size: 17px; line-height: 1; pointer-events: none;
-      color: var(--cel-c); opacity: .9; text-shadow: 0 2px 8px color-mix(in srgb, var(--cel-a) 50%, transparent); }
+      color: var(--cel-b); opacity: .85; }
     .cel__bit--1 { top: 8%;  left: 12%; font-size: 22px; }
-    .cel__bit--2 { top: 20%; left: 68%; color: var(--cel-b); }
-    .cel__bit--3 { top: 62%; left: 6%;  font-size: 20px; color: var(--cel-b); }
+    .cel__bit--2 { top: 20%; left: 68%; color: var(--cel-a); }
+    .cel__bit--3 { top: 62%; left: 6%;  font-size: 20px; color: var(--cel-a); }
     .cel__bit--4 { top: 82%; left: 26%; }
     .cel__bit--5 { top: 46%; left: 78%; font-size: 21px; }
-    .cel__bit--6 { top: 88%; left: 62%; color: var(--cel-b); }
+    .cel__bit--6 { top: 88%; left: 62%; color: var(--cel-a); }
     .cel__bit--7 { top: 34%; left: 2%;  font-size: 14px; }
     .cel__bit--8 { top: 6%;  left: 46%; font-size: 14px; }
 
@@ -76,30 +78,30 @@ export interface CommentNode extends CommentView {
     .cel__info { position: relative; z-index: 1; display: flex; flex-direction: column;
       align-items: center; gap: 6px; text-align: center; padding: 0 4px; }
     /* Chữ viết tay: dùng font script có sẵn của máy, KHÔNG tải font ngoài (máy chủ nội bộ có thể không ra Internet) */
+    /* Dùng --cel-a (màu ĐẬM của bộ) cho chữ nhấn: --cel-c là màu nhạt, trên nền sáng gần như mất chữ. */
     .cel__script { font-family: 'Segoe Script', 'Bradley Hand', 'Brush Script MT', cursive;
-      font-size: 30px; line-height: 1.1; color: var(--cel-c); transform: rotate(-3deg);
-      text-shadow: 0 2px 10px color-mix(in srgb, var(--cel-a) 45%, transparent); }
-    .cel__name { font-size: 34px; font-weight: 800; letter-spacing: .2px; color: #fff;
-      line-height: 1.15; text-shadow: 0 3px 14px rgba(0,0,0,.35); }
+      font-size: 30px; line-height: 1.1; color: var(--cel-a); transform: rotate(-3deg); }
+    .cel__name { font-size: 34px; font-weight: 800; letter-spacing: .2px; color: var(--color-text);
+      line-height: 1.15; }
     .cel__tags { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
     .cel__dept { padding: 3px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
-      color: var(--cel-c); background: color-mix(in srgb, var(--cel-a) 22%, transparent);
-      border: 1px solid color-mix(in srgb, var(--cel-c) 45%, transparent); }
+      color: var(--cel-a); background: color-mix(in srgb, var(--cel-a) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cel-a) 40%, transparent); }
     .cel__badge { display: inline-flex; align-items: center; gap: 6px;
-      padding: 5px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #3b2500;
+      padding: 5px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #fff;
       background: linear-gradient(135deg, var(--cel-c), var(--cel-b));
       box-shadow: 0 6px 18px color-mix(in srgb, var(--cel-a) 45%, transparent); }
     /* Đường kẻ ngăn có biểu tượng ở giữa */
     .cel__sep { display: flex; align-items: center; gap: 10px; width: min(100%, 460px); margin: 2px 0; }
     .cel__sep::before, .cel__sep::after { content: ''; flex: 1; height: 1px;
-      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cel-c) 55%, transparent), transparent); }
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cel-a) 45%, transparent), transparent); }
     .cel__sep i { font-style: normal; font-size: 15px; }
     /* Khối lời chúc: nền mờ để chữ luôn đọc được trên nền gradient */
     .cel__msg { width: 100%; padding: 14px 18px; border-radius: 14px; text-align: left;
-      font-size: 14.5px; line-height: 1.75; color: #f2f5f7; white-space: pre-line;
-      background: rgba(255, 255, 255, .06);
-      border: 1px solid color-mix(in srgb, var(--cel-c) 22%, transparent); }
-    .cel__msg ::ng-deep .cel__hl { color: var(--cel-c); font-weight: 800; }
+      font-size: 14.5px; line-height: 1.75; color: var(--color-text); white-space: pre-line;
+      background: color-mix(in srgb, var(--color-surface) 72%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cel-a) 20%, transparent); }
+    .cel__msg ::ng-deep .cel__hl { color: var(--cel-a); font-weight: 800; }
     /* Hình minh hoạ góc phải dưới */
     .cel__art { position: absolute; right: 18px; bottom: 6px; z-index: 1;
       font-size: 62px; line-height: 1; opacity: .92; pointer-events: none;
