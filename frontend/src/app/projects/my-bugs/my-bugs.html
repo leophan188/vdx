@@ -26,21 +26,20 @@
   <button type="button" class="btn btn--ghost btn--sm" (click)="resetFilter()">Đặt lại</button>
 </div>
 
-<data-grid [columns]="cols" [rows]="filtered()" minWidth="1400px"
+<data-grid [columns]="cols" [rows]="filtered()" minWidth="1180px"
            [title]="'Bug / Issue của tôi (' + filtered().length + ')'"
            [pageSize]="50" [pageSizes]="[50, 100, 200]"
            [emptyText]="loading() ? 'Đang tải…' : 'Chưa có bug/issue nào.'">
-  <ng-template gridCell="code" let-b>
-    <button type="button" class="mybug-open" (click)="openWorkspace(b)">{{ b.code }}</button>
-  </ng-template>
   <ng-template gridCell="title" let-b>
-    <button type="button" class="mybug-open" (click)="openWorkspace(b)">{{ b.title }}</button>
+    <span class="task-cell__head">
+      <span class="badge" [class]="typeBadge(b.type)">{{ typeLabel(b.type) }}</span>
+      <span class="task-cell__code">{{ b.code }}</span>
+      <button type="button" class="mybug-open task-cell__title" [title]="b.title"
+              (click)="openWorkspace(b)">{{ b.title }}</button>
+    </span>
   </ng-template>
   <ng-template gridCell="projectName" let-b>
     <span [title]="b.projectCode + ' · ' + b.projectName">{{ b.projectName }}</span>
-  </ng-template>
-  <ng-template gridCell="type" let-b>
-    <span class="badge" [class]="typeBadge(b.type)">{{ typeLabel(b.type) }}</span>
   </ng-template>
   <ng-template gridCell="status" let-b>
     <span class="badge" [class]="statusBadge(b.status)">{{ statusLabel(b.status) }}</span>

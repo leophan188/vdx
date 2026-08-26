@@ -39,13 +39,6 @@ import { DescEditor, DescShot, stripShotMarkers } from '../desc-editor/desc-edit
     .bug-form { display: grid; gap: var(--space-3); width: 100%; }
     .bug-stats { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
-    /* Ô gộp Loại · Mã · Tiêu đề — nằm trên MỘT hàng, tiêu đề dài thì cắt bằng "…" chứ không
-       xuống dòng, vì mỗi lần xuống dòng là cả dòng lưới cao thêm một nấc. */
-    .bug-name { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
-    .bug-name__code { font-family: var(--font-mono, monospace); font-size: var(--text-xs);
-      color: var(--color-text-muted); flex: none; }
-    .bug-name__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-    .bug-name .badge { flex: none; }
     .bug-search { min-width: 230px; height: var(--control-h-sm); padding: 0 var(--space-3);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
       background: var(--color-surface); color: var(--color-text); font: inherit; }

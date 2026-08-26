@@ -89,13 +89,11 @@ export class MyBugs implements OnInit {
 
   readonly cols: GridColumn[] = [
     // Tiêu đề cố ý không đặt width — data-grid cho cột co giãn nuốt hết chỗ thừa.
-    { key: 'code', header: 'Mã', width: '80px', sortable: true },
-    { key: 'title', header: 'Tiêu đề', sortable: true },
+    { key: 'title', header: 'Công việc', sortable: true },
     { key: 'projectName', header: 'Dự án', width: '180px', sortable: true },
-    { key: 'type', header: 'Loại', width: '84px' },
-    { key: 'status', header: 'Trạng thái', width: '132px' },
-    { key: 'assigneeName', header: 'PIC', width: '190px' },
-    { key: 'reporterName', header: 'Người log', width: '190px' },
+    { key: 'status', header: 'Trạng thái', width: '128px' },
+    { key: 'assigneeName', header: 'PIC', width: '184px' },
+    { key: 'reporterName', header: 'Người log', width: '184px' },
     { key: 'role', header: 'Vai trò', width: '110px' },
     { key: 'dueDate', header: 'Deadline', width: '124px', sortable: true }
   ];

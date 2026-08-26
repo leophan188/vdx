@@ -303,17 +303,16 @@
           }
         </div>
       }
-      <ng-template gridCell="code" let-t>
-        <button type="button" class="ov2__d-type ov2__d-code" [style.--tb-color]="typeColor(t.type)"
-                title="Mở chi tiết công việc" (click)="openTask(t)">{{ t.code }}</button>
-      </ng-template>
-      <ng-template gridCell="type" let-t>
-        <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
-      </ng-template>
       <ng-template gridCell="title" let-t>
-        <button type="button" class="ov2__d-open" [title]="t.title + ' — bấm để mở chi tiết'"
-                (click)="openTask(t)">{{ t.title }}</button>
-        @if (parentPath(t)) { <div class="ov2__d-parent" [title]="parentPath(t)">↳ {{ parentPath(t) }}</div> }
+        <span class="task-cell">
+          <span class="task-cell__head">
+            <span class="ov2__d-type" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
+            <span class="task-cell__code">{{ t.code }}</span>
+            <button type="button" class="ov2__d-open task-cell__title"
+                    [title]="t.title + ' — bấm để mở chi tiết'" (click)="openTask(t)">{{ t.title }}</button>
+          </span>
+          @if (parentPath(t)) { <span class="task-cell__parent" [title]="parentPath(t)">↳ {{ parentPath(t) }}</span> }
+        </span>
       </ng-template>
       <ng-template gridCell="assigneeName" let-t>
         @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
@@ -323,12 +322,6 @@
         <span class="badge" [class]="taskStatusBadge(t.status)">{{ taskStatusLabel(t.status) }}</span>
       </ng-template>
       <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
-      <ng-template gridCell="progressPct" let-t>
-        <div class="ov2__d-pct">
-          <div class="ov2__d-bar"><div class="ov2__d-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
-          <span class="ov2__d-val">{{ clampPct(t.progressPct) }}%</span>
-        </div>
-      </ng-template>
     </data-grid>
   }
 </app-modal>

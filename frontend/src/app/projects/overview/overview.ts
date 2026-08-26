@@ -265,17 +265,12 @@ function emptyTypeBuckets(): TypeBuckets {
     /* Ô chi tiết trong popup */
     .ov2__d-type { font-size: var(--text-xs); font-weight: 700; padding: 1px 7px; border-radius: 999px; white-space: nowrap;
       color: var(--tb-color, var(--color-primary)); background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
-    .ov2__d-code { border: 0; cursor: pointer; font: inherit; font-size: var(--text-xs); font-weight: 700; }
-    .ov2__d-code:hover { text-decoration: underline; }
     /* Tiêu đề công việc — bấm để mở chi tiết */
     .ov2__d-open { display: block; width: 100%; border: 0; background: none; padding: 0; cursor: pointer;
       font: inherit; color: inherit; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .ov2__d-open:hover { color: var(--color-primary); text-decoration: underline; }
     .ov2__d-parent { font-size: var(--text-xs); color: var(--color-text-muted); overflow: hidden;
       text-overflow: ellipsis; white-space: nowrap; }
-    .ov2__d-pct { display: flex; align-items: center; gap: var(--space-2); }
-    .ov2__d-bar { flex: 1; min-width: 48px; height: 8px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; }
-    .ov2__d-fill { height: 100%; border-radius: 999px; background: var(--status-done); }
     .ov2__d-val { font-size: var(--text-xs); color: var(--color-text-muted); min-width: 32px; text-align: right; }
 
     /* ===== TRANG IN / PDF Tổng quan (báo cáo khách) ===== */
@@ -646,17 +641,13 @@ export class PrjOverview {
 
   /** Nhãn/màu cho popup + bảng. */
   readonly detailCols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '84px', sortable: true },
-    { key: 'type', header: 'Loại', width: '104px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '190px' },
-    { key: 'status', header: 'Trạng thái', width: '132px' },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '124px', sortable: true },
-    { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
+    { key: 'assigneeName', header: 'Người làm', width: '184px' },
+    { key: 'status', header: 'Trạng thái', width: '128px' },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '124px', sortable: true }
   ];
   typeColor(t: TaskType): string { return TYPE_META[t]?.color ?? 'var(--color-primary)'; }
   typeLabel(t: TaskType): string { return TYPE_META[t]?.short ?? t; }
-  clampPct(v: number | null | undefined): number { return Math.max(0, Math.min(100, Math.round(v ?? 0))); }
   /** Chuỗi cha (Epic › Story › Task cha) để hiện dưới tiêu đề trong popup. */
   parentPath(t: ProjectTask): string { return (t.parentChain ?? []).map((p) => p.title).join(' › '); }
   taskStatusLabel(s: TaskStatus): string { return STATUS_META.find((m) => m.key === s)?.label ?? s; }

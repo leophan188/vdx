@@ -109,8 +109,6 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
       background: color-mix(in srgb, var(--tb-color, var(--color-primary)) 14%, transparent); }
 
     /* Mã / tiêu đề công việc bấm được → mở chi tiết */
-    .rpp__code-btn { border: 0; cursor: pointer; font: inherit; }
-    .rpp__code-btn:hover { text-decoration: underline; }
     .rpp__title-btn { border: 0; background: none; padding: 0; cursor: pointer; font: inherit; color: inherit;
       text-align: left; }
     .rpp__title-btn:hover { color: var(--color-primary); text-decoration: underline; }
@@ -207,7 +205,6 @@ interface BugPerson { userId: string | null; name: string; count: number; items:
     /* Số lượng đã hiện ở tiêu đề section → ẩn "N mục" của lưới bên trong (tránh trùng). */
     .rpp__sec-body ::ng-deep .grid__count { display: none; }
 
-    .rpp__pct-cell { display: flex; align-items: center; gap: var(--space-2); }
     .rpp__mini-bar { flex: 1; min-width: 56px; height: 8px; border-radius: var(--radius-full);
       background: var(--color-surface-alt); overflow: hidden; }
     .rpp__mini-fill { height: 100%; border-radius: var(--radius-full); background: var(--status-done); }
@@ -677,12 +674,10 @@ export class PrjReportsPeriod {
 
   /** Cột cho lưới danh sách task (khối trạng thái). */
   readonly cols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '90px', sortable: true },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '190px' },
-    { key: 'estimateHours', header: 'Est (h)', align: 'center', width: '90px', sortable: true },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '120px', sortable: true },
-    { key: 'progressPct', header: '% hoàn thành', width: '170px', sortable: true }
+    { key: 'assigneeName', header: 'Người làm', width: '184px' },
+    { key: 'estimateHours', header: 'Est (h)', align: 'center', width: '84px', sortable: true },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '120px', sortable: true }
   ];
 
   /**
@@ -692,13 +687,10 @@ export class PrjReportsPeriod {
    * nên mỗi dòng vỡ thành 5-6 dòng chữ. Modal cũng chuyển sang xwide cho rộng.
    */
   readonly personCols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '92px', sortable: true },
-    { key: 'type', header: 'Loại', width: '104px' },
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'assigneeName', header: 'Người làm', width: '190px' },
-    { key: 'status', header: 'Trạng thái', width: '132px' },
-    { key: 'dueDate', header: 'Hạn', align: 'center', width: '124px', sortable: true },
-    { key: 'progressPct', header: '% HT', width: '110px', sortable: true }
+    { key: 'assigneeName', header: 'Người làm', width: '184px' },
+    { key: 'status', header: 'Trạng thái', width: '128px' },
+    { key: 'dueDate', header: 'Hạn', align: 'center', width: '124px', sortable: true }
   ];
   /**
    * Cột hiển thị: bỏ "Người làm" khi popup lọc theo người VÀ mọi dòng đều do đúng người đó thực hiện.

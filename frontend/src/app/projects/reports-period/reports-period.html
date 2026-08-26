@@ -316,17 +316,17 @@
             <data-grid [columns]="cols" [rows]="b.rows" [exportName]="b.title"
                        [searchable]="false" [pageSize]="50" [pageSizes]="[50, 100, 200]"
                        [emptyText]="b.emptyText">
-              <ng-template gridCell="code" let-t>
-                <button type="button" class="rpp__type-badge rpp__code-btn" [style.--tb-color]="typeColor(t.type)"
-                        [title]="typeLabel(t.type) + ' — bấm để mở chi tiết'" (click)="openTask(t)">{{ t.code }}</button>
-              </ng-template>
               <ng-template gridCell="title" let-t>
-                <div>
-                  <button type="button" class="rpp__title-btn" [title]="t.title + ' — bấm để mở chi tiết'"
-                          (click)="openTask(t)">{{ t.title }}</button>
-                  <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
-                </div>
-                @if (t.parentPath) { <div class="rpp__li-parent" [title]="t.parentPath">↳ {{ t.parentPath }}</div> }
+                <span class="task-cell">
+                  <span class="task-cell__head">
+                    <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
+                    <span class="task-cell__code">{{ t.code }}</span>
+                    <button type="button" class="rpp__title-btn task-cell__title"
+                            [title]="t.title + ' — bấm để mở chi tiết'" (click)="openTask(t)">{{ t.title }}</button>
+                    <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
+                  </span>
+                  @if (t.parentPath) { <span class="task-cell__parent" [title]="t.parentPath">↳ {{ t.parentPath }}</span> }
+                </span>
               </ng-template>
               <ng-template gridCell="assigneeName" let-t>
                 @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
@@ -334,12 +334,6 @@
               </ng-template>
               <ng-template gridCell="estimateHours" let-t>{{ t.estimateHours || 0 }}</ng-template>
               <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
-              <ng-template gridCell="progressPct" let-t>
-                <div class="rpp__pct-cell">
-                  <div class="rpp__mini-bar"><div class="rpp__mini-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
-                  <span class="rpp__pct-val">{{ clampPct(t.progressPct) }}%</span>
-                </div>
-              </ng-template>
             </data-grid>
           </div>
         }
@@ -368,17 +362,16 @@
           }
         </div>
       }
-      <ng-template gridCell="code" let-t>
-        <button type="button" class="rpp__type-badge rpp__code-btn" [style.--tb-color]="typeColor(t.type)"
-                title="Mở chi tiết công việc" (click)="openTask(t)">{{ t.code }}</button>
-      </ng-template>
-      <ng-template gridCell="type" let-t>
-        <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
-      </ng-template>
       <ng-template gridCell="title" let-t>
-        <button type="button" class="rpp__title-btn" [title]="t.title + ' — bấm để mở chi tiết'"
-                (click)="openTask(t)">{{ t.title }}</button>
-        @if (t.parentPath) { <div class="rpp__li-parent" [title]="t.parentPath">↳ {{ t.parentPath }}</div> }
+        <span class="task-cell">
+          <span class="task-cell__head">
+            <span class="rpp__type-badge" [style.--tb-color]="typeColor(t.type)">{{ typeLabel(t.type) }}</span>
+            <span class="task-cell__code">{{ t.code }}</span>
+            <button type="button" class="rpp__title-btn task-cell__title"
+                    [title]="t.title + ' — bấm để mở chi tiết'" (click)="openTask(t)">{{ t.title }}</button>
+          </span>
+          @if (t.parentPath) { <span class="task-cell__parent" [title]="t.parentPath">↳ {{ t.parentPath }}</span> }
+        </span>
       </ng-template>
       <ng-template gridCell="assigneeName" let-t>
         @if (t.assigneeName) { <employee-chip [name]="t.assigneeName" /> }
@@ -388,12 +381,6 @@
         <span class="badge" [class]="statusBadge(t.status)">{{ statusLabel(t.status) }}</span>
       </ng-template>
       <ng-template gridCell="dueDate" let-t>{{ t.dueDate || '—' }}</ng-template>
-      <ng-template gridCell="progressPct" let-t>
-        <div class="rpp__pct-cell">
-          <div class="rpp__mini-bar"><div class="rpp__mini-fill" [style.width.%]="clampPct(t.progressPct)"></div></div>
-          <span class="rpp__pct-val">{{ clampPct(t.progressPct) }}%</span>
-        </div>
-      </ng-template>
     </data-grid>
   }
 </app-modal>
