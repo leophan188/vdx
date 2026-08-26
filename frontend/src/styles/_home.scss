@@ -110,8 +110,8 @@
 /* Biểu tượng chìm góc phải — nhận ra loại tin kể cả khi chưa đọc chữ */
 .ochome-post--celebrate::after {
   content: var(--cel-ico);
-  position: absolute; right: 14px; bottom: 4px; z-index: 0;
-  font-size: 104px; line-height: 1; opacity: .08; pointer-events: none; user-select: none;
+  position: absolute; right: 12px; bottom: 0; z-index: 0;
+  font-size: 76px; line-height: 1; opacity: .08; pointer-events: none; user-select: none;
 }
 .ochome-post--celebrate > * { position: relative; z-index: 1; }
 
