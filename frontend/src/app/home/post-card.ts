@@ -26,36 +26,95 @@ export interface CommentNode extends CommentView {
     .ochome-comment--reply.is-deep { margin-left: 0; }
     .ochome-comment__replybox { display: flex; gap: 8px; align-items: flex-start; margin: 6px 0 6px 38px; }
     .ochome-mention { color: var(--color-primary); font-weight: 600; white-space: nowrap; }
-    /* Thiệp giữ dáng ĐỨNG căn giữa (xếp ngang trông lệch hẳn về trái), chỉ thu nhỏ mọi kích
-       thước và khoảng cách để bỏ phần diện tích thừa — thẻ cũ cao gần 500px cho 2–3 dòng chữ. */
-    .ochome-celebrate-hero { display: flex; flex-direction: column; align-items: center;
-      gap: 6px; margin: 4px 0 10px; }
-    /* Vòng quanh ảnh lấy màu của LOẠI tin (biến --cel-* đặt ở .ochome-post--bd/ob/anniv). */
-    .ochome-celebrate-hero__ring { display: inline-flex; padding: 4px; border-radius: 50%;
-      background: linear-gradient(135deg, var(--cel-a, #db2777), var(--cel-b, #ea580c) 55%, var(--cel-c, #f59e0b));
-      box-shadow: 0 8px 24px color-mix(in srgb, var(--cel-a, #db2777) 35%, transparent); }
-    .ochome-celebrate-hero__img { width: 88px; height: 88px; border-radius: 50%; object-fit: cover;
-      border: 2px solid var(--color-surface); display: block; }
-    .ochome-celebrate-hero ::ng-deep .avatar { width: 88px !important; height: 88px !important; font-size: 31px !important;
-      border: 2px solid var(--color-surface); border-radius: 50%; }
-    .ochome-celebrate-hero__name { font-size: 18px; font-weight: 800; color: var(--color-text); letter-spacing: .2px; }
-    /* Phòng ban của người được chúc — chip nhỏ dưới tên, giúp nhận ra ngay người của bộ phận nào. */
-    .ochome-celebrate-hero__dept { margin-top: -2px; padding: 2px 10px; border-radius: 999px;
-      font-size: 12px; font-weight: 700; letter-spacing: .3px;
-      color: var(--cel-a, var(--color-text-muted));
-      background: color-mix(in srgb, var(--cel-a, currentColor) 14%, transparent);
-      border: 1px solid color-mix(in srgb, var(--cel-a, currentColor) 35%, transparent); }
-    /* Huy hiệu SỐ NĂM gắn bó — điểm nhấn riêng của thiệp thâm niên, đọc được từ xa. */
-    .ochome-celebrate-hero__badge { display: inline-flex; align-items: baseline; gap: 4px;
-      margin-top: 0; padding: 4px 13px; border-radius: 999px;
-      background: linear-gradient(135deg, var(--cel-a), var(--cel-b) 60%, var(--cel-c));
-      color: #fff; font-weight: 800; letter-spacing: .4px; text-shadow: 0 1px 2px rgba(0,0,0,.2);
-      box-shadow: 0 6px 18px color-mix(in srgb, var(--cel-a) 35%, transparent); }
-    .ochome-celebrate-hero__badge b { font-size: 17px; line-height: 1; }
-    /* Nội dung căn giữa như thiệp, nhưng khung chữ rộng hơn cũ (580 → 720px) và dòng sát hơn
-       để chữ không bị bó thành nhiều dòng ngắn giữa một thẻ rộng. */
-    .ochome-post--celebrate .ochome-post__text { text-align: center; max-width: 720px;
-      margin: 0 auto 2px; line-height: 1.55; }
+    /* ===================== THIỆP CHÚC MỪNG =====================
+       Khung riêng bên trong bài: ảnh nhân sự bên trái trên nền hoạ tiết, bên phải là lời chào
+       viết tay + tên + phòng ban + lời chúc. Toàn bộ dựng bằng CSS/emoji, không cần file ảnh,
+       nên chạy được cả khi máy chủ không ra Internet. Bộ màu lấy từ biến --cel-* của từng loại tin. */
+    .cel { position: relative; display: grid; grid-template-columns: minmax(220px, 300px) 1fr;
+      align-items: center; gap: 8px; margin: 4px 0 10px; padding: 22px 26px;
+      border-radius: 18px; overflow: hidden;
+      border: 1px solid color-mix(in srgb, var(--cel-a) 45%, transparent);
+      background:
+        radial-gradient(60% 90% at 22% 45%, color-mix(in srgb, var(--cel-b) 26%, transparent), transparent 70%),
+        linear-gradient(135deg, color-mix(in srgb, var(--cel-a) 22%, #0b0f14) 0%,
+                                 color-mix(in srgb, var(--cel-a) 10%, #0b0f14) 55%,
+                                 color-mix(in srgb, var(--cel-c) 14%, #0b0f14) 100%); }
+    /* Dải sóng mềm ở đáy thiệp */
+    .cel::before { content: ''; position: absolute; left: -10%; right: -10%; bottom: -58%;
+      height: 100%; border-radius: 50%; pointer-events: none;
+      background: color-mix(in srgb, var(--cel-a) 16%, transparent); }
+
+    /* --- Cột trái: ảnh + vầng sáng + hoạ tiết rắc --- */
+    .cel__stage { position: relative; display: flex; align-items: center; justify-content: center;
+      min-height: 190px; z-index: 1; }
+    .cel__ring { position: relative; display: inline-flex; padding: 5px; border-radius: 50%;
+      background: linear-gradient(135deg, var(--cel-a), var(--cel-c));
+      box-shadow: 0 0 0 6px color-mix(in srgb, var(--cel-a) 18%, transparent),
+                  0 0 46px 10px color-mix(in srgb, var(--cel-b) 45%, transparent); }
+    .cel__img { width: 150px; height: 150px; border-radius: 50%; object-fit: cover;
+      border: 4px solid color-mix(in srgb, #fff 88%, var(--cel-a)); display: block; }
+    .cel__ring ::ng-deep .avatar { width: 150px !important; height: 150px !important;
+      font-size: 52px !important; border: 4px solid color-mix(in srgb, #fff 88%, var(--cel-a));
+      border-radius: 50%; }
+    /* Vương miện đội lên ảnh (sinh nhật / thâm niên) */
+    .cel__crown { position: absolute; top: 2px; left: 50%; transform: translate(-92%, -34%) rotate(-18deg);
+      font-size: 40px; line-height: 1; z-index: 2;
+      filter: drop-shadow(0 4px 10px color-mix(in srgb, var(--cel-a) 60%, transparent)); }
+    /* Hoạ tiết rắc quanh ảnh — toạ độ cố định để bố cục không nhảy mỗi lần render */
+    .cel__bit { position: absolute; font-size: 17px; line-height: 1; pointer-events: none;
+      color: var(--cel-c); opacity: .9; text-shadow: 0 2px 8px color-mix(in srgb, var(--cel-a) 50%, transparent); }
+    .cel__bit--1 { top: 8%;  left: 12%; font-size: 22px; }
+    .cel__bit--2 { top: 20%; left: 68%; color: var(--cel-b); }
+    .cel__bit--3 { top: 62%; left: 6%;  font-size: 20px; color: var(--cel-b); }
+    .cel__bit--4 { top: 82%; left: 26%; }
+    .cel__bit--5 { top: 46%; left: 78%; font-size: 21px; }
+    .cel__bit--6 { top: 88%; left: 62%; color: var(--cel-b); }
+    .cel__bit--7 { top: 34%; left: 2%;  font-size: 14px; }
+    .cel__bit--8 { top: 6%;  left: 46%; font-size: 14px; }
+
+    /* --- Cột phải: lời chào, tên, thẻ, lời chúc --- */
+    .cel__info { position: relative; z-index: 1; display: flex; flex-direction: column;
+      align-items: center; gap: 6px; text-align: center; padding: 0 4px; }
+    /* Chữ viết tay: dùng font script có sẵn của máy, KHÔNG tải font ngoài (máy chủ nội bộ có thể không ra Internet) */
+    .cel__script { font-family: 'Segoe Script', 'Bradley Hand', 'Brush Script MT', cursive;
+      font-size: 30px; line-height: 1.1; color: var(--cel-c); transform: rotate(-3deg);
+      text-shadow: 0 2px 10px color-mix(in srgb, var(--cel-a) 45%, transparent); }
+    .cel__name { font-size: 34px; font-weight: 800; letter-spacing: .2px; color: #fff;
+      line-height: 1.15; text-shadow: 0 3px 14px rgba(0,0,0,.35); }
+    .cel__tags { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+    .cel__dept { padding: 3px 14px; border-radius: 999px; font-size: 13px; font-weight: 700;
+      color: var(--cel-c); background: color-mix(in srgb, var(--cel-a) 22%, transparent);
+      border: 1px solid color-mix(in srgb, var(--cel-c) 45%, transparent); }
+    .cel__badge { display: inline-flex; align-items: center; gap: 6px;
+      padding: 5px 16px; border-radius: 999px; font-size: 14px; font-weight: 800; color: #3b2500;
+      background: linear-gradient(135deg, var(--cel-c), var(--cel-b));
+      box-shadow: 0 6px 18px color-mix(in srgb, var(--cel-a) 45%, transparent); }
+    /* Đường kẻ ngăn có biểu tượng ở giữa */
+    .cel__sep { display: flex; align-items: center; gap: 10px; width: min(100%, 460px); margin: 2px 0; }
+    .cel__sep::before, .cel__sep::after { content: ''; flex: 1; height: 1px;
+      background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--cel-c) 55%, transparent), transparent); }
+    .cel__sep i { font-style: normal; font-size: 15px; }
+    /* Khối lời chúc: nền mờ để chữ luôn đọc được trên nền gradient */
+    .cel__msg { width: 100%; padding: 14px 18px; border-radius: 14px; text-align: left;
+      font-size: 14.5px; line-height: 1.75; color: #f2f5f7; white-space: pre-line;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid color-mix(in srgb, var(--cel-c) 22%, transparent); }
+    .cel__msg ::ng-deep .cel__hl { color: var(--cel-c); font-weight: 800; }
+    /* Hình minh hoạ góc phải dưới */
+    .cel__art { position: absolute; right: 18px; bottom: 6px; z-index: 1;
+      font-size: 62px; line-height: 1; opacity: .92; pointer-events: none;
+      filter: drop-shadow(0 6px 14px rgba(0,0,0,.35)); }
+
+    /* Màn hẹp: xếp dọc, thu nhỏ mọi thứ cho vừa */
+    @media (max-width: 720px) {
+      .cel { grid-template-columns: 1fr; gap: 4px; padding: 18px 16px; }
+      .cel__stage { min-height: 150px; }
+      .cel__img, .cel__ring ::ng-deep .avatar { width: 112px !important; height: 112px !important; }
+      .cel__script { font-size: 24px; }
+      .cel__name { font-size: 26px; }
+      .cel__art { font-size: 44px; right: 10px; }
+      .cel__msg { text-align: center; }
+    }
   `]
 })
 export class PostCard {
@@ -156,6 +215,55 @@ export class PostCard {
     const dept = m ? m[1].trim() : '';
     return /^công ty$/i.test(dept) ? '' : dept;
   });
+
+  /** Lời chào viết tay ở đầu thiệp. */
+  readonly celebrationScript = computed(() => this.celebrationKind() === 'ob' ? 'Chào mừng' : 'Chúc mừng');
+
+  /** Biểu tượng nhỏ nằm giữa đường kẻ ngăn phần tên với phần lời chúc. */
+  readonly celebrationIcon = computed(() => {
+    switch (this.celebrationKind()) {
+      case 'bd': return '🎂';
+      case 'ob': return '🌟';
+      case 'anniv': return '⭐';
+      default: return '🎉';
+    }
+  });
+
+  /** Hình minh hoạ góc phải dưới của thiệp. */
+  readonly celebrationArt = computed(() => {
+    switch (this.celebrationKind()) {
+      case 'bd': return '🎂';
+      case 'ob': return '🌿';
+      case 'anniv': return '🎁';
+      default: return '🎉';
+    }
+  });
+
+  /** Hoạ tiết rắc quanh ảnh — mỗi loại một bộ, đặt rải theo toạ độ cố định (xem CSS .cel__bit--n). */
+  readonly celebrationBits = computed<string[]>(() => {
+    switch (this.celebrationKind()) {
+      case 'bd': return ['★', '✦', '❊', '✧', '★', '✦', '❊', '✧'];
+      case 'ob': return ['✦', '❈', '✧', '★', '✿', '✦', '❈', '✧'];
+      case 'anniv': return ['★', '✦', '❊', '✧', '★', '✿', '✦', '★'];
+      default: return [];
+    }
+  });
+
+  /**
+   * Lời chúc trong thiệp: tô nổi TÊN người được chúc và MÃ phòng ban để mắt bắt ngay,
+   * phần còn lại giữ nguyên. Vẫn đi qua escapeHtml trước khi chèn thẻ nên an toàn.
+   */
+  renderCelebrationBody(text: string): SafeHtml {
+    let html = this.escapeHtml(this.stripMarkers(text));
+    for (const key of [this.celebrantName(), this.celebrantDept()]) {
+      if (!key) {
+        continue;
+      }
+      const re = new RegExp(this.escapeRegex(this.escapeHtml(key)), 'g');
+      html = html.replace(re, `<b class="cel__hl">${this.escapeHtml(key)}</b>`);
+    }
+    return this.sanitizer.bypassSecurityTrustHtml(html);
+  }
 
   readonly showComments = signal(false);
   readonly draft = signal('');

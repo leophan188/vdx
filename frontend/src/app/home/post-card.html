@@ -37,26 +37,50 @@
     <p class="ochome-post__text ochome-post__muted">Bài viết đang bị ẩn (chỉ admin thấy).</p>
   }
 
-  <!-- Hero: ảnh nhân sự được chúc (tin chúc mừng có subjectUserId) — căn giữa, sinh động -->
-  @if (isCelebration() && current().subjectUserId) {
-    <div class="ochome-celebrate-hero">
-      <span class="ochome-celebrate-hero__ring">
-        @if (avatarUrl(current().subjectUserId); as src) {
-          <img class="ochome-celebrate-hero__img" [src]="src" alt=""
-               (error)="onAvatarError(current().subjectUserId)" />
-        } @else {
-          <app-avatar [name]="celebrantName()" [size]="116" />
+  <!--
+    THIỆP chúc mừng: ảnh nhân sự bên trái (kèm hoạ tiết rắc quanh), bên phải là lời chào viết tay,
+    tên, phòng ban, huy hiệu năm gắn bó rồi tới lời chúc. Lời chúc nằm TRONG thiệp nên không dùng
+    .ochome-post__text như bài thường nữa.
+  -->
+  @if (isCelebration()) {
+    <div class="cel">
+      <div class="cel__stage">
+        @if (celebrationKind() === 'bd' || celebrationKind() === 'anniv') {
+          <span class="cel__crown" aria-hidden="true">👑</span>
         }
-      </span>
-      @if (celebrantName()) { <strong class="ochome-celebrate-hero__name">{{ celebrantName() }}</strong> }
-      @if (celebrantDept()) { <span class="ochome-celebrate-hero__dept">{{ celebrantDept() }}</span> }
-      @if (anniversaryYears()) {
-        <span class="ochome-celebrate-hero__badge"><b>{{ anniversaryYears() }}</b> năm gắn bó</span>
-      }
+        <span class="cel__ring">
+          @if (avatarUrl(current().subjectUserId); as src) {
+            <img class="cel__img" [src]="src" alt=""
+                 (error)="onAvatarError(current().subjectUserId)" />
+          } @else {
+            <app-avatar [name]="celebrantName() || current().authorName" [size]="150" />
+          }
+        </span>
+        @for (b of celebrationBits(); track $index) {
+          <span class="cel__bit cel__bit--{{ $index + 1 }}" aria-hidden="true">{{ b }}</span>
+        }
+      </div>
+
+      <div class="cel__info">
+        <span class="cel__script">{{ celebrationScript() }}</span>
+        @if (celebrantName()) { <strong class="cel__name">{{ celebrantName() }}</strong> }
+        <span class="cel__tags">
+          @if (celebrantDept()) { <span class="cel__dept">{{ celebrantDept() }}</span> }
+          @if (anniversaryYears()) {
+            <span class="cel__badge">👥 {{ anniversaryYears() }} năm gắn bó</span>
+          }
+        </span>
+        <span class="cel__sep" aria-hidden="true"><i>{{ celebrationIcon() }}</i></span>
+        @if (current().body) {
+          <div class="cel__msg" [innerHTML]="renderCelebrationBody(current().body)"></div>
+        }
+      </div>
+
+      <span class="cel__art" aria-hidden="true">{{ celebrationArt() }}</span>
     </div>
   }
 
-  @if (current().body) {
+  @if (current().body && !isCelebration()) {
     <p class="ochome-post__text" [innerHTML]="renderBody(current().body, current().mentions)"></p>
   }
 

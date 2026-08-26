@@ -89,16 +89,13 @@
   padding-top: 0;                                  /* banner chiếm mép trên */
   /* Mặc định (tin chúc mừng không rõ loại): hồng-cam như cũ */
   --cel-a: #db2777; --cel-b: #ea580c; --cel-c: #f59e0b; --cel-ico: '🎉';
-  border: 1px solid color-mix(in srgb, var(--cel-a) 55%, transparent);
-  border-left: 4px solid var(--cel-a);
+  /* Nền thẻ để NHẠT — thiệp bên trong đã có nền gradient riêng, đậm cả hai thì chọi nhau. */
+  border: 1px solid color-mix(in srgb, var(--cel-a) 45%, transparent);
   background:
-    radial-gradient(130% 120% at 92% -10%, color-mix(in srgb, var(--cel-c) 30%, transparent), transparent 55%),
-    linear-gradient(135deg,
-      color-mix(in srgb, var(--cel-a) 26%, transparent),
-      color-mix(in srgb, var(--cel-b) 18%, transparent) 55%,
-      color-mix(in srgb, var(--cel-c) 22%, transparent)),
+    linear-gradient(135deg, color-mix(in srgb, var(--cel-a) 8%, transparent),
+                            color-mix(in srgb, var(--cel-c) 6%, transparent)),
     var(--color-surface);
-  box-shadow: 0 8px 26px color-mix(in srgb, var(--cel-a) 24%, transparent);
+  box-shadow: 0 8px 26px color-mix(in srgb, var(--cel-a) 20%, transparent);
 }
 /* SINH NHẬT — hồng/đỏ, bánh kem */
 .ochome-post--bd    { --cel-a: #db2777; --cel-b: #f43f5e; --cel-c: #fb923c; --cel-ico: '🎂'; }
@@ -106,14 +103,6 @@
 .ochome-post--ob    { --cel-a: #0d9488; --cel-b: #0ea5e9; --cel-c: #34d399; --cel-ico: '🌱'; }
 /* THÂM NIÊN — vàng hổ phách, cúp: sắc "huân chương", trang trọng hơn */
 .ochome-post--anniv { --cel-a: #b45309; --cel-b: #f59e0b; --cel-c: #fcd34d; --cel-ico: '🏆'; }
-
-/* Biểu tượng chìm góc phải — nhận ra loại tin kể cả khi chưa đọc chữ */
-.ochome-post--celebrate::after {
-  content: var(--cel-ico);
-  position: absolute; right: 12px; bottom: 0; z-index: 0;
-  font-size: 76px; line-height: 1; opacity: .08; pointer-events: none; user-select: none;
-}
-.ochome-post--celebrate > * { position: relative; z-index: 1; }
 
 /* Dải banner đầu bài (full-width, KHÔNG đè nút quản trị) */
 .ochome-celebrate-banner {
