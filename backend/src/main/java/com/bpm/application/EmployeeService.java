@@ -28,6 +28,7 @@ import java.text.Normalizer;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -203,6 +204,22 @@ public class EmployeeService {
                     "lý do=nhân sự nghỉ việc, empCode=" + e.getEmpCode() + ", projectId=" + m.getProjectId());
             log.info("[hr] {} đã nghỉ → cắt quyền dự án {}", e.getEmpCode(), m.getProjectId());
         }
+    }
+
+    /**
+     * Ngưỡng an toàn cho ĐỒNG BỘ TOÀN PHẦN: file phải chứa ít nhất chừng này so với số nhân sự nội bộ
+     * đang có thì mới xử lý người vắng mặt.
+     *
+     * Không có chốt này thì một lần đọc file hỏng, sheet bị đổi quyền hay tải về thiếu dòng sẽ khiến
+     * TOÀN BỘ nhân sự bị coi là đã nghỉ: khoá tài khoản, đánh dấu nghỉ việc và cắt quyền mọi dự án
+     * cùng lúc. Thà bỏ qua một lần đồng bộ còn hơn khoá nhầm cả công ty.
+     */
+    private static final double FULL_SYNC_MIN_RATIO = 0.8d;
+
+    /** File có đủ "đầy đặn" để tin mà xử lý người vắng mặt hay không. */
+    private static boolean fileCoversMostStaff(int totalRead, Collection<Employee> existing) {
+        long internal = existing.stream().filter(e -> !e.isExternal()).count();
+        return internal == 0 || totalRead >= Math.max(1, Math.round(internal * FULL_SYNC_MIN_RATIO));
     }
 
     /** Trạng thái ghi cho người không còn trong file đồng bộ toàn phần. */
@@ -513,7 +530,7 @@ public class EmployeeService {
 
         // Đồng bộ TOÀN PHẦN (tuỳ chọn): nhân sự cũ vắng mặt khỏi file → khoá (hoặc bàn giao).
         // Mặc định TẮT để upload từng phần không vô tình khoá người không có trong file.
-        if (fullSync) {
+        if (fullSync && fileCoversMostStaff(totalRead, existing.values())) {
             for (Employee e : existing.values()) {
                 // LOẠI TRỪ nhân sự thuê ngoài/mượn: vắng mặt khỏi file là bình thường (không đồng bộ) → KHÔNG khoá.
                 if (e.isExternal()) {
@@ -624,7 +641,15 @@ public class EmployeeService {
         }
 
         // Đồng bộ TOÀN PHẦN (tuỳ chọn): nhân sự cũ vắng mặt khỏi file → khoá (hoặc bàn giao).
-        for (Employee e : fullSync ? existing.values() : java.util.List.<Employee>of()) {
+        // Chỉ chạy khi file đủ đầy đặn — xem FULL_SYNC_MIN_RATIO.
+        boolean canSweepAbsent = fullSync && fileCoversMostStaff(parsed.rows().size(), existing.values());
+        if (fullSync && !canSweepAbsent) {
+            log.warn("[hr-import] BỎ QUA xử lý vắng mặt: file chỉ có {} dòng, quá ít so với {} nhân sự nội bộ",
+                    parsed.rows().size(), existing.values().stream().filter(e -> !e.isExternal()).count());
+            auditPort.record("EMPLOYEE_FULLSYNC_SKIPPED", "EmployeeImportLog", null, actor,
+                    "file=" + fileName + ", rows=" + parsed.rows().size() + " — nghi file thiếu dòng, không khoá ai");
+        }
+        for (Employee e : canSweepAbsent ? existing.values() : java.util.List.<Employee>of()) {
             // LOẠI TRỪ nhân sự thuê ngoài/mượn khỏi khoá-khi-vắng-mặt (không đồng bộ từ file).
             if (e.isExternal()) {
                 continue;
