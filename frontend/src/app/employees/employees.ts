@@ -52,6 +52,11 @@ function isActiveStatus(status: string | null): boolean {
   return !!status && status.trim().toLowerCase().includes('đang làm');
 }
 
+/** Đã nghỉ thật sự (khác "Chưa Onboard") — khớp Employee.hasLeft ở backend. */
+function hasLeftStatus(status: string | null): boolean {
+  return !!status && status.trim().toLowerCase().includes('nghỉ');
+}
+
 @Component({
   selector: 'app-employees',
   imports: [FormsModule, PageHeader, DataGrid, GridCellDirective, Modal, SearchableSelect, EmployeeChip, Skeleton, EmptyState],
@@ -123,6 +128,9 @@ export class Employees implements OnInit {
    */
   private endDateOf(e: Employee): Date | null {
     if (isActiveStatus(e.status)) return new Date();
+    // "Chưa Onboard" cũng không phải đang làm, nhưng theo hướng ngược lại: chưa vào làm ngày nào
+    // thì không có thâm niên để mà tính, chứ không phải thâm niên chốt tại hôm nay.
+    if (!hasLeftStatus(e.status)) return null;
     const leave = parseDmy(e.leaveDate);
     if (leave) return leave;
     const upd = e.updatedAt ? new Date(e.updatedAt) : null;
@@ -153,6 +161,7 @@ export class Employees implements OnInit {
   /** Người đã nghỉ: nói rõ thâm niên chốt đến ngày nào, vì con số không còn chạy tiếp. */
   seniorityHint(e: Employee): string {
     if (isActiveStatus(e.status)) return 'Tính đến hôm nay';
+    if (!hasLeftStatus(e.status)) return 'Chưa vào làm — chưa tính thâm niên';
     const leave = e.leaveDate;
     return leave ? 'Chốt đến ngày nghỉ ' + leave
       : 'Chốt đến lần cập nhật hồ sơ gần nhất (chưa có ngày nghỉ chính thức)';

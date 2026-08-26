@@ -65,6 +65,11 @@ describe('Employees — thống kê & bộ lọc', () => {
     const exact = { ...emp('9003', 'Tròn năm', 'Đang làm việc', 'PDX', 'Senior'), joinDate: '29/02/2024' };
     expect(cmp.seniorityText(exact)).not.toContain('0 tháng');
 
+    // Chưa Onboard: không phải đang làm, nhưng cũng chưa có thâm niên nào.
+    const notYet = { ...emp('9005', 'Chưa vào', 'Chưa Onboard', 'PDX', 'Junior'),
+      joinDate: '20/07/2026', updatedAt: '2026-07-17T00:00:00Z' };
+    expect(cmp.seniorityText(notYet)).toBe('—');
+
     // Thiếu ngày vào thì không bịa số.
     expect(cmp.seniorityText(emp('9004', 'Thiếu ngày', 'Đang làm việc', 'PDX', 'Senior'))).toBe('—');
   });

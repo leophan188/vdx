@@ -153,9 +153,17 @@ public class Employee {
     public void syncLeaveDate(LocalDate today) {
         if (isActive()) {
             this.leaveDate = null;
-        } else if (this.leaveDate == null) {
+        } else if (hasLeft() && this.leaveDate == null) {
             this.leaveDate = today;
         }
+    }
+
+    /**
+     * ĐÃ NGHỈ thật sự — phân biệt với "Chưa Onboard", cũng là trạng thái không-đang-làm nhưng theo
+     * hướng ngược lại: người chưa vào làm thì không có ngày nghỉ và cũng chưa có thâm niên nào.
+     */
+    public boolean hasLeft() {
+        return status != null && status.trim().toLowerCase().contains("nghỉ");
     }
 
     public void linkAccount(String userAccountId, String actor) {
