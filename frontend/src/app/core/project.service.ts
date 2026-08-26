@@ -568,6 +568,12 @@ export class ProjectService {
   listProjectWorkLogs(projectId: string, from: string, to: string): Observable<WorkLog[]> {
     return this.http.get<WorkLog[]>(`${this.base}/${projectId}/work-logs?from=${from}&to=${to}`, this.opts);
   }
+  /** Đổi người của một dòng giờ ghi nhầm (không đụng các dòng khác). */
+  reassignWorkLog(projectId: string, workLogId: string, userId: string): Observable<WorkLog> {
+    return this.http.patch<WorkLog>(`${this.base}/${projectId}/work-logs/${workLogId}/user`,
+      { assigneeUserId: userId }, this.opts);
+  }
+
   deleteWorkLog(projectId: string, workLogId: string): Observable<void> {
     return this.http.delete<void>(`${this.base}/${projectId}/work-logs/${workLogId}`, this.opts);
   }

@@ -150,8 +150,23 @@
                 <span class="td__work-date">{{ w.workDate }}</span>
                 <b class="td__work-h">{{ w.hours }}h</b>
                 <span class="td__work-note" [title]="w.note || ''">{{ w.note || '' }}</span>
-                <button type="button" class="td__work-del" title="Xoá dòng giờ" (click)="deleteLog(w)">×</button>
+                <span class="td__work-acts">
+                  <button type="button" class="td__work-del"
+                          title="Chuyển dòng giờ này sang người khác (ghi nhầm người)"
+                          (click)="reassigningLog.set(reassigningLog() === w.id ? null : w.id)">⇄</button>
+                  <button type="button" class="td__work-del" title="Xoá dòng giờ" (click)="deleteLog(w)">×</button>
+                </span>
               </div>
+              @if (reassigningLog() === w.id) {
+                <div class="td__work-reassign">
+                  <span class="hint">Chuyển giờ này sang:</span>
+                  <searchable-select [options]="peopleSel()" [value]="w.userId || ''"
+                                     (valueChange)="reassignLog(w, $event)"
+                                     placeholder="Chọn người…" />
+                  <button type="button" class="btn btn--ghost btn--sm"
+                          (click)="reassigningLog.set(null)">Huỷ</button>
+                </div>
+              }
             }
           </div>
         } @else {

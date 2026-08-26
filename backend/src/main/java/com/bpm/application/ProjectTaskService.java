@@ -659,6 +659,38 @@ public class ProjectTaskService {
         return out;
     }
 
+    /**
+     * Đổi NGƯỜI của một dòng giờ đã ghi.
+     *
+     * Mỗi dòng giờ vốn gắn với một BƯỚC (vai Lập trình / Kiểm thử) và người đảm nhiệm bước đó tại thời
+     * điểm ghi — nên đổi người thực hiện hay người kiểm thử của task KHÔNG kéo theo giờ cũ: công sức đã
+     * bỏ ra vẫn thuộc người đã làm. Cách đó đúng khi bàn giao thật, nhưng khi gán nhầm người rồi mới sửa
+     * thì dòng giờ nằm sai chỗ; hàm này để nắn lại đúng dòng đó, không đụng các dòng khác.
+     */
+    @Transactional
+    public ProjectDto.WorkLogResponse changeWorkLogUser(String projectId, String workLogId,
+                                                        String userId, String actor) {
+        TaskWorkLog w = workLogRepo.findById(workLogId)
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy dòng giờ"));
+        if (!w.getProjectId().equals(projectId)) {
+            throw new IllegalArgumentException("Dòng giờ không thuộc dự án này");
+        }
+        String uid = blankToNull(userId);
+        if (uid == null || userRepo.findById(uid).isEmpty()) {
+            throw new IllegalArgumentException("Không tìm thấy người được chọn");
+        }
+        String old = w.getUserId();
+        w.reassignTo(uid, userRepo.findById(uid).map(u -> u.getFullName()).orElse(null));
+        TaskWorkLog saved = workLogRepo.save(w);
+        auditPort.record("PROJECT_TASK_WORK_LOG_REASSIGNED", "ProjectTask", w.getTaskId(), actor,
+                "workLogId=" + workLogId + ", từ=" + old + ", sang=" + uid + ", giờ=" + w.getHours());
+        Project p = getProject(projectId);
+        ProjectTask t = taskRepo.findById(saved.getTaskId()).orElse(null);
+        return t == null
+                ? ProjectDto.WorkLogResponse.of(saved, null, null)
+                : ProjectDto.WorkLogResponse.of(saved, code(p, t), t.getTitle());
+    }
+
     /** Xoá một dòng giờ ghi nhầm (trừ lại vào tổng giờ của task). */
     @Transactional
     public void deleteWorkLog(String projectId, String workLogId, String actor) {

@@ -91,7 +91,7 @@ type SubTab = 'info' | 'comments' | 'activity';
     .td__work-list { display: grid; gap: 2px; }
     /* align-items: start — ghi chú dài xuống nhiều dòng thì các cột còn lại bám mép trên,
        không bị đẩy trôi xuống giữa dòng cao. */
-    .td__work-row { display: grid; grid-template-columns: 114px minmax(90px, 1fr) 92px 52px 2fr 24px;
+    .td__work-row { display: grid; grid-template-columns: 114px minmax(90px, 1fr) 92px 52px 2fr 52px;
       align-items: start; gap: 8px; padding: 6px 8px; border-radius: 6px;
       background: var(--color-surface); font-size: var(--text-sm); }
     .td__work-role { font-size: 10px; font-weight: 700; padding: 1px 6px; border-radius: 999px; text-align: center;
@@ -104,8 +104,14 @@ type SubTab = 'info' | 'comments' | 'activity';
        — lý do bị trả lại — nằm ở cuối câu và không đọc được, phải rê chuột mới thấy. */
     .td__work-note { color: var(--color-text-muted); font-size: var(--text-xs);
       white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.45; }
+    .td__work-acts { display: flex; gap: 6px; align-items: center; justify-content: flex-end; }
     .td__work-del { border: 0; background: none; cursor: pointer; color: var(--color-text-muted);
       font-size: 1.1rem; line-height: 1; padding: 0; }
+    /* Ô chọn người khi nắn lại dòng giờ ghi nhầm */
+    .td__work-reassign { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+      margin: 2px 0 6px; padding: 8px 10px; border-radius: 6px;
+      background: var(--color-surface); border: 1px dashed var(--color-primary); }
+    .td__work-reassign searchable-select { min-width: 240px; }
     .td__work-del:hover { color: var(--overdue, #e5484d); }
     .td__work-empty { margin: 0; font-size: var(--text-xs); color: var(--color-text-muted); line-height: 1.5; }
     .td__life-input { height: var(--control-h-sm); border: 1px solid var(--color-border);
@@ -625,6 +631,32 @@ export class PrjTaskDetail {
       error: (e) => { this.savingLog.set(false); this.toast.error('Không ghi được giờ', e?.error?.message ?? ''); }
     });
   }
+  /** Dòng giờ đang mở ô chọn người (null = không mở). */
+  readonly reassigningLog = signal<string | null>(null);
+
+  /**
+   * Nắn lại NGƯỜI của một dòng giờ ghi nhầm.
+   *
+   * Đổi người thực hiện / kiểm thử của task KHÔNG kéo giờ cũ theo — mỗi dòng giờ thuộc về bước và
+   * người đã làm bước đó, nên bàn giao thật thì công của người trước vẫn còn nguyên. Khi gán nhầm
+   * người rồi mới sửa thì dùng chỗ này để nắn đúng dòng bị sai.
+   */
+  reassignLog(w: WorkLog, userId: string): void {
+    this.reassigningLog.set(null);
+    const t = this.task();
+    if (!userId || userId === w.userId || !t) {
+      return;
+    }
+    this.svc.reassignWorkLog(this.projectId(), w.id, userId).subscribe({
+      next: () => {
+        this.toast.success('Đã chuyển dòng giờ sang người khác');
+        this.loadWorkLogs(t.id);
+        this.changed.emit();
+      },
+      error: (e) => this.toast.error('Không chuyển được dòng giờ', e?.error?.message ?? '')
+    });
+  }
+
   deleteLog(w: WorkLog): void {
     const t = this.current();
     if (!t) return;

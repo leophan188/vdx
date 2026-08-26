@@ -118,6 +118,12 @@ public class TaskWorkLog {
     public String getTaskId() { return taskId; }
     public String getUserId() { return userId; }
     public String getUserName() { return userName; }
+
+    /** Nắn lại người của dòng giờ khi ghi nhầm (xem ProjectTaskService#changeWorkLogUser). */
+    public void reassignTo(String userId, String userName) {
+        this.userId = userId;
+        this.userName = userName;
+    }
     public String getRole() { return role; }
     public LocalDate getWorkDate() { return workDate; }
     public double getHours() { return hours; }

@@ -290,6 +290,15 @@ public class ProjectController {
         return taskService.listProjectWorkLogs(id, from, to);
     }
 
+    /** Đổi NGƯỜI của một dòng giờ ghi nhầm (không đụng các dòng khác). */
+    @PatchMapping("/{id}/work-logs/{workLogId}/user")
+    public ProjectDto.WorkLogResponse reassignWorkLog(@PathVariable String id, @PathVariable String workLogId,
+                                                      @RequestBody ProjectDto.AssigneeRequest req,
+                                                      Authentication auth) {
+        projectService.requireCanManage(id, actor(auth), isAdmin(auth));
+        return taskService.changeWorkLogUser(id, workLogId, req.assigneeUserId(), actor(auth));
+    }
+
     @DeleteMapping("/{id}/work-logs/{workLogId}")
     public void deleteWorkLog(@PathVariable String id, @PathVariable String workLogId, Authentication auth) {
         projectService.requireMember(id, actor(auth), isAdmin(auth));
