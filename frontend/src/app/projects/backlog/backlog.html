@@ -100,7 +100,6 @@
 <div class="bl-tree">
   <div class="bl-head">
     <span>Công việc</span>
-    <span>Loại</span>
     <span>Trạng thái</span>
     <span>Người thực hiện</span>
     <span class="bl-num">Est (giờ)</span>
@@ -128,17 +127,13 @@
                     (click)="toggle(r.task.id)"
                     [attr.aria-label]="isCollapsed(r.task.id) ? 'Mở' : 'Gập'">{{ isCollapsed(r.task.id) ? '▸' : '▾' }}</button>
           } @else { <span class="bl-leaf">·</span> }
-          <i class="bl-prio bl-prio--{{ r.task.priority }}"
-             [title]="'Ưu tiên: ' + priorityLabel(r.task.priority)" aria-hidden="true"></i>
+          <span class="badge bl-type" [class]="typeBadge(r.task.type)">{{ typeLabel(r.task.type) }}</span>
           <span class="bl-code">{{ r.task.code }}</span>
           <span class="bl-name" role="button" tabindex="0"
                 [title]="r.task.title + ' — bấm để xem chi tiết'"
                 (click)="openDetail(r.task)"
                 (keydown.enter)="openDetail(r.task)">{{ r.task.title }}</span>
         </span>
-
-        <!-- Loại -->
-        <span><span class="badge" [class]="typeBadge(r.task.type)">{{ typeLabel(r.task.type) }}</span></span>
 
         <!-- Trạng thái: rollup (cha / EPIC / STORY) = TỰ TỔNG HỢP (read-only); lá = đổi nhanh -->
         @if (isRollup(r.task)) {
