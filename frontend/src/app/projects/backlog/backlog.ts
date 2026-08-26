@@ -71,9 +71,9 @@ interface TreeRow {
      */
     .bl-head, .bl-row {
       display: grid;
-      grid-template-columns: minmax(340px, 2.4fr) 84px 116px 148px 62px 100px 152px 92px 104px;
+      grid-template-columns: minmax(360px, 2.6fr) 84px 116px 148px 62px 100px 248px 104px;
       align-items: center; gap: var(--space-2);
-      padding: var(--space-2) var(--space-3); min-width: 1286px;
+      padding: 5px var(--space-3); min-width: 1290px;
     }
     .bl-head { font-weight: 600; font-size: var(--font-size-sm); color: var(--color-text-muted);
       background: var(--color-surface-alt); border-bottom: 1px solid var(--color-border); }
@@ -134,7 +134,16 @@ interface TreeRow {
       overflow-wrap: anywhere; padding-top: 5px; }
     .bl-name:hover { color: var(--color-primary); text-decoration: underline; }
     /* Ô THỜI GIAN gộp: hai ngày xếp chồng + số ngày công ở dòng cuối. */
-    .bl-when { display: grid; gap: 3px; min-width: 0; }
+    /* Hai ô ngày nằm NGANG trên một hàng. Trước đây xếp dọc kèm dòng "N ngày" nên mỗi dòng lưới cao
+       gần 100px, một màn hình chỉ thấy dăm task; số ngày công chuyển vào tooltip của cả khối. */
+    .bl-when { display: flex; align-items: center; gap: 4px; min-width: 0; }
+    /* Ưu tiên bỏ khỏi lưới (vẫn lọc và sửa được ở form) nhưng giữ lại một CHẤM MÀU cạnh mã task —
+       quét mắt vẫn thấy ngay việc High/Urgent mà không tốn nguyên một cột. */
+    .bl-prio { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--color-border); }
+    .bl-prio--URGENT { background: var(--overdue, #e5484d); }
+    .bl-prio--HIGH { background: var(--status-pending, #f59e0b); }
+    .bl-prio--MEDIUM { background: var(--status-active, #3b82f6); }
+    .bl-prio--LOW { background: var(--color-text-muted); opacity: .5; }
     .bl-when__dur { font-size: var(--text-xs); color: var(--color-text-muted);
       font-variant-numeric: tabular-nums; }
     .bl-actions { display: flex; gap: 2px; justify-content: flex-end; }
@@ -153,8 +162,8 @@ interface TreeRow {
       box-shadow: 0 0 0 2px var(--color-primary-soft); }
     /* Chọn/sửa ngày ngay trên lưới (task lá) */
     .bl-date-input {
-      width: 100%; max-width: 140px; font-variant-numeric: tabular-nums;
-      padding: 2px var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
+      width: 100%; max-width: 118px; font-variant-numeric: tabular-nums;
+      padding: 1px var(--space-1); border: 1px solid var(--color-border); border-radius: var(--radius-sm);
       background: var(--color-surface); color: var(--color-text); font-size: var(--font-size-sm);
     }
     .bl-date-input:hover { border-color: var(--color-primary-soft); }

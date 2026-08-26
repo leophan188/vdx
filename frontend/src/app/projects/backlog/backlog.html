@@ -106,7 +106,6 @@
     <span class="bl-num">Est (giờ)</span>
     <span>% Hoàn thành</span>
     <span>Thời gian</span>
-    <span>Ưu tiên</span>
     <span class="bl-actions">Thao tác</span>
   </div>
 
@@ -129,6 +128,8 @@
                     (click)="toggle(r.task.id)"
                     [attr.aria-label]="isCollapsed(r.task.id) ? 'Mở' : 'Gập'">{{ isCollapsed(r.task.id) ? '▸' : '▾' }}</button>
           } @else { <span class="bl-leaf">·</span> }
+          <i class="bl-prio bl-prio--{{ r.task.priority }}"
+             [title]="'Ưu tiên: ' + priorityLabel(r.task.priority)" aria-hidden="true"></i>
           <span class="bl-code">{{ r.task.code }}</span>
           <span class="bl-name" role="button" tabindex="0"
                 [title]="r.task.title + ' — bấm để xem chi tiết'"
@@ -195,7 +196,7 @@
 
         <!-- THỜI GIAN (gộp Từ ngày / Đến ngày / Duration vào một cột để nhường chỗ cho cột
              Công việc). Rollup (cha) = tự tổng hợp read-only; lá = chọn/sửa ngay trên lưới. -->
-        <span class="bl-when">
+        <span class="bl-when" [title]="'Số ngày công: ' + durationOf(r.task)">
           @if (isRollup(r.task)) {
             <span class="bl-date bl-num--muted" title="Tự tổng hợp từ task con">{{ startOf(r.task) || '—' }}</span>
             <span class="bl-date bl-num--muted" title="Tự tổng hợp từ task con">{{ dueOf(r.task) || '—' }}</span>
@@ -207,11 +208,7 @@
                    (change)="saveDateInline(r.task, 'due', $any($event.target).value)"
                    title="Ngày kết thúc — chọn để cập nhật (Est trống sẽ tự tính = số ngày × 8)" />
           }
-          <span class="bl-when__dur" title="Số ngày công">{{ durationOf(r.task) }}</span>
         </span>
-
-        <!-- Ưu tiên -->
-        <span><span class="badge" [class]="priorityBadge(r.task.priority)">{{ priorityLabel(r.task.priority) }}</span></span>
 
         <!-- Thao tác -->
         <span class="bl-actions">
