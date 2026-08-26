@@ -82,7 +82,9 @@ import { DescEditor, DescShot, stripShotMarkers } from '../desc-editor/desc-edit
     .sev--red { background: var(--overdue-bg); color: var(--overdue); }
     .sev--orange { background: var(--status-pending-bg); color: var(--status-pending); }
     .sev--gray { background: var(--color-surface-alt, #eef1f5); color: var(--color-text-muted, #64748b); }
-    .bug-edit { background: none; border: none; cursor: pointer; color: var(--color-text-muted, #64748b); font-size: 1rem; padding: 2px 6px; border-radius: 6px; }
+    /* Hai nút thao tác luôn nằm CÙNG một hàng — xuống dòng là cả dòng lưới cao thêm một nấc. */
+    .bug-act { display: flex; align-items: center; justify-content: center; gap: 2px; white-space: nowrap; }
+    .bug-edit { background: none; border: none; cursor: pointer; color: var(--color-text-muted, #64748b); font-size: 1rem; padding: 0 4px; line-height: 1.6; border-radius: 6px; }
     .bug-edit:hover { background: var(--color-surface-alt, #eef1f5); color: var(--color-primary, #2563eb); }
   `]
 })
@@ -230,12 +232,13 @@ export class PrjBugs implements OnInit {
   // trạng thái, thanh tiến độ ở đây không nói thêm điều gì mà trạng thái chưa nói.
   readonly cols: GridColumn[] = [
     { key: 'title', header: 'Công việc', sortable: true },
-    { key: 'status', header: 'Trạng thái', width: '132px' },
-    { key: 'priority', header: 'Ưu tiên', width: '96px' },
-    { key: 'severity', header: 'Mức độ', width: '116px' },
-    { key: 'assignee', header: 'Người thực hiện', width: '190px' },
-    { key: 'est', header: 'Est', width: '64px', align: 'right' },
-    { key: 'act', header: '', width: '70px', align: 'center' }
+    { key: 'status', header: 'Trạng thái', width: '128px' },
+    { key: 'priority', header: 'Ưu tiên', width: '92px' },
+    { key: 'severity', header: 'Mức độ', width: '108px' },
+    { key: 'assignee', header: 'Người thực hiện', width: '184px' },
+    { key: 'est', header: 'Est', width: '58px', align: 'right' },
+    // 70px không đủ cho hai nút 28px kèm đệm nên nút thứ hai rơi xuống dòng, kéo cả dòng cao gấp đôi.
+    { key: 'act', header: '', width: '80px', align: 'center' }
   ];
 
   /** Vị trí · chức danh · bộ phận của người thực hiện — phần bị lược khỏi ô hẹp, dồn vào tooltip. */
