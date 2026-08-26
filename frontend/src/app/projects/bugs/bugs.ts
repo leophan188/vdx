@@ -13,7 +13,6 @@ import { forkJoin, of } from 'rxjs';
 import { ToastService } from '../../shared/toast/toast.service';
 import { AuthService } from '../../core/auth.service';
 import { PrjTaskDetail } from '../task-detail/task-detail';
-import { EmployeeChip } from '../../shared/employee-chip/employee-chip';
 import { ImageLightbox, LightboxItem } from '../../shared/image-lightbox/image-lightbox';
 import { HoursInput } from '../../shared/hours-input/hours-input';
 import { workRoleForTransition } from '../work-stats';
@@ -31,18 +30,27 @@ import { DescEditor, DescShot, stripShotMarkers } from '../desc-editor/desc-edit
  */
 @Component({
   selector: 'app-prj-bugs',
-  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, EmployeeChip, TypeFilter,
+  imports: [FormsModule, DataGrid, GridCellDirective, Modal, SearchableSelect, PrjTaskDetail, TypeFilter,
     WorkEntryDialog, ImageLightbox, DescEditor, HoursInput],
   templateUrl: './bugs.html',
   styles: [`
     /* Thanh lọc dùng class chuẩn .filter-bar (ở _components.scss). */
     .bug-form { display: grid; gap: var(--space-3); width: 100%; }
     .bug-stats { display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-3); }
-    .bug-progress { display: flex; align-items: center; gap: 6px; }
-    .bug-progress .bar { flex: 1; height: 6px; border-radius: 999px; background: var(--color-surface-alt); overflow: hidden; min-width: 48px; }
-    .bug-progress .bar > i { display: block; height: 100%; background: var(--color-primary); }
-    .bug-progress .pct { font-size: .75rem; min-width: 34px; text-align: right; }
     .bug-open { background: none; border: none; padding: 0; color: var(--color-primary); cursor: pointer; font-weight: 600; text-align: left; }
+    /* Ô gộp Loại · Mã · Tiêu đề — nằm trên MỘT hàng, tiêu đề dài thì cắt bằng "…" chứ không
+       xuống dòng, vì mỗi lần xuống dòng là cả dòng lưới cao thêm một nấc. */
+    .bug-name { display: flex; align-items: center; gap: var(--space-2); min-width: 0; }
+    .bug-name__code { font-family: var(--font-mono, monospace); font-size: var(--text-xs);
+      color: var(--color-text-muted); flex: none; }
+    .bug-name__text { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bug-name .badge { flex: none; }
+    /* Người thực hiện: chỉ mã + tên trên một hàng. Chip đầy đủ (kèm vị trí, chức danh, bộ phận)
+       trong cột 190px tự xuống ba bốn dòng, một mình nó đội chiều cao cả dòng lưới lên gấp đôi;
+       phần còn lại vẫn xem được ở tooltip. */
+    .bug-who { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bug-who__code { font-family: var(--font-mono, monospace); font-size: var(--text-xs);
+      color: var(--color-text-muted); margin-right: var(--space-1); }
     .bug-search { min-width: 230px; height: var(--control-h-sm); padding: 0 var(--space-3);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
       background: var(--color-surface); color: var(--color-text); font: inherit; }
@@ -215,18 +223,26 @@ export class PrjBugs implements OnInit {
   // Cột Tiêu đề CỐ Ý không đặt width — data-grid coi cột đầu tiên không có width là cột co
   // giãn và cho nó nuốt hết chỗ thừa. Các cột còn lại siết sát nội dung thật (đều là nhãn
   // ngắn hoặc con số), trước đây rộng dư gần 140px lấy mất chỗ của tiêu đề.
+  //
+  // Mã, Loại và Tiêu đề gộp chung MỘT cột: ba cột riêng ngốn 164px chiều ngang để chở đúng một
+  // nhãn ngắn và một mã 6 ký tự, trong khi tiêu đề lỗi — thứ người ta thực sự đọc để nhận ra lỗi
+  // nào — lại bị cắt. Cột % hoàn thành cũng bỏ: bug/issue gần như chỉ chạy 0% hoặc 100% theo
+  // trạng thái, thanh tiến độ ở đây không nói thêm điều gì mà trạng thái chưa nói.
   readonly cols: GridColumn[] = [
-    { key: 'code', header: 'Mã', width: '80px', sortable: true },
-    { key: 'type', header: 'Loại', width: '84px' },
-    { key: 'title', header: 'Tiêu đề', sortable: true },
+    { key: 'title', header: 'Công việc', sortable: true },
     { key: 'status', header: 'Trạng thái', width: '132px' },
     { key: 'priority', header: 'Ưu tiên', width: '96px' },
     { key: 'severity', header: 'Mức độ', width: '116px' },
     { key: 'assignee', header: 'Người thực hiện', width: '190px' },
-    { key: 'progress', header: '%', width: '96px' },
     { key: 'est', header: 'Est', width: '64px', align: 'right' },
     { key: 'act', header: '', width: '70px', align: 'center' }
   ];
+
+  /** Vị trí · chức danh · bộ phận của người thực hiện — phần bị lược khỏi ô hẹp, dồn vào tooltip. */
+  assigneeTooltip(t: ProjectTask): string {
+    const parts = [t.assigneeCode, t.assigneeName, t.assigneePosition, t.assigneeTitle, t.assigneeDept];
+    return parts.filter((p) => !!p).join(' · ');
+  }
 
   /**
    * Toàn bộ bug/issue (chưa lọc), MỚI LOG NHẤT LÊN ĐẦU.
