@@ -33,12 +33,23 @@ public final class CustomerWorkdaySheet {
     /** Tiêu đề cột tên và mã — chấp nhận vài cách viết thường gặp. */
     private static final List<String> NAME_HEADERS = List.of("ho va ten", "ho ten", "nhan su", "ten nhan vien", "ten");
     private static final List<String> CODE_HEADERS = List.of("ma nv", "ma nhan vien", "id", "ma nhan su", "ma");
+    /** Cột mô tả — không bắt buộc, đọc được thì đưa vào ghi chú để đối soát còn biết người đó làm gì. */
+    private static final List<String> NOTE_HEADERS =
+            List.of("hang muc cong viec", "hang muc", "vi tri", "du an", "project");
+    /**
+     * Đầu một MỤC mới của biên bản ("2. Thời gian cung cấp dịch vụ ngoài giờ hành chính").
+     * Biên bản khách hàng thường có vài bảng nối nhau trong cùng một sheet; đọc thẳng tới cuối sheet
+     * là cộng luôn công ngoài giờ vào công hành chính mà không ai thấy.
+     */
+    private static final java.util.regex.Pattern SECTION = java.util.regex.Pattern.compile("^\\d{1,2}\\s*[.)]\\s*\\S.*");
+    /** Số dòng trống liên tiếp coi như hết bảng. */
+    private static final int MAX_BLANK_STREAK = 12;
 
     private CustomerWorkdaySheet() {
     }
 
-    /** Một ô công đọc được: ai, ngày nào, mấy công. */
-    public record Cellule(String empCode, String name, LocalDate date, double days) {
+    /** Một ô công đọc được: ai, ngày nào, mấy công, kèm hạng mục/dự án nếu bảng có ghi. */
+    public record Cellule(String empCode, String name, LocalDate date, double days, String note) {
     }
 
     public record ParseResult(List<Cellule> cells, List<String> problems) {
@@ -60,6 +71,7 @@ public final class CustomerWorkdaySheet {
         int headerRow = -1;
         int nameCol = -1;
         int codeCol = -1;
+        List<Integer> noteCols = new ArrayList<>();
         Map<Integer, LocalDate> dayCols = new LinkedHashMap<>();
         // Dò tối đa 20 dòng đầu để tìm hàng tiêu đề: bảng khách hàng thường có vài dòng tiêu đề lớn,
         // logo hay tên công ty phía trên.
@@ -70,6 +82,7 @@ public final class CustomerWorkdaySheet {
             }
             int tmpName = -1;
             int tmpCode = -1;
+            List<Integer> tmpNotes = new ArrayList<>();
             Map<Integer, LocalDate> tmpDays = new LinkedHashMap<>();
             for (int c = row.getFirstCellNum(); c >= 0 && c < row.getLastCellNum(); c++) {
                 String raw = text(row.getCell(c));
@@ -86,6 +99,10 @@ public final class CustomerWorkdaySheet {
                     tmpCode = c;
                     continue;
                 }
+                if (NOTE_HEADERS.contains(key)) {
+                    tmpNotes.add(c);
+                    continue;
+                }
                 LocalDate d = dayOf(row.getCell(c), norm, period);
                 if (d != null) {
                     tmpDays.put(c, d);
@@ -95,6 +112,7 @@ public final class CustomerWorkdaySheet {
                 headerRow = r;
                 nameCol = tmpName;
                 codeCol = tmpCode;
+                noteCols = tmpNotes;
                 dayCols = tmpDays;
                 break;
             }
@@ -105,21 +123,40 @@ public final class CustomerWorkdaySheet {
             return new ParseResult(out, problems);
         }
 
+        int blankStreak = 0;
         for (int r = headerRow + 1; r <= sheet.getLastRowNum(); r++) {
             Row row = sheet.getRow(r);
             if (row == null) {
+                if (++blankStreak >= MAX_BLANK_STREAK) {
+                    break;
+                }
                 continue;
+            }
+            // Gặp tiêu đề mục kế tiếp là HẾT bảng này — mọi thứ phía dưới thuộc về bảng khác.
+            if (startsNewSection(row, nameCol)) {
+                break;
             }
             String name = text(row.getCell(nameCol)).trim();
             if (name.isBlank()) {
+                if (++blankStreak >= MAX_BLANK_STREAK) {
+                    break;
+                }
                 continue;
             }
+            blankStreak = 0;
             String lower = normalize(name);
             // Dòng tổng cuối bảng không phải nhân sự.
             if (lower.startsWith("tong") || lower.startsWith("total") || lower.startsWith("cong ")) {
                 continue;
             }
             String code = codeCol >= 0 ? text(row.getCell(codeCol)).trim() : null;
+            StringBuilder note = new StringBuilder();
+            for (int nc : noteCols) {
+                String v = text(row.getCell(nc)).trim();
+                if (!v.isBlank()) {
+                    note.append(note.length() > 0 ? " · " : "").append(v);
+                }
+            }
             for (Map.Entry<Integer, LocalDate> dc : dayCols.entrySet()) {
                 Cell cell = row.getCell(dc.getKey());
                 Double v = numberOf(cell);
@@ -132,11 +169,26 @@ public final class CustomerWorkdaySheet {
                     continue;
                 }
                 if (v != 0) {
-                    out.add(new Cellule(blankToNull(code), name, dc.getValue(), v));
+                    out.add(new Cellule(blankToNull(code), name, dc.getValue(), v,
+                            blankToNull(note.toString())));
                 }
             }
         }
         return new ParseResult(out, problems);
+    }
+
+    /**
+     * Dòng này có phải tiêu đề của MỤC kế tiếp không — dò các cột từ đầu tới cột tên, vì tiêu đề mục
+     * thường nằm ở cột ngoài cùng bên trái chứ không thẳng cột nào của bảng.
+     */
+    private static boolean startsNewSection(Row row, int nameCol) {
+        for (int c = Math.max(0, row.getFirstCellNum()); c <= nameCol; c++) {
+            String v = text(row.getCell(c)).trim();
+            if (v.length() > 3 && SECTION.matcher(v).matches()) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /** Biểu mẫu trống cho một kỳ: cột Mã NV, Họ và tên, rồi mỗi ngày trong tháng một cột. */

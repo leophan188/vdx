@@ -78,6 +78,8 @@ export interface DbProbe {
 export interface PivotRow {
   name: string;
   empCode: string | null;
+  /** Hạng mục / dự án khách hàng ghi cho người này (chỉ có ở nguồn khách hàng). */
+  note: string | null;
   /** NGÀY CÔNG theo ngày trong tháng (1 hoặc 0,5); ngày vắng mặt trong map = nghỉ. */
   daysByDay: Record<string, number>;
   /** Số giờ tương ứng — chỉ nguồn ERP mới có, dùng cho tooltip. */

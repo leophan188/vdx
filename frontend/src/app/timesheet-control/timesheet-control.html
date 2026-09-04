@@ -185,8 +185,10 @@
         <p class="tsc-hint">Nguồn: <b>{{ customerSource() }}</b></p>
       }
       <p class="tsc-hint">
-        File khách hàng đọc theo dạng <b>bảng ngang</b>: một cột họ tên (kèm mã NV nếu có) và mỗi ngày
-        trong tháng một cột, điền 1 hoặc 0,5. Tải “Biểu mẫu khách hàng” để có đúng khuôn của tháng đang chọn.
+        Đọc thẳng <b>biên bản nghiệm thu</b> khách hàng gửi: bỏ qua phần tiêu đề, địa chỉ, mã số thuế ở
+        đầu file, tự tìm hàng tiêu đề có cột “Họ và tên” cùng các cột ngày (01/2, 02/2…), và <b>dừng lại
+        trước mục kế tiếp</b> nên phần ngoài giờ hành chính không bị cộng lẫn vào. Không có cột mã nhân
+        viên thì ghép theo tên. Rê chuột vào tên để xem hạng mục / dự án.
       </p>
       <p class="tsc-hint">
         Import lại cùng một kỳ sẽ <b>thay toàn bộ</b> dữ liệu kỳ đó — bản gửi sau của khách hàng là bản
@@ -218,7 +220,7 @@
         <tbody>
           @for (r of rows; track r.name + (r.empCode || '')) {
             <tr>
-              <td class="tsc-pivot__name">
+              <td class="tsc-pivot__name" [title]="r.note || ''">
                 @if (r.empCode) { <span class="tsc-pivot__code">{{ r.empCode }}</span> }{{ r.name }}
               </td>
               @for (d of pivotDays(); track d) {

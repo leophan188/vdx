@@ -249,6 +249,9 @@ public class ErpTimesheetService {
                 }
                 PivotAgg agg = byPerson.computeIfAbsent(keyOf(c.getEmpCode(), c.getMatchKey()),
                         k -> new PivotAgg(c.getEmployeeName(), c.getEmpCode()));
+                if (agg.note == null && c.getNote() != null) {
+                    agg.note = c.getNote();   // hạng mục / dự án khách hàng ghi cho người này
+                }
                 agg.byDay.merge(c.getWorkDate().getDayOfMonth(), c.getDays(), Double::sum);
             }
         } else {
@@ -276,7 +279,7 @@ public class ErpTimesheetService {
             for (Map.Entry<Integer, Double> c : a.hoursByDay.entrySet()) {
                 hours.put(c.getKey(), WorkdayReconciliation.round2(c.getValue()));
             }
-            rows.add(new PivotRow(a.name, a.empCode, cells, hours,
+            rows.add(new PivotRow(a.name, a.empCode, a.note, cells, hours,
                     WorkdayReconciliation.round2(total), cells.size()));
         }
         rows.sort(Comparator.comparing(PivotRow::empCode, CODE_ORDER)
@@ -298,7 +301,7 @@ public class ErpTimesheetService {
      * @param daysByDay  NGÀY CÔNG theo ngày trong tháng (1..31) — 1 hoặc 0,5; ngày vắng mặt = nghỉ
      * @param hoursByDay số giờ tương ứng, để xem khi rê chuột (chỉ có ở nguồn ERP)
      */
-    public record PivotRow(String name, String empCode, Map<Integer, Double> daysByDay,
+    public record PivotRow(String name, String empCode, String note, Map<Integer, Double> daysByDay,
                            Map<Integer, Double> hoursByDay, double totalDays, int dayCount) {
     }
 
@@ -310,6 +313,7 @@ public class ErpTimesheetService {
     private static final class PivotAgg {
         private final String name;
         private final String empCode;
+        private String note;
         private final Map<Integer, Double> byDay = new java.util.TreeMap<>();
         private final Map<Integer, Double> hoursByDay = new java.util.TreeMap<>();
 
@@ -358,7 +362,7 @@ public class ErpTimesheetService {
         List<CustomerWorkdayEntry> rows = new ArrayList<>();
         for (CustomerWorkdaySheet.Cellule c : parsed.cells()) {
             rows.add(new CustomerWorkdayEntry(ym.toString(), c.date(), c.empCode(), c.name(),
-                    WorkdayReconciliation.matchKey(c.name()), c.days(), null, fileName, actor));
+                    WorkdayReconciliation.matchKey(c.name()), c.days(), c.note(), fileName, actor));
         }
         customerRepo.deleteByPeriodKey(ym.toString());
         customerRepo.saveAll(rows);
