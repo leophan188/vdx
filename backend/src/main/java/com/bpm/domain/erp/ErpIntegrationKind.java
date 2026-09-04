@@ -11,9 +11,13 @@ package com.bpm.domain.erp;
 public enum ErpIntegrationKind {
 
     PROJECTS("Các dự án", "Danh sách dự án bên ERP", "project.project"),
-    BILLABLE("Quản lý billable của dự án", "Phân bổ nhân sự / chi phí tính phí theo dự án", ""),
+    BILLABLE("Billable & nhân sự của dự án", "Nguồn lực phân bổ và billable — nằm trong chi tiết từng dự án",
+            "project.project"),
     ORG_EMPLOYEE("Sơ đồ tổ chức & nhân sự", "Phòng ban, vị trí và hồ sơ nhân sự", "hr.employee"),
     ATTENDANCE("Công nhân sự", "Chấm công theo ngày — đang dùng ở màn Kiểm soát giờ công", "hr.attendance"),
+    // Nghỉ phép là model RIÊNG (hr.leave), không phải chấm công: hr.attendance ghi ngày công còn
+    // hr.leave ghi đơn xin nghỉ. Tách ra để không ai dán nhầm link rồi tưởng đã có chấm công.
+    LEAVE("Nghỉ phép", "Đơn xin nghỉ đã duyệt — dùng để giải thích ngày thiếu công", "hr.leave"),
     RECRUITMENT("Tuyển dụng", "Tin tuyển dụng và ứng viên", "hr.applicant");
 
     private final String label;
