@@ -36,6 +36,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/tracking', 'Theo dõi quy trình'],
   ['/excel-reports', 'Công cụ'],
   ['/timesheet-control', 'Công cụ'],
+  ['/erp-integrations', 'Quản trị hệ thống'],
 ];
 
 /** Một mục điều hướng con (trong flyout). */
@@ -74,6 +75,7 @@ const NAV_GROUPS: NavGroup[] = [
     { label: 'Biểu mẫu', icon: '📋', link: '/forms', feature: 'PROCESS' },
     { label: 'Theo dõi quy trình', icon: '📡', link: '/tracking', feature: 'TRACKING' },
     { label: 'Cấu hình & dữ liệu', icon: '🛠️', link: '/system-config', feature: 'SYSTEM' },
+    { label: 'Tích hợp ERP', icon: '🔌', link: '/erp-integrations', feature: 'SYSTEM' },
     { label: 'Truy vết kiểm toán', icon: '📜', link: '/audit', feature: 'AUDIT' },
   ] },
 ];

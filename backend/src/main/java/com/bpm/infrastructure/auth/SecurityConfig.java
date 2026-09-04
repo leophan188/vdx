@@ -101,6 +101,9 @@ public class SecurityConfig {
                 // Kiểm soát giờ công (ERP ↔ khách hàng) nằm trong nhóm Công cụ nên dùng chung chức năng
                 // IMPORT; riêng cấu hình kết nối ERP còn chặn thêm ở tầng controller vì chứa API key.
                 .requestMatchers("/api/v1/erp-timesheet/**").hasAuthority("FEAT_IMPORT")
+                // Cấu hình tích hợp ERP là việc quản trị hệ thống (chứa khoá vào ERP công ty), nên
+                // đặt sau FEAT_SYSTEM chứ không dùng chung quyền với màn Công cụ.
+                .requestMatchers("/api/v1/erp-integrations/**").hasAuthority("FEAT_SYSTEM")
                 .requestMatchers("/api/v1/system/**").hasAuthority("FEAT_SYSTEM")
                 // Quản lý dự án (mini-Jira): cần chức năng PROJECT; phân quyền thành viên ở tầng nghiệp vụ.
                 .requestMatchers("/api/v1/projects/**").hasAuthority("FEAT_PROJECT")

@@ -18,6 +18,7 @@ import { Ot } from './ot/ot';
 import { Leave } from './leave/leave';
 import { ExcelReports } from './excel-reports/excel-reports';
 import { TimesheetControl } from './timesheet-control/timesheet-control';
+import { ErpIntegrations } from './erp-integrations/erp-integrations';
 import { Reports } from './reports/reports';
 import { Documents } from './documents/documents';
 import { DocEditor } from './documents/doc-editor';
@@ -51,6 +52,7 @@ export const routes: Routes = [
   },
   { path: 'excel-reports', component: ExcelReports, canActivate: [featureGuard('IMPORT')] },
   { path: 'timesheet-control', component: TimesheetControl, canActivate: [featureGuard('IMPORT')] },
+  { path: 'erp-integrations', component: ErpIntegrations, canActivate: [featureGuard('SYSTEM')] },
   { path: 'tools', pathMatch: 'full', redirectTo: 'excel-reports' }, // lối vào theo tên gọi "Công cụ"
   { path: 'system-config', loadComponent: () => import('./system-config/system-config').then((m) => m.SystemConfig), canActivate: [featureGuard('SYSTEM')] },
   { path: 'permissions', loadComponent: () => import('./permissions/permission-matrix').then((m) => m.PermissionMatrix), canActivate: [featureGuard('PERMISSION')] },

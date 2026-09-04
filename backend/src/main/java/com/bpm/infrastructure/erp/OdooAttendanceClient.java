@@ -113,6 +113,33 @@ public class OdooAttendanceClient {
         return null;
     }
 
+    /**
+     * Đếm số bản ghi của một model — dùng để KIỂM TRA một link tích hợp có trỏ đúng chỗ không.
+     *
+     * Đếm chứ không đọc dữ liệu: chỉ cần biết model có thật, tài khoản có quyền đọc và bảng có bao
+     * nhiêu dòng; kéo cả bảng project.project hay hr.employee về chỉ để xác nhận đường link là việc
+     * vừa chậm vừa không cần.
+     */
+    public int countRecords(ErpConfig cfg, String model) {
+        if (model == null || model.isBlank()) {
+            throw new IllegalArgumentException("Chưa xác định được model — dán link ERP hoặc gõ tên model.");
+        }
+        long uid = login(cfg);
+        ArrayNode args = json.createArrayNode();
+        args.add(cfg.getDbName());
+        args.add(uid);
+        args.add(cfg.getApiKey());
+        args.add(model.trim());
+        args.add("search_count");
+        ArrayNode positional = args.addArray();
+        positional.add(json.createArrayNode());   // domain rỗng = đếm tất cả
+        JsonNode res = call(cfg, params("object", "execute_kw", args));
+        if (res == null || !res.isNumber()) {
+            throw new IllegalArgumentException("ERP không trả về số bản ghi cho model \"" + model + "\".");
+        }
+        return res.asInt();
+    }
+
     /** Đăng nhập, trả về uid. Ném IllegalArgumentException (→ 400) kèm lý do người dùng hiểu được. */
     public long login(ErpConfig cfg) {
         JsonNode res = call(cfg, params("common", "login",
