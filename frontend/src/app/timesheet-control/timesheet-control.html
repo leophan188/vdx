@@ -161,6 +161,20 @@
         Số liệu <b>lưu lại theo kỳ</b>, không gọi lại ERP mỗi lần mở màn hình — có vậy mới nói được
         “số này chốt lúc nào”. Bấm “Tải chấm công ERP” để cập nhật; dữ liệu cũ của kỳ được thay hoàn toàn.
       </p>
+      @if (erpPivot()?.stale) {
+        <div class="tsc-card tsc-card--warn">
+          <b>Dữ liệu kỳ này tải bằng phiên bản cũ nên hiện toàn số 0.</b>
+          <p class="tsc-hint">
+            Các bản ghi đó chưa có cột ngày công (lúc tải hệ thống còn tính theo giờ). Bấm nút dưới để
+            đọc lại từ ERP — dữ liệu cũ của kỳ sẽ được thay hoàn toàn.
+          </p>
+          <div>
+            <button type="button" class="btn btn--primary btn--sm" [disabled]="busy()" (click)="syncErp()">
+              ⬇ Tải lại chấm công ERP kỳ {{ period() }}
+            </button>
+          </div>
+        </div>
+      }
       <ng-container [ngTemplateOutlet]="pivotTable"
                     [ngTemplateOutletContext]="{ rows: erpPivotRows(), showHours: true,
                       empty: 'Kỳ này chưa tải chấm công từ ERP.' }" />

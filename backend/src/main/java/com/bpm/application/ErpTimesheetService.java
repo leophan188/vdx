@@ -238,6 +238,9 @@ public class ErpTimesheetService {
         YearMonth ym = parsePeriod(periodKey);
         int days = ym.lengthOfMonth();
         Map<String, PivotAgg> byPerson = new LinkedHashMap<>();
+        // Bản ghi tải bằng phiên bản trước KHÔNG có ngày công (cột mới, giá trị NULL) nên mọi ô hiện 0.
+        // Đếm lại để màn hình nói thẳng "kỳ này cần tải lại" thay vì bày ra một bảng số 0 khó hiểu.
+        int stale = 0;
         if (customer) {
             for (CustomerWorkdayEntry c : customerRepo.findByPeriodKey(ym.toString())) {
                 if (c.getWorkDate() == null) {
@@ -249,6 +252,9 @@ public class ErpTimesheetService {
             }
         } else {
             for (ErpAttendanceEntry e : attendanceRepo.findByPeriodKey(ym.toString())) {
+                if (!e.hasWorkday()) {
+                    stale++;
+                }
                 PivotAgg agg = byPerson.computeIfAbsent(keyOf(e.getEmpCode(), e.getMatchKey()),
                         k -> new PivotAgg(e.getEmployeeName(), e.getEmpCode()));
                 // Cùng một ngày có thể có nhiều bản ghi — cộng dồn, đừng ghi đè.
@@ -283,7 +289,7 @@ public class ErpTimesheetService {
                 weekend.add(d);
             }
         }
-        return new PivotResult(ym.toString(), days, weekend, rows);
+        return new PivotResult(ym.toString(), days, weekend, rows, stale > 0);
     }
 
     /**
@@ -294,7 +300,9 @@ public class ErpTimesheetService {
                            Map<Integer, Double> hoursByDay, double totalDays, int dayCount) {
     }
 
-    public record PivotResult(String period, int daysInMonth, List<Integer> weekendDays, List<PivotRow> rows) {
+    /** @param stale dữ liệu kỳ này tải bằng phiên bản cũ, thiếu ngày công → cần tải lại từ ERP */
+    public record PivotResult(String period, int daysInMonth, List<Integer> weekendDays,
+                              List<PivotRow> rows, boolean stale) {
     }
 
     private static final class PivotAgg {

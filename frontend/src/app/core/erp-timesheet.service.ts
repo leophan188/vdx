@@ -92,6 +92,8 @@ export interface PivotResult {
   /** Các ngày rơi vào Thứ Bảy / Chủ nhật — để tô khác màu. */
   weekendDays: number[];
   rows: PivotRow[];
+  /** Dữ liệu kỳ này tải bằng phiên bản cũ (thiếu ngày công) — cần tải lại từ ERP. */
+  stale: boolean;
 }
 
 export interface ImportResult {

@@ -103,6 +103,9 @@ public class ErpAttendanceEntry {
     }
 
     public double getWorkday() { return workday == null ? 0d : workday; }
+
+    /** Bản ghi có ngày công hay không — không có nghĩa là tải bằng phiên bản trước khi thêm cột. */
+    public boolean hasWorkday() { return payWorkday != null || workday != null; }
     public Instant getFetchedAt() { return fetchedAt; }
     public String getFetchedBy() { return fetchedBy; }
 }
