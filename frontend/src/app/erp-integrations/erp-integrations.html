@@ -1,16 +1,15 @@
 <section class="page">
   <app-page-header title="Tích hợp ERP"
-                   subtitle="Khai kết nối và đường link cho từng luồng dữ liệu lấy từ ERP"
+                   subtitle="Một kết nối dùng chung, mỗi luồng dữ liệu một đường link"
                    [breadcrumb]="[{ label: 'Quản trị hệ thống' }, { label: 'Tích hợp ERP' }]">
     <button actions type="button" class="btn btn--ghost btn--sm" [disabled]="loading()" (click)="reload()">
       ↻ Tải lại
     </button>
   </app-page-header>
 
-  <!-- KẾT NỐI CHUNG: mọi luồng dùng chung một bộ đăng nhập; mỗi luồng một tài khoản là cách chắc chắn
-       để năm chỗ khai sai bốn. -->
+  <!-- KẾT NỐI CHUNG cho mọi luồng: cùng một máy chủ, database và tài khoản. -->
   <div class="erpi-card">
-    <b>Kết nối ERP (dùng chung cho mọi luồng)</b>
+    <b>Kết nối ERP</b>
     <div class="erpi-form">
       <div class="field">
         <label>URL Odoo</label>
@@ -30,11 +29,6 @@
                [placeholder]="connection()?.apiKeySet ? '•••••• (để trống = giữ khoá cũ)' : 'mật khẩu hoặc API key'" />
       </div>
     </div>
-    <p class="erpi-hint">
-      Dán được cả đường link đang mở trên trình duyệt — phần <code>/web#action=…</code> sẽ tự bị cắt.
-      Nên dùng tài khoản <b>riêng, chỉ đọc</b> thay cho tài khoản cá nhân: PlanX làm được gì thì tài
-      khoản đó làm được nấy. Khoá đã lưu không bao giờ hiện lại trên màn hình.
-    </p>
     @if (connection()?.lastCheckStatus) {
       <p class="erpi-hint">Lần kiểm tra gần nhất: <b>{{ connection()?.lastCheckStatus }}</b></p>
     }
@@ -46,41 +40,32 @@
     </div>
   </div>
 
-  <h3>Các luồng dữ liệu</h3>
-  <p class="erpi-hint">
-    Mở đúng màn cần lấy trên ERP rồi dán nguyên đường link vào đây — hệ thống tự tách tên model
-    (<code>model=…</code>) nằm trong link. Bấm <b>Kiểm tra</b> để đọc thử và đếm số bản ghi: lưu được
-    chưa chứng minh link trỏ đúng chỗ.
-  </p>
+  <!-- CÁC LINK: mỗi luồng chỉ khác nhau đúng một đường link, dán y như link chấm công. -->
+  <div class="erpi-card">
+    <b>Đường link từng luồng dữ liệu</b>
+    <p class="erpi-hint">
+      Mở màn cần lấy trên ERP rồi dán nguyên thanh địa chỉ vào ô tương ứng — giống hệt cách khai link
+      chấm công. Bấm <b>Kiểm tra</b> để đọc thử, hệ thống báo lại số bản ghi đọc được.
+    </p>
 
-  @for (it of integrations(); track it.key) {
-    <div class="erpi-item">
-      <div class="erpi-item__head">
-        <span class="erpi-item__title">{{ it.label }}</span>
-        <span class="erpi-item__desc">{{ it.description }}</span>
-      </div>
-      <div class="erpi-item__row">
+    @for (it of integrations(); track it.key) {
+      <div class="erpi-line">
+        <label class="erpi-line__label" [title]="it.description">{{ it.label }}</label>
         <input type="text" [(ngModel)]="draft[it.key].linkUrl" [name]="'link-' + it.key"
-               placeholder="Dán link ERP, vd https://erp.vmo.dev/web#action=148&model=hr.attendance…" />
-        <input type="text" [(ngModel)]="draft[it.key].modelName" [name]="'model-' + it.key"
-               placeholder="model (vd hr.employee)" />
-        <label class="erpi-toggle">
-          <input type="checkbox" [(ngModel)]="draft[it.key].enabled" [name]="'on-' + it.key" />
-          Đang dùng
-        </label>
-        <span class="erpi-actions">
-          <button type="button" class="btn btn--secondary btn--sm" [disabled]="busy() === it.key"
-                  (click)="save(it)">Lưu</button>
-          <button type="button" class="btn btn--ghost btn--sm" [disabled]="busy() === it.key"
-                  (click)="test(it)">Kiểm tra</button>
-        </span>
+               [placeholder]="'https://erp.vmo.dev/web#action=…&model=' + (it.suggestedModel || '…')" />
+        <button type="button" class="btn btn--ghost btn--sm" [disabled]="busy() === it.key"
+                (click)="test(it)">Kiểm tra</button>
+        @if (it.lastCheckStatus) {
+          <span class="erpi-status" [class]="statusClass(it)">{{ it.lastCheckStatus }}</span>
+        } @else {
+          <span class="erpi-status erpi-status--muted">chưa kiểm tra</span>
+        }
       </div>
-      @if (it.lastCheckStatus) {
-        <span class="erpi-status" [class]="statusClass(it)">
-          {{ it.lastCheckStatus }}
-          @if (it.lastCheckAt) { <span class="erpi-item__desc">· {{ when(it.lastCheckAt) }}</span> }
-        </span>
-      }
+    }
+
+    <div class="erpi-actions">
+      <button type="button" class="btn btn--primary btn--sm" [disabled]="busy() === 'all'"
+              (click)="saveAll()">Lưu tất cả link</button>
     </div>
-  }
+  </div>
 </section>

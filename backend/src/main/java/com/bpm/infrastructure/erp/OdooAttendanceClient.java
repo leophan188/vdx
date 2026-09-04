@@ -122,7 +122,8 @@ public class OdooAttendanceClient {
      */
     public int countRecords(ErpConfig cfg, String model) {
         if (model == null || model.isBlank()) {
-            throw new IllegalArgumentException("Chưa xác định được model — dán link ERP hoặc gõ tên model.");
+            throw new IllegalArgumentException("Link chưa cho biết lấy dữ liệu gì — cần đường link có "
+                    + "dạng .../web#...&model=<tên bảng>..., mở đúng màn cần lấy trên ERP rồi copy lại.");
         }
         long uid = login(cfg);
         ArrayNode args = json.createArrayNode();
