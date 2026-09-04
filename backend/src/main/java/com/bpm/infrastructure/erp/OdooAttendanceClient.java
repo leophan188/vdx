@@ -36,6 +36,9 @@ import java.util.List;
  * ngày vẫn hưởng lương đủ — nên lấy nhầm cột là cả bảng ra 0. Tự chia giờ cho 8 thì càng sai: một
  * ngày làm 7,3 tiếng ra 0,91 công, không ai đối chiếu nổi với ERP.
  *
+ * Phạm vi đọc còn siết theo hai cột nữa: {@code working_time = working_days} (bỏ cuối tuần và nghỉ
+ * lễ — Odoo sinh bản ghi cho cả những ngày đó) và {@code leave_status_in_day = K}, tức không xin nghỉ.
+ *
  * Lọc theo {@code attendance_date} (kiểu ngày) nên cũng hết bài toán múi giờ: lọc theo {@code check_in}
  * thì phải đổi sang UTC vì ca đêm 23:30 ngày 05/09 giờ VN nằm ở 16:30 UTC, đọc thô là đẩy công sang
  * ngày khác. {@code worked_hours} vẫn đọc kèm để tra khi số công trông đáng ngờ.
@@ -49,6 +52,11 @@ public class OdooAttendanceClient {
     public static final ZoneId VN = ZoneId.of("Asia/Ho_Chi_Minh");
 
     private static final DateTimeFormatter ODOO_DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    /** Giá trị của cột "Thời gian làm việc" ứng với NGÀY LÀM VIỆC (khác weekend / holidays). */
+    private static final String WORKING_DAYS = "working_days";
+    /** Giá trị của cột "Xin nghỉ" ứng với "Không" (khác NS / NC / N). */
+    private static final String NO_LEAVE = "K";
+
     /** Trần số bản ghi một lần đọc — chặn việc lỡ tay chọn khoảng 5 năm rồi kéo sập cả hai hệ thống. */
     private static final int MAX_RECORDS = 200_000;
 
@@ -141,6 +149,12 @@ public class OdooAttendanceClient {
             // Bỏ ngày công bằng 0 ngay từ ERP: Odoo sinh bản ghi cho MỌI người MỌI ngày, kể cả cuối
             // tuần và ngày nghỉ — tải hết về thì chín phần mười là dòng rỗng.
             domain.add(tripleNum("pay_workday", ">", 0));
+            // Chỉ NGÀY LÀM VIỆC: Odoo sinh bản ghi cho cả cuối tuần (weekend) và nghỉ lễ (holidays),
+            // tính vào thì số công của tháng phồng lên so với bảng công khách hàng gửi.
+            domain.add(triple("working_time", "=", WORKING_DAYS));
+            // Và chỉ ngày KHÔNG xin nghỉ: nghỉ sáng (NS), nghỉ chiều (NC), nghỉ cả ngày (N) vẫn có
+            // ngày công hưởng lương, nhưng đó không phải ngày người ta thực sự làm việc.
+            domain.add(triple("leave_status_in_day", "=", NO_LEAVE));
 
             ObjectNode kwargs = json.createObjectNode();
             ArrayNode fields = kwargs.putArray("fields");
