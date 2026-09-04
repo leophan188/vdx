@@ -67,7 +67,15 @@ import {
     .tsc-pivot tbody tr:nth-child(even) .tsc-pivot__name { background: var(--color-surface-zebra); }
     .tsc-pivot__code { font-family: var(--font-mono, monospace); font-size: var(--text-xs);
       color: var(--color-text-muted); margin-right: var(--space-2); }
-    .tsc-pivot__we { background: color-mix(in srgb, var(--color-text-muted) 10%, transparent); }
+    /* Cột Thứ Bảy / Chủ nhật. Phải đặc hiệu hơn quy tắc kẻ sọc ở trên, nếu không dòng chẵn bị nền
+       zebra đè mất và cột cuối tuần chỉ hiện màu ở nửa số dòng. Trộn với màu nền thay vì dùng
+       transparent để đúng cả nền sáng lẫn nền tối. */
+    .tsc-pivot th.tsc-pivot__we,
+    .tsc-pivot td.tsc-pivot__we,
+    .tsc-pivot tbody tr:nth-child(even) td.tsc-pivot__we {
+      background: color-mix(in srgb, var(--color-primary) 16%, var(--color-surface));
+    }
+    .tsc-pivot thead th.tsc-pivot__we { color: var(--color-text); }
     .tsc-pivot__total { font-weight: var(--weight-semibold);
       border-left: 1px solid var(--color-border); }
     .tsc-pivot__empty { color: var(--color-text-muted); }
