@@ -135,11 +135,19 @@
                   title="Tải báo cáo đối soát của khoảng tháng này ra Excel">
             ⬇ Xuất báo cáo
           </button>
-          <label class="tsc-check">
-            <input type="checkbox" [checked]="onlyDiff()"
-                   (change)="onlyDiff.set($any($event.target).checked)" />
-            Chỉ hiện dòng lệch
-          </label>
+          <span class="tsc-bar__label">Chiều lệch</span>
+          <div class="tsc-chips">
+            <button type="button" class="tsc-chip" [class.is-on]="diffMode() === 'all'"
+                    (click)="diffMode.set('all')">Tất cả</button>
+            <button type="button" class="tsc-chip" [class.is-on]="diffMode() === 'plus'"
+                    (click)="diffMode.set('plus')" title="Chỉ xem ERP nhiều hơn khách hàng">
+              Chỉ lệch dương
+            </button>
+            <button type="button" class="tsc-chip" [class.is-on]="diffMode() === 'minus'"
+                    (click)="diffMode.set('minus')" title="Chỉ xem khách hàng nhiều hơn ERP">
+              Chỉ lệch âm
+            </button>
+          </div>
         }
       </div>
 
@@ -230,9 +238,7 @@
           </table>
         </div>
         @if (!visibleReportRows().length) {
-          <p class="tsc-hint">
-            {{ onlyDiff() ? 'Không có nhân sự nào lệch trong khoảng này.' : 'Không có nhân sự nào khớp bộ lọc.' }}
-          </p>
+          <p class="tsc-hint">{{ emptyReportText() }}</p>
         }
       } @else {
         <p class="tsc-hint">

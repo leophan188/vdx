@@ -48,6 +48,15 @@ import {
     .tsc-file { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
     .tsc-check { display: inline-flex; align-items: center; gap: var(--space-2);
       font-size: var(--text-sm); color: var(--color-text-muted); }
+    /* Chip lọc chiều lệch. Không dùng .bl-chip của Backlog vì style đó nằm trong component ấy —
+       lấy sang đây thì im lặng mất định dạng. */
+    .tsc-chips { display: inline-flex; gap: var(--space-1); flex-wrap: wrap; }
+    .tsc-chip { padding: 3px var(--space-3); border: 1px solid var(--color-border);
+      border-radius: var(--radius-full); background: var(--color-surface); color: var(--color-text-muted);
+      font: inherit; font-size: var(--text-sm); cursor: pointer; }
+    .tsc-chip:hover { border-color: var(--color-primary); color: var(--color-primary); }
+    .tsc-chip.is-on { background: var(--color-primary-soft); border-color: var(--color-primary);
+      color: var(--color-primary); font-weight: var(--weight-semibold); }
     .tsc-pivot--gap { margin-top: var(--space-3); }
     .tsc-search { height: var(--control-h-sm); min-width: 240px; padding: 0 var(--space-3);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
@@ -129,10 +138,32 @@ export class TimesheetControl {
     (this.custPivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
   readonly reportRows = computed(() =>
     (this.report()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
-  /** Chỉ những người có tháng lệch — dùng cho chế độ "chỉ xem dòng lệch". */
-  readonly onlyDiff = signal(false);
-  readonly visibleReportRows = computed(() =>
-    this.onlyDiff() ? this.reportRows().filter((r) => r.monthsWithDiff > 0) : this.reportRows());
+  /**
+   * Lọc theo CHIỀU lệch. Hai chiều là hai việc khác nhau: ERP nhiều hơn thì đi hỏi vì sao khách hàng
+   * không nghiệm thu, còn khách hàng nhiều hơn thì phải soi lại chấm công — nên xem tách ra tiện hơn
+   * là dò dấu trừ trong cả bảng.
+   */
+  readonly diffMode = signal<'all' | 'plus' | 'minus'>('all');
+  readonly visibleReportRows = computed(() => {
+    const mode = this.diffMode();
+    const rows = this.reportRows();
+    if (mode === 'plus') {
+      return rows.filter((r) => r.totalDiff > 0);
+    }
+    if (mode === 'minus') {
+      return rows.filter((r) => r.totalDiff < 0);
+    }
+    return rows;
+  });
+
+  /** Nhãn cho trạng thái rỗng, nói đúng bộ lọc đang bật. */
+  emptyReportText(): string {
+    switch (this.diffMode()) {
+      case 'plus': return 'Không có nhân sự nào ERP nhiều hơn khách hàng.';
+      case 'minus': return 'Không có nhân sự nào khách hàng nhiều hơn ERP.';
+      default: return 'Không có nhân sự nào khớp bộ lọc.';
+    }
+  }
   /** Các ngày trong tháng — dựng sẵn để template khỏi tính lại mỗi lần vẽ. */
   readonly pivotDays = computed(() => {
     const n = this.erpPivot()?.daysInMonth ?? this.custPivot()?.daysInMonth ?? 0;
