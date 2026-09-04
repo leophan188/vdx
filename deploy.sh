@@ -9,12 +9,12 @@
 #     SSHPASS='<mật-khẩu-ssh>' ./deploy.sh            # không phải gõ mật khẩu
 #     ./deploy.sh                                     # ssh sẽ hỏi mật khẩu
 #   Tuỳ chọn (ghi đè mặc định qua biến môi trường):
-#     DEPLOY_SERVER=pdx@10.10.0.70  DEPLOY_DIR=/home/pdx/bpm-vdx/vdx  ./deploy.sh
+#     DEPLOY_SERVER=pdx@10.8.0.60  DEPLOY_DIR=/home/pdx/bpm-vdx/vdx  ./deploy.sh
 #     DEPLOY_SERVICES="backend frontend"  ./deploy.sh   # chỉ build service cần
 # ===========================================================================
 set -euo pipefail
 
-SERVER="${DEPLOY_SERVER:-pdx@10.10.0.70}"
+SERVER="${DEPLOY_SERVER:-pdx@10.8.0.60}"
 REMOTE_DIR="${DEPLOY_DIR:-/home/pdx/bpm-vdx/vdx}"
 SERVICES="${DEPLOY_SERVICES:-backend frontend}"
 BRANCH="$(git rev-parse --abbrev-ref HEAD)"
@@ -46,4 +46,4 @@ echo "--- trạng thái ---"
 docker compose ps
 REMOTE
 
-echo "→ [3/3] Xong. FE: http://10.10.0.70:8085  |  branch: $BRANCH"
+echo "→ [3/3] Xong. FE: http://10.8.0.60:8085  |  branch: $BRANCH"
