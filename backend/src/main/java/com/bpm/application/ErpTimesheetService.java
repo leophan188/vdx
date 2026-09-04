@@ -223,7 +223,8 @@ public class ErpTimesheetService {
             out.add(new ErpPersonRow(en.getKey(), a.name, a.empCode, WorkdayReconciliation.round2(a.hours),
                     WorkdayReconciliation.round2(a.workdays), a.dates.size()));
         }
-        out.sort(Comparator.comparing(ErpPersonRow::name, String.CASE_INSENSITIVE_ORDER));
+        out.sort(Comparator.comparing(ErpPersonRow::empCode, CODE_ORDER)
+                .thenComparing(ErpPersonRow::name, String.CASE_INSENSITIVE_ORDER));
         return out;
     }
 
@@ -278,7 +279,8 @@ public class ErpTimesheetService {
             rows.add(new PivotRow(a.name, a.empCode, cells, hours,
                     WorkdayReconciliation.round2(total), cells.size()));
         }
-        rows.sort(Comparator.comparing(PivotRow::name, String.CASE_INSENSITIVE_ORDER));
+        rows.sort(Comparator.comparing(PivotRow::empCode, CODE_ORDER)
+                .thenComparing(PivotRow::name, String.CASE_INSENSITIVE_ORDER));
 
         // Thứ Bảy/Chủ nhật đánh dấu sẵn ở backend để màn hình khỏi tự suy ra lịch — chấm công cuối
         // tuần là chuyện đáng chú ý, phải nhìn ra ngay giữa một rừng con số.
@@ -369,7 +371,8 @@ public class ErpTimesheetService {
     @Transactional(readOnly = true)
     public List<CustomerWorkdayEntry> customerRows(String periodKey) {
         List<CustomerWorkdayEntry> rows = customerRepo.findByPeriodKey(parsePeriod(periodKey).toString());
-        rows.sort(Comparator.comparing(CustomerWorkdayEntry::getEmployeeName, String.CASE_INSENSITIVE_ORDER));
+        rows.sort(Comparator.comparing(CustomerWorkdayEntry::getEmpCode, CODE_ORDER)
+                .thenComparing(CustomerWorkdayEntry::getEmployeeName, String.CASE_INSENSITIVE_ORDER));
         return rows;
     }
 
@@ -428,11 +431,9 @@ public class ErpTimesheetService {
                     e == null ? 0 : e.hours(), erpDays, e == null ? 0 : e.dayCount(),
                     custDays, diff, status));
         }
-        // Đưa việc cần xử lý lên trước: lệch nhiều nhất trước, dòng khớp xuống cuối.
-        out.sort(Comparator
-                .comparingInt((WorkdayReconciliation.Row r) ->
-                        r.status() == WorkdayReconciliation.Status.MATCHED ? 1 : 0)
-                .thenComparing(r -> -Math.abs(r.diffDays()))
+        // Theo MÃ nhân viên, giống hai bảng nguồn — ba bảng cùng thứ tự thì dò ngang giữa các tab mới
+        // nhanh. Muốn xem việc cần xử lý trước thì bấm cột "Lệch" để sắp lại.
+        out.sort(Comparator.comparing(WorkdayReconciliation.Row::empCode, CODE_ORDER)
                 .thenComparing(WorkdayReconciliation.Row::name, String.CASE_INSENSITIVE_ORDER));
         return out;
     }
@@ -442,6 +443,37 @@ public class ErpTimesheetService {
     /** Tổng theo người phía ERP. */
     public record ErpPersonRow(String matchKey, String name, String empCode,
                                double hours, double days, int dayCount) {
+    }
+
+    /**
+     * Sắp theo MÃ nhân viên: mã toàn số so theo SỐ, còn lại so theo chuỗi, người chưa có mã xuống cuối.
+     * So thuần chuỗi thì "10" đứng trước "9", còn đẩy người chưa có mã lên đầu bảng thì phần đáng đọc
+     * bị dồn xuống dưới.
+     */
+    private static final Comparator<String> CODE_ORDER = (a, b) -> {
+        boolean ba = a == null || a.isBlank();
+        boolean bb = b == null || b.isBlank();
+        if (ba || bb) {
+            return ba && bb ? 0 : (ba ? 1 : -1);
+        }
+        Long na = asLong(a);
+        Long nb = asLong(b);
+        if (na != null && nb != null) {
+            // Cùng phần số ("3982" và "3982.1") thì so tiếp cả chuỗi, nếu không thứ tự hai dòng đó
+            // đảo qua đảo lại giữa các lần tải và người dùng tưởng dữ liệu thay đổi.
+            int byNumber = Long.compare(na, nb);
+            return byNumber != 0 ? byNumber : a.compareToIgnoreCase(b);
+        }
+        if (na != null || nb != null) {
+            return na != null ? -1 : 1;   // mã số trước, mã có chữ sau
+        }
+        return a.compareToIgnoreCase(b);
+    };
+
+    /** Phần số ở đầu mã ("3982.1" → 3982); null nếu không bắt đầu bằng số. */
+    private static Long asLong(String s) {
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("^(\\d{1,18})").matcher(s.trim());
+        return m.find() ? Long.valueOf(m.group(1)) : null;
     }
 
     /**
