@@ -78,9 +78,10 @@ export interface DbProbe {
 export interface PivotRow {
   name: string;
   empCode: string | null;
-  /** Giờ theo ngày trong tháng; ngày vắng mặt trong map = không có chấm công. */
+  /** NGÀY CÔNG theo ngày trong tháng (1 hoặc 0,5); ngày vắng mặt trong map = nghỉ. */
+  daysByDay: Record<string, number>;
+  /** Số giờ tương ứng — chỉ nguồn ERP mới có, dùng cho tooltip. */
   hoursByDay: Record<string, number>;
-  totalHours: number;
   totalDays: number;
   dayCount: number;
 }
@@ -96,12 +97,6 @@ export interface PivotResult {
 export interface ImportResult {
   rows: number;
   message: string;
-}
-
-export interface ValidateResponse {
-  valid: boolean;
-  dataRows: number;
-  issues: { row: number; column: string | null; message: string }[];
 }
 
 /** Kiểm soát giờ công: chấm công ERP · công khách hàng · đối soát, tất cả theo kỳ "yyyy-MM". */
@@ -141,14 +136,14 @@ export class ErpTimesheetService {
     return this.http.get<ErpPersonRow[]>(`${this.base}/erp/rows?period=${period}`);
   }
 
-  pivot(period: string): Observable<PivotResult> {
+  /** Bảng ngang nguồn ERP. */
+  erpPivot(period: string): Observable<PivotResult> {
     return this.http.get<PivotResult>(`${this.base}/erp/pivot?period=${period}`);
   }
 
-  validateCustomer(file: File): Observable<ValidateResponse> {
-    const fd = new FormData();
-    fd.append('file', file);
-    return this.http.post<ValidateResponse>(`${this.base}/customer/validate`, fd);
+  /** Bảng ngang nguồn khách hàng — cùng khuôn để so bằng mắt. */
+  customerPivot(period: string): Observable<PivotResult> {
+    return this.http.get<PivotResult>(`${this.base}/customer/pivot?period=${period}`);
   }
 
   importCustomer(period: string, file: File): Observable<ImportResult> {
@@ -161,8 +156,8 @@ export class ErpTimesheetService {
     return this.http.get<CustomerRow[]>(`${this.base}/customer/rows?period=${period}`);
   }
 
-  customerTemplateUrl(): string {
-    return `${this.base}/customer/template`;
+  customerTemplateUrl(period: string): string {
+    return `${this.base}/customer/template?period=${period}`;
   }
 
   reconcile(period: string): Observable<ReconcileResponse> {

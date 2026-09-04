@@ -4,9 +4,6 @@ import com.bpm.application.ErpTimesheetService;
 import com.bpm.domain.erp.CustomerWorkdayEntry;
 import com.bpm.domain.erp.ErpConfig;
 import com.bpm.domain.erp.WorkdayReconciliation;
-import com.bpm.domain.report.ExcelReportEngine;
-import com.bpm.domain.report.ReportTemplate;
-import com.bpm.domain.report.ValidationResult;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -72,12 +69,6 @@ public class ErpTimesheetController {
     public record ImportResult(int rows, String message) {
     }
 
-    public record IssueRow(int row, String column, String message) {
-    }
-
-    public record ValidateResponse(boolean valid, int dataRows, List<IssueRow> issues) {
-    }
-
     // ===== Cấu hình =====
 
     @GetMapping("/config")
@@ -128,20 +119,19 @@ public class ErpTimesheetController {
                 .toList();
     }
 
-    /** Bảng công theo ngày: một nhân sự một dòng, mỗi ngày một cột. */
+    /** Bảng công theo ngày của nguồn ERP: một nhân sự một dòng, mỗi ngày một cột. */
     @GetMapping("/erp/pivot")
-    public ErpTimesheetService.PivotResult pivot(@RequestParam String period) {
-        return service.pivot(period);
+    public ErpTimesheetService.PivotResult erpPivot(@RequestParam String period) {
+        return service.pivot(period, false);
+    }
+
+    /** Bảng công theo ngày của nguồn khách hàng — cùng khuôn với bảng ERP để so bằng mắt. */
+    @GetMapping("/customer/pivot")
+    public ErpTimesheetService.PivotResult customerPivot(@RequestParam String period) {
+        return service.pivot(period, true);
     }
 
     // ===== Nguồn 2: khách hàng =====
-
-    @PostMapping("/customer/validate")
-    public ValidateResponse validateCustomer(@RequestParam("file") MultipartFile file) throws IOException {
-        ValidationResult v = service.validateCustomerFile(file.getBytes(), file.getOriginalFilename());
-        return new ValidateResponse(v.isValid(), v.getDataRows(),
-                v.getIssues().stream().map(i -> new IssueRow(i.row(), i.column(), i.message())).toList());
-    }
 
     @PostMapping("/customer/import")
     public ImportResult importCustomer(@RequestParam String period,
@@ -160,12 +150,13 @@ public class ErpTimesheetController {
                 .toList();
     }
 
-    /** Biểu mẫu trống để gửi khách hàng điền. */
+    /** Biểu mẫu trống để gửi khách hàng điền — số cột ngày theo đúng tháng được chọn. */
     @GetMapping("/customer/template")
-    public ResponseEntity<byte[]> customerTemplate() {
-        byte[] bytes = ExcelReportEngine.writeSampleTemplate(ReportTemplate.CONG_KHACH_HANG);
+    public ResponseEntity<byte[]> customerTemplate(@RequestParam String period) {
+        byte[] bytes = service.customerTemplate(period);
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"mau-cong-khach-hang.xlsx\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"mau-cong-khach-hang-" + period + ".xlsx\"")
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(bytes);

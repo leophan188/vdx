@@ -39,7 +39,14 @@ public class CustomerWorkdayEntry {
     @Column(name = "match_key", length = 300)
     private String matchKey;
 
-    /** Số công khách hàng ghi nhận (đơn vị NGÀY công). */
+    /**
+     * NGÀY trong tháng mà số công này thuộc về. Null = dòng tổng cả tháng (dữ liệu nhập theo mẫu cũ);
+     * bảng ngang chỉ vẽ được từ những dòng có ngày.
+     */
+    @Column(name = "work_date")
+    private java.time.LocalDate workDate;
+
+    /** Số công khách hàng ghi nhận (đơn vị NGÀY công: 1 hoặc 0,5). */
     @Column(name = "days", nullable = false)
     private double days;
 
@@ -58,9 +65,11 @@ public class CustomerWorkdayEntry {
     protected CustomerWorkdayEntry() {
     }
 
-    public CustomerWorkdayEntry(String periodKey, String empCode, String employeeName, String matchKey,
-                                double days, String note, String sourceFile, String actor) {
+    public CustomerWorkdayEntry(String periodKey, java.time.LocalDate workDate, String empCode,
+                                String employeeName, String matchKey, double days, String note,
+                                String sourceFile, String actor) {
         this.periodKey = periodKey;
+        this.workDate = workDate;
         this.empCode = empCode;
         this.employeeName = employeeName;
         this.matchKey = matchKey;
@@ -76,6 +85,7 @@ public class CustomerWorkdayEntry {
     public String getEmpCode() { return empCode; }
     public String getEmployeeName() { return employeeName; }
     public String getMatchKey() { return matchKey; }
+    public java.time.LocalDate getWorkDate() { return workDate; }
     public double getDays() { return days; }
     public String getNote() { return note; }
     public String getSourceFile() { return sourceFile; }

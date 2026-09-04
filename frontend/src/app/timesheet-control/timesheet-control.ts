@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { NgTemplateOutlet } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { PageHeader } from '../shared/page-header/page-header';
 import { DataGrid, GridColumn } from '../shared/data-grid/data-grid';
@@ -7,7 +8,7 @@ import { GridCellDirective } from '../shared/data-grid/grid-cell.directive';
 import { Tabs, TabItem } from '../shared/tabs/tabs';
 import { ToastService } from '../shared/toast/toast.service';
 import {
-  ErpTimesheetService, ErpConfig, ErpPersonRow, CustomerRow, ReconcileRow, ReconcileSummary, PivotResult
+  ErpTimesheetService, ErpConfig, CustomerRow, ReconcileRow, ReconcileSummary, PivotResult
 } from '../core/erp-timesheet.service';
 
 /**
@@ -19,7 +20,7 @@ import {
  */
 @Component({
   selector: 'app-timesheet-control',
-  imports: [FormsModule, PageHeader, DataGrid, GridCellDirective, Tabs],
+  imports: [FormsModule, NgTemplateOutlet, PageHeader, DataGrid, GridCellDirective, Tabs],
   templateUrl: './timesheet-control.html',
   styles: [`
     .tsc-bar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
@@ -80,8 +81,7 @@ export class TimesheetControl {
   readonly tabs: TabItem[] = [
     { key: 'reconcile', label: 'Đối soát', icon: '⚖️' },
     { key: 'erp', label: 'Công ERP', icon: '🏢' },
-    { key: 'customer', label: 'Công khách hàng', icon: '📄' },
-    { key: 'pivot', label: 'Bảng công theo ngày', icon: '📅' }
+    { key: 'customer', label: 'Công khách hàng', icon: '📄' }
   ];
   readonly tab = signal<string>('reconcile');
 
@@ -101,25 +101,25 @@ export class TimesheetControl {
       nên lọc riêng từng bảng chỉ tạo ra cảnh mỗi nơi hiện một tập người khác nhau. */
   readonly keyword = signal('');
 
-  readonly erpRowsAll = signal<ErpPersonRow[]>([]);
+  readonly erpPivot = signal<PivotResult | null>(null);
+  readonly custPivot = signal<PivotResult | null>(null);
   readonly customerRowsAll = signal<CustomerRow[]>([]);
   readonly reconcileRowsAll = signal<ReconcileRow[]>([]);
   readonly summary = signal<ReconcileSummary | null>(null);
-  readonly pivot = signal<PivotResult | null>(null);
 
-  readonly erpRows = computed(() => this.erpRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
-  readonly customerRows = computed(() =>
-    this.customerRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
   readonly reconcileRows = computed(() =>
     this.reconcileRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
-  readonly pivotRows = computed(() =>
-    (this.pivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  readonly erpPivotRows = computed(() =>
+    (this.erpPivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  readonly custPivotRows = computed(() =>
+    (this.custPivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
   /** Các ngày trong tháng — dựng sẵn để template khỏi tính lại mỗi lần vẽ. */
   readonly pivotDays = computed(() => {
-    const n = this.pivot()?.daysInMonth ?? 0;
+    const n = this.erpPivot()?.daysInMonth ?? this.custPivot()?.daysInMonth ?? 0;
     return Array.from({ length: n }, (_, i) => i + 1);
   });
-  private readonly weekendSet = computed(() => new Set(this.pivot()?.weekendDays ?? []));
+  private readonly weekendSet = computed(() =>
+    new Set(this.erpPivot()?.weekendDays ?? this.custPivot()?.weekendDays ?? []));
 
   /** Nguồn dữ liệu khách hàng của kỳ — hiện file nào, ai import, lúc nào. */
   readonly customerSource = computed(() => {
@@ -130,27 +130,11 @@ export class TimesheetControl {
       + (first.importedBy ? ' · ' + first.importedBy : '');
   });
 
-  readonly erpCols: GridColumn[] = [
-    { key: 'name', header: 'Nhân sự', sortable: true },
-    { key: 'empCode', header: 'Mã NV', width: '104px', sortable: true },
-    { key: 'dayCount', header: 'Ngày chấm', width: '110px', align: 'center', sortable: true },
-    { key: 'hours', header: 'Tổng giờ', width: '110px', align: 'right', sortable: true },
-    { key: 'days', header: 'Quy ra công', width: '124px', align: 'right', sortable: true }
-  ];
-
-  readonly customerCols: GridColumn[] = [
-    { key: 'name', header: 'Nhân sự', sortable: true },
-    { key: 'empCode', header: 'Mã NV', width: '110px' },
-    { key: 'days', header: 'Số công', width: '110px', align: 'right', sortable: true },
-    { key: 'note', header: 'Ghi chú', width: '260px' }
-  ];
-
   readonly reconcileCols: GridColumn[] = [
     { key: 'name', header: 'Nhân sự', sortable: true },
     { key: 'empCode', header: 'Mã NV', width: '104px', sortable: true },
     { key: 'status', header: 'Tình trạng', width: '150px' },
     { key: 'erpDayCount', header: 'Ngày chấm', width: '108px', align: 'center', sortable: true },
-    { key: 'erpHours', header: 'Giờ ERP', width: '104px', align: 'right', sortable: true },
     { key: 'erpDays', header: 'Công ERP', width: '112px', align: 'right', sortable: true },
     { key: 'customerDays', header: 'Công KH', width: '112px', align: 'right', sortable: true },
     { key: 'diffDays', header: 'Lệch', width: '104px', align: 'right', sortable: true }
@@ -188,15 +172,15 @@ export class TimesheetControl {
   reload(): void {
     const p = this.period();
     this.loading.set(true);
-    this.svc.erpRows(p).subscribe({
-      next: (r) => this.erpRowsAll.set(r),
-      error: () => this.erpRowsAll.set([])
-    });
     this.svc.customerRows(p).subscribe({
       next: (r) => this.customerRowsAll.set(r),
       error: () => this.customerRowsAll.set([])
     });
-    this.svc.pivot(p).subscribe({ next: (r) => this.pivot.set(r), error: () => this.pivot.set(null) });
+    this.svc.erpPivot(p).subscribe({ next: (r) => this.erpPivot.set(r), error: () => this.erpPivot.set(null) });
+    this.svc.customerPivot(p).subscribe({
+      next: (r) => this.custPivot.set(r),
+      error: () => this.custPivot.set(null)
+    });
     this.svc.reconcile(p).subscribe({
       next: (r) => { this.reconcileRowsAll.set(r.rows); this.summary.set(r.summary); this.loading.set(false); },
       error: () => { this.reconcileRowsAll.set([]); this.summary.set(null); this.loading.set(false); }
@@ -292,12 +276,12 @@ export class TimesheetControl {
   }
 
   downloadTemplate(): void {
-    this.http.get(this.svc.customerTemplateUrl(), { responseType: 'blob' }).subscribe({
+    this.http.get(this.svc.customerTemplateUrl(this.period()), { responseType: 'blob' }).subscribe({
       next: (blob) => {
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'mau-cong-khach-hang.xlsx';
+        a.download = `mau-cong-khach-hang-${this.period()}.xlsx`;
         a.click();
         URL.revokeObjectURL(url);
       },
@@ -321,10 +305,16 @@ export class TimesheetControl {
     }
   }
 
-  /** Giờ của một người trong một ngày; rỗng nghĩa là ngày đó không có chấm công. */
-  cell(row: { hoursByDay: Record<string, number> }, day: number): string {
-    const v = row.hoursByDay[String(day)];
+  /** NGÀY CÔNG của một người trong một ngày; rỗng nghĩa là ngày đó nghỉ. */
+  cell(row: { daysByDay: Record<string, number> }, day: number): string {
+    const v = row.daysByDay[String(day)];
     return v === undefined ? '' : this.num(v);
+  }
+
+  /** Số giờ tương ứng, cho tooltip — chỉ nguồn ERP mới có. */
+  cellHint(row: { hoursByDay?: Record<string, number> }, day: number): string {
+    const h = row.hoursByDay?.[String(day)];
+    return h === undefined ? '' : this.num(h) + ' giờ';
   }
 
   isWeekend(day: number): boolean {

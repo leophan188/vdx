@@ -138,7 +138,6 @@
           <span class="badge" [class]="statusBadge(r.status)">{{ r.statusLabel }}</span>
         </ng-template>
         <ng-template gridCell="empCode" let-r>{{ r.empCode || '—' }}</ng-template>
-        <ng-template gridCell="erpHours" let-r>{{ num(r.erpHours) }}</ng-template>
         <ng-template gridCell="erpDays" let-r>{{ num(r.erpDays) }}</ng-template>
         <ng-template gridCell="customerDays" let-r>{{ num(r.customerDays) }}</ng-template>
         <ng-template gridCell="diffDays" let-r>
@@ -149,61 +148,17 @@
 
     @case ('erp') {
       <p class="tsc-hint">
-        Số liệu đọc từ ERP và <b>lưu lại theo kỳ</b>, không gọi lại mỗi lần mở màn hình — có vậy mới nói
-        được “số này chốt lúc nào”. Muốn cập nhật thì bấm “Tải chấm công ERP”, dữ liệu cũ của kỳ sẽ được
-        thay hoàn toàn.
+        Giá trị là <b>ngày công do ERP tính</b> (1 hoặc 0,5 — đã trừ nghỉ nửa buổi), không phải giờ:
+        lấy đúng con số ERP hiển thị thì hai bên mới đối chiếu được. Rê chuột vào ô để xem số giờ.
+        Ô trống là ngày nghỉ, cột nền xám là Thứ Bảy / Chủ nhật.
       </p>
-      <data-grid [columns]="erpCols" [rows]="erpRows()" [toolbar]="false" minWidth="720px"
-                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
-                 [emptyText]="loading() ? 'Đang tải…' : 'Kỳ này chưa tải chấm công từ ERP.'">
-        <ng-template gridCell="empCode" let-r>{{ r.empCode || '—' }}</ng-template>
-        <ng-template gridCell="hours" let-r>{{ num(r.hours) }}</ng-template>
-        <ng-template gridCell="days" let-r>{{ num(r.days) }}</ng-template>
-      </data-grid>
-    }
-
-    @case ('pivot') {
       <p class="tsc-hint">
-        Số <b>giờ</b> chấm công từng ngày; ô trống là ngày không có chấm công, cột nền xám là Thứ Bảy /
-        Chủ nhật. Bảng tổng theo người cho biết ai lệch, bảng này cho biết <b>lệch ở ngày nào</b>.
+        Số liệu <b>lưu lại theo kỳ</b>, không gọi lại ERP mỗi lần mở màn hình — có vậy mới nói được
+        “số này chốt lúc nào”. Bấm “Tải chấm công ERP” để cập nhật; dữ liệu cũ của kỳ được thay hoàn toàn.
       </p>
-      @if (pivotRows().length) {
-        <div class="tsc-pivot">
-          <table>
-            <thead>
-              <tr>
-                <th class="tsc-pivot__name">Nhân sự</th>
-                @for (d of pivotDays(); track d) {
-                  <th [class.tsc-pivot__we]="isWeekend(d)">{{ d }}</th>
-                }
-                <th class="tsc-pivot__total">Tổng giờ</th>
-                <th class="tsc-pivot__total">Công</th>
-                <th class="tsc-pivot__total">Ngày</th>
-              </tr>
-            </thead>
-            <tbody>
-              @for (r of pivotRows(); track r.name + (r.empCode || '')) {
-                <tr>
-                  <td class="tsc-pivot__name">
-                    @if (r.empCode) { <span class="tsc-pivot__code">{{ r.empCode }}</span> }{{ r.name }}
-                  </td>
-                  @for (d of pivotDays(); track d) {
-                    <td [class.tsc-pivot__we]="isWeekend(d)">{{ cell(r, d) }}</td>
-                  }
-                  <td class="tsc-pivot__total">{{ num(r.totalHours) }}</td>
-                  <td class="tsc-pivot__total">{{ num(r.totalDays) }}</td>
-                  <td class="tsc-pivot__total">{{ r.dayCount }}</td>
-                </tr>
-              }
-            </tbody>
-          </table>
-        </div>
-      } @else {
-        <p class="tsc-hint">
-          {{ loading() ? 'Đang tải…' : (keyword() ? 'Không có nhân sự nào khớp bộ lọc.'
-             : 'Kỳ này chưa tải chấm công từ ERP.') }}
-        </p>
-      }
+      <ng-container [ngTemplateOutlet]="pivotTable"
+                    [ngTemplateOutletContext]="{ rows: erpPivotRows(), showHours: true,
+                      empty: 'Kỳ này chưa tải chấm công từ ERP.' }" />
     }
 
     @case ('customer') {
@@ -211,16 +166,56 @@
         <p class="tsc-hint">Nguồn: <b>{{ customerSource() }}</b></p>
       }
       <p class="tsc-hint">
-        Import lại cùng một kỳ sẽ <b>thay toàn bộ</b> dữ liệu kỳ đó — bản gửi sau của khách hàng là bản
-        có hiệu lực. File sai định dạng thì không có gì bị ghi đè.
+        File khách hàng đọc theo dạng <b>bảng ngang</b>: một cột họ tên (kèm mã NV nếu có) và mỗi ngày
+        trong tháng một cột, điền 1 hoặc 0,5. Tải “Biểu mẫu khách hàng” để có đúng khuôn của tháng đang chọn.
       </p>
-      <data-grid [columns]="customerCols" [rows]="customerRows()" [toolbar]="false" minWidth="760px"
-                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
-                 [emptyText]="loading() ? 'Đang tải…' : 'Kỳ này chưa import file công khách hàng.'">
-        <ng-template gridCell="days" let-r>{{ num(r.days) }}</ng-template>
-        <ng-template gridCell="empCode" let-r>{{ r.empCode || '—' }}</ng-template>
-        <ng-template gridCell="note" let-r>{{ r.note || '—' }}</ng-template>
-      </data-grid>
+      <p class="tsc-hint">
+        Import lại cùng một kỳ sẽ <b>thay toàn bộ</b> dữ liệu kỳ đó — bản gửi sau của khách hàng là bản
+        có hiệu lực. File không đọc được thì không có gì bị ghi đè.
+      </p>
+      <ng-container [ngTemplateOutlet]="pivotTable"
+                    [ngTemplateOutletContext]="{ rows: custPivotRows(), showHours: false,
+                      empty: 'Kỳ này chưa import file công khách hàng.' }" />
     }
   }
 </section>
+
+<!-- Bảng ngang dùng CHUNG cho hai nguồn: cùng một khuôn thì mắt so được ngay giữa hai tab, mỗi nguồn
+     một kiểu bảng là bắt người đọc dịch lại bố cục mỗi lần chuyển tab. -->
+<ng-template #pivotTable let-rows="rows" let-showHours="showHours" let-empty="empty">
+  @if (rows.length) {
+    <div class="tsc-pivot">
+      <table>
+        <thead>
+          <tr>
+            <th class="tsc-pivot__name">Nhân sự</th>
+            @for (d of pivotDays(); track d) {
+              <th [class.tsc-pivot__we]="isWeekend(d)">{{ d }}</th>
+            }
+            <th class="tsc-pivot__total">Tổng công</th>
+            <th class="tsc-pivot__total">Ngày</th>
+          </tr>
+        </thead>
+        <tbody>
+          @for (r of rows; track r.name + (r.empCode || '')) {
+            <tr>
+              <td class="tsc-pivot__name">
+                @if (r.empCode) { <span class="tsc-pivot__code">{{ r.empCode }}</span> }{{ r.name }}
+              </td>
+              @for (d of pivotDays(); track d) {
+                <td [class.tsc-pivot__we]="isWeekend(d)"
+                    [title]="showHours ? cellHint(r, d) : ''">{{ cell(r, d) }}</td>
+              }
+              <td class="tsc-pivot__total">{{ num(r.totalDays) }}</td>
+              <td class="tsc-pivot__total">{{ r.dayCount }}</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  } @else {
+    <p class="tsc-hint">
+      {{ loading() ? 'Đang tải…' : (keyword() ? 'Không có nhân sự nào khớp bộ lọc.' : empty) }}
+    </p>
+  }
+</ng-template>

@@ -8,7 +8,6 @@ import java.util.List;
  * Phần đọc/validate file dùng chung ở {@link ExcelReportEngine}; công thức riêng của từng tool nằm ở
  * engine riêng ({@link SunEffortEngine}) để test thuần, lặp lại được.
  *
- * CONG_KHACH_HANG: công khách hàng ghi nhận theo tháng — nguồn thứ hai của màn Kiểm soát giờ công.
  * PHAN_BO_CHI_PHI_SUN_ITS: Phân bổ chi phí nhân sự (Sun ITS) — đọc sheet "Raw normalized" rồi gộp thành
  * 3 bảng kết quả (theo nhân sự · theo dự án · theo cặp nhân sự × dự án).
  */
@@ -35,25 +34,7 @@ public enum ReportTemplate {
                     new Column("Manday (VNĐ)", ColumnType.NUMBER),
                     Column.optional("MD nhân sự tự khai", ColumnType.NUMBER),
                     Column.optional("Thời gian thực hiện", ColumnType.NUMBER)
-            )),
-
-    /**
-     * Công khách hàng ghi nhận, dùng cho màn Kiểm soát giờ công. Kỳ (tháng) KHÔNG nằm trong file mà
-     * chọn trên màn hình: file khách hàng gửi theo tháng, ghi thêm cột tháng chỉ tạo thêm một chỗ để
-     * sai lệch với thư mục kỳ đang import.
-     */
-    CONG_KHACH_HANG(
-            "CONG_KHACH_HANG",
-            "Công khách hàng ghi nhận (theo tháng)",
-            "Đọc số công khách hàng ghi nhận cho từng nhân sự trong một tháng, lưu lại theo kỳ rồi "
-                    + "đối soát với chấm công đọc từ ERP.",
-            List.of(
-                    Column.mayBeEmpty("Mã NV", ColumnType.TEXT),
-                    Column.key("Họ và tên", ColumnType.TEXT),
-                    new Column("Số công", ColumnType.NUMBER),
-                    Column.optional("Ghi chú", ColumnType.TEXT)
-            ),
-            false);
+            ));
 
     /** Kiểu dữ liệu cột để validate (FR-D02). */
     public enum ColumnType { TEXT, NUMBER, DATE }
@@ -120,27 +101,13 @@ public enum ReportTemplate {
     private final String title;
     private final String description;
     private final List<Column> columns;
-    /** Có xuất hiện ở danh sách chọn tool của màn Công cụ hay không. */
-    private final boolean standaloneTool;
 
     ReportTemplate(String key, String title, String description, List<Column> columns) {
-        this(key, title, description, columns, true);
-    }
-
-    ReportTemplate(String key, String title, String description, List<Column> columns, boolean standaloneTool) {
         this.key = key;
         this.title = title;
         this.description = description;
         this.columns = columns;
-        this.standaloneTool = standaloneTool;
     }
-
-    /**
-     * Mẫu đứng riêng thành một tool ở màn Công cụ (chọn tool → import → xem kết quả). Mẫu phục vụ một
-     * màn khác — như biểu mẫu công khách hàng của màn Kiểm soát giờ công — thì KHÔNG: để nó lọt vào
-     * danh sách chọn tool là mời người dùng import file vào một chỗ không xử lý được nó.
-     */
-    public boolean isStandaloneTool() { return standaloneTool; }
 
     public String getKey() { return key; }
     public String getTitle() { return title; }

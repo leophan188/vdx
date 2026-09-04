@@ -1,14 +1,12 @@
 package com.bpm.application;
 
 import com.bpm.domain.erp.AttendanceRecord;
+import com.bpm.domain.erp.CustomerWorkdaySheet;
 import com.bpm.domain.erp.CustomerWorkdayEntry;
 import com.bpm.domain.erp.ErpAttendanceEntry;
 import com.bpm.domain.erp.ErpConfig;
 import com.bpm.domain.erp.WorkdayReconciliation;
-import com.bpm.domain.report.ExcelReportEngine;
-import com.bpm.domain.report.ReportTemplate;
 import com.bpm.domain.report.SafeWorkbookReader;
-import com.bpm.domain.report.ValidationResult;
 import com.bpm.infrastructure.erp.CustomerWorkdayRepository;
 import com.bpm.infrastructure.erp.ErpAttendanceRepository;
 import com.bpm.infrastructure.erp.ErpConfigRepository;
@@ -223,7 +221,7 @@ public class ErpTimesheetService {
         for (Map.Entry<String, ErpAgg> en : byPerson.entrySet()) {
             ErpAgg a = en.getValue();
             out.add(new ErpPersonRow(en.getKey(), a.name, a.empCode, WorkdayReconciliation.round2(a.hours),
-                    WorkdayReconciliation.toDays(a.hours), a.dates.size()));
+                    WorkdayReconciliation.round2(a.workdays), a.dates.size()));
         }
         out.sort(Comparator.comparing(ErpPersonRow::name, String.CASE_INSENSITIVE_ORDER));
         return out;
@@ -236,28 +234,43 @@ public class ErpTimesheetService {
      * ngày nào" — câu hỏi tiếp theo ngay sau khi thấy một dòng lệch, mà tổng tháng thì chịu.
      */
     @Transactional(readOnly = true)
-    public PivotResult pivot(String periodKey) {
+    public PivotResult pivot(String periodKey, boolean customer) {
         YearMonth ym = parsePeriod(periodKey);
         int days = ym.lengthOfMonth();
         Map<String, PivotAgg> byPerson = new LinkedHashMap<>();
-        for (ErpAttendanceEntry e : attendanceRepo.findByPeriodKey(ym.toString())) {
-            String key = keyOf(e.getEmpCode(), e.getMatchKey());
-            PivotAgg agg = byPerson.computeIfAbsent(key,
-                    k -> new PivotAgg(e.getEmployeeName(), e.getEmpCode()));
-            // Cùng một ngày có thể chấm nhiều lần (ra ngoài rồi vào lại) — cộng dồn, đừng ghi đè.
-            agg.hoursByDay.merge(e.getWorkDate().getDayOfMonth(), e.getHours(), Double::sum);
+        if (customer) {
+            for (CustomerWorkdayEntry c : customerRepo.findByPeriodKey(ym.toString())) {
+                if (c.getWorkDate() == null) {
+                    continue;   // dòng tổng tháng kiểu cũ: không đặt được vào cột ngày nào
+                }
+                PivotAgg agg = byPerson.computeIfAbsent(keyOf(c.getEmpCode(), c.getMatchKey()),
+                        k -> new PivotAgg(c.getEmployeeName(), c.getEmpCode()));
+                agg.byDay.merge(c.getWorkDate().getDayOfMonth(), c.getDays(), Double::sum);
+            }
+        } else {
+            for (ErpAttendanceEntry e : attendanceRepo.findByPeriodKey(ym.toString())) {
+                PivotAgg agg = byPerson.computeIfAbsent(keyOf(e.getEmpCode(), e.getMatchKey()),
+                        k -> new PivotAgg(e.getEmployeeName(), e.getEmpCode()));
+                // Cùng một ngày có thể có nhiều bản ghi — cộng dồn, đừng ghi đè.
+                agg.byDay.merge(e.getWorkDate().getDayOfMonth(), e.getWorkday(), Double::sum);
+                agg.hoursByDay.merge(e.getWorkDate().getDayOfMonth(), e.getHours(), Double::sum);
+            }
         }
         List<PivotRow> rows = new ArrayList<>();
         for (PivotAgg a : byPerson.values()) {
             double total = 0;
             Map<Integer, Double> cells = new LinkedHashMap<>();
-            for (Map.Entry<Integer, Double> c : a.hoursByDay.entrySet()) {
+            for (Map.Entry<Integer, Double> c : a.byDay.entrySet()) {
                 double v = WorkdayReconciliation.round2(c.getValue());
                 cells.put(c.getKey(), v);
                 total += v;
             }
-            rows.add(new PivotRow(a.name, a.empCode, cells, WorkdayReconciliation.round2(total),
-                    WorkdayReconciliation.toDays(total), cells.size()));
+            Map<Integer, Double> hours = new LinkedHashMap<>();
+            for (Map.Entry<Integer, Double> c : a.hoursByDay.entrySet()) {
+                hours.put(c.getKey(), WorkdayReconciliation.round2(c.getValue()));
+            }
+            rows.add(new PivotRow(a.name, a.empCode, cells, hours,
+                    WorkdayReconciliation.round2(total), cells.size()));
         }
         rows.sort(Comparator.comparing(PivotRow::name, String.CASE_INSENSITIVE_ORDER));
 
@@ -273,9 +286,12 @@ public class ErpTimesheetService {
         return new PivotResult(ym.toString(), days, weekend, rows);
     }
 
-    /** @param hoursByDay giờ chấm công theo ngày trong tháng (1..31); ngày không có mặt = không đi làm */
-    public record PivotRow(String name, String empCode, Map<Integer, Double> hoursByDay,
-                           double totalHours, double totalDays, int dayCount) {
+    /**
+     * @param daysByDay  NGÀY CÔNG theo ngày trong tháng (1..31) — 1 hoặc 0,5; ngày vắng mặt = nghỉ
+     * @param hoursByDay số giờ tương ứng, để xem khi rê chuột (chỉ có ở nguồn ERP)
+     */
+    public record PivotRow(String name, String empCode, Map<Integer, Double> daysByDay,
+                           Map<Integer, Double> hoursByDay, double totalDays, int dayCount) {
     }
 
     public record PivotResult(String period, int daysInMonth, List<Integer> weekendDays, List<PivotRow> rows) {
@@ -284,6 +300,7 @@ public class ErpTimesheetService {
     private static final class PivotAgg {
         private final String name;
         private final String empCode;
+        private final Map<Integer, Double> byDay = new java.util.TreeMap<>();
         private final Map<Integer, Double> hoursByDay = new java.util.TreeMap<>();
 
         private PivotAgg(String name, String empCode) {
@@ -303,15 +320,9 @@ public class ErpTimesheetService {
 
     // ===== Nguồn 2: công khách hàng =====
 
-    /** Kiểm tra file trước khi lưu — dùng chung bộ validate của Công cụ Excel. */
-    public ValidationResult validateCustomerFile(byte[] bytes, String fileName) {
-        try (Workbook wb = SafeWorkbookReader.open(bytes, fileName)) {
-            return ExcelReportEngine.validate(ReportTemplate.CONG_KHACH_HANG, wb);
-        } catch (SafeWorkbookReader.UnsafeFileException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new IllegalArgumentException("Không đọc được file: " + e.getMessage());
-        }
+    /** Biểu mẫu trống cho một kỳ — số cột ngày đúng bằng số ngày của tháng đó. */
+    public byte[] customerTemplate(String periodKey) {
+        return CustomerWorkdaySheet.writeTemplate(parsePeriod(periodKey));
     }
 
     /**
@@ -321,27 +332,23 @@ public class ErpTimesheetService {
     @Transactional
     public int importCustomer(String periodKey, byte[] bytes, String fileName, String actor) {
         YearMonth ym = parsePeriod(periodKey);
-        ValidationResult v = validateCustomerFile(bytes, fileName);
-        if (!v.isValid()) {
-            throw new IllegalArgumentException("File có lỗi, chưa import: " + v.getIssues().size()
-                    + " lỗi — xem lại rồi gửi bản đúng, dữ liệu kỳ cũ giữ nguyên.");
-        }
-        List<CustomerWorkdayEntry> rows = new ArrayList<>();
+        CustomerWorkdaySheet.ParseResult parsed;
         try (Workbook wb = SafeWorkbookReader.open(bytes, fileName)) {
-            for (ExcelReportEngine.InputRow r : ExcelReportEngine.readRows(ReportTemplate.CONG_KHACH_HANG, wb)) {
-                String name = str(r.values().get("Họ và tên"));
-                if (name == null || name.isBlank()) {
-                    continue;
-                }
-                Double days = num(r.values().get("Số công"));
-                rows.add(new CustomerWorkdayEntry(ym.toString(), str(r.values().get("Mã NV")), name.trim(),
-                        WorkdayReconciliation.matchKey(name), days == null ? 0d : days,
-                        str(r.values().get("Ghi chú")), fileName, actor));
-            }
+            parsed = CustomerWorkdaySheet.read(wb, ym);
         } catch (SafeWorkbookReader.UnsafeFileException e) {
             throw e;
         } catch (Exception e) {
             throw new IllegalArgumentException("Không đọc được file: " + e.getMessage());
+        }
+        if (parsed.cells().isEmpty()) {
+            String why = parsed.problems().isEmpty() ? "" : " (" + parsed.problems().get(0) + ")";
+            throw new IllegalArgumentException("Không đọc được dòng công nào trong file" + why
+                    + ". Dữ liệu kỳ cũ giữ nguyên.");
+        }
+        List<CustomerWorkdayEntry> rows = new ArrayList<>();
+        for (CustomerWorkdaySheet.Cellule c : parsed.cells()) {
+            rows.add(new CustomerWorkdayEntry(ym.toString(), c.date(), c.empCode(), c.name(),
+                    WorkdayReconciliation.matchKey(c.name()), c.days(), null, fileName, actor));
         }
         customerRepo.deleteByPeriodKey(ym.toString());
         customerRepo.saveAll(rows);
@@ -442,6 +449,8 @@ public class ErpTimesheetService {
         private final String name;
         private final String empCode;
         private double hours;
+        /** Tổng NGÀY CÔNG do ERP tính — con số dùng để đối soát. */
+        private double workdays;
         private final TreeSet<LocalDate> dates = new TreeSet<>();
 
         private ErpAgg(String name, String empCode) {
@@ -451,6 +460,7 @@ public class ErpTimesheetService {
 
         private void add(ErpAttendanceEntry e) {
             hours += e.getHours();
+            workdays += e.getWorkday();
             dates.add(e.getWorkDate());
         }
     }

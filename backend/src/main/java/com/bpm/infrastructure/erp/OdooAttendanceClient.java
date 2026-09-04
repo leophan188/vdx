@@ -31,10 +31,14 @@ import java.util.List;
  * thật nằm sau lời gọi RPC mà giao diện đó phát đi. Gọi thẳng RPC vừa ổn định trước mọi thay đổi giao
  * diện, vừa lấy được đúng khoảng ngày cần thay vì tải cả bảng.
  *
- * MÚI GIỜ là chỗ dễ sai nhất: Odoo lưu và trả giờ theo UTC, còn "ngày công" là theo giờ Việt Nam.
- * Một ca chấm 08:00 ngày 05/09 giờ VN nằm ở 01:00 UTC cùng ngày, nhưng ca đêm 23:30 ngày 05/09 giờ VN
- * lại là 16:30 UTC — đọc thô theo UTC sẽ đẩy công sang ngày khác. Mọi mốc thời gian ở đây quy về
- * {@link #VN} ngay khi đọc, và khoảng lọc gửi sang Odoo cũng được đổi ngược lại sang UTC.
+ * Đọc NGÀY CÔNG chứ không tự quy đổi từ giờ: Odoo có sẵn {@code workday} (1.0 / 0.5, đã trừ nghỉ nửa
+ * buổi) và {@code attendance_date} — dùng thẳng hai trường đó thì con số bên này luôn khớp con số
+ * người dùng nhìn thấy trong ERP. Tự chia giờ cho 8 sẽ ra 0,91 công cho một ngày làm 7,3 tiếng, không
+ * ai đối chiếu nổi.
+ *
+ * Lọc theo {@code attendance_date} (kiểu ngày) nên cũng hết bài toán múi giờ: lọc theo {@code check_in}
+ * thì phải đổi sang UTC vì ca đêm 23:30 ngày 05/09 giờ VN nằm ở 16:30 UTC, đọc thô là đẩy công sang
+ * ngày khác. {@code worked_hours} vẫn đọc kèm để tra khi số công trông đáng ngờ.
  */
 @Component
 public class OdooAttendanceClient {
@@ -127,26 +131,26 @@ public class OdooAttendanceClient {
      */
     public List<AttendanceRecord> fetchAttendance(ErpConfig cfg, LocalDate from, LocalDate to) {
         long uid = login(cfg);
-        String fromUtc = toUtcText(from.atStartOfDay());
-        String toUtc = toUtcText(to.plusDays(1).atStartOfDay().minusSeconds(1));
-
         List<AttendanceRecord> out = new ArrayList<>();
         int offset = 0;
         final int page = 5_000;
         while (true) {
             ArrayNode domain = json.createArrayNode();
-            domain.add(triple("check_in", ">=", fromUtc));
-            domain.add(triple("check_in", "<=", toUtc));
+            domain.add(triple("attendance_date", ">=", from.toString()));
+            domain.add(triple("attendance_date", "<=", to.toString()));
+            // Bỏ ngày công bằng 0 ngay từ ERP: Odoo sinh bản ghi cho MỌI người MỌI ngày, kể cả cuối
+            // tuần và ngày nghỉ — tải hết về thì chín phần mười là dòng rỗng.
+            domain.add(tripleNum("workday", ">", 0));
 
             ObjectNode kwargs = json.createObjectNode();
             ArrayNode fields = kwargs.putArray("fields");
             fields.add("employee_id");
-            fields.add("check_in");
-            fields.add("check_out");
+            fields.add("attendance_date");
+            fields.add("workday");
             fields.add("worked_hours");
             kwargs.put("limit", page);
             kwargs.put("offset", offset);
-            kwargs.put("order", "check_in asc");
+            kwargs.put("order", "attendance_date asc");
 
             ArrayNode args = json.createArrayNode();
             args.add(cfg.getDbName());
@@ -180,28 +184,25 @@ public class OdooAttendanceClient {
         return out;
     }
 
-    /**
-     * Một dòng hr.attendance → bản ghi nội bộ. Bỏ qua dòng chưa check-out ({@code worked_hours} = 0
-     * và không có check_out): đó là ca đang mở, tính vào thì công của hôm nay luôn thiếu.
-     */
+    /** Một dòng hr.attendance → bản ghi nội bộ; bỏ qua dòng thiếu nhân sự, thiếu ngày hoặc 0 công. */
     private AttendanceRecord toRecord(JsonNode r) {
         JsonNode emp = r.get("employee_id");
         // Odoo trả trường many2one dạng [id, "Tên"]; false nếu trống.
         if (emp == null || !emp.isArray() || emp.size() < 2) {
             return null;
         }
-        String checkIn = text(r, "check_in");
-        if (checkIn == null) {
+        String date = text(r, "attendance_date");
+        if (date == null) {
             return null;
         }
-        boolean open = text(r, "check_out") == null;
+        double workday = r.hasNonNull("workday") ? r.get("workday").asDouble(0) : 0;
+        if (workday <= 0) {
+            return null;
+        }
         double hours = r.hasNonNull("worked_hours") ? r.get("worked_hours").asDouble(0) : 0;
-        if (open && hours <= 0) {
-            return null;
-        }
-        LocalDate workDate = fromUtcText(checkIn).atZone(ZoneId.of("UTC")).withZoneSameInstant(VN).toLocalDate();
         String display = emp.get(1).asText();
-        return new AttendanceRecord(emp.get(0).asLong(), nameOf(display), codeOf(display), workDate, hours);
+        return new AttendanceRecord(emp.get(0).asLong(), nameOf(display), codeOf(display),
+                LocalDate.parse(date), workday, hours);
     }
 
     /**
@@ -250,6 +251,15 @@ public class OdooAttendanceClient {
             }
         }
         return a;
+    }
+
+    /** Điều kiện so sánh với một SỐ — Odoo phân biệt "workday > 0" với "workday > '0'". */
+    private ArrayNode tripleNum(String field, String op, double value) {
+        ArrayNode t = json.createArrayNode();
+        t.add(field);
+        t.add(op);
+        t.add(value);
+        return t;
     }
 
     private ArrayNode triple(String field, String op, String value) {

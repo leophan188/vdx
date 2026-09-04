@@ -49,8 +49,16 @@ public class ErpAttendanceEntry {
     @Column(name = "work_date", nullable = false)
     private LocalDate workDate;
 
+    /** Số giờ ERP ghi nhận — giữ để tra khi số công trông đáng ngờ, không dùng để đối soát. */
     @Column(name = "hours", nullable = false)
     private double hours;
+
+    /**
+     * NGÀY CÔNG do ERP tính (1.0 / 0.5). Kiểu bọc để hồ sơ tải về TRƯỚC bản này (cột mới, giá trị
+     * NULL) vẫn đọc được thay vì nổ ngay lúc truy vấn.
+     */
+    @Column(name = "workday")
+    private Double workday;
 
     /** Thời điểm tải kỳ này từ ERP — để giải trình con số. */
     @Column(name = "fetched_at")
@@ -70,6 +78,7 @@ public class ErpAttendanceEntry {
         this.matchKey = matchKey;
         this.workDate = rec.workDate();
         this.hours = rec.workedHours();
+        this.workday = rec.workday();
         this.fetchedAt = Instant.now();
         this.fetchedBy = actor;
     }
@@ -82,6 +91,9 @@ public class ErpAttendanceEntry {
     public String getMatchKey() { return matchKey; }
     public LocalDate getWorkDate() { return workDate; }
     public double getHours() { return hours; }
+
+    /** Ngày công ERP tính; dữ liệu cũ chưa có thì trả 0 để phép cộng không vỡ. */
+    public double getWorkday() { return workday == null ? 0d : workday; }
     public Instant getFetchedAt() { return fetchedAt; }
     public String getFetchedBy() { return fetchedBy; }
 }
