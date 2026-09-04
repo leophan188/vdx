@@ -100,9 +100,9 @@
     <button type="button" class="btn btn--ghost btn--sm" (click)="downloadTemplate()">
       ⬇ Biểu mẫu khách hàng
     </button>
-    <button type="button" class="btn btn--secondary btn--sm" (click)="exportExcel()"
-            title="Tải kết quả đối soát kỳ này ra Excel (đối soát + hai bảng công theo ngày)">
-      ⬇ Xuất đối soát
+    <button type="button" class="btn btn--ghost btn--sm" (click)="exportExcel()"
+            title="Tải riêng kỳ đang chọn: đối soát tháng đó kèm hai bảng công theo ngày">
+      ⬇ Xuất kỳ này
     </button>
     <input type="search" class="tsc-search" placeholder="🔍 Lọc theo tên hoặc mã nhân sự…"
            [value]="keyword()" (input)="keyword.set($any($event.target).value)" />
@@ -116,40 +116,123 @@
 
   @switch (tab()) {
     @case ('reconcile') {
-      @if (summary(); as s) {
-        <div class="tsc-metrics">
-          <div class="tsc-metric"><b>{{ s.total }}</b><span>Nhân sự đối soát</span></div>
-          <div class="tsc-metric"><b>{{ s.matched }}</b><span>Khớp</span></div>
-          <div class="tsc-metric"><b>{{ s.diff }}</b><span>Lệch số công</span></div>
-          <div class="tsc-metric"><b>{{ s.erpOnly }}</b><span>Chỉ có ở ERP</span></div>
-          <div class="tsc-metric"><b>{{ s.customerOnly }}</b><span>Chỉ có ở khách hàng</span></div>
-          <div class="tsc-metric"><b>{{ num(s.erpDays) }}</b><span>Tổng công ERP</span></div>
-          <div class="tsc-metric"><b>{{ num(s.customerDays) }}</b><span>Tổng công khách hàng</span></div>
-          <div class="tsc-metric">
-            <b [class]="diffClass(s.diffDays)">{{ num(s.diffDays) }}</b><span>Lệch (ERP − KH)</span>
-          </div>
-        </div>
-      }
-      <p class="tsc-hint">
-        Quy đổi <b>8 giờ = 1 công</b>. Ghép hai nguồn theo <b>mã nhân viên</b> (ERP ghi kèm mã trong tên,
-        dạng “Nguyễn Văn A - 4021”); dòng nào không có mã thì lùi về ghép theo <b>tên đã bỏ dấu</b> —
-        cột “Ngày chấm” giúp nhận ra ngay trường hợp hai người trùng tên bị gộp làm một.
-      </p>
-      <data-grid [columns]="reconcileCols" [rows]="reconcileRows()" [toolbar]="false" minWidth="1100px"
-                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
-                 [emptyText]="loading() ? 'Đang tải…' : 'Chưa có dữ liệu cho kỳ này — hãy tải chấm công ERP và import file khách hàng.'">
-        <ng-template gridCell="status" let-r>
-          <span class="badge" [class]="statusBadge(r.status)">{{ r.statusLabel }}</span>
-        </ng-template>
-        <ng-template gridCell="empCode" let-r>{{ r.empCode || '—' }}</ng-template>
-        <ng-template gridCell="erpDays" let-r>{{ num(r.erpDays) }}</ng-template>
-        <ng-template gridCell="customerDays" let-r>{{ num(r.customerDays) }}</ng-template>
-        <ng-template gridCell="diffDays" let-r>
-          <span [class]="diffClass(r.diffDays)">{{ num(r.diffDays) }}</span>
-        </ng-template>
-      </data-grid>
-    }
+      <!-- Khoảng kỳ + nút chạy. Đối soát KHÔNG tự chạy khi mở màn: người dùng còn phải tải ERP và
+           import file khách hàng xong mới chốt số, chạy sẵn chỉ bày ra kết quả nửa vời rồi bị tưởng
+           là kết quả thật. -->
+      <div class="tsc-bar">
+        <span class="tsc-bar__label">Từ tháng</span>
+        <input type="month" class="tsc-month" [value]="fromPeriod()"
+               (change)="setFrom($any($event.target).value)" />
+        <span class="tsc-bar__label">đến tháng</span>
+        <input type="month" class="tsc-month" [value]="toPeriod()"
+               (change)="setTo($any($event.target).value)" />
+        <button type="button" class="btn btn--primary btn--sm" [disabled]="reporting()"
+                (click)="runReconcile()">
+          {{ reporting() ? 'Đang đối soát…' : '⚖ Thực hiện đối soát' }}
+        </button>
+        @if (report()) {
+          <button type="button" class="btn btn--secondary btn--sm" (click)="exportRange()"
+                  title="Tải báo cáo đối soát của khoảng tháng này ra Excel">
+            ⬇ Xuất báo cáo
+          </button>
+          <label class="tsc-check">
+            <input type="checkbox" [checked]="onlyDiff()"
+                   (change)="onlyDiff.set($any($event.target).checked)" />
+            Chỉ hiện dòng lệch
+          </label>
+        }
+      </div>
 
+      @if (report(); as rep) {
+        <div class="tsc-metrics">
+          <div class="tsc-metric"><b>{{ rep.rows.length }}</b><span>Nhân sự</span></div>
+          <div class="tsc-metric"><b>{{ rep.periods.length }}</b><span>Tháng đối soát</span></div>
+          <div class="tsc-metric"><b>{{ num(rep.totalErp) }}</b><span>Tổng công ERP</span></div>
+          <div class="tsc-metric"><b>{{ num(rep.totalCustomer) }}</b><span>Tổng công KH</span></div>
+          <div class="tsc-metric">
+            <b [class]="diffClass(rep.totalDiff)">{{ num(rep.totalDiff) }}</b><span>Tổng lệch (ERP−KH)</span>
+          </div>
+          <div class="tsc-metric"><b>{{ rep.peopleWithDiff }}</b><span>Nhân sự có lệch</span></div>
+          <div class="tsc-metric"><b>{{ rep.monthsWithDiff }}</b><span>Tháng có lệch</span></div>
+        </div>
+
+        <p class="tsc-hint">
+          Danh sách nhân sự lấy theo <b>nguồn ERP</b>: người chỉ có trong file khách hàng mà bên chấm
+          công không có thì không đưa vào bảng.
+          @if (rep.droppedCustomerOnlyRows) {
+            Kỳ này đã loại <b>{{ rep.droppedCustomerOnlyRows }}</b> dòng như vậy — nếu con số này lớn
+            bất thường thì nhiều khả năng tên trong hai hệ thống viết khác nhau.
+          }
+        </p>
+
+        <!-- Tổng theo THÁNG: trả lời ngay "tháng nào lệch" trước khi soi từng người. -->
+        <div class="tsc-pivot">
+          <table>
+            <thead>
+              <tr>
+                <th class="tsc-pivot__name">Tháng</th>
+                <th class="tsc-pivot__total">Công ERP</th>
+                <th class="tsc-pivot__total">Công KH</th>
+                <th class="tsc-pivot__total">Lệch</th>
+                <th class="tsc-pivot__total">Số người lệch</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (m of rep.months; track m.period) {
+                <tr>
+                  <td class="tsc-pivot__name">{{ shortPeriod(m.period) }}</td>
+                  <td class="tsc-pivot__total">{{ num(m.erpDays) }}</td>
+                  <td class="tsc-pivot__total">{{ num(m.customerDays) }}</td>
+                  <td class="tsc-pivot__total" [class]="diffClass(m.diffDays)">{{ num(m.diffDays) }}</td>
+                  <td class="tsc-pivot__total">{{ m.peopleWithDiff || '' }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Theo NGƯỜI × THÁNG: ô là chênh lệch, rê chuột xem ERP/KH. Hiện cả ba con số mỗi ô thì
+             bảng mười hai tháng không còn đọc được. -->
+        <div class="tsc-pivot tsc-pivot--gap">
+          <table>
+            <thead>
+              <tr>
+                <th class="tsc-pivot__name">Nhân sự</th>
+                @for (p of rep.periods; track p) { <th>{{ shortPeriod(p) }}</th> }
+                <th class="tsc-pivot__total">ERP</th>
+                <th class="tsc-pivot__total">KH</th>
+                <th class="tsc-pivot__total">Tổng lệch</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of visibleReportRows(); track r.name + (r.empCode || '')) {
+                <tr>
+                  <td class="tsc-pivot__name">
+                    @if (r.empCode) { <span class="tsc-pivot__code">{{ r.empCode }}</span> }{{ r.name }}
+                  </td>
+                  @for (p of rep.periods; track p) {
+                    <td [class]="cellDiffClass(r, p)" [title]="cellTitle(r, p)">{{ cellDiff(r, p) }}</td>
+                  }
+                  <td class="tsc-pivot__total">{{ num(r.totalErp) }}</td>
+                  <td class="tsc-pivot__total">{{ num(r.totalCustomer) }}</td>
+                  <td class="tsc-pivot__total" [class]="diffClass(r.totalDiff)">{{ num(r.totalDiff) }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        @if (!visibleReportRows().length) {
+          <p class="tsc-hint">
+            {{ onlyDiff() ? 'Không có nhân sự nào lệch trong khoảng này.' : 'Không có nhân sự nào khớp bộ lọc.' }}
+          </p>
+        }
+      } @else {
+        <p class="tsc-hint">
+          Chọn khoảng tháng rồi bấm <b>Thực hiện đối soát</b>. Trước đó nhớ đã <b>tải chấm công ERP</b>
+          và <b>import file khách hàng</b> cho những tháng đó.
+        </p>
+      }
+    }
     @case ('erp') {
       <p class="tsc-hint">
         Giá trị là <b>Ngày công hưởng lương</b> của ERP (1 hoặc 0,5) — đúng cột bạn nhìn thấy trong màn

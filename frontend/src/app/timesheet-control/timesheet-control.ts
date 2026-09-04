@@ -3,12 +3,10 @@ import { FormsModule } from '@angular/forms';
 import { NgTemplateOutlet } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { PageHeader } from '../shared/page-header/page-header';
-import { DataGrid, GridColumn } from '../shared/data-grid/data-grid';
-import { GridCellDirective } from '../shared/data-grid/grid-cell.directive';
 import { Tabs, TabItem } from '../shared/tabs/tabs';
 import { ToastService } from '../shared/toast/toast.service';
 import {
-  ErpTimesheetService, ErpConfig, CustomerRow, ReconcileRow, ReconcileSummary, PivotResult
+  ErpTimesheetService, ErpConfig, CustomerRow, PivotResult, RangeReport, RangeRow
 } from '../core/erp-timesheet.service';
 
 /**
@@ -20,7 +18,7 @@ import {
  */
 @Component({
   selector: 'app-timesheet-control',
-  imports: [FormsModule, NgTemplateOutlet, PageHeader, DataGrid, GridCellDirective, Tabs],
+  imports: [FormsModule, NgTemplateOutlet, PageHeader, Tabs],
   templateUrl: './timesheet-control.html',
   styles: [`
     .tsc-bar { display: flex; align-items: center; gap: var(--space-3); flex-wrap: wrap;
@@ -48,6 +46,9 @@ import {
     .tsc-diff--under { color: var(--overdue, #e5484d); font-weight: var(--weight-semibold); }
     .tsc-diff--zero { color: var(--color-text-muted); }
     .tsc-file { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+    .tsc-check { display: inline-flex; align-items: center; gap: var(--space-2);
+      font-size: var(--text-sm); color: var(--color-text-muted); }
+    .tsc-pivot--gap { margin-top: var(--space-3); }
     .tsc-search { height: var(--control-h-sm); min-width: 240px; padding: 0 var(--space-3);
       border: 1px solid var(--color-border); border-radius: var(--radius-md);
       background: var(--color-surface); color: var(--color-text); font: inherit; }
@@ -111,16 +112,27 @@ export class TimesheetControl {
 
   readonly erpPivot = signal<PivotResult | null>(null);
   readonly custPivot = signal<PivotResult | null>(null);
-  readonly customerRowsAll = signal<CustomerRow[]>([]);
-  readonly reconcileRowsAll = signal<ReconcileRow[]>([]);
-  readonly summary = signal<ReconcileSummary | null>(null);
 
-  readonly reconcileRows = computed(() =>
-    this.reconcileRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  /**
+   * Khoảng kỳ cho báo cáo đối soát. Hai bảng nguồn vẫn xem theo TỪNG tháng (chúng là ảnh chụp dữ liệu
+   * của một tháng), còn đối soát thì câu hỏi thường là "cả quý này lệch bao nhiêu, tháng nào lệch".
+   */
+  readonly fromPeriod = signal<string>(defaultPeriod());
+  readonly toPeriod = signal<string>(defaultPeriod());
+  readonly report = signal<RangeReport | null>(null);
+  readonly reporting = signal(false);
+  readonly customerRowsAll = signal<CustomerRow[]>([]);
+
   readonly erpPivotRows = computed(() =>
     (this.erpPivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
   readonly custPivotRows = computed(() =>
     (this.custPivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  readonly reportRows = computed(() =>
+    (this.report()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  /** Chỉ những người có tháng lệch — dùng cho chế độ "chỉ xem dòng lệch". */
+  readonly onlyDiff = signal(false);
+  readonly visibleReportRows = computed(() =>
+    this.onlyDiff() ? this.reportRows().filter((r) => r.monthsWithDiff > 0) : this.reportRows());
   /** Các ngày trong tháng — dựng sẵn để template khỏi tính lại mỗi lần vẽ. */
   readonly pivotDays = computed(() => {
     const n = this.erpPivot()?.daysInMonth ?? this.custPivot()?.daysInMonth ?? 0;
@@ -137,16 +149,6 @@ export class TimesheetControl {
     return `${first.sourceFile ?? 'file không rõ tên'}${when ? ' · ' + when : ''}`
       + (first.importedBy ? ' · ' + first.importedBy : '');
   });
-
-  readonly reconcileCols: GridColumn[] = [
-    { key: 'name', header: 'Nhân sự', sortable: true },
-    { key: 'empCode', header: 'Mã NV', width: '104px', sortable: true },
-    { key: 'status', header: 'Tình trạng', width: '150px' },
-    { key: 'erpDayCount', header: 'Ngày chấm', width: '108px', align: 'center', sortable: true },
-    { key: 'erpDays', header: 'Công ERP', width: '112px', align: 'right', sortable: true },
-    { key: 'customerDays', header: 'Công KH', width: '112px', align: 'right', sortable: true },
-    { key: 'diffDays', header: 'Lệch', width: '104px', align: 'right', sortable: true }
-  ];
 
   constructor() {
     this.svc.config().subscribe({
@@ -173,6 +175,9 @@ export class TimesheetControl {
   setPeriod(value: string): void {
     if (!value) return;
     this.period.set(value);
+    // Kéo khoảng đối soát theo kỳ đang xem: phần lớn lần dùng là đối soát đúng tháng vừa nạp dữ liệu.
+    this.fromPeriod.set(value);
+    this.toPeriod.set(value);
     this.reload();
   }
 
@@ -189,10 +194,9 @@ export class TimesheetControl {
       next: (r) => this.custPivot.set(r),
       error: () => this.custPivot.set(null)
     });
-    this.svc.reconcile(p).subscribe({
-      next: (r) => { this.reconcileRowsAll.set(r.rows); this.summary.set(r.summary); this.loading.set(false); },
-      error: () => { this.reconcileRowsAll.set([]); this.summary.set(null); this.loading.set(false); }
-    });
+    this.loading.set(false);
+    // KHÔNG tự chạy đối soát ở đây: người dùng còn phải tải ERP và import file khách hàng xong xuôi
+    // rồi mới chốt số, chạy sẵn chỉ bày ra một kết quả nửa vời rồi bị hiểu là kết quả thật.
   }
 
   // ===== Cấu hình kết nối =====
@@ -251,6 +255,47 @@ export class TimesheetControl {
     this.svc.config().subscribe({ next: (c) => this.config.set(c) });
   }
 
+  /** Chạy đối soát cho khoảng kỳ đang chọn — chỉ khi người dùng bấm. */
+  runReconcile(): void {
+    this.reporting.set(true);
+    this.svc.reconcileRange(this.fromPeriod(), this.toPeriod()).subscribe({
+      next: (r) => {
+        this.report.set(r);
+        this.reporting.set(false);
+        this.tab.set('reconcile');
+      },
+      error: (e) => {
+        this.reporting.set(false);
+        this.report.set(null);
+        this.toast.error(msg(e, 'Không đối soát được.'));
+      }
+    });
+  }
+
+  /** Số công của một người trong một tháng — rỗng khi tháng đó không có dữ liệu. */
+  cellDiff(row: RangeRow, period: string): string {
+    const c = row.byPeriod[period];
+    return c === undefined ? '' : this.num(c.diffDays);
+  }
+
+  cellDiffClass(row: RangeRow, period: string): string {
+    const c = row.byPeriod[period];
+    return c === undefined ? '' : this.diffClass(c.diffDays);
+  }
+
+  /** Chi tiết ERP/KH của ô, hiện khi rê chuột — bảng chỉ hiện chênh lệch cho đỡ rối. */
+  cellTitle(row: RangeRow, period: string): string {
+    const c = row.byPeriod[period];
+    if (c === undefined) return 'Tháng này không có dữ liệu';
+    return `ERP ${this.num(c.erpDays)} · KH ${this.num(c.customerDays)} · lệch ${this.num(c.diffDays)}`;
+  }
+
+  /** "2026-01" → "T01/26" cho tiêu đề cột khỏi chiếm chỗ. */
+  shortPeriod(p: string): string {
+    const [y, m] = p.split('-');
+    return `T${m}/${y.slice(2)}`;
+  }
+
   // ===== Nguồn 1: ERP =====
 
   syncErp(): void {
@@ -284,8 +329,28 @@ export class TimesheetControl {
   }
 
   /** Tải kết quả đối soát của kỳ — để gửi kèm biên bản mà người nhận không phải mở hệ thống. */
+  /** Xuất kỳ đang chọn: đối soát tháng đó + hai bảng công theo ngày. */
   exportExcel(): void {
     this.saveFile(this.svc.exportUrl(this.period()), `doi-soat-cong-${this.period()}.xlsx`);
+  }
+
+  /** Xuất đúng báo cáo nhiều tháng đang hiển thị ở tab Đối soát. */
+  exportRange(): void {
+    const from = this.fromPeriod();
+    const to = this.toPeriod();
+    this.saveFile(this.svc.exportRangeUrl(from, to), `doi-soat-cong-${from}_${to}.xlsx`);
+  }
+
+  setFrom(v: string): void {
+    if (v) {
+      this.fromPeriod.set(v);
+    }
+  }
+
+  setTo(v: string): void {
+    if (v) {
+      this.toPeriod.set(v);
+    }
   }
 
   downloadTemplate(): void {

@@ -175,13 +175,29 @@ public class ErpTimesheetController {
                 WorkdayReconciliation.summarize(rows));
     }
 
-    /** Tải kết quả đối soát của kỳ dưới dạng .xlsx. */
+    /**
+     * Đối soát NHIỀU tháng — chỉ chạy khi người dùng bấm nút, không tự chạy lúc mở màn: mỗi lần chạy là
+     * quét lại toàn bộ dữ liệu của khoảng, và người đối soát muốn tự quyết thời điểm chốt số.
+     */
+    @GetMapping("/reconcile-range")
+    public ErpTimesheetService.RangeReport reconcileRange(@RequestParam String from, @RequestParam String to) {
+        return service.reconcileRange(from, to);
+    }
+
+    /**
+     * Tải kết quả đối soát ra .xlsx.
+     * Có {@code from}/{@code to} → báo cáo nhiều tháng (đúng thứ đang xem ở tab Đối soát);
+     * chỉ có {@code period} → bản một kỳ kèm hai bảng công theo ngày.
+     */
     @GetMapping("/export")
-    public ResponseEntity<byte[]> export(@RequestParam String period) {
-        byte[] bytes = service.exportExcel(period);
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) String period,
+                                         @RequestParam(required = false) String from,
+                                         @RequestParam(required = false) String to) {
+        boolean range = from != null && !from.isBlank() && to != null && !to.isBlank();
+        byte[] bytes = range ? service.exportRangeExcel(from, to) : service.exportExcel(period);
+        String name = range ? "doi-soat-cong-" + from + "_" + to : "doi-soat-cong-" + period;
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=\"doi-soat-cong-" + period + ".xlsx\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + name + ".xlsx\"")
                 .contentType(MediaType.parseMediaType(
                         "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .body(bytes);

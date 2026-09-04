@@ -98,6 +98,45 @@ export interface PivotResult {
   stale: boolean;
 }
 
+/** Số công hai bên và chênh lệch của một người trong MỘT tháng. */
+export interface RangeCell {
+  erpDays: number;
+  customerDays: number;
+  diffDays: number;
+}
+
+export interface RangeRow {
+  name: string;
+  empCode: string | null;
+  /** Khoá là kỳ "yyyy-MM"; tháng không có dữ liệu thì không có khoá. */
+  byPeriod: Record<string, RangeCell>;
+  totalErp: number;
+  totalCustomer: number;
+  totalDiff: number;
+  monthsWithDiff: number;
+}
+
+export interface PeriodTotal {
+  period: string;
+  erpDays: number;
+  customerDays: number;
+  diffDays: number;
+  peopleWithDiff: number;
+}
+
+export interface RangeReport {
+  periods: string[];
+  rows: RangeRow[];
+  months: PeriodTotal[];
+  totalErp: number;
+  totalCustomer: number;
+  totalDiff: number;
+  peopleWithDiff: number;
+  monthsWithDiff: number;
+  /** Dòng chỉ có ở file khách hàng, không có bên ERP — đã bị loại khỏi bảng. */
+  droppedCustomerOnlyRows: number;
+}
+
 export interface ImportResult {
   rows: number;
   message: string;
@@ -164,8 +203,19 @@ export class ErpTimesheetService {
     return `${this.base}/customer/template?period=${period}`;
   }
 
+  /** Đối soát nhiều tháng — chỉ gọi khi người dùng bấm nút. */
+  reconcileRange(from: string, to: string): Observable<RangeReport> {
+    return this.http.get<RangeReport>(`${this.base}/reconcile-range?from=${from}&to=${to}`);
+  }
+
+  /** Xuất một kỳ (kèm hai bảng công theo ngày). */
   exportUrl(period: string): string {
     return `${this.base}/export?period=${period}`;
+  }
+
+  /** Xuất báo cáo đối soát nhiều tháng — đúng bảng đang xem. */
+  exportRangeUrl(from: string, to: string): string {
+    return `${this.base}/export?from=${from}&to=${to}`;
   }
 
   reconcile(period: string): Observable<ReconcileResponse> {

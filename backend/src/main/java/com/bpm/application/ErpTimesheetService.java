@@ -474,6 +474,128 @@ public class ErpTimesheetService {
     }
 
     /**
+     * Đối soát NHIỀU THÁNG liền nhau: mỗi nhân sự một dòng, mỗi tháng một ô lệch, kèm tổng cả khoảng.
+     *
+     * Danh sách nhân sự lấy theo NGUỒN ERP: người chỉ xuất hiện trong file khách hàng mà bên chấm công
+     * không có thì không đưa vào bảng — đó thường là người của đội khác hoặc tên viết sai, đứng trong
+     * bảng chỉ làm nhiễu phần cần đọc. Số dòng bị loại vẫn được đếm và trả về để không biến mất lặng lẽ.
+     */
+    @Transactional(readOnly = true)
+    public RangeReport reconcileRange(String fromPeriod, String toPeriod) {
+        YearMonth from = parsePeriod(fromPeriod);
+        YearMonth to = parsePeriod(toPeriod);
+        if (to.isBefore(from)) {
+            YearMonth tmp = from;
+            from = to;
+            to = tmp;
+        }
+        if (from.plusMonths(MAX_RANGE_MONTHS - 1).isBefore(to)) {
+            throw new IllegalArgumentException("Khoảng quá dài — tối đa " + MAX_RANGE_MONTHS + " tháng một lần.");
+        }
+
+        List<String> periods = new ArrayList<>();
+        for (YearMonth m = from; !m.isAfter(to); m = m.plusMonths(1)) {
+            periods.add(m.toString());
+        }
+
+        // Gom theo NGƯỜI, khoá theo mã (không có mã thì theo tên) — giống cách đối soát một tháng.
+        Map<String, RangeAgg> people = new LinkedHashMap<>();
+        Map<String, PeriodTotal> monthTotals = new LinkedHashMap<>();
+        int droppedRows = 0;
+
+        for (String period : periods) {
+            List<WorkdayReconciliation.Row> rows = reconcile(period);
+            double erpMonth = 0;
+            double custMonth = 0;
+            int diffPeople = 0;
+            for (WorkdayReconciliation.Row r : rows) {
+                if (r.status() == WorkdayReconciliation.Status.CUSTOMER_ONLY) {
+                    droppedRows++;
+                    continue;   // chỉ có ở khách hàng → không thuộc danh sách nhân sự gốc
+                }
+                RangeAgg agg = people.computeIfAbsent(r.matchKey(),
+                        k -> new RangeAgg(r.name(), r.empCode()));
+                if (agg.empCode == null && r.empCode() != null) {
+                    agg.empCode = r.empCode();
+                }
+                agg.byPeriod.put(period, new Cell(r.erpDays(), r.customerDays(), r.diffDays()));
+                agg.totalErp += r.erpDays();
+                agg.totalCustomer += r.customerDays();
+                erpMonth += r.erpDays();
+                custMonth += r.customerDays();
+                if (Math.abs(r.diffDays()) > WorkdayReconciliation.TOLERANCE_DAYS) {
+                    agg.monthsWithDiff++;
+                    diffPeople++;
+                }
+            }
+            monthTotals.put(period, new PeriodTotal(period, WorkdayReconciliation.round2(erpMonth),
+                    WorkdayReconciliation.round2(custMonth),
+                    WorkdayReconciliation.round2(erpMonth - custMonth), diffPeople));
+        }
+
+        List<RangeRow> rows = new ArrayList<>();
+        for (RangeAgg a : people.values()) {
+            rows.add(new RangeRow(a.name, a.empCode, a.byPeriod,
+                    WorkdayReconciliation.round2(a.totalErp),
+                    WorkdayReconciliation.round2(a.totalCustomer),
+                    WorkdayReconciliation.round2(a.totalErp - a.totalCustomer),
+                    a.monthsWithDiff));
+        }
+        rows.sort(Comparator.comparing(RangeRow::empCode, CODE_ORDER)
+                .thenComparing(RangeRow::name, String.CASE_INSENSITIVE_ORDER));
+
+        double erp = rows.stream().mapToDouble(RangeRow::totalErp).sum();
+        double cust = rows.stream().mapToDouble(RangeRow::totalCustomer).sum();
+        long peopleWithDiff = rows.stream().filter(r -> r.monthsWithDiff() > 0).count();
+        long monthsWithDiff = monthTotals.values().stream()
+                .filter(m -> Math.abs(m.diffDays()) > WorkdayReconciliation.TOLERANCE_DAYS).count();
+
+        return new RangeReport(periods, rows, new ArrayList<>(monthTotals.values()),
+                WorkdayReconciliation.round2(erp), WorkdayReconciliation.round2(cust),
+                WorkdayReconciliation.round2(erp - cust),
+                (int) peopleWithDiff, (int) monthsWithDiff, droppedRows);
+    }
+
+    /** Trần độ dài khoảng đối soát — mỗi tháng là một lượt đọc CSDL, mở vô hạn là mời người dùng treo màn hình. */
+    private static final int MAX_RANGE_MONTHS = 24;
+
+    /** Số công hai bên và chênh lệch của một người trong MỘT tháng. */
+    public record Cell(double erpDays, double customerDays, double diffDays) {
+    }
+
+    /** @param monthsWithDiff số tháng người này lệch — cột để lọc nhanh ai cần xem lại */
+    public record RangeRow(String name, String empCode, Map<String, Cell> byPeriod,
+                           double totalErp, double totalCustomer, double totalDiff, int monthsWithDiff) {
+    }
+
+    public record PeriodTotal(String period, double erpDays, double customerDays, double diffDays,
+                              int peopleWithDiff) {
+    }
+
+    /**
+     * @param droppedCustomerOnlyRows số dòng có ở file khách hàng nhưng không có bên ERP, đã bị loại —
+     *                                trả về để màn hình nói rõ thay vì giấu đi
+     */
+    public record RangeReport(List<String> periods, List<RangeRow> rows, List<PeriodTotal> months,
+                              double totalErp, double totalCustomer, double totalDiff,
+                              int peopleWithDiff, int monthsWithDiff, int droppedCustomerOnlyRows) {
+    }
+
+    private static final class RangeAgg {
+        private final String name;
+        private String empCode;
+        private final Map<String, Cell> byPeriod = new LinkedHashMap<>();
+        private double totalErp;
+        private double totalCustomer;
+        private int monthsWithDiff;
+
+        private RangeAgg(String name, String empCode) {
+            this.name = name;
+            this.empCode = empCode;
+        }
+    }
+
+    /**
      * Xuất kết quả đối soát ra .xlsx: sheet đối soát + hai bảng công theo ngày của hai nguồn.
      * Đủ để gửi kèm biên bản mà người nhận không cần mở hệ thống.
      */
@@ -483,6 +605,26 @@ public class ErpTimesheetService {
         List<WorkdayReconciliation.Row> rows = reconcile(period);
         return WorkdayExcelWriter.write(period, rows, WorkdayReconciliation.summarize(rows),
                 pivotView(period, false), pivotView(period, true));
+    }
+
+    /** Xuất báo cáo đối soát NHIỀU THÁNG — đúng nội dung đang hiển thị ở tab Đối soát. */
+    @Transactional(readOnly = true)
+    public byte[] exportRangeExcel(String fromPeriod, String toPeriod) {
+        RangeReport rep = reconcileRange(fromPeriod, toPeriod);
+        List<WorkdayExcelWriter.RangeLine> lines = new ArrayList<>();
+        for (RangeRow r : rep.rows()) {
+            Map<String, Double> diff = new LinkedHashMap<>();
+            r.byPeriod().forEach((k, v) -> diff.put(k, v.diffDays()));
+            lines.add(new WorkdayExcelWriter.RangeLine(r.name(), r.empCode(), diff,
+                    r.totalErp(), r.totalCustomer(), r.totalDiff(), r.monthsWithDiff()));
+        }
+        List<WorkdayExcelWriter.MonthLine> months = new ArrayList<>();
+        for (PeriodTotal m : rep.months()) {
+            months.add(new WorkdayExcelWriter.MonthLine(m.period(), m.erpDays(), m.customerDays(),
+                    m.diffDays(), m.peopleWithDiff()));
+        }
+        return WorkdayExcelWriter.writeRange(rep.periods(), lines, months,
+                rep.totalErp(), rep.totalCustomer(), rep.totalDiff());
     }
 
     private WorkdayExcelWriter.PivotView pivotView(String period, boolean customer) {
