@@ -115,6 +115,11 @@ export class TimesheetControl {
         this.form.baseUrl = c.baseUrl ?? '';
         this.form.dbName = c.dbName ?? '';
         this.form.username = c.username ?? '';
+        // CHƯA có khoá thì mở sẵn form, không bắt bấm thêm một nút mới thấy được chỗ khai. Đã khai
+        // rồi thì gập lại, vì từ đó trở đi màn này dùng để đối soát chứ không phải để sửa kết nối.
+        if (!c.apiKeySet) {
+          this.configOpen.set(true);
+        }
       },
       error: () => this.config.set(null)
     });
