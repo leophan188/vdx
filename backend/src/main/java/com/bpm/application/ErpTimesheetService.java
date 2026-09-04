@@ -476,9 +476,15 @@ public class ErpTimesheetService {
     /**
      * Đối soát NHIỀU THÁNG liền nhau: mỗi nhân sự một dòng, mỗi tháng một ô lệch, kèm tổng cả khoảng.
      *
-     * Danh sách nhân sự lấy theo NGUỒN ERP: người chỉ xuất hiện trong file khách hàng mà bên chấm công
-     * không có thì không đưa vào bảng — đó thường là người của đội khác hoặc tên viết sai, đứng trong
-     * bảng chỉ làm nhiễu phần cần đọc. Số dòng bị loại vẫn được đếm và trả về để không biến mất lặng lẽ.
+     * Danh sách nhân sự lấy theo BẢNG CÔNG KHÁCH HÀNG: chỉ đối soát người có mặt ở CẢ HAI nguồn.
+     * Người khách hàng không ghi công thì không nằm trong phạm vi nghiệm thu, đưa vào bảng chỉ thành
+     * một dòng "lệch" bằng đúng số công ERP — sai về nghĩa và lấn hết phần cần đọc. Người khách hàng
+     * có mà ERP không có cũng bỏ, vì không có gì để đối chiếu.
+     *
+     * Lọc theo TỪNG THÁNG chứ không theo cả khoảng: tháng nào một bên chưa có dữ liệu thì ô đó để
+     * trống, thay vì hiện một khoản lệch giả bằng toàn bộ số công của bên còn lại.
+     * Số ô bị loại ở mỗi phía đều được đếm và trả về — loại lặng lẽ thì một người bị bỏ sót sẽ không
+     * ai phát hiện.
      */
     @Transactional(readOnly = true)
     public RangeReport reconcileRange(String fromPeriod, String toPeriod) {
@@ -501,7 +507,8 @@ public class ErpTimesheetService {
         // Gom theo NGƯỜI, khoá theo mã (không có mã thì theo tên) — giống cách đối soát một tháng.
         Map<String, RangeAgg> people = new LinkedHashMap<>();
         Map<String, PeriodTotal> monthTotals = new LinkedHashMap<>();
-        int droppedRows = 0;
+        int droppedCustomerOnly = 0;
+        int droppedErpOnly = 0;
 
         for (String period : periods) {
             List<WorkdayReconciliation.Row> rows = reconcile(period);
@@ -510,8 +517,12 @@ public class ErpTimesheetService {
             int diffPeople = 0;
             for (WorkdayReconciliation.Row r : rows) {
                 if (r.status() == WorkdayReconciliation.Status.CUSTOMER_ONLY) {
-                    droppedRows++;
-                    continue;   // chỉ có ở khách hàng → không thuộc danh sách nhân sự gốc
+                    droppedCustomerOnly++;
+                    continue;   // khách hàng ghi công nhưng ERP không có → không có gì để đối chiếu
+                }
+                if (r.status() == WorkdayReconciliation.Status.ERP_ONLY) {
+                    droppedErpOnly++;
+                    continue;   // khách hàng không ghi công tháng này → ngoài phạm vi nghiệm thu
                 }
                 RangeAgg agg = people.computeIfAbsent(r.matchKey(),
                         k -> new RangeAgg(r.name(), r.empCode()));
@@ -553,7 +564,7 @@ public class ErpTimesheetService {
         return new RangeReport(periods, rows, new ArrayList<>(monthTotals.values()),
                 WorkdayReconciliation.round2(erp), WorkdayReconciliation.round2(cust),
                 WorkdayReconciliation.round2(erp - cust),
-                (int) peopleWithDiff, (int) monthsWithDiff, droppedRows);
+                (int) peopleWithDiff, (int) monthsWithDiff, droppedCustomerOnly, droppedErpOnly);
     }
 
     /** Trần độ dài khoảng đối soát — mỗi tháng là một lượt đọc CSDL, mở vô hạn là mời người dùng treo màn hình. */
@@ -573,12 +584,13 @@ public class ErpTimesheetService {
     }
 
     /**
-     * @param droppedCustomerOnlyRows số dòng có ở file khách hàng nhưng không có bên ERP, đã bị loại —
-     *                                trả về để màn hình nói rõ thay vì giấu đi
+     * @param droppedCustomerOnlyRows số ô khách hàng có mà ERP không có, đã bị loại
+     * @param droppedErpOnlyRows      số ô ERP có mà khách hàng không ghi công, đã bị loại
      */
     public record RangeReport(List<String> periods, List<RangeRow> rows, List<PeriodTotal> months,
                               double totalErp, double totalCustomer, double totalDiff,
-                              int peopleWithDiff, int monthsWithDiff, int droppedCustomerOnlyRows) {
+                              int peopleWithDiff, int monthsWithDiff,
+                              int droppedCustomerOnlyRows, int droppedErpOnlyRows) {
     }
 
     private static final class RangeAgg {

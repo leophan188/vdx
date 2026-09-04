@@ -133,8 +133,10 @@ export interface RangeReport {
   totalDiff: number;
   peopleWithDiff: number;
   monthsWithDiff: number;
-  /** Dòng chỉ có ở file khách hàng, không có bên ERP — đã bị loại khỏi bảng. */
+  /** Ô khách hàng có mà ERP không có — đã bị loại. */
   droppedCustomerOnlyRows: number;
+  /** Ô ERP có mà khách hàng không ghi công — đã bị loại (ngoài phạm vi nghiệm thu). */
+  droppedErpOnlyRows: number;
 }
 
 export interface ImportResult {

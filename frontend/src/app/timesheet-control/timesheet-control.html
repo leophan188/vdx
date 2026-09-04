@@ -157,11 +157,18 @@
         </div>
 
         <p class="tsc-hint">
-          Danh sách nhân sự lấy theo <b>nguồn ERP</b>: người chỉ có trong file khách hàng mà bên chấm
-          công không có thì không đưa vào bảng.
-          @if (rep.droppedCustomerOnlyRows) {
-            Kỳ này đã loại <b>{{ rep.droppedCustomerOnlyRows }}</b> dòng như vậy — nếu con số này lớn
-            bất thường thì nhiều khả năng tên trong hai hệ thống viết khác nhau.
+          Chỉ đối soát người có mặt ở <b>cả hai</b> nguồn, lấy <b>bảng công khách hàng</b> làm gốc.
+          Tháng nào một bên chưa có dữ liệu thì ô để trống thay vì hiện lệch giả.
+          @if (rep.droppedErpOnlyRows || rep.droppedCustomerOnlyRows) {
+            Đã loại
+            @if (rep.droppedErpOnlyRows) {
+              <b>{{ rep.droppedErpOnlyRows }}</b> ô ERP có mà khách hàng không ghi công
+            }
+            @if (rep.droppedErpOnlyRows && rep.droppedCustomerOnlyRows) { <span>, </span> }
+            @if (rep.droppedCustomerOnlyRows) {
+              <b>{{ rep.droppedCustomerOnlyRows }}</b> ô khách hàng có mà ERP không có
+            }
+            — con số lớn bất thường thường là do tên trong hai hệ thống viết khác nhau.
           }
         </p>
 
