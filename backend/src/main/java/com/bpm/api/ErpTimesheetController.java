@@ -128,6 +128,12 @@ public class ErpTimesheetController {
                 .toList();
     }
 
+    /** Bảng công theo ngày: một nhân sự một dòng, mỗi ngày một cột. */
+    @GetMapping("/erp/pivot")
+    public ErpTimesheetService.PivotResult pivot(@RequestParam String period) {
+        return service.pivot(period);
+    }
+
     // ===== Nguồn 2: khách hàng =====
 
     @PostMapping("/customer/validate")

@@ -7,7 +7,7 @@ import { GridCellDirective } from '../shared/data-grid/grid-cell.directive';
 import { Tabs, TabItem } from '../shared/tabs/tabs';
 import { ToastService } from '../shared/toast/toast.service';
 import {
-  ErpTimesheetService, ErpConfig, ErpPersonRow, CustomerRow, ReconcileRow, ReconcileSummary
+  ErpTimesheetService, ErpConfig, ErpPersonRow, CustomerRow, ReconcileRow, ReconcileSummary, PivotResult
 } from '../core/erp-timesheet.service';
 
 /**
@@ -47,6 +47,29 @@ import {
     .tsc-diff--under { color: var(--overdue, #e5484d); font-weight: var(--weight-semibold); }
     .tsc-diff--zero { color: var(--color-text-muted); }
     .tsc-file { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+    .tsc-search { height: var(--control-h-sm); min-width: 240px; padding: 0 var(--space-3);
+      border: 1px solid var(--color-border); border-radius: var(--radius-md);
+      background: var(--color-surface); color: var(--color-text); font: inherit; }
+    /* Bảng công theo ngày: 31 cột nên chắc chắn phải cuộn ngang, mà cuộn ngang thì cột tên trôi mất
+       và người đọc không còn biết mình đang xem dòng của ai — ghim cột tên lại. */
+    .tsc-pivot { overflow-x: auto; border: 1px solid var(--color-border); border-radius: var(--radius-md); }
+    .tsc-pivot table { border-collapse: separate; border-spacing: 0; font-size: var(--text-sm);
+      font-variant-numeric: tabular-nums; }
+    .tsc-pivot th, .tsc-pivot td { padding: 3px var(--space-2); border-bottom: 1px solid var(--color-border);
+      white-space: nowrap; text-align: right; }
+    .tsc-pivot thead th { position: sticky; top: 0; z-index: 2; background: var(--color-surface-alt);
+      color: var(--color-text-muted); font-weight: var(--weight-semibold); }
+    .tsc-pivot .tsc-pivot__name { position: sticky; left: 0; z-index: 3; text-align: left;
+      background: var(--color-surface); min-width: 220px; border-right: 1px solid var(--color-border); }
+    .tsc-pivot thead .tsc-pivot__name { z-index: 4; background: var(--color-surface-alt); }
+    .tsc-pivot tbody tr:nth-child(even) td { background: var(--color-surface-zebra); }
+    .tsc-pivot tbody tr:nth-child(even) .tsc-pivot__name { background: var(--color-surface-zebra); }
+    .tsc-pivot__code { font-family: var(--font-mono, monospace); font-size: var(--text-xs);
+      color: var(--color-text-muted); margin-right: var(--space-2); }
+    .tsc-pivot__we { background: color-mix(in srgb, var(--color-text-muted) 10%, transparent); }
+    .tsc-pivot__total { font-weight: var(--weight-semibold);
+      border-left: 1px solid var(--color-border); }
+    .tsc-pivot__empty { color: var(--color-text-muted); }
   `]
 })
 export class TimesheetControl {
@@ -57,7 +80,8 @@ export class TimesheetControl {
   readonly tabs: TabItem[] = [
     { key: 'reconcile', label: 'Đối soát', icon: '⚖️' },
     { key: 'erp', label: 'Công ERP', icon: '🏢' },
-    { key: 'customer', label: 'Công khách hàng', icon: '📄' }
+    { key: 'customer', label: 'Công khách hàng', icon: '📄' },
+    { key: 'pivot', label: 'Bảng công theo ngày', icon: '📅' }
   ];
   readonly tab = signal<string>('reconcile');
 
@@ -73,14 +97,33 @@ export class TimesheetControl {
   readonly dbOptions = signal<string[]>([]);
   readonly dbHint = signal<string>('');
 
-  readonly erpRows = signal<ErpPersonRow[]>([]);
-  readonly customerRows = signal<CustomerRow[]>([]);
-  readonly reconcileRows = signal<ReconcileRow[]>([]);
+  /** Lọc chung cho MỌI bảng: gõ tên hoặc mã nhân sự. Bốn bảng là bốn góc nhìn của cùng một tháng
+      nên lọc riêng từng bảng chỉ tạo ra cảnh mỗi nơi hiện một tập người khác nhau. */
+  readonly keyword = signal('');
+
+  readonly erpRowsAll = signal<ErpPersonRow[]>([]);
+  readonly customerRowsAll = signal<CustomerRow[]>([]);
+  readonly reconcileRowsAll = signal<ReconcileRow[]>([]);
   readonly summary = signal<ReconcileSummary | null>(null);
+  readonly pivot = signal<PivotResult | null>(null);
+
+  readonly erpRows = computed(() => this.erpRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  readonly customerRows = computed(() =>
+    this.customerRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  readonly reconcileRows = computed(() =>
+    this.reconcileRowsAll().filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  readonly pivotRows = computed(() =>
+    (this.pivot()?.rows ?? []).filter((r) => hit(this.keyword(), r.name, r.empCode)));
+  /** Các ngày trong tháng — dựng sẵn để template khỏi tính lại mỗi lần vẽ. */
+  readonly pivotDays = computed(() => {
+    const n = this.pivot()?.daysInMonth ?? 0;
+    return Array.from({ length: n }, (_, i) => i + 1);
+  });
+  private readonly weekendSet = computed(() => new Set(this.pivot()?.weekendDays ?? []));
 
   /** Nguồn dữ liệu khách hàng của kỳ — hiện file nào, ai import, lúc nào. */
   readonly customerSource = computed(() => {
-    const first = this.customerRows()[0];
+    const first = this.customerRowsAll()[0];
     if (!first) return '';
     const when = first.importedAt ? new Date(first.importedAt).toLocaleString('vi-VN') : '';
     return `${first.sourceFile ?? 'file không rõ tên'}${when ? ' · ' + when : ''}`
@@ -145,14 +188,18 @@ export class TimesheetControl {
   reload(): void {
     const p = this.period();
     this.loading.set(true);
-    this.svc.erpRows(p).subscribe({ next: (r) => this.erpRows.set(r), error: () => this.erpRows.set([]) });
-    this.svc.customerRows(p).subscribe({
-      next: (r) => this.customerRows.set(r),
-      error: () => this.customerRows.set([])
+    this.svc.erpRows(p).subscribe({
+      next: (r) => this.erpRowsAll.set(r),
+      error: () => this.erpRowsAll.set([])
     });
+    this.svc.customerRows(p).subscribe({
+      next: (r) => this.customerRowsAll.set(r),
+      error: () => this.customerRowsAll.set([])
+    });
+    this.svc.pivot(p).subscribe({ next: (r) => this.pivot.set(r), error: () => this.pivot.set(null) });
     this.svc.reconcile(p).subscribe({
-      next: (r) => { this.reconcileRows.set(r.rows); this.summary.set(r.summary); this.loading.set(false); },
-      error: () => { this.reconcileRows.set([]); this.summary.set(null); this.loading.set(false); }
+      next: (r) => { this.reconcileRowsAll.set(r.rows); this.summary.set(r.summary); this.loading.set(false); },
+      error: () => { this.reconcileRowsAll.set([]); this.summary.set(null); this.loading.set(false); }
     });
   }
 
@@ -274,6 +321,16 @@ export class TimesheetControl {
     }
   }
 
+  /** Giờ của một người trong một ngày; rỗng nghĩa là ngày đó không có chấm công. */
+  cell(row: { hoursByDay: Record<string, number> }, day: number): string {
+    const v = row.hoursByDay[String(day)];
+    return v === undefined ? '' : this.num(v);
+  }
+
+  isWeekend(day: number): boolean {
+    return this.weekendSet().has(day);
+  }
+
   num(v: number): string {
     return (Math.round(v * 100) / 100).toLocaleString('vi-VN');
   }
@@ -285,6 +342,18 @@ function defaultPeriod(): string {
   d.setDate(1);
   d.setMonth(d.getMonth() - 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+/** Khớp từ khoá với tên hoặc mã nhân sự, bỏ dấu để gõ "duc" vẫn ra "Đức". */
+function hit(keyword: string, name: string | null, code: string | null): boolean {
+  const q = norm(keyword);
+  if (!q) return true;
+  return norm(name).includes(q) || norm(code).includes(q);
+}
+
+function norm(s: string | null): string {
+  return (s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase().trim();
 }
 
 function msg(e: unknown, fallback: string): string {

@@ -100,6 +100,8 @@
     <button type="button" class="btn btn--ghost btn--sm" (click)="downloadTemplate()">
       ⬇ Biểu mẫu khách hàng
     </button>
+    <input type="search" class="tsc-search" placeholder="🔍 Lọc theo tên hoặc mã nhân sự…"
+           [value]="keyword()" (input)="keyword.set($any($event.target).value)" />
     <span class="filter-bar__spacer"></span>
     <button type="button" class="btn btn--ghost btn--sm" [disabled]="loading()" (click)="reload()">
       ↻ Tải lại
@@ -158,6 +160,50 @@
         <ng-template gridCell="hours" let-r>{{ num(r.hours) }}</ng-template>
         <ng-template gridCell="days" let-r>{{ num(r.days) }}</ng-template>
       </data-grid>
+    }
+
+    @case ('pivot') {
+      <p class="tsc-hint">
+        Số <b>giờ</b> chấm công từng ngày; ô trống là ngày không có chấm công, cột nền xám là Thứ Bảy /
+        Chủ nhật. Bảng tổng theo người cho biết ai lệch, bảng này cho biết <b>lệch ở ngày nào</b>.
+      </p>
+      @if (pivotRows().length) {
+        <div class="tsc-pivot">
+          <table>
+            <thead>
+              <tr>
+                <th class="tsc-pivot__name">Nhân sự</th>
+                @for (d of pivotDays(); track d) {
+                  <th [class.tsc-pivot__we]="isWeekend(d)">{{ d }}</th>
+                }
+                <th class="tsc-pivot__total">Tổng giờ</th>
+                <th class="tsc-pivot__total">Công</th>
+                <th class="tsc-pivot__total">Ngày</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (r of pivotRows(); track r.name + (r.empCode || '')) {
+                <tr>
+                  <td class="tsc-pivot__name">
+                    @if (r.empCode) { <span class="tsc-pivot__code">{{ r.empCode }}</span> }{{ r.name }}
+                  </td>
+                  @for (d of pivotDays(); track d) {
+                    <td [class.tsc-pivot__we]="isWeekend(d)">{{ cell(r, d) }}</td>
+                  }
+                  <td class="tsc-pivot__total">{{ num(r.totalHours) }}</td>
+                  <td class="tsc-pivot__total">{{ num(r.totalDays) }}</td>
+                  <td class="tsc-pivot__total">{{ r.dayCount }}</td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="tsc-hint">
+          {{ loading() ? 'Đang tải…' : (keyword() ? 'Không có nhân sự nào khớp bộ lọc.'
+             : 'Kỳ này chưa tải chấm công từ ERP.') }}
+        </p>
+      }
     }
 
     @case ('customer') {

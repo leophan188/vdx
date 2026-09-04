@@ -74,6 +74,25 @@ export interface DbProbe {
   message: string;
 }
 
+/** Một dòng của bảng công theo ngày. */
+export interface PivotRow {
+  name: string;
+  empCode: string | null;
+  /** Giờ theo ngày trong tháng; ngày vắng mặt trong map = không có chấm công. */
+  hoursByDay: Record<string, number>;
+  totalHours: number;
+  totalDays: number;
+  dayCount: number;
+}
+
+export interface PivotResult {
+  period: string;
+  daysInMonth: number;
+  /** Các ngày rơi vào Thứ Bảy / Chủ nhật — để tô khác màu. */
+  weekendDays: number[];
+  rows: PivotRow[];
+}
+
 export interface ImportResult {
   rows: number;
   message: string;
@@ -120,6 +139,10 @@ export class ErpTimesheetService {
 
   erpRows(period: string): Observable<ErpPersonRow[]> {
     return this.http.get<ErpPersonRow[]>(`${this.base}/erp/rows?period=${period}`);
+  }
+
+  pivot(period: string): Observable<PivotResult> {
+    return this.http.get<PivotResult>(`${this.base}/erp/pivot?period=${period}`);
   }
 
   validateCustomer(file: File): Observable<ValidateResponse> {

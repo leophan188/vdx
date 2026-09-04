@@ -229,6 +229,69 @@ public class ErpTimesheetService {
         return out;
     }
 
+    /**
+     * Bảng công theo NGÀY: mỗi nhân sự một dòng, mỗi ngày trong tháng một cột.
+     *
+     * Bảng tổng theo người trả lời "tháng này ai bao nhiêu công", còn bảng này trả lời "lệch nằm ở
+     * ngày nào" — câu hỏi tiếp theo ngay sau khi thấy một dòng lệch, mà tổng tháng thì chịu.
+     */
+    @Transactional(readOnly = true)
+    public PivotResult pivot(String periodKey) {
+        YearMonth ym = parsePeriod(periodKey);
+        int days = ym.lengthOfMonth();
+        Map<String, PivotAgg> byPerson = new LinkedHashMap<>();
+        for (ErpAttendanceEntry e : attendanceRepo.findByPeriodKey(ym.toString())) {
+            String key = keyOf(e.getEmpCode(), e.getMatchKey());
+            PivotAgg agg = byPerson.computeIfAbsent(key,
+                    k -> new PivotAgg(e.getEmployeeName(), e.getEmpCode()));
+            // Cùng một ngày có thể chấm nhiều lần (ra ngoài rồi vào lại) — cộng dồn, đừng ghi đè.
+            agg.hoursByDay.merge(e.getWorkDate().getDayOfMonth(), e.getHours(), Double::sum);
+        }
+        List<PivotRow> rows = new ArrayList<>();
+        for (PivotAgg a : byPerson.values()) {
+            double total = 0;
+            Map<Integer, Double> cells = new LinkedHashMap<>();
+            for (Map.Entry<Integer, Double> c : a.hoursByDay.entrySet()) {
+                double v = WorkdayReconciliation.round2(c.getValue());
+                cells.put(c.getKey(), v);
+                total += v;
+            }
+            rows.add(new PivotRow(a.name, a.empCode, cells, WorkdayReconciliation.round2(total),
+                    WorkdayReconciliation.toDays(total), cells.size()));
+        }
+        rows.sort(Comparator.comparing(PivotRow::name, String.CASE_INSENSITIVE_ORDER));
+
+        // Thứ Bảy/Chủ nhật đánh dấu sẵn ở backend để màn hình khỏi tự suy ra lịch — chấm công cuối
+        // tuần là chuyện đáng chú ý, phải nhìn ra ngay giữa một rừng con số.
+        List<Integer> weekend = new ArrayList<>();
+        for (int d = 1; d <= days; d++) {
+            var dow = ym.atDay(d).getDayOfWeek();
+            if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) {
+                weekend.add(d);
+            }
+        }
+        return new PivotResult(ym.toString(), days, weekend, rows);
+    }
+
+    /** @param hoursByDay giờ chấm công theo ngày trong tháng (1..31); ngày không có mặt = không đi làm */
+    public record PivotRow(String name, String empCode, Map<Integer, Double> hoursByDay,
+                           double totalHours, double totalDays, int dayCount) {
+    }
+
+    public record PivotResult(String period, int daysInMonth, List<Integer> weekendDays, List<PivotRow> rows) {
+    }
+
+    private static final class PivotAgg {
+        private final String name;
+        private final String empCode;
+        private final Map<Integer, Double> hoursByDay = new java.util.TreeMap<>();
+
+        private PivotAgg(String name, String empCode) {
+            this.name = name;
+            this.empCode = empCode;
+        }
+    }
+
     /** Các kỳ đã có dữ liệu ở bất kỳ nguồn nào — để màn hình gợi ý tháng. */
     @Transactional(readOnly = true)
     public List<String> periods() {
