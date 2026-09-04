@@ -1,0 +1,142 @@
+<section class="page">
+  <app-page-header title="Kiểm soát giờ công"
+                   subtitle="Chấm công ERP · công khách hàng ghi nhận · đối soát theo tháng"
+                   [breadcrumb]="[{ label: 'Công cụ' }, { label: 'Kiểm soát giờ công' }]">
+    <button actions type="button" class="btn btn--ghost btn--sm" (click)="configOpen.set(!configOpen())">
+      ⚙️ Kết nối ERP
+    </button>
+  </app-page-header>
+
+  <!-- Kết nối ERP: gập lại mặc định vì khai một lần rồi thôi, nhưng phải thấy được trạng thái
+       lần kiểm tra gần nhất khi số liệu trông lạ. -->
+  @if (configOpen()) {
+    <div class="tsc-card">
+      <div class="tsc-form">
+        <div class="field">
+          <label>URL Odoo</label>
+          <input type="text" name="baseUrl" [(ngModel)]="form.baseUrl" placeholder="https://erp.vmo.dev" />
+        </div>
+        <div class="field">
+          <label>Database</label>
+          <input type="text" name="dbName" [(ngModel)]="form.dbName" placeholder="tên database Odoo" />
+        </div>
+        <div class="field">
+          <label>Tài khoản</label>
+          <input type="text" name="username" [(ngModel)]="form.username" placeholder="tài khoản riêng cho PlanX" />
+        </div>
+        <div class="field">
+          <label>API key</label>
+          <input type="password" name="apiKey" [(ngModel)]="form.apiKey"
+                 [placeholder]="config()?.apiKeySet ? '•••••• (để trống = giữ khoá cũ)' : 'API key hoặc mật khẩu'" />
+        </div>
+      </div>
+      <p class="tsc-hint">
+        Nên cấp cho PlanX một tài khoản/API key <b>riêng, chỉ đọc hr.attendance</b> — khoá lộ thì chỉ mất
+        quyền đọc chấm công và thu hồi được mà không ảnh hưởng ai. Khoá đã lưu không bao giờ hiện lại
+        trên màn hình; để trống ô API key nghĩa là giữ nguyên khoá cũ.
+      </p>
+      @if (config()?.lastCheckStatus) {
+        <p class="tsc-hint">Lần kiểm tra gần nhất: <b>{{ config()?.lastCheckStatus }}</b></p>
+      }
+      <div class="tsc-file">
+        <button type="button" class="btn btn--primary btn--sm" [disabled]="busy()" (click)="saveConfig()">
+          Lưu kết nối
+        </button>
+        <button type="button" class="btn btn--secondary btn--sm" [disabled]="busy()" (click)="testConnection()">
+          Kiểm tra kết nối
+        </button>
+      </div>
+    </div>
+  }
+
+  <!-- Kỳ dùng CHUNG cho cả ba tab -->
+  <div class="tsc-bar">
+    <span class="tsc-bar__label">Kỳ (tháng)</span>
+    <input type="month" class="tsc-month" [value]="period()"
+           (change)="setPeriod($any($event.target).value)" />
+    <button type="button" class="btn btn--secondary btn--sm" [disabled]="busy()" (click)="syncErp()">
+      ⬇ Tải chấm công ERP
+    </button>
+    <label class="btn btn--secondary btn--sm">
+      ⬆ Import công khách hàng
+      <input type="file" hidden accept=".xlsx,.xls,.csv" (change)="onFile($event)" />
+    </label>
+    <button type="button" class="btn btn--ghost btn--sm" (click)="downloadTemplate()">
+      ⬇ Biểu mẫu khách hàng
+    </button>
+    <span class="filter-bar__spacer"></span>
+    <button type="button" class="btn btn--ghost btn--sm" [disabled]="loading()" (click)="reload()">
+      ↻ Tải lại
+    </button>
+  </div>
+
+  <app-tabs [tabs]="tabs" [(active)]="tab" />
+
+  @switch (tab()) {
+    @case ('reconcile') {
+      @if (summary(); as s) {
+        <div class="tsc-metrics">
+          <div class="tsc-metric"><b>{{ s.total }}</b><span>Nhân sự đối soát</span></div>
+          <div class="tsc-metric"><b>{{ s.matched }}</b><span>Khớp</span></div>
+          <div class="tsc-metric"><b>{{ s.diff }}</b><span>Lệch số công</span></div>
+          <div class="tsc-metric"><b>{{ s.erpOnly }}</b><span>Chỉ có ở ERP</span></div>
+          <div class="tsc-metric"><b>{{ s.customerOnly }}</b><span>Chỉ có ở khách hàng</span></div>
+          <div class="tsc-metric"><b>{{ num(s.erpDays) }}</b><span>Tổng công ERP</span></div>
+          <div class="tsc-metric"><b>{{ num(s.customerDays) }}</b><span>Tổng công khách hàng</span></div>
+          <div class="tsc-metric">
+            <b [class]="diffClass(s.diffDays)">{{ num(s.diffDays) }}</b><span>Lệch (ERP − KH)</span>
+          </div>
+        </div>
+      }
+      <p class="tsc-hint">
+        Quy đổi <b>8 giờ = 1 công</b>. Ghép hai nguồn theo <b>tên đã bỏ dấu</b> vì hai hệ thống không
+        dùng chung bộ mã nhân sự — cột “Ngày chấm” giúp nhận ra ngay trường hợp hai người trùng tên bị
+        gộp làm một.
+      </p>
+      <data-grid [columns]="reconcileCols" [rows]="reconcileRows()" [toolbar]="false" minWidth="1100px"
+                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                 [emptyText]="loading() ? 'Đang tải…' : 'Chưa có dữ liệu cho kỳ này — hãy tải chấm công ERP và import file khách hàng.'">
+        <ng-template gridCell="status" let-r>
+          <span class="badge" [class]="statusBadge(r.status)">{{ r.statusLabel }}</span>
+        </ng-template>
+        <ng-template gridCell="erpHours" let-r>{{ num(r.erpHours) }}</ng-template>
+        <ng-template gridCell="erpDays" let-r>{{ num(r.erpDays) }}</ng-template>
+        <ng-template gridCell="customerDays" let-r>{{ num(r.customerDays) }}</ng-template>
+        <ng-template gridCell="diffDays" let-r>
+          <span [class]="diffClass(r.diffDays)">{{ num(r.diffDays) }}</span>
+        </ng-template>
+      </data-grid>
+    }
+
+    @case ('erp') {
+      <p class="tsc-hint">
+        Số liệu đọc từ ERP và <b>lưu lại theo kỳ</b>, không gọi lại mỗi lần mở màn hình — có vậy mới nói
+        được “số này chốt lúc nào”. Muốn cập nhật thì bấm “Tải chấm công ERP”, dữ liệu cũ của kỳ sẽ được
+        thay hoàn toàn.
+      </p>
+      <data-grid [columns]="erpCols" [rows]="erpRows()" [toolbar]="false" minWidth="720px"
+                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                 [emptyText]="loading() ? 'Đang tải…' : 'Kỳ này chưa tải chấm công từ ERP.'">
+        <ng-template gridCell="hours" let-r>{{ num(r.hours) }}</ng-template>
+        <ng-template gridCell="days" let-r>{{ num(r.days) }}</ng-template>
+      </data-grid>
+    }
+
+    @case ('customer') {
+      @if (customerSource()) {
+        <p class="tsc-hint">Nguồn: <b>{{ customerSource() }}</b></p>
+      }
+      <p class="tsc-hint">
+        Import lại cùng một kỳ sẽ <b>thay toàn bộ</b> dữ liệu kỳ đó — bản gửi sau của khách hàng là bản
+        có hiệu lực. File sai định dạng thì không có gì bị ghi đè.
+      </p>
+      <data-grid [columns]="customerCols" [rows]="customerRows()" [toolbar]="false" minWidth="760px"
+                 [pageSize]="50" [pageSizes]="[50, 100, 200]"
+                 [emptyText]="loading() ? 'Đang tải…' : 'Kỳ này chưa import file công khách hàng.'">
+        <ng-template gridCell="days" let-r>{{ num(r.days) }}</ng-template>
+        <ng-template gridCell="empCode" let-r>{{ r.empCode || '—' }}</ng-template>
+        <ng-template gridCell="note" let-r>{{ r.note || '—' }}</ng-template>
+      </data-grid>
+    }
+  }
+</section>

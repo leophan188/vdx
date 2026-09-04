@@ -97,6 +97,9 @@ class ExcelReportServiceTest {
 
     @Test
     void listTemplates_onlyHasSunTool() {
+        // Danh sách chọn tool chỉ gồm mẫu ĐỨNG RIÊNG. Mẫu "Công khách hàng" cũng khai trong
+        // ReportTemplate nhưng phục vụ màn Kiểm soát giờ công, để nó lọt vào đây là mời người dùng
+        // import file vào một chỗ không xử lý được nó.
         assertThat(svc.listTemplates()).singleElement()
                 .satisfies(t -> {
                     assertThat(t.getKey()).isEqualTo(SUN);

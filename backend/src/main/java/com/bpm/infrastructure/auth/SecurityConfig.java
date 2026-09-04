@@ -98,6 +98,9 @@ public class SecurityConfig {
                 // Epic 1 Quản lý nhân sự + Import (Epic 4 Import Excel).
                 .requestMatchers("/api/v1/employees/**").hasAuthority("FEAT_HR")
                 .requestMatchers("/api/v1/excel-reports/**").hasAuthority("FEAT_IMPORT")
+                // Kiểm soát giờ công (ERP ↔ khách hàng) nằm trong nhóm Công cụ nên dùng chung chức năng
+                // IMPORT; riêng cấu hình kết nối ERP còn chặn thêm ở tầng controller vì chứa API key.
+                .requestMatchers("/api/v1/erp-timesheet/**").hasAuthority("FEAT_IMPORT")
                 .requestMatchers("/api/v1/system/**").hasAuthority("FEAT_SYSTEM")
                 // Quản lý dự án (mini-Jira): cần chức năng PROJECT; phân quyền thành viên ở tầng nghiệp vụ.
                 .requestMatchers("/api/v1/projects/**").hasAuthority("FEAT_PROJECT")

@@ -49,7 +49,8 @@ public class ExcelReportService {
 
     /** Danh sách loại tool cố định (FR-D01). */
     public List<ReportTemplate> listTemplates() {
-        return Arrays.asList(ReportTemplate.values());
+        // Chỉ những mẫu ĐỨNG RIÊNG thành tool; mẫu phục vụ màn khác (công khách hàng) không hiện ở đây.
+        return java.util.Arrays.stream(ReportTemplate.values()).filter(ReportTemplate::isStandaloneTool).toList();
     }
 
     /** Kiểm tra định dạng file đầu vào theo mẫu (FR-D02) + an toàn file (NFR-09). Không ghi gì xuống DB. */

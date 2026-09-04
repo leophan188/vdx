@@ -35,6 +35,7 @@ const PAGE_TITLES: ReadonlyArray<readonly [string, string]> = [
   ['/forms', 'Biểu mẫu'],
   ['/tracking', 'Theo dõi quy trình'],
   ['/excel-reports', 'Công cụ'],
+  ['/timesheet-control', 'Công cụ'],
 ];
 
 /** Một mục điều hướng con (trong flyout). */
@@ -62,6 +63,7 @@ const NAV_GROUPS: NavGroup[] = [
   ] },
   { key: 'tools', label: 'Công cụ', icon: '🧰', items: [
     { label: 'Import Excel → Kết quả', icon: '🧰', link: '/excel-reports', feature: 'IMPORT' },
+    { label: 'Kiểm soát giờ công', icon: '⏱️', link: '/timesheet-control', feature: 'IMPORT' },
   ] },
   { key: 'admin', label: 'Quản trị hệ thống', icon: '⚙️', items: [
     { label: 'Quản lý nhân sự', icon: '👥', link: '/employees', feature: 'HR' },
