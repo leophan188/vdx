@@ -31,10 +31,10 @@ import java.util.List;
  * thật nằm sau lời gọi RPC mà giao diện đó phát đi. Gọi thẳng RPC vừa ổn định trước mọi thay đổi giao
  * diện, vừa lấy được đúng khoảng ngày cần thay vì tải cả bảng.
  *
- * Đọc NGÀY CÔNG chứ không tự quy đổi từ giờ: Odoo có sẵn {@code workday} (1.0 / 0.5, đã trừ nghỉ nửa
- * buổi) và {@code attendance_date} — dùng thẳng hai trường đó thì con số bên này luôn khớp con số
- * người dùng nhìn thấy trong ERP. Tự chia giờ cho 8 sẽ ra 0,91 công cho một ngày làm 7,3 tiếng, không
- * ai đối chiếu nổi.
+ * Đọc NGÀY CÔNG HƯỞNG LƯƠNG ({@code pay_workday}) chứ không tự quy đổi từ giờ, cũng không lấy
+ * {@code workday}: "ngày công thực tế" bằng 0 với nghỉ phép đã duyệt, WFH và quên chấm công — những
+ * ngày vẫn hưởng lương đủ — nên lấy nhầm cột là cả bảng ra 0. Tự chia giờ cho 8 thì càng sai: một
+ * ngày làm 7,3 tiếng ra 0,91 công, không ai đối chiếu nổi với ERP.
  *
  * Lọc theo {@code attendance_date} (kiểu ngày) nên cũng hết bài toán múi giờ: lọc theo {@code check_in}
  * thì phải đổi sang UTC vì ca đêm 23:30 ngày 05/09 giờ VN nằm ở 16:30 UTC, đọc thô là đẩy công sang
@@ -140,12 +140,13 @@ public class OdooAttendanceClient {
             domain.add(triple("attendance_date", "<=", to.toString()));
             // Bỏ ngày công bằng 0 ngay từ ERP: Odoo sinh bản ghi cho MỌI người MỌI ngày, kể cả cuối
             // tuần và ngày nghỉ — tải hết về thì chín phần mười là dòng rỗng.
-            domain.add(tripleNum("workday", ">", 0));
+            domain.add(tripleNum("pay_workday", ">", 0));
 
             ObjectNode kwargs = json.createObjectNode();
             ArrayNode fields = kwargs.putArray("fields");
             fields.add("employee_id");
             fields.add("attendance_date");
+            fields.add("pay_workday");
             fields.add("workday");
             fields.add("worked_hours");
             kwargs.put("limit", page);
@@ -195,14 +196,15 @@ public class OdooAttendanceClient {
         if (date == null) {
             return null;
         }
-        double workday = r.hasNonNull("workday") ? r.get("workday").asDouble(0) : 0;
-        if (workday <= 0) {
+        double pay = r.hasNonNull("pay_workday") ? r.get("pay_workday").asDouble(0) : 0;
+        if (pay <= 0) {
             return null;
         }
+        double workday = r.hasNonNull("workday") ? r.get("workday").asDouble(0) : 0;
         double hours = r.hasNonNull("worked_hours") ? r.get("worked_hours").asDouble(0) : 0;
         String display = emp.get(1).asText();
         return new AttendanceRecord(emp.get(0).asLong(), nameOf(display), codeOf(display),
-                LocalDate.parse(date), workday, hours);
+                LocalDate.parse(date), pay, workday, hours);
     }
 
     /**

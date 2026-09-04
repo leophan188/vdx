@@ -252,7 +252,7 @@ public class ErpTimesheetService {
                 PivotAgg agg = byPerson.computeIfAbsent(keyOf(e.getEmpCode(), e.getMatchKey()),
                         k -> new PivotAgg(e.getEmployeeName(), e.getEmpCode()));
                 // Cùng một ngày có thể có nhiều bản ghi — cộng dồn, đừng ghi đè.
-                agg.byDay.merge(e.getWorkDate().getDayOfMonth(), e.getWorkday(), Double::sum);
+                agg.byDay.merge(e.getWorkDate().getDayOfMonth(), e.getPayWorkday(), Double::sum);
                 agg.hoursByDay.merge(e.getWorkDate().getDayOfMonth(), e.getHours(), Double::sum);
             }
         }
@@ -460,7 +460,7 @@ public class ErpTimesheetService {
 
         private void add(ErpAttendanceEntry e) {
             hours += e.getHours();
-            workdays += e.getWorkday();
+            workdays += e.getPayWorkday();
             dates.add(e.getWorkDate());
         }
     }

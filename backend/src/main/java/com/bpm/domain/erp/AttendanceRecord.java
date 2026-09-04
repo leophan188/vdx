@@ -10,9 +10,12 @@ import java.time.LocalDate;
  * @param employeeCode  MÃ nhân viên tách từ tên hiển thị của Odoo ("Đoàn Đình Đức - 4021" → 4021);
  *                      null nếu bản ghi bên ERP không ghi mã
  * @param workDate      NGÀY làm việc — lấy thẳng trường attendance_date của Odoo
- * @param workday       NGÀY CÔNG Odoo tự tính (1.0 / 0.5); đây mới là con số dùng để đối soát
- * @param workedHours   số giờ (worked_hours) — giữ lại để tra khi ngày công trông đáng ngờ
+ * @param payWorkday    NGÀY CÔNG HƯỞNG LƯƠNG (pay_workday) — con số dùng để đối soát. Khác với
+ *                      "ngày công thực tế" (workday): nghỉ phép đã duyệt, WFH, quên chấm công đều
+ *                      hưởng lương đủ nhưng thực tế bằng 0, lấy nhầm cột là cả bảng ra 0
+ * @param workday       ngày công thực tế — giữ để tra khi hai con số lệch nhau
+ * @param workedHours   số giờ (worked_hours) — giữ để tra khi ngày công trông đáng ngờ
  */
 public record AttendanceRecord(long employeeErpId, String employeeName, String employeeCode,
-                               LocalDate workDate, double workday, double workedHours) {
+                               LocalDate workDate, double payWorkday, double workday, double workedHours) {
 }
