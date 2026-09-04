@@ -21,13 +21,18 @@ public record AttendanceRecord(long employeeErpId, String employeeName, String e
                                double workday, double workedHours) {
 
     /**
-     * Ngày công dùng để ĐỐI SOÁT với bảng công khách hàng: ngày hưởng lương trừ phần nghỉ có lương.
+     * Ngày công dùng để ĐỐI SOÁT với bảng công khách hàng: lấy NGUYÊN ngày công hưởng lương.
      *
-     * Nghỉ nửa buổi có phép cho pay_workday = 1 và nghỉ có lương 0,5 nên còn 0,5 công thực làm, đúng
-     * bằng con số khách hàng ghi. Nghỉ không lương thì pay_workday đã là 0,5 và phần nghỉ có lương
-     * bằng 0 nên vẫn ra 0,5; trừ cả hai loại nghỉ sẽ ra 0 và tạo ra lệch âm không có thật.
+     * Đã thử trừ phần nghỉ có lương và phải bỏ, vì hai bên không chốt công theo cùng quy tắc nghỉ.
+     * Số thật tháng 02/2026 của mã 4233: ngày nghỉ NỬA buổi khách hàng ghi 0,5 (khớp cách trừ), nhưng
+     * ngày nghỉ CẢ ngày họ vẫn ghi đủ 1; còn mã 3980 thì ngược lại, ngày ERP không ghi nghỉ nào mà
+     * khách hàng chỉ nghiệm thu 0,5. Trừ nghỉ làm ERP tụt xuống dưới bảng nghiệm thu và sinh ra lệch
+     * ÂM — thứ vô lý về nghiệp vụ vì bên chấm công không thể ít hơn bên xác nhận.
+     *
+     * Giữ nguyên ngày công hưởng lương thì ERP luôn là cận trên, và phần chênh còn lại đúng là thứ
+     * cần đem đi hỏi. {@link #paidLeave} vẫn được lưu để tra khi cần giải thích một ô lệch.
      */
     public double reconcileDays() {
-        return Math.max(0d, payWorkday - paidLeave);
+        return Math.max(0d, payWorkday);
     }
 }

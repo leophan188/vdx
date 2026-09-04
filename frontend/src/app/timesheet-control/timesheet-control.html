@@ -145,20 +145,22 @@
 
       @if (report(); as rep) {
         <div class="tsc-metrics">
-          <div class="tsc-metric"><b>{{ rep.rows.length }}</b><span>Nhân sự</span></div>
+          <div class="tsc-metric"><b>{{ rep.rows.length }}</b><span>Nhân sự có lệch</span></div>
+          <div class="tsc-metric"><b>{{ rep.matchedPeople }}</b><span>Khớp hoàn toàn (đã ẩn)</span></div>
           <div class="tsc-metric"><b>{{ rep.periods.length }}</b><span>Tháng đối soát</span></div>
           <div class="tsc-metric"><b>{{ num(rep.totalErp) }}</b><span>Tổng công ERP</span></div>
           <div class="tsc-metric"><b>{{ num(rep.totalCustomer) }}</b><span>Tổng công KH</span></div>
           <div class="tsc-metric">
             <b [class]="diffClass(rep.totalDiff)">{{ num(rep.totalDiff) }}</b><span>Tổng lệch (ERP−KH)</span>
           </div>
-          <div class="tsc-metric"><b>{{ rep.peopleWithDiff }}</b><span>Nhân sự có lệch</span></div>
           <div class="tsc-metric"><b>{{ rep.monthsWithDiff }}</b><span>Tháng có lệch</span></div>
         </div>
 
         <p class="tsc-hint">
-          Chỉ đối soát người có mặt ở <b>cả hai</b> nguồn, lấy <b>bảng công khách hàng</b> làm gốc.
-          Tháng nào một bên chưa có dữ liệu thì ô để trống thay vì hiện lệch giả.
+          Chỉ đối soát người có mặt ở <b>cả hai</b> nguồn, lấy <b>bảng công khách hàng</b> làm gốc; người
+          khớp hoàn toàn cả khoảng được ẩn khỏi bảng. Tháng nào một bên chưa có dữ liệu thì ô để trống
+          thay vì hiện lệch giả. Số công phía ERP là <b>ngày công hưởng lương</b> giữ nguyên, không trừ
+          ngày nghỉ — hai bên chốt công theo quy tắc nghỉ khác nhau, và phần chênh đó chính là thứ cần đối soát.
           @if (rep.droppedErpOnlyRows || rep.droppedCustomerOnlyRows) {
             Đã loại
             @if (rep.droppedErpOnlyRows) {

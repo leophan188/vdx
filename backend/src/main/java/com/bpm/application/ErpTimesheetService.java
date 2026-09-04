@@ -544,27 +544,43 @@ public class ErpTimesheetService {
                     WorkdayReconciliation.round2(erpMonth - custMonth), diffPeople));
         }
 
-        List<RangeRow> rows = new ArrayList<>();
+        List<RangeRow> allRows = new ArrayList<>();
         for (RangeAgg a : people.values()) {
-            rows.add(new RangeRow(a.name, a.empCode, a.byPeriod,
+            allRows.add(new RangeRow(a.name, a.empCode, a.byPeriod,
                     WorkdayReconciliation.round2(a.totalErp),
                     WorkdayReconciliation.round2(a.totalCustomer),
                     WorkdayReconciliation.round2(a.totalErp - a.totalCustomer),
                     a.monthsWithDiff));
         }
+        // Người KHỚP cả khoảng thì không cần nằm trong bảng: đối soát là để tìm chỗ lệch, giữ lại
+        // hàng trăm dòng số 0 chỉ khiến vài dòng đáng xem bị chìm. Số người khớp vẫn được đếm và hiện
+        // ở dải chỉ số nên không ai tưởng dữ liệu bị mất.
+        int matchedPeople = 0;
+        List<RangeRow> withDiff = new ArrayList<>();
+        for (RangeRow r : allRows) {
+            if (Math.abs(r.totalDiff()) <= WorkdayReconciliation.TOLERANCE_DAYS) {
+                matchedPeople++;
+            } else {
+                withDiff.add(r);
+            }
+        }
+        List<RangeRow> rows = withDiff;
         rows.sort(Comparator.comparing(RangeRow::empCode, CODE_ORDER)
                 .thenComparing(RangeRow::name, String.CASE_INSENSITIVE_ORDER));
 
-        double erp = rows.stream().mapToDouble(RangeRow::totalErp).sum();
-        double cust = rows.stream().mapToDouble(RangeRow::totalCustomer).sum();
-        long peopleWithDiff = rows.stream().filter(r -> r.monthsWithDiff() > 0).count();
+        // Tổng phải tính trên TOÀN BỘ người, kể cả người khớp — nếu chỉ cộng các dòng còn hiện thì
+        // "tổng công ERP" bỗng nhỏ hơn thực tế và không đối chiếu được với bảng nguồn.
+        double erp = allRows.stream().mapToDouble(RangeRow::totalErp).sum();
+        double cust = allRows.stream().mapToDouble(RangeRow::totalCustomer).sum();
+        long peopleWithDiff = allRows.stream().filter(r -> r.monthsWithDiff() > 0).count();
         long monthsWithDiff = monthTotals.values().stream()
                 .filter(m -> Math.abs(m.diffDays()) > WorkdayReconciliation.TOLERANCE_DAYS).count();
 
         return new RangeReport(periods, rows, new ArrayList<>(monthTotals.values()),
                 WorkdayReconciliation.round2(erp), WorkdayReconciliation.round2(cust),
                 WorkdayReconciliation.round2(erp - cust),
-                (int) peopleWithDiff, (int) monthsWithDiff, droppedCustomerOnly, droppedErpOnly);
+                (int) peopleWithDiff, (int) monthsWithDiff, droppedCustomerOnly, droppedErpOnly,
+                matchedPeople);
     }
 
     /** Trần độ dài khoảng đối soát — mỗi tháng là một lượt đọc CSDL, mở vô hạn là mời người dùng treo màn hình. */
@@ -586,11 +602,13 @@ public class ErpTimesheetService {
     /**
      * @param droppedCustomerOnlyRows số ô khách hàng có mà ERP không có, đã bị loại
      * @param droppedErpOnlyRows      số ô ERP có mà khách hàng không ghi công, đã bị loại
+     * @param matchedPeople           số nhân sự khớp hoàn toàn — không nằm trong {@code rows}
      */
     public record RangeReport(List<String> periods, List<RangeRow> rows, List<PeriodTotal> months,
                               double totalErp, double totalCustomer, double totalDiff,
                               int peopleWithDiff, int monthsWithDiff,
-                              int droppedCustomerOnlyRows, int droppedErpOnlyRows) {
+                              int droppedCustomerOnlyRows, int droppedErpOnlyRows,
+                              int matchedPeople) {
     }
 
     private static final class RangeAgg {

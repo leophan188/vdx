@@ -9,9 +9,13 @@ import java.time.LocalDate;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Ngày công đối soát = ngày hưởng lương − nghỉ CÓ lương. Bốn ca dưới đây lấy từ dữ liệu thật trên
- * ERP của công ty (tháng 01–07/2026), vì quy tắc này từng sai theo hai hướng khác nhau:
- * lọc bỏ mọi ngày có xin nghỉ thì mất nửa ngày công thực làm, còn trừ cả nghỉ không lương thì trừ hai lần.
+ * Ngày công đối soát = NGUYÊN ngày công hưởng lương của ERP.
+ *
+ * Quy tắc này đã sai ba lần theo ba kiểu, nên các ca dưới đây lấy thẳng từ dữ liệu thật trên ERP công
+ * ty (01–07/2026) để khoá lại: (1) lọc bỏ mọi ngày có xin nghỉ thì mất nửa ngày công thực làm;
+ * (2) trừ cả nghỉ không lương là trừ hai lần vì pay_workday đã trừ sẵn; (3) trừ nghỉ có lương thì ERP
+ * tụt xuống dưới bảng nghiệm thu của khách hàng, sinh lệch âm — bên chấm công không thể ít hơn bên
+ * xác nhận. Khách hàng chốt công theo quy tắc nghỉ riêng của họ, phần chênh chính là thứ cần đối soát.
  */
 class ReconcileDaysTest {
 
@@ -27,29 +31,30 @@ class ReconcileDaysTest {
     }
 
     @Test
-    @DisplayName("Nghỉ nửa buổi CÓ lương: còn 0,5 công thực làm")
+    @DisplayName("Nghỉ nửa buổi CÓ lương: vẫn tính nguyên ngày công hưởng lương")
     void nghiNuaBuoiCoLuong() {
-        // 13/01/2026, mã 3647: pay_workday 1.0, pay_leave_types_num 0.5 — khách hàng ghi đúng 0,5.
-        assertThat(rec(1.0, 0.5).reconcileDays()).isEqualTo(0.5);
+        // 04/02/2026, mã 4233: ERP pay_workday 1.0 với nghỉ sáng 0.5; khách hàng nghiệm thu 0,5.
+        // Chênh 0,5 là chênh THẬT cần đem đi hỏi, không phải thứ để công thức tự triệt tiêu.
+        assertThat(rec(1.0, 0.5).reconcileDays()).isEqualTo(1.0);
     }
 
     @Test
-    @DisplayName("Nghỉ nửa buổi KHÔNG lương: vẫn 0,5 — pay_workday đã trừ sẵn phần không lương")
-    void nghiNuaBuoiKhongLuong() {
-        // 25/02/2026: pay_workday 0.5, pay_leave_types_num 0. Trừ thêm total_leaves_num (0.5) sẽ ra 0.
-        assertThat(rec(0.5, 0).reconcileDays()).isEqualTo(0.5);
+    @DisplayName("Nghỉ CẢ ngày có lương: vẫn 1 — khách hàng cũng nghiệm thu đủ ngày đó")
+    void nghiTronNgayCoLuong() {
+        // 12/02/2026, mã 4233: ERP nghỉ cả ngày có lương, khách hàng vẫn ghi 1 công.
+        assertThat(rec(1.0, 1.0).reconcileDays()).isEqualTo(1.0);
     }
 
     @Test
-    @DisplayName("Nghỉ trọn ngày: 0 công, dù có lương hay không")
-    void nghiTronNgay() {
-        assertThat(rec(1.0, 1.0).reconcileDays()).isZero();   // nghỉ phép cả ngày
-        assertThat(rec(0.0, 0.0).reconcileDays()).isZero();   // nghỉ không lương cả ngày
+    @DisplayName("Nghỉ không lương: pay_workday đã trừ sẵn nên lấy nguyên giá trị đó")
+    void nghiKhongLuong() {
+        assertThat(rec(0.5, 0).reconcileDays()).isEqualTo(0.5);   // nghỉ nửa buổi không lương
+        assertThat(rec(0.0, 0.0).reconcileDays()).isZero();       // nghỉ không lương cả ngày
     }
 
     @Test
     @DisplayName("Không bao giờ trả số âm")
     void khongAm() {
-        assertThat(rec(0.5, 1.0).reconcileDays()).isZero();
+        assertThat(rec(-1.0, 0).reconcileDays()).isZero();
     }
 }

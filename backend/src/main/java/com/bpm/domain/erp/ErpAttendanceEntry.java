@@ -112,17 +112,21 @@ public class ErpAttendanceEntry {
     }
 
     /**
-     * Ngày công dùng để ĐỐI SOÁT: hưởng lương trừ phần nghỉ có lương.
-     * Xem AttendanceRecord.reconcileDays() để biết vì sao không trừ nghỉ không lương.
+     * Ngày công dùng để ĐỐI SOÁT: nguyên ngày công hưởng lương.
+     * Xem AttendanceRecord.reconcileDays() để biết vì sao KHÔNG trừ phần nghỉ ở đây.
      */
     public double getReconcileDays() {
-        return Math.max(0d, getPayWorkday() - getPaidLeave());
+        return Math.max(0d, getPayWorkday());
     }
 
     public double getWorkday() { return workday == null ? 0d : workday; }
 
-    /** Bản ghi có ngày công hay không — không có nghĩa là tải bằng phiên bản trước khi thêm cột. */
-    public boolean hasWorkday() { return payWorkday != null || workday != null; }
+    /**
+     * Bản ghi đã tải bằng phiên bản HIỆN TẠI hay chưa. Mỗi lần đổi cách tính ngày công lại thêm một
+     * cột mới, và dữ liệu tải trước đó để trống cột ấy — dấu hiệu chắc chắn nhất cho biết kỳ này cần
+     * đọc lại từ ERP thay vì bày ra những con số tính theo quy tắc đã bỏ.
+     */
+    public boolean hasWorkday() { return payWorkday != null && paidLeave != null; }
     public Instant getFetchedAt() { return fetchedAt; }
     public String getFetchedBy() { return fetchedBy; }
 }

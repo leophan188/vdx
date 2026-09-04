@@ -213,9 +213,9 @@ public class OdooAttendanceClient {
             return null;
         }
         double paidLeave = r.hasNonNull("pay_leave_types_num") ? r.get("pay_leave_types_num").asDouble(0) : 0;
-        if (pay - paidLeave <= 0) {
-            return null;   // nghỉ có lương trọn ngày: hưởng lương nhưng không có công thực làm
-        }
+        // KHÔNG loại ngày nghỉ có lương: khách hàng vẫn nghiệm thu nhiều ngày như vậy (xem
+        // AttendanceRecord.reconcileDays()), loại đi là tự tạo lệch âm.
+
         double workday = r.hasNonNull("workday") ? r.get("workday").asDouble(0) : 0;
         double hours = r.hasNonNull("worked_hours") ? r.get("worked_hours").asDouble(0) : 0;
         String display = emp.get(1).asText();

@@ -137,6 +137,8 @@ export interface RangeReport {
   droppedCustomerOnlyRows: number;
   /** Ô ERP có mà khách hàng không ghi công — đã bị loại (ngoài phạm vi nghiệm thu). */
   droppedErpOnlyRows: number;
+  /** Nhân sự khớp hoàn toàn — không nằm trong `rows`. */
+  matchedPeople: number;
 }
 
 export interface ImportResult {
