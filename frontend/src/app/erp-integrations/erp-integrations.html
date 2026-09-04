@@ -29,6 +29,25 @@
                [placeholder]="connection()?.apiKeySet ? '•••••• (để trống = giữ khoá cũ)' : 'mật khẩu hoặc API key'" />
       </div>
     </div>
+    <div class="erpi-line">
+      <label class="erpi-line__label">Đơn vị lấy dữ liệu</label>
+      <input type="text" [ngModel]="orgUnitInput()" (ngModelChange)="orgUnitInput.set($event)"
+             name="orgUnit" placeholder="vd VMO DX" />
+      <button type="button" class="btn btn--ghost btn--sm" [disabled]="busy() === 'org'"
+              (click)="resolveOrgUnit()">Tìm trên cây tổ chức</button>
+      @if (connection()?.orgUnitErpId) {
+        <span class="erpi-status erpi-status--ok">đang lấy: {{ connection()?.orgUnitName }}</span>
+      } @else {
+        <span class="erpi-status erpi-status--muted">chưa chọn</span>
+      }
+    </div>
+    <p class="erpi-hint">
+      Mọi luồng chỉ lấy dữ liệu <b>trong phạm vi đơn vị này</b> và các đơn vị con — dự án, nhân sự, cơ
+      cấu tổ chức, tuyển dụng. Kéo cả công ty về rồi lọc sau là tự chuốc dữ liệu rác.
+    </p>
+    @if (orgMatches().length > 1) {
+      <p class="erpi-hint">Tên khớp nhiều đơn vị, gõ rõ hơn: {{ orgMatches().join(' | ') }}</p>
+    }
     @if (connection()?.lastCheckStatus) {
       <p class="erpi-hint">Lần kiểm tra gần nhất: <b>{{ connection()?.lastCheckStatus }}</b></p>
     }
@@ -67,5 +86,68 @@
       <button type="button" class="btn btn--primary btn--sm" [disabled]="busy() === 'all'"
               (click)="saveAll()">Lưu tất cả link</button>
     </div>
+  </div>
+  <!-- CHỌN DỰ ÁN: đơn vị chỉ dùng chừng trăm trong 1.827 dự án của công ty, nên tick chọn chứ không
+       đồng bộ hết. -->
+  <div class="erpi-card">
+    <b>Đồng bộ dự án từ ERP</b>
+    <div class="erpi-actions">
+      <button type="button" class="btn btn--secondary btn--sm" [disabled]="busy() === 'projects'"
+              (click)="loadProjects()">
+        {{ busy() === 'projects' ? 'Đang tải…' : '↓ Tải danh sách dự án' }}
+      </button>
+      @if (projects().length) {
+        <input type="search" class="erpi-search" [ngModel]="projectFilter()"
+               (ngModelChange)="projectFilter.set($event)" name="prjFilter"
+               placeholder="🔍 Lọc theo tên hoặc mã dự án…" />
+        <button type="button" class="btn btn--ghost btn--sm" (click)="pickAllVisible(true)">Chọn hết</button>
+        <button type="button" class="btn btn--ghost btn--sm" (click)="pickAllVisible(false)">Bỏ chọn</button>
+        <span class="erpi-status">{{ picked().size }} / {{ projects().length }} dự án được chọn</span>
+        <button type="button" class="btn btn--primary btn--sm" [disabled]="busy() === 'projects'"
+                (click)="syncProjects()">⤓ Đồng bộ dự án đã chọn</button>
+      }
+    </div>
+
+    @if (projects().length) {
+      <div class="erpi-table">
+        <table>
+          <thead>
+            <tr>
+              <th style="width:44px"></th>
+              <th>Dự án</th>
+              <th style="width:120px">Mã ERP</th>
+              <th style="width:120px">Bắt đầu</th>
+              <th style="width:120px">Kết thúc</th>
+              <th style="width:160px">Trong PlanX</th>
+            </tr>
+          </thead>
+          <tbody>
+            @for (p of visibleProjects(); track p.erpId) {
+              <tr>
+                <td>
+                  <input type="checkbox" [checked]="isPicked(p.erpId)"
+                         (change)="togglePick(p.erpId, $any($event.target).checked)" />
+                </td>
+                <td [title]="p.customer || ''">{{ p.name }}</td>
+                <td>{{ p.code || '—' }}</td>
+                <td>{{ p.startDate || '—' }}</td>
+                <td>{{ p.endDate || '—' }}</td>
+                <td>
+                  @if (p.linked) {
+                    <span class="erpi-status erpi-status--ok">đã đồng bộ · {{ p.localCode }}</span>
+                  } @else {
+                    <span class="erpi-status erpi-status--muted">chưa có</span>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="erpi-hint">
+        Đồng bộ lại dự án đã có là <b>cập nhật</b> tên và ngày, không tạo bản mới — khớp theo ID bên ERP.
+        Mã dự án trong PlanX giữ nguyên sau lần tạo đầu vì nó đã đi vào mã công việc.
+      </p>
+    }
   </div>
 </section>

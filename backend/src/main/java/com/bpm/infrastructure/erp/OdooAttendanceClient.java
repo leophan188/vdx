@@ -21,6 +21,8 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.Map;
 import java.util.List;
 
 /**
@@ -111,6 +113,76 @@ public class OdooAttendanceClient {
             }
         }
         return null;
+    }
+
+    /**
+     * Đọc bản ghi theo domain, CHỊU ĐƯỢC trường lỗi: đọc trường bắt buộc trước, rồi thử thêm từng nhóm
+     * trường tuỳ chọn và bỏ qua nhóm nào ERP từ chối.
+     *
+     * Cần vậy vì vài trường tính động của bản Odoo công ty ném lỗi khi đọc qua RPC, và Odoo hỏng CẢ
+     * lời gọi chứ không chỉ bỏ trống trường đó — đọc kèm "code" là mất luôn danh sách dự án. Thà thiếu
+     * một cột còn hơn màn hình trống.
+     *
+     * @param domain điều kiện lọc dạng Odoo, vd {@code List.of(List.of("du", "child_of", 91))}
+     */
+    public Map<Long, Map<String, JsonNode>> searchReadTolerant(ErpConfig cfg, String model, List<?> domain,
+                                                               List<String> requiredFields,
+                                                               List<List<String>> optionalGroups, int limit) {
+        Map<Long, Map<String, JsonNode>> byId = new LinkedHashMap<>();
+        read(cfg, model, domain, requiredFields, limit, byId, true);
+        for (List<String> group : optionalGroups) {
+            try {
+                read(cfg, model, domain, group, limit, byId, false);
+            } catch (RuntimeException e) {
+                log.warn("[erp] {} không đọc được nhóm trường {} — bỏ qua ({})", model, group, e.getMessage());
+            }
+        }
+        return byId;
+    }
+
+    private void read(ErpConfig cfg, String model, List<?> domain, List<String> fields, int limit,
+                      Map<Long, Map<String, JsonNode>> byId, boolean createMissing) {
+        long uid = login(cfg);
+        ObjectNode kwargs = json.createObjectNode();
+        ArrayNode f = kwargs.putArray("fields");
+        for (String field : fields) {
+            f.add(field);
+        }
+        kwargs.put("limit", limit);
+
+        ArrayNode args = json.createArrayNode();
+        args.add(cfg.getDbName());
+        args.add(uid);
+        args.add(cfg.getApiKey());
+        args.add(model);
+        args.add("search_read");
+        ArrayNode positional = args.addArray();
+        positional.add(json.valueToTree(domain));
+        args.add(kwargs);
+
+        JsonNode rows = call(cfg, params("object", "execute_kw", args));
+        if (rows == null || !rows.isArray()) {
+            return;
+        }
+        for (JsonNode r : rows) {
+            long id = r.path("id").asLong(0);
+            if (id <= 0) {
+                continue;
+            }
+            Map<String, JsonNode> target = byId.get(id);
+            if (target == null) {
+                if (!createMissing) {
+                    continue;   // bản ghi mới xuất hiện ở lượt đọc phụ: bỏ, tránh dòng thiếu tên
+                }
+                target = new LinkedHashMap<>();
+                byId.put(id, target);
+            }
+            for (String field : fields) {
+                if (r.has(field)) {
+                    target.put(field, r.get(field));
+                }
+            }
+        }
     }
 
     /**

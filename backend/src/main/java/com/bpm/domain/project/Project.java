@@ -63,6 +63,16 @@ public class Project {
     @Column(name = "task_seq", nullable = false)
     private int taskSeq = 0;
 
+    /**
+     * ID của dự án bên ERP (project.project). Có giá trị nghĩa là dự án này được chọn đồng bộ từ ERP;
+     * null là dự án khai tay trong PlanX.
+     *
+     * Khớp bằng ID chứ không bằng mã hay tên: mã dự án bên ERP có thể sửa, tên thì sửa thường xuyên,
+     * còn ID thì không đổi — dùng tên để khớp là mỗi lần khách đổi tên dự án lại sinh ra một bản ghi mới.
+     */
+    @Column(name = "erp_project_id")
+    private Long erpProjectId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
@@ -126,6 +136,14 @@ public class Project {
     public void setBudget(Long budget) { this.budget = budget; }
     public Double getPlannedEffortMm() { return plannedEffortMm; }
     public void setPlannedEffortMm(Double plannedEffortMm) { this.plannedEffortMm = plannedEffortMm; }
+    public Long getErpProjectId() {
+        return erpProjectId;
+    }
+
+    public void setErpProjectId(Long erpProjectId) {
+        this.erpProjectId = erpProjectId;
+    }
+
     public int getTaskSeq() { return taskSeq; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }

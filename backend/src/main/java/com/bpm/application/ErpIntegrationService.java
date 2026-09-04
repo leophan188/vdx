@@ -6,6 +6,7 @@ import com.bpm.domain.erp.ErpIntegration;
 import com.bpm.domain.erp.ErpIntegrationKind;
 import com.bpm.infrastructure.erp.ErpIntegrationRepository;
 import com.bpm.infrastructure.erp.OdooAttendanceClient;
+import com.bpm.infrastructure.erp.OdooOrgClient;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -28,13 +29,15 @@ public class ErpIntegrationService {
 
     private final ErpIntegrationRepository repo;
     private final ErpTimesheetService timesheetService;
+    private final OdooOrgClient orgClient;
     private final OdooAttendanceClient odoo;
     private final AuditPort auditPort;
 
     public ErpIntegrationService(ErpIntegrationRepository repo, ErpTimesheetService timesheetService,
-                                 OdooAttendanceClient odoo, AuditPort auditPort) {
+                                 OdooAttendanceClient odoo, OdooOrgClient orgClient, AuditPort auditPort) {
         this.repo = repo;
         this.timesheetService = timesheetService;
+        this.orgClient = orgClient;
         this.odoo = odoo;
         this.auditPort = auditPort;
     }
@@ -103,6 +106,33 @@ public class ErpIntegrationService {
             throw e;
         }
         return find(kind);
+    }
+
+    /**
+     * Tìm đơn vị trên cây tổ chức ERP theo tên rồi ghi vào cấu hình.
+     *
+     * Người dùng biết tên đơn vị ("VMO DX") chứ không biết id nội bộ của Odoo, nên nhận tên và tự tra.
+     * Trả về danh sách nếu tên khớp nhiều nhánh — chọn bừa nhánh đầu là cách âm thầm lấy nhầm dữ liệu
+     * của đơn vị khác.
+     */
+    @Transactional
+    public List<String> resolveOrgUnit(String name, String actor) {
+        ErpConfig cfg = timesheetService.config();
+        List<OdooOrgClient.Department> found = orgClient.findDepartments(cfg, name);
+        if (found.isEmpty()) {
+            throw new IllegalArgumentException("Không tìm thấy đơn vị nào tên chứa \"" + name + "\".");
+        }
+        // Khớp đúng tên thì chốt luôn, khỏi bắt chọn giữa một danh sách chỉ có một ứng viên thật.
+        OdooOrgClient.Department exact = found.stream()
+                .filter(d -> d.name().equalsIgnoreCase(name.trim()))
+                .findFirst().orElse(found.size() == 1 ? found.get(0) : null);
+        if (exact != null) {
+            timesheetService.saveOrgUnit(exact.name(), exact.id(), actor);
+            auditPort.record("ERP_ORG_UNIT_SET", "ErpConfig", "default", actor,
+                    "unit=" + exact.completeName() + " (id=" + exact.id() + ")");
+            return List.of(exact.completeName() + " · " + exact.employeeCount() + " nhân sự");
+        }
+        return found.stream().map(d -> d.completeName() + " · " + d.employeeCount() + " nhân sự").toList();
     }
 
     private IntegrationView find(ErpIntegrationKind kind) {

@@ -74,6 +74,16 @@ public class ErpTimesheetService {
         return saved;
     }
 
+    /** Ghi đơn vị lấy dữ liệu vào cấu hình chung. */
+    @Transactional
+    public void saveOrgUnit(String name, Long erpId, String actor) {
+        ErpConfig cfg = configRepo.findById("default").orElseGet(ErpConfig::new);
+        cfg.setOrgUnit(name, erpId);
+        configRepo.save(cfg);
+        auditPort.record("ERP_ORG_UNIT_SAVED", "ErpConfig", "default", actor,
+                "unit=" + name + " (erpId=" + erpId + ")");
+    }
+
     /** Thử đăng nhập ERP; ghi lại kết quả để màn hình nói được lần kiểm tra gần nhất ra sao. */
     /**
      * Thử đăng nhập bằng thông tin ĐANG GÕ trên form; ô nào bỏ trống thì lấy giá trị đã lưu.

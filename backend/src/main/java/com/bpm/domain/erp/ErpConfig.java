@@ -36,6 +36,17 @@ public class ErpConfig {
     @Column(name = "api_key", length = 500)
     private String apiKey;
 
+    /**
+     * Đơn vị trên cây tổ chức ERP mà hệ thống này lấy dữ liệu — mọi luồng chỉ lấy trong phạm vi đó.
+     * Lưu cả tên lẫn id: tên để người dùng đọc, id để gọi API. Không lấy toàn công ty vì PlanX là công
+     * cụ của một đơn vị; kéo cả 997 nhân sự và 1.827 dự án về rồi lọc sau là tự chuốc dữ liệu rác.
+     */
+    @Column(name = "org_unit_name", length = 300)
+    private String orgUnitName;
+
+    @Column(name = "org_unit_erp_id")
+    private Long orgUnitErpId;
+
     private Instant lastCheckAt;
     @Column(length = 500)
     private String lastCheckStatus;
@@ -59,6 +70,12 @@ public class ErpConfig {
         }
         this.updatedAt = Instant.now();
         this.updatedBy = actor;
+    }
+
+    /** Ghi lại đơn vị đã tra được từ ERP. */
+    public void setOrgUnit(String name, Long erpId) {
+        this.orgUnitName = name == null ? null : name.trim();
+        this.orgUnitErpId = erpId;
     }
 
     public void markChecked(String status) {
@@ -107,6 +124,9 @@ public class ErpConfig {
         }
         return t;
     }
+
+    public String getOrgUnitName() { return orgUnitName; }
+    public Long getOrgUnitErpId() { return orgUnitErpId; }
 
     public String getId() { return id; }
     public String getBaseUrl() { return baseUrl; }
