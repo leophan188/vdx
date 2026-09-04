@@ -100,6 +100,10 @@
     <button type="button" class="btn btn--ghost btn--sm" (click)="downloadTemplate()">
       ⬇ Biểu mẫu khách hàng
     </button>
+    <button type="button" class="btn btn--secondary btn--sm" (click)="exportExcel()"
+            title="Tải kết quả đối soát kỳ này ra Excel (đối soát + hai bảng công theo ngày)">
+      ⬇ Xuất đối soát
+    </button>
     <input type="search" class="tsc-search" placeholder="🔍 Lọc theo tên hoặc mã nhân sự…"
            [value]="keyword()" (input)="keyword.set($any($event.target).value)" />
     <span class="filter-bar__spacer"></span>

@@ -283,17 +283,26 @@ export class TimesheetControl {
     });
   }
 
+  /** Tải kết quả đối soát của kỳ — để gửi kèm biên bản mà người nhận không phải mở hệ thống. */
+  exportExcel(): void {
+    this.saveFile(this.svc.exportUrl(this.period()), `doi-soat-cong-${this.period()}.xlsx`);
+  }
+
   downloadTemplate(): void {
-    this.http.get(this.svc.customerTemplateUrl(this.period()), { responseType: 'blob' }).subscribe({
+    this.saveFile(this.svc.customerTemplateUrl(this.period()), `mau-cong-khach-hang-${this.period()}.xlsx`);
+  }
+
+  private saveFile(url: string, name: string): void {
+    this.http.get(url, { responseType: 'blob' }).subscribe({
       next: (blob) => {
-        const url = URL.createObjectURL(blob);
+        const objectUrl = URL.createObjectURL(blob);
         const a = document.createElement('a');
-        a.href = url;
-        a.download = `mau-cong-khach-hang-${this.period()}.xlsx`;
+        a.href = objectUrl;
+        a.download = name;
         a.click();
-        URL.revokeObjectURL(url);
+        URL.revokeObjectURL(objectUrl);
       },
-      error: () => this.toast.error('Không tải được biểu mẫu.')
+      error: () => this.toast.error('Không tải được file.')
     });
   }
 

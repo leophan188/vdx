@@ -5,6 +5,7 @@ import com.bpm.domain.erp.CustomerWorkdaySheet;
 import com.bpm.domain.erp.CustomerWorkdayEntry;
 import com.bpm.domain.erp.ErpAttendanceEntry;
 import com.bpm.domain.erp.ErpConfig;
+import com.bpm.domain.erp.WorkdayExcelWriter;
 import com.bpm.domain.erp.WorkdayReconciliation;
 import com.bpm.domain.report.SafeWorkbookReader;
 import com.bpm.infrastructure.erp.CustomerWorkdayRepository;
@@ -470,6 +471,28 @@ public class ErpTimesheetService {
         out.sort(Comparator.comparing(WorkdayReconciliation.Row::empCode, CODE_ORDER)
                 .thenComparing(WorkdayReconciliation.Row::name, String.CASE_INSENSITIVE_ORDER));
         return out;
+    }
+
+    /**
+     * Xuất kết quả đối soát ra .xlsx: sheet đối soát + hai bảng công theo ngày của hai nguồn.
+     * Đủ để gửi kèm biên bản mà người nhận không cần mở hệ thống.
+     */
+    @Transactional(readOnly = true)
+    public byte[] exportExcel(String periodKey) {
+        String period = parsePeriod(periodKey).toString();
+        List<WorkdayReconciliation.Row> rows = reconcile(period);
+        return WorkdayExcelWriter.write(period, rows, WorkdayReconciliation.summarize(rows),
+                pivotView(period, false), pivotView(period, true));
+    }
+
+    private WorkdayExcelWriter.PivotView pivotView(String period, boolean customer) {
+        PivotResult p = pivot(period, customer);
+        List<WorkdayExcelWriter.PivotLine> lines = new ArrayList<>();
+        for (PivotRow r : p.rows()) {
+            lines.add(new WorkdayExcelWriter.PivotLine(r.name(), r.empCode(), r.daysByDay(),
+                    r.totalDays(), r.dayCount()));
+        }
+        return new WorkdayExcelWriter.PivotView(p.daysInMonth(), lines);
     }
 
     // ===== phụ trợ =====

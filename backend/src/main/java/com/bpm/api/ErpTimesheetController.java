@@ -175,6 +175,18 @@ public class ErpTimesheetController {
                 WorkdayReconciliation.summarize(rows));
     }
 
+    /** Tải kết quả đối soát của kỳ dưới dạng .xlsx. */
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(@RequestParam String period) {
+        byte[] bytes = service.exportExcel(period);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename=\"doi-soat-cong-" + period + ".xlsx\"")
+                .contentType(MediaType.parseMediaType(
+                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .body(bytes);
+    }
+
     private static void requireAdmin(Authentication auth) {
         if (!ApiAuth.isAdmin(auth)) {
             throw new org.springframework.security.access.AccessDeniedException(

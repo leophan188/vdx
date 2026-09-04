@@ -164,6 +164,10 @@ export class ErpTimesheetService {
     return `${this.base}/customer/template?period=${period}`;
   }
 
+  exportUrl(period: string): string {
+    return `${this.base}/export?period=${period}`;
+  }
+
   reconcile(period: string): Observable<ReconcileResponse> {
     return this.http.get<ReconcileResponse>(`${this.base}/reconcile?period=${period}`);
   }
