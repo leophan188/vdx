@@ -36,27 +36,45 @@
         </div>
         <div class="field">
           <label>Database</label>
-          <input type="text" name="dbName" [(ngModel)]="form.dbName" placeholder="tên database Odoo" />
+          @if (dbOptions().length > 1) {
+            <select name="dbName" [(ngModel)]="form.dbName">
+              <option value="">— Chọn database —</option>
+              @for (d of dbOptions(); track d) { <option [value]="d">{{ d }}</option> }
+            </select>
+          } @else {
+            <input type="text" name="dbName" [(ngModel)]="form.dbName"
+                   placeholder="chưa biết? bấm Dò database" />
+          }
         </div>
         <div class="field">
           <label>Tài khoản</label>
           <input type="text" name="username" [(ngModel)]="form.username" placeholder="tài khoản riêng cho PlanX" />
         </div>
         <div class="field">
-          <label>API key</label>
+          <label>Mật khẩu / API key</label>
           <input type="password" name="apiKey" [(ngModel)]="form.apiKey"
                  [placeholder]="config()?.apiKeySet ? '•••••• (để trống = giữ khoá cũ)' : 'API key hoặc mật khẩu'" />
         </div>
       </div>
       <p class="tsc-hint">
-        Nên cấp cho PlanX một tài khoản/API key <b>riêng, chỉ đọc hr.attendance</b> — khoá lộ thì chỉ mất
-        quyền đọc chấm công và thu hồi được mà không ảnh hưởng ai. Khoá đã lưu không bao giờ hiện lại
-        trên màn hình; để trống ô API key nghĩa là giữ nguyên khoá cũ.
+        Dán được cả đường link đang mở trên trình duyệt — phần <code>/web#action=…</code> sẽ tự được cắt bỏ.
+        Ô cuối nhận <b>mật khẩu đăng nhập ERP</b> hoặc API key, cái nào cũng được. Chưa biết tên database
+        thì điền tài khoản/mật khẩu rồi bấm <b>Dò database</b>.
       </p>
+      <p class="tsc-hint">
+        Nên xin người quản trị ERP một tài khoản <b>riêng, chỉ đọc hr.attendance</b> thay vì dùng tài khoản
+        cá nhân: PlanX làm được gì thì tài khoản đó làm được nấy, và khi cần thu hồi cũng không ảnh hưởng
+        tới công việc của bạn. Mật khẩu đã lưu không bao giờ hiện lại trên màn hình; để trống ô đó nghĩa
+        là giữ nguyên cái cũ.
+      </p>
+      @if (dbHint()) { <p class="tsc-hint">🔎 {{ dbHint() }}</p> }
       @if (config()?.lastCheckStatus) {
         <p class="tsc-hint">Lần kiểm tra gần nhất: <b>{{ config()?.lastCheckStatus }}</b></p>
       }
       <div class="tsc-file">
+        <button type="button" class="btn btn--secondary btn--sm" [disabled]="busy()" (click)="detectDb()">
+          🔎 Dò database
+        </button>
         <button type="button" class="btn btn--primary btn--sm" [disabled]="busy()" (click)="saveConfig()">
           Lưu kết nối
         </button>

@@ -98,6 +98,13 @@ public class ErpTimesheetController {
         return new ImportResult(0, service.testConnection(ApiAuth.actor(auth)));
     }
 
+    /** Dò tên database — nhận thẳng thông tin đang gõ trên form, chưa cần lưu. */
+    @PostMapping("/config/detect-db")
+    public ErpTimesheetService.DbProbe detectDb(@RequestBody ConfigRequest req, Authentication auth) {
+        requireAdmin(auth);
+        return service.detectDatabase(req.baseUrl(), req.username(), req.apiKey());
+    }
+
     // ===== Nguồn 1: ERP =====
 
     @GetMapping("/periods")

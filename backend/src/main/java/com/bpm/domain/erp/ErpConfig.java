@@ -83,10 +83,26 @@ public class ErpConfig {
         return s == null ? null : s.trim();
     }
 
-    /** "https://erp.vmo.dev/" và "https://erp.vmo.dev" phải cho ra cùng một endpoint. */
+    /**
+     * Quy mọi kiểu URL người dùng dán vào về GỐC Odoo.
+     * Người dùng gần như luôn copy nguyên thanh địa chỉ đang mở
+     * ({@code https://erp.vmo.dev/web#action=148&model=hr.attendance…}); giữ nguyên chuỗi đó thì lời
+     * gọi RPC trỏ vào {@code /web#.../jsonrpc} và không bao giờ chạy.
+     */
     private static String trimTrailingSlash(String s) {
         String t = trim(s);
-        while (t != null && t.endsWith("/")) {
+        if (t == null) {
+            return null;
+        }
+        int hash = t.indexOf('#');
+        if (hash > 0) {
+            t = t.substring(0, hash);
+        }
+        int web = t.indexOf("/web");
+        if (web > 0) {
+            t = t.substring(0, web);
+        }
+        while (t.endsWith("/")) {
             t = t.substring(0, t.length() - 1);
         }
         return t;

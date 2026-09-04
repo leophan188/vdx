@@ -69,6 +69,9 @@ export class TimesheetControl {
   readonly config = signal<ErpConfig | null>(null);
   readonly configOpen = signal(false);
   readonly form = { baseUrl: '', dbName: '', username: '', apiKey: '' };
+  /** Danh sách database máy chủ công bố (nếu có) — để chọn thay vì gõ tay. */
+  readonly dbOptions = signal<string[]>([]);
+  readonly dbHint = signal<string>('');
 
   readonly erpRows = signal<ErpPersonRow[]>([]);
   readonly customerRows = signal<CustomerRow[]>([]);
@@ -163,6 +166,31 @@ export class TimesheetControl {
         this.toast.success('Đã lưu kết nối ERP.');
       },
       error: (e) => { this.busy.set(false); this.toast.error(msg(e, 'Không lưu được kết nối.')); }
+    });
+  }
+
+  /**
+   * Dò tên database. Người dùng thường chỉ có đường link và tài khoản đăng nhập; tên database là thứ
+   * của người quản trị ERP, không hiện ở đâu trong giao diện thường ngày.
+   */
+  detectDb(): void {
+    this.busy.set(true);
+    this.svc.detectDb({ ...this.form }).subscribe({
+      next: (p) => {
+        this.busy.set(false);
+        this.dbOptions.set(p.options ?? []);
+        this.dbHint.set(p.message ?? '');
+        if (p.database) {
+          this.form.dbName = p.database;
+          this.toast.success('Tìm thấy database: ' + p.database);
+        } else {
+          this.toast.info(p.message || 'Chưa dò được tên database.');
+        }
+      },
+      error: (e) => {
+        this.busy.set(false);
+        this.toast.error(msg(e, 'Không dò được database — kiểm tra lại URL.'));
+      }
     });
   }
 

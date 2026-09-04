@@ -66,6 +66,13 @@ export interface ReconcileResponse {
   summary: ReconcileSummary;
 }
 
+/** Kết quả dò tên database Odoo. */
+export interface DbProbe {
+  database: string | null;
+  options: string[];
+  message: string;
+}
+
 export interface ImportResult {
   rows: number;
   message: string;
@@ -90,6 +97,11 @@ export class ErpTimesheetService {
   /** apiKey để trống = giữ nguyên khoá đang lưu. */
   saveConfig(body: { baseUrl: string; dbName: string; username: string; apiKey: string }): Observable<ErpConfig> {
     return this.http.put<ErpConfig>(`${this.base}/config`, body);
+  }
+
+  /** Dò tên database từ thông tin đang gõ trên form (chưa cần lưu). */
+  detectDb(body: { baseUrl: string; dbName: string; username: string; apiKey: string }): Observable<DbProbe> {
+    return this.http.post<DbProbe>(`${this.base}/config/detect-db`, body);
   }
 
   testConnection(): Observable<ImportResult> {

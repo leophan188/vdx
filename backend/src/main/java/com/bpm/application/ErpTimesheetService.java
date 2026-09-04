@@ -93,6 +93,77 @@ public class ErpTimesheetService {
         }
     }
 
+    /**
+     * Dò tên database: hỏi thẳng ERP trước, không được thì thử đăng nhập vào vài cái tên suy ra từ
+     * chính địa chỉ máy chủ.
+     *
+     * Người dùng thường không biết tên database — đó là thứ của người quản trị ERP, không hiện ở đâu
+     * trong giao diện thường ngày. Bắt họ đi hỏi rồi mới dùng được màn hình là cách chắc chắn để tính
+     * năng nằm im không ai đụng tới.
+     */
+    @Transactional(readOnly = true)
+    public DbProbe detectDatabase(String baseUrl, String username, String password) {
+        ErpConfig saved = config();
+        String url = blank(baseUrl) ? saved.getBaseUrl() : baseUrl;
+        String user = blank(username) ? saved.getUsername() : username;
+        String pass = blank(password) ? saved.getApiKey() : password;
+
+        List<String> listed = odoo.listDatabases(url);
+        if (listed.size() == 1) {
+            return new DbProbe(listed.get(0), listed, "Máy chủ chỉ có một database.");
+        }
+        if (!listed.isEmpty()) {
+            String hit = (user == null || pass == null) ? null : odoo.probeDatabase(url, user, pass, listed);
+            return new DbProbe(hit, listed, hit != null
+                    ? "Đăng nhập được vào database này."
+                    : "Máy chủ có nhiều database — chọn một rồi bấm Kiểm tra kết nối.");
+        }
+        if (user == null || pass == null) {
+            return new DbProbe(null, List.of(),
+                    "Máy chủ không cho liệt kê database. Điền tài khoản và mật khẩu rồi dò lại.");
+        }
+        String hit = odoo.probeDatabase(url, user, pass, candidateNames(url));
+        return new DbProbe(hit, List.of(), hit != null
+                ? "Đăng nhập được vào database này."
+                : "Không đoán được tên database. Hỏi người quản trị ERP, hoặc mở ERP trên trình duyệt, "
+                        + "bấm F12 → tab Console, gõ odoo.info.db rồi chép kết quả vào ô Database.");
+    }
+
+    /** Kết quả dò: tên tìm được (nếu có), danh sách máy chủ công bố, và câu giải thích cho người dùng. */
+    public record DbProbe(String database, List<String> options, String message) {
+    }
+
+    /**
+     * Các tên database hay gặp, suy từ chính địa chỉ: "https://erp.vmo.dev" → erp.vmo.dev, erp_vmo_dev,
+     * erp-vmo-dev, erp, vmo… Thử vài cái rẻ hơn nhiều so với chờ người quản trị ERP trả lời.
+     */
+    private static List<String> candidateNames(String baseUrl) {
+        String host = baseUrl == null ? "" : baseUrl.replaceAll("^https?://", "").replaceAll("[/:].*$", "");
+        java.util.LinkedHashSet<String> out = new java.util.LinkedHashSet<>();
+        if (!host.isBlank()) {
+            out.add(host);
+            out.add(host.replace('.', '_'));
+            out.add(host.replace('.', '-'));
+            String[] parts = host.split("\\.");
+            if (parts.length > 0) {
+                out.add(parts[0]);
+            }
+            if (parts.length > 1) {
+                out.add(parts[1]);
+                out.add(parts[0] + "_" + parts[1]);
+                out.add(parts[0] + "-" + parts[1]);
+            }
+        }
+        out.add("odoo");
+        out.add("production");
+        out.add("prod");
+        return List.copyOf(out);
+    }
+
+    private static boolean blank(String s) {
+        return s == null || s.isBlank();
+    }
+
     // ===== Nguồn 1: chấm công ERP =====
 
     /**

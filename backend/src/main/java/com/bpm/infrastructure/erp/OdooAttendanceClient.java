@@ -53,6 +53,57 @@ public class OdooAttendanceClient {
             .connectTimeout(Duration.ofSeconds(15))
             .build();
 
+    /**
+     * Hỏi ERP xem có những database nào ({@code service=db, method=list}).
+     *
+     * Nhiều bản Odoo TẮT tính năng này (list_db = False) để không lộ danh sách database ra ngoài —
+     * khi đó trả về danh sách rỗng chứ không coi là lỗi, người dùng sẽ tự điền tên database.
+     */
+    public List<String> listDatabases(String baseUrl) {
+        JsonNode res;
+        try {
+            res = callRaw(baseUrl, params("db", "list", json.createArrayNode()));
+        } catch (RuntimeException e) {
+            return List.of();
+        }
+        if (res == null || !res.isArray()) {
+            return List.of();
+        }
+        List<String> out = new ArrayList<>();
+        for (JsonNode n : res) {
+            if (n != null && n.isTextual()) {
+                out.add(n.asText());
+            }
+        }
+        return out;
+    }
+
+    /**
+     * Thử đăng nhập lần lượt vào từng database ứng viên, trả về tên database đăng nhập được.
+     *
+     * Dùng khi máy chủ không cho liệt kê database: sai tên database thì Odoo báo "database not found"
+     * chứ không tính là lần đăng nhập sai, nên thử vài cái tên không làm khoá tài khoản. Trả về null
+     * nếu không cái nào vào được.
+     */
+    public String probeDatabase(String baseUrl, String username, String password, List<String> candidates) {
+        for (String db : candidates) {
+            if (db == null || db.isBlank()) {
+                continue;
+            }
+            try {
+                JsonNode res = callRaw(baseUrl, params("common", "login",
+                        arr(db.trim(), username, password)));
+                if (res != null && res.isNumber() && res.asLong(0) > 0) {
+                    return db.trim();
+                }
+            } catch (RuntimeException e) {
+                // Sai tên database / máy chủ từ chối → thử cái tiếp theo.
+                log.debug("[erp] thử database {} không được: {}", db, e.getMessage());
+            }
+        }
+        return null;
+    }
+
     /** Đăng nhập, trả về uid. Ném IllegalArgumentException (→ 400) kèm lý do người dùng hiểu được. */
     public long login(ErpConfig cfg) {
         JsonNode res = call(cfg, params("common", "login",
@@ -188,6 +239,15 @@ public class OdooAttendanceClient {
         if (cfg == null || !cfg.isConfigured()) {
             throw new IllegalArgumentException("Chưa khai báo kết nối ERP (URL, database, tài khoản, API key).");
         }
+        return callRaw(cfg.getBaseUrl(), params);
+    }
+
+    /** Gọi JSON-RPC chỉ với URL — dùng được cả khi chưa lưu cấu hình (lúc dò database). */
+    private JsonNode callRaw(String baseUrl, ObjectNode params) {
+        ErpConfig cfg = null;
+        if (baseUrl == null || baseUrl.isBlank()) {
+            throw new IllegalArgumentException("Thiếu URL Odoo.");
+        }
         ObjectNode body = json.createObjectNode();
         body.put("jsonrpc", "2.0");
         body.put("method", "call");
@@ -195,14 +255,14 @@ public class OdooAttendanceClient {
 
         HttpResponse<String> res;
         try {
-            HttpRequest req = HttpRequest.newBuilder(URI.create(cfg.getBaseUrl() + "/jsonrpc"))
+            HttpRequest req = HttpRequest.newBuilder(URI.create(trimSlash(baseUrl) + "/jsonrpc"))
                     .header("Content-Type", "application/json")
                     .timeout(Duration.ofSeconds(120))
                     .POST(HttpRequest.BodyPublishers.ofString(body.toString(), StandardCharsets.UTF_8))
                     .build();
             res = http.send(req, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
         } catch (Exception e) {
-            throw new IllegalArgumentException("Không gọi được ERP tại " + cfg.getBaseUrl()
+            throw new IllegalArgumentException("Không gọi được ERP tại " + baseUrl
                     + " — kiểm tra URL và việc máy chủ PlanX có ra được địa chỉ đó không. (" + e.getMessage() + ")");
         }
         if (res.statusCode() != 200) {
@@ -238,6 +298,23 @@ public class OdooAttendanceClient {
     private static String text(JsonNode node, String field) {
         JsonNode v = node.get(field);
         return v == null || v.isNull() || v.isBoolean() ? null : v.asText();
+    }
+
+    /** "https://erp.vmo.dev/" và ".../web#action=148" đều phải quy về gốc "https://erp.vmo.dev". */
+    private static String trimSlash(String s) {
+        String t = s.trim();
+        int hash = t.indexOf('#');
+        if (hash > 0) {
+            t = t.substring(0, hash);
+        }
+        int web = t.indexOf("/web");
+        if (web > 0) {
+            t = t.substring(0, web);
+        }
+        while (t.endsWith("/")) {
+            t = t.substring(0, t.length() - 1);
+        }
+        return t;
     }
 
     private static String toUtcText(LocalDateTime vnTime) {
