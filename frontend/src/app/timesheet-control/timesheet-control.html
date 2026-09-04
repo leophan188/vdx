@@ -7,6 +7,24 @@
     </button>
   </app-page-header>
 
+  <!-- CHƯA khai kết nối thì nói thẳng ngay giữa màn, kèm nút mở form. Nút "⚙️ Kết nối ERP" nằm nép ở
+       góc tiêu đề là chỗ hợp lý cho việc khai một lần rồi thôi, nhưng lần đầu vào màn thì người dùng
+       không có gì dẫn đường: bảng trống, bấm "Tải chấm công ERP" thì báo lỗi thiếu cấu hình. -->
+  @if (config() && !config()!.apiKeySet && !configOpen()) {
+    <div class="tsc-card tsc-card--warn">
+      <b>Chưa kết nối ERP.</b>
+      <p class="tsc-hint">
+        Cần URL Odoo, tên database, tài khoản và API key thì mới tải được chấm công. Khai một lần, hệ
+        thống nhớ lại cho các kỳ sau.
+      </p>
+      <div>
+        <button type="button" class="btn btn--primary btn--sm" (click)="configOpen.set(true)">
+          ⚙️ Khai báo kết nối ERP
+        </button>
+      </div>
+    </div>
+  }
+
   <!-- Kết nối ERP: gập lại mặc định vì khai một lần rồi thôi, nhưng phải thấy được trạng thái
        lần kiểm tra gần nhất khi số liệu trông lạ. -->
   @if (configOpen()) {

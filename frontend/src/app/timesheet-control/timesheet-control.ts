@@ -31,6 +31,8 @@ import {
     .tsc-card { border: 1px solid var(--color-border); border-radius: var(--radius-md);
       padding: var(--space-4); background: var(--color-surface); display: grid;
       gap: var(--space-3); margin-bottom: var(--space-4); }
+    .tsc-card--warn { border-color: var(--status-pending, #d97706); }
+    .tsc-card--warn b { font-size: var(--text-lg); }
     .tsc-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
       gap: var(--space-3); }
     .tsc-hint { font-size: var(--text-sm); color: var(--color-text-muted); margin: 0; }
