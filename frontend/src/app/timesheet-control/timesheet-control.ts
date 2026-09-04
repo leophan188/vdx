@@ -89,6 +89,7 @@ export class TimesheetControl {
 
   readonly erpCols: GridColumn[] = [
     { key: 'name', header: 'Nhân sự', sortable: true },
+    { key: 'empCode', header: 'Mã NV', width: '104px', sortable: true },
     { key: 'dayCount', header: 'Ngày chấm', width: '110px', align: 'center', sortable: true },
     { key: 'hours', header: 'Tổng giờ', width: '110px', align: 'right', sortable: true },
     { key: 'days', header: 'Quy ra công', width: '124px', align: 'right', sortable: true }
@@ -103,6 +104,7 @@ export class TimesheetControl {
 
   readonly reconcileCols: GridColumn[] = [
     { key: 'name', header: 'Nhân sự', sortable: true },
+    { key: 'empCode', header: 'Mã NV', width: '104px', sortable: true },
     { key: 'status', header: 'Tình trạng', width: '150px' },
     { key: 'erpDayCount', header: 'Ngày chấm', width: '108px', align: 'center', sortable: true },
     { key: 'erpHours', header: 'Giờ ERP', width: '104px', align: 'right', sortable: true },
@@ -196,7 +198,7 @@ export class TimesheetControl {
 
   testConnection(): void {
     this.busy.set(true);
-    this.svc.testConnection().subscribe({
+    this.svc.testConnection({ ...this.form }).subscribe({
       next: (r) => { this.busy.set(false); this.toast.success(r.message); this.refreshConfig(); },
       error: (e) => {
         this.busy.set(false);

@@ -16,6 +16,7 @@ export interface ErpConfig {
 /** Tổng chấm công ERP của một người trong kỳ. */
 export interface ErpPersonRow {
   name: string;
+  /** Mã nhân viên tách từ tên hiển thị bên ERP ("Nguyễn Văn A - 4021"). */
   empCode: string | null;
   hours: number;
   days: number;
@@ -104,8 +105,9 @@ export class ErpTimesheetService {
     return this.http.post<DbProbe>(`${this.base}/config/detect-db`, body);
   }
 
-  testConnection(): Observable<ImportResult> {
-    return this.http.post<ImportResult>(`${this.base}/config/test`, {});
+  /** Kiểm tra bằng thông tin đang gõ trên form — ô trống thì backend dùng giá trị đã lưu. */
+  testConnection(body: { baseUrl: string; dbName: string; username: string; apiKey: string }): Observable<ImportResult> {
+    return this.http.post<ImportResult>(`${this.base}/config/test`, body);
   }
 
   periods(): Observable<string[]> {

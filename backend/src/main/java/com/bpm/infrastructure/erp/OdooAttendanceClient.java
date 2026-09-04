@@ -200,7 +200,32 @@ public class OdooAttendanceClient {
             return null;
         }
         LocalDate workDate = fromUtcText(checkIn).atZone(ZoneId.of("UTC")).withZoneSameInstant(VN).toLocalDate();
-        return new AttendanceRecord(emp.get(0).asLong(), emp.get(1).asText(), workDate, hours);
+        String display = emp.get(1).asText();
+        return new AttendanceRecord(emp.get(0).asLong(), nameOf(display), codeOf(display), workDate, hours);
+    }
+
+    /**
+     * Tên hiển thị của nhân sự bên Odoo có dạng "Đoàn Đình Đức - 4021" — phần đuôi chính là MÃ nhân
+     * viên, cùng bộ mã với hồ sơ nhân sự bên này. Mã đáng giá hơn tên nhiều khi đối soát: tên viết
+     * hoa/thường/thiếu dấu mỗi nơi một kiểu, còn hai người trùng tên là chuyện xảy ra thật.
+     */
+    private static final java.util.regex.Pattern NAME_CODE =
+            java.util.regex.Pattern.compile("^(.*\\S)\\s*-\\s*([A-Za-z0-9._]{2,20})$");
+
+    public static String codeOf(String display) {
+        if (display == null) {
+            return null;
+        }
+        java.util.regex.Matcher m = NAME_CODE.matcher(display.trim());
+        return m.matches() ? m.group(2) : null;
+    }
+
+    public static String nameOf(String display) {
+        if (display == null) {
+            return null;
+        }
+        java.util.regex.Matcher m = NAME_CODE.matcher(display.trim());
+        return m.matches() ? m.group(1) : display.trim();
     }
 
     // ===== JSON-RPC =====

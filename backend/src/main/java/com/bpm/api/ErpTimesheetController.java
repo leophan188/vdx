@@ -92,10 +92,13 @@ public class ErpTimesheetController {
                 req.apiKey(), ApiAuth.actor(auth)));
     }
 
+    /** Kiểm tra bằng thông tin đang gõ trên form (body có thể rỗng → dùng cấu hình đã lưu). */
     @PostMapping("/config/test")
-    public ImportResult testConnection(Authentication auth) {
+    public ImportResult testConnection(@RequestBody(required = false) ConfigRequest req, Authentication auth) {
         requireAdmin(auth);
-        return new ImportResult(0, service.testConnection(ApiAuth.actor(auth)));
+        ConfigRequest r = req == null ? new ConfigRequest(null, null, null, null) : req;
+        return new ImportResult(0, service.testConnection(r.baseUrl(), r.dbName(), r.username(),
+                r.apiKey(), ApiAuth.actor(auth)));
     }
 
     /** Dò tên database — nhận thẳng thông tin đang gõ trên form, chưa cần lưu. */

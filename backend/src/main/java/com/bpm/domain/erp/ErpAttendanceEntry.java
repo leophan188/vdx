@@ -38,6 +38,10 @@ public class ErpAttendanceEntry {
     @Column(name = "employee_name", length = 300)
     private String employeeName;
 
+    /** Mã nhân viên tách từ tên hiển thị bên ERP — khoá ghép chính xác nhất với file khách hàng. */
+    @Column(name = "emp_code", length = 100)
+    private String empCode;
+
     /** Khoá ghép theo TÊN đã chuẩn hoá — dùng để bắt cặp với dòng của khách hàng. */
     @Column(name = "match_key", length = 300)
     private String matchKey;
@@ -62,6 +66,7 @@ public class ErpAttendanceEntry {
         this.periodKey = periodKey;
         this.erpEmployeeId = rec.employeeErpId();
         this.employeeName = rec.employeeName();
+        this.empCode = rec.employeeCode();
         this.matchKey = matchKey;
         this.workDate = rec.workDate();
         this.hours = rec.workedHours();
@@ -73,6 +78,7 @@ public class ErpAttendanceEntry {
     public String getPeriodKey() { return periodKey; }
     public long getErpEmployeeId() { return erpEmployeeId; }
     public String getEmployeeName() { return employeeName; }
+    public String getEmpCode() { return empCode; }
     public String getMatchKey() { return matchKey; }
     public LocalDate getWorkDate() { return workDate; }
     public double getHours() { return hours; }

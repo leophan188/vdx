@@ -76,9 +76,25 @@ public class ErpTimesheetService {
     }
 
     /** Thử đăng nhập ERP; ghi lại kết quả để màn hình nói được lần kiểm tra gần nhất ra sao. */
+    /**
+     * Thử đăng nhập bằng thông tin ĐANG GÕ trên form; ô nào bỏ trống thì lấy giá trị đã lưu.
+     *
+     * Trước đây hàm này chỉ đọc cấu hình trong CSDL, nên bấm "Kiểm tra kết nối" mà chưa bấm "Lưu" thì
+     * nhận đúng câu "Chưa khai báo kết nối ERP" dù bốn ô trên màn đã điền đủ — người dùng không hiểu
+     * mình sai ở đâu. Kiểm tra trước rồi mới lưu mới là thứ tự tự nhiên.
+     */
     @Transactional
-    public String testConnection(String actor) {
+    public String testConnection(String baseUrl, String dbName, String username, String password, String actor) {
         ErpConfig cfg = config();
+        if (!blank(baseUrl) || !blank(dbName) || !blank(username) || !blank(password)) {
+            ErpConfig probe = new ErpConfig();
+            probe.update(blank(baseUrl) ? cfg.getBaseUrl() : baseUrl,
+                    blank(dbName) ? cfg.getDbName() : dbName,
+                    blank(username) ? cfg.getUsername() : username,
+                    blank(password) ? cfg.getApiKey() : password, actor);
+            long uid = odoo.login(probe);
+            return "OK — đăng nhập thành công (uid=" + uid + "). Bấm Lưu kết nối để dùng cho các kỳ sau.";
+        }
         try {
             long uid = odoo.login(cfg);
             String ok = "OK — đăng nhập thành công (uid=" + uid + ")";
@@ -200,12 +216,13 @@ public class ErpTimesheetService {
     public List<ErpPersonRow> erpRows(String periodKey) {
         Map<String, ErpAgg> byPerson = new LinkedHashMap<>();
         for (ErpAttendanceEntry e : attendanceRepo.findByPeriodKey(parsePeriod(periodKey).toString())) {
-            byPerson.computeIfAbsent(e.getMatchKey(), k -> new ErpAgg(e.getEmployeeName())).add(e);
+            String key = keyOf(e.getEmpCode(), e.getMatchKey());
+            byPerson.computeIfAbsent(key, k -> new ErpAgg(e.getEmployeeName(), e.getEmpCode())).add(e);
         }
         List<ErpPersonRow> out = new ArrayList<>();
         for (Map.Entry<String, ErpAgg> en : byPerson.entrySet()) {
             ErpAgg a = en.getValue();
-            out.add(new ErpPersonRow(en.getKey(), a.name, WorkdayReconciliation.round2(a.hours),
+            out.add(new ErpPersonRow(en.getKey(), a.name, a.empCode, WorkdayReconciliation.round2(a.hours),
                     WorkdayReconciliation.toDays(a.hours), a.dates.size()));
         }
         out.sort(Comparator.comparing(ErpPersonRow::name, String.CASE_INSENSITIVE_ORDER));
@@ -288,22 +305,32 @@ public class ErpTimesheetService {
     @Transactional(readOnly = true)
     public List<WorkdayReconciliation.Row> reconcile(String periodKey) {
         String period = parsePeriod(periodKey).toString();
-        Map<String, ErpPersonRow> erp = new LinkedHashMap<>();
+        // Bên ERP đánh chỉ mục theo CẢ HAI khoá: mã và tên. File khách hàng có mã thì ghép theo mã;
+        // chỉ có tên thì vẫn ghép được — bắt buộc phải có mã mới đối soát nổi là đặt điều kiện lên
+        // thứ khách hàng không nợ mình.
+        Map<String, ErpPersonRow> erpByKey = new LinkedHashMap<>();
+        Map<String, ErpPersonRow> erpByName = new LinkedHashMap<>();
         for (ErpPersonRow r : erpRows(period)) {
-            erp.put(r.matchKey(), r);
+            erpByKey.put(r.matchKey(), r);
+            erpByName.putIfAbsent(WorkdayReconciliation.matchKey(r.name()), r);
         }
         Map<String, CustAgg> cust = new LinkedHashMap<>();
         for (CustomerWorkdayEntry c : customerRepo.findByPeriodKey(period)) {
-            cust.computeIfAbsent(c.getMatchKey(), k -> new CustAgg(c.getEmployeeName(), c.getEmpCode()))
+            ErpPersonRow hit = erpByKey.get(keyOf(c.getEmpCode(), c.getMatchKey()));
+            if (hit == null) {
+                hit = erpByName.get(c.getMatchKey());
+            }
+            String key = hit != null ? hit.matchKey() : keyOf(c.getEmpCode(), c.getMatchKey());
+            cust.computeIfAbsent(key, k -> new CustAgg(c.getEmployeeName(), c.getEmpCode()))
                     .add(c.getDays());
         }
 
         List<WorkdayReconciliation.Row> out = new ArrayList<>();
         TreeSet<String> keys = new TreeSet<>();
-        keys.addAll(erp.keySet());
+        keys.addAll(erpByKey.keySet());
         keys.addAll(cust.keySet());
         for (String key : keys) {
-            ErpPersonRow e = erp.get(key);
+            ErpPersonRow e = erpByKey.get(key);
             CustAgg c = cust.get(key);
             double erpDays = e == null ? 0 : e.days();
             double custDays = c == null ? 0 : WorkdayReconciliation.round2(c.days);
@@ -318,7 +345,8 @@ public class ErpTimesheetService {
                         ? WorkdayReconciliation.Status.MATCHED : WorkdayReconciliation.Status.DIFF;
             }
             out.add(new WorkdayReconciliation.Row(key,
-                    e != null ? e.name() : c.name, c != null ? c.empCode : null,
+                    e != null ? e.name() : c.name,
+                    e != null && e.empCode() != null ? e.empCode() : (c != null ? c.empCode : null),
                     e == null ? 0 : e.hours(), erpDays, e == null ? 0 : e.dayCount(),
                     custDays, diff, status));
         }
@@ -334,16 +362,28 @@ public class ErpTimesheetService {
     // ===== phụ trợ =====
 
     /** Tổng theo người phía ERP. */
-    public record ErpPersonRow(String matchKey, String name, double hours, double days, int dayCount) {
+    public record ErpPersonRow(String matchKey, String name, String empCode,
+                               double hours, double days, int dayCount) {
+    }
+
+    /**
+     * Khoá ghép: ưu tiên MÃ nhân viên, không có mã mới lùi về tên đã chuẩn hoá.
+     * ERP ghi tên kèm mã ("Đoàn Đình Đức - 4021") và file khách hàng cũng thường có cột mã, nên phần
+     * lớn dòng ghép được chính xác; tên chỉ là phương án dự phòng vì trùng tên là chuyện có thật.
+     */
+    private static String keyOf(String empCode, String nameKey) {
+        return empCode != null && !empCode.isBlank() ? "#" + empCode.trim().toLowerCase() : nameKey;
     }
 
     private static final class ErpAgg {
         private final String name;
+        private final String empCode;
         private double hours;
         private final TreeSet<LocalDate> dates = new TreeSet<>();
 
-        private ErpAgg(String name) {
+        private ErpAgg(String name, String empCode) {
             this.name = name;
+            this.empCode = empCode;
         }
 
         private void add(ErpAttendanceEntry e) {
