@@ -60,6 +60,10 @@ public class ErpAttendanceEntry {
     @Column(name = "pay_workday")
     private Double payWorkday;
 
+    /** Phần nghỉ CÓ LƯƠNG trong ngày — trừ khỏi ngày công hưởng lương khi đối soát. */
+    @Column(name = "paid_leave")
+    private Double paidLeave;
+
     /** Ngày công THỰC TẾ — giữ để tra khi lệch với ngày công hưởng lương. */
     @Column(name = "workday")
     private Double workday;
@@ -83,6 +87,7 @@ public class ErpAttendanceEntry {
         this.workDate = rec.workDate();
         this.hours = rec.workedHours();
         this.payWorkday = rec.payWorkday();
+        this.paidLeave = rec.paidLeave();
         this.workday = rec.workday();
         this.fetchedAt = Instant.now();
         this.fetchedBy = actor;
@@ -97,9 +102,21 @@ public class ErpAttendanceEntry {
     public LocalDate getWorkDate() { return workDate; }
     public double getHours() { return hours; }
 
-    /** Ngày công hưởng lương; dữ liệu cũ chưa có thì lùi về ngày công thực tế rồi mới tới 0. */
+    /** Ngày công hưởng lương thô, CHƯA trừ nghỉ có lương. */
     public double getPayWorkday() {
         return payWorkday != null ? payWorkday : (workday == null ? 0d : workday);
+    }
+
+    public double getPaidLeave() {
+        return paidLeave == null ? 0d : paidLeave;
+    }
+
+    /**
+     * Ngày công dùng để ĐỐI SOÁT: hưởng lương trừ phần nghỉ có lương.
+     * Xem AttendanceRecord.reconcileDays() để biết vì sao không trừ nghỉ không lương.
+     */
+    public double getReconcileDays() {
+        return Math.max(0d, getPayWorkday() - getPaidLeave());
     }
 
     public double getWorkday() { return workday == null ? 0d : workday; }

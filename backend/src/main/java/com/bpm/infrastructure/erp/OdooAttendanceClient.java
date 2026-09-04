@@ -54,9 +54,6 @@ public class OdooAttendanceClient {
     private static final DateTimeFormatter ODOO_DT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     /** Giá trị của cột "Thời gian làm việc" ứng với NGÀY LÀM VIỆC (khác weekend / holidays). */
     private static final String WORKING_DAYS = "working_days";
-    /** Giá trị của cột "Xin nghỉ" ứng với "Không" (khác NS / NC / N). */
-    private static final String NO_LEAVE = "K";
-
     /** Trần số bản ghi một lần đọc — chặn việc lỡ tay chọn khoảng 5 năm rồi kéo sập cả hai hệ thống. */
     private static final int MAX_RECORDS = 200_000;
 
@@ -152,15 +149,16 @@ public class OdooAttendanceClient {
             // Chỉ NGÀY LÀM VIỆC: Odoo sinh bản ghi cho cả cuối tuần (weekend) và nghỉ lễ (holidays),
             // tính vào thì số công của tháng phồng lên so với bảng công khách hàng gửi.
             domain.add(triple("working_time", "=", WORKING_DAYS));
-            // Và chỉ ngày KHÔNG xin nghỉ: nghỉ sáng (NS), nghỉ chiều (NC), nghỉ cả ngày (N) vẫn có
-            // ngày công hưởng lương, nhưng đó không phải ngày người ta thực sự làm việc.
-            domain.add(triple("leave_status_in_day", "=", NO_LEAVE));
+            // KHÔNG lọc theo cột "Xin nghỉ" nữa: nghỉ NỬA buổi vẫn còn nửa ngày công thực làm mà khách
+            // hàng có ghi nhận, loại cả ngày là tự tạo ra lệch âm. Phần nghỉ được TRỪ lúc tính, xem
+            // AttendanceRecord.reconcileDays().
 
             ObjectNode kwargs = json.createObjectNode();
             ArrayNode fields = kwargs.putArray("fields");
             fields.add("employee_id");
             fields.add("attendance_date");
             fields.add("pay_workday");
+            fields.add("pay_leave_types_num");
             fields.add("workday");
             fields.add("worked_hours");
             kwargs.put("limit", page);
@@ -214,11 +212,15 @@ public class OdooAttendanceClient {
         if (pay <= 0) {
             return null;
         }
+        double paidLeave = r.hasNonNull("pay_leave_types_num") ? r.get("pay_leave_types_num").asDouble(0) : 0;
+        if (pay - paidLeave <= 0) {
+            return null;   // nghỉ có lương trọn ngày: hưởng lương nhưng không có công thực làm
+        }
         double workday = r.hasNonNull("workday") ? r.get("workday").asDouble(0) : 0;
         double hours = r.hasNonNull("worked_hours") ? r.get("worked_hours").asDouble(0) : 0;
         String display = emp.get(1).asText();
         return new AttendanceRecord(emp.get(0).asLong(), nameOf(display), codeOf(display),
-                LocalDate.parse(date), pay, workday, hours);
+                LocalDate.parse(date), pay, paidLeave, workday, hours);
     }
 
     /**
