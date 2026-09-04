@@ -157,10 +157,9 @@
         </div>
 
         <p class="tsc-hint">
-          Chỉ đối soát người có mặt ở <b>cả hai</b> nguồn, lấy <b>bảng công khách hàng</b> làm gốc; người
-          khớp hoàn toàn cả khoảng được ẩn khỏi bảng. Tháng nào một bên chưa có dữ liệu thì ô để trống
-          thay vì hiện lệch giả. Số công phía ERP là <b>ngày công hưởng lương</b> giữ nguyên, không trừ
-          ngày nghỉ — hai bên chốt công theo quy tắc nghỉ khác nhau, và phần chênh đó chính là thứ cần đối soát.
+          So <b>số công ERP ghi nhận</b> với <b>số công khách hàng ghi nhận</b>, chỉ những người có mặt ở
+          cả hai nguồn; người khớp hoàn toàn cả khoảng được ẩn khỏi bảng. Tháng nào một bên chưa có dữ
+          liệu thì ô để trống thay vì hiện lệch giả.
           @if (rep.droppedErpOnlyRows || rep.droppedCustomerOnlyRows) {
             Đã loại
             @if (rep.droppedErpOnlyRows) {
@@ -244,15 +243,9 @@
     }
     @case ('erp') {
       <p class="tsc-hint">
-        Giá trị là <b>Ngày công hưởng lương</b> của ERP (1 hoặc 0,5) — đúng cột bạn nhìn thấy trong màn
-        chấm công. Cột “Ngày công thực tế” bằng 0 với nghỉ phép đã duyệt, WFH và quên chấm công, tức
-        những ngày vẫn hưởng lương đủ, nên không dùng để đối soát.
-      </p>
-      <p class="tsc-hint">
-        Chỉ lấy ngày có <b>Thời gian làm việc = “Ngày làm việc”</b> (bỏ cuối tuần và nghỉ lễ), và trừ
-        phần <b>nghỉ có lương</b> trong ngày: nghỉ nửa buổi còn 0,5 công, nghỉ trọn ngày còn 0. Nghỉ
-        không lương không bị trừ thêm lần nữa vì ngày công hưởng lương đã trừ sẵn. Rê chuột vào ô để
-        xem số giờ; ô trống là ngày không có công, cột nền xám là Thứ Bảy / Chủ nhật.
+        Giá trị là <b>số công ERP ghi nhận</b> (1 hoặc 0,5) — lấy nguyên cột “Ngày công hưởng lương”
+        trong màn chấm công, chỉ tính ngày làm việc (bỏ cuối tuần và nghỉ lễ). Rê chuột vào ô để xem
+        số giờ; ô trống là ngày không có công, cột nền xám là Thứ Bảy / Chủ nhật.
       </p>
       <p class="tsc-hint">
         Số liệu <b>lưu lại theo kỳ</b>, không gọi lại ERP mỗi lần mở màn hình — có vậy mới nói được
