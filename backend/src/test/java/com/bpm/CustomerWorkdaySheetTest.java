@@ -111,6 +111,31 @@ class CustomerWorkdaySheetTest {
     }
 
     @Test
+    @DisplayName("Chỉ đọc sheet ĐẦU TIÊN — các sheet chi tiết từng người bị bỏ qua")
+    void chiDocSheetDau() throws Exception {
+        try (Workbook wb = mauKhachHang()) {
+            // Sheet chi tiết của một nhân sự, cùng khuôn nhưng số công khác — nếu bị đọc lẫn thì
+            // công của người đó tăng gấp đôi mà bảng vẫn trông bình thường.
+            Sheet chiTiet = wb.createSheet("1. Đỗ Quốc Hưng");
+            Row h = chiTiet.createRow(0);
+            h.createCell(2).setCellValue("Họ và tên");
+            for (int d = 1; d <= 28; d++) {
+                h.createCell(4 + d).setCellValue(String.format("%02d/2", d));
+            }
+            Row r = chiTiet.createRow(1);
+            r.createCell(2).setCellValue("Đỗ Quốc Hưng");
+            r.createCell(6).setCellValue(1.0);
+            r.createCell(8).setCellValue(1.0);
+
+            CustomerWorkdaySheet.ParseResult res = CustomerWorkdaySheet.read(wb, KY);
+            assertThat(res.sheetName()).isEqualTo("Bang cong");
+            double tongHung = res.cells().stream()
+                    .filter(c -> c.name().startsWith("Đỗ")).mapToDouble(CustomerWorkdaySheet.Cellule::days).sum();
+            assertThat(tongHung).isEqualTo(1.5);
+        }
+    }
+
+    @Test
     @DisplayName("Cột tổng cuối bảng không bị nhận nhầm thành một ngày")
     void khongNhamCotTong() throws Exception {
         try (Workbook wb = mauKhachHang()) {

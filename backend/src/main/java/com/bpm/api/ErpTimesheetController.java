@@ -139,7 +139,8 @@ public class ErpTimesheetController {
                                        Authentication auth) throws IOException {
         int n = service.importCustomer(period, file.getBytes(), file.getOriginalFilename(),
                 ApiAuth.actor(auth));
-        return new ImportResult(n, "Đã lưu " + n + " dòng công khách hàng cho kỳ " + period + ".");
+        return new ImportResult(n, "Kỳ " + period + ": " + service.lastImportSummary()
+                + ". Đối chiếu nhanh với file trước khi dùng số liệu.");
     }
 
     @GetMapping("/customer/rows")

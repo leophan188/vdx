@@ -366,10 +366,40 @@ public class ErpTimesheetService {
         }
         customerRepo.deleteByPeriodKey(ym.toString());
         customerRepo.saveAll(rows);
+
+        // Tóm tắt để người import ĐỐI CHIẾU NGAY với file đang mở: đọc được bao nhiêu người, tổng bao
+        // nhiêu công, từ ngày nào tới ngày nào. Chỉ nói "đã lưu 320 dòng" thì file bị cắt hụt nửa bảng
+        // hay lẫn bảng ngoài giờ đều trông y hệt nhau.
+        java.util.Set<String> people = new java.util.LinkedHashSet<>();
+        double totalDays = 0;
+        LocalDate min = null;
+        LocalDate max = null;
+        for (CustomerWorkdayEntry e : rows) {
+            people.add(e.getMatchKey());
+            totalDays += e.getDays();
+            if (min == null || e.getWorkDate().isBefore(min)) {
+                min = e.getWorkDate();
+            }
+            if (max == null || e.getWorkDate().isAfter(max)) {
+                max = e.getWorkDate();
+            }
+        }
+        String summary = "sheet \"" + parsed.sheetName() + "\" · "
+                + people.size() + " nhân sự · " + WorkdayReconciliation.round2(totalDays)
+                + " công · ngày " + (min == null ? "?" : min.getDayOfMonth())
+                + "–" + (max == null ? "?" : max.getDayOfMonth());
         auditPort.record("CUSTOMER_WORKDAY_IMPORTED", "CustomerWorkday", ym.toString(), actor,
-                "file=" + fileName + ", rows=" + rows.size());
-        log.info("[erp] kỳ {} ← file khách hàng {}: {} dòng", ym, fileName, rows.size());
+                "file=" + fileName + ", rows=" + rows.size() + ", " + summary);
+        log.info("[erp] kỳ {} ← file khách hàng {}: {} ô ({})", ym, fileName, rows.size(), summary);
+        lastImportSummary = summary;
         return rows.size();
+    }
+
+    /** Tóm tắt lần import gần nhất — controller ghép vào câu thông báo trả về màn hình. */
+    private String lastImportSummary = "";
+
+    public String lastImportSummary() {
+        return lastImportSummary;
     }
 
     @Transactional(readOnly = true)

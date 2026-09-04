@@ -185,7 +185,8 @@
         <p class="tsc-hint">Nguồn: <b>{{ customerSource() }}</b></p>
       }
       <p class="tsc-hint">
-        Đọc thẳng <b>biên bản nghiệm thu</b> khách hàng gửi: bỏ qua phần tiêu đề, địa chỉ, mã số thuế ở
+        Đọc thẳng <b>biên bản nghiệm thu</b> khách hàng gửi: chỉ <b>sheet đầu tiên</b> (các sheet chi tiết
+        từng người phía sau bị bỏ qua để không cộng trùng), bỏ qua phần tiêu đề, địa chỉ, mã số thuế ở
         đầu file, tự tìm hàng tiêu đề có cột “Họ và tên” cùng các cột ngày (01/2, 02/2…), và <b>dừng lại
         trước mục kế tiếp</b> nên phần ngoài giờ hành chính không bị cộng lẫn vào. Không có cột mã nhân
         viên thì ghép theo tên. Rê chuột vào tên để xem hạng mục / dự án.

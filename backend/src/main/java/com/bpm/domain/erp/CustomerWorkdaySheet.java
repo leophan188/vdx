@@ -52,7 +52,8 @@ public final class CustomerWorkdaySheet {
     public record Cellule(String empCode, String name, LocalDate date, double days, String note) {
     }
 
-    public record ParseResult(List<Cellule> cells, List<String> problems) {
+    /** @param sheetName tên sheet đã đọc — báo lại để người import biết chắc mình lấy đúng bảng nào */
+    public record ParseResult(List<Cellule> cells, List<String> problems, String sheetName) {
     }
 
     /**
@@ -62,11 +63,15 @@ public final class CustomerWorkdaySheet {
     public static ParseResult read(Workbook wb, YearMonth period) {
         List<Cellule> out = new ArrayList<>();
         List<String> problems = new ArrayList<>();
-        Sheet sheet = wb.getSheetAt(0);
+        // CHỈ sheet đầu tiên. Biên bản khách hàng còn kèm mỗi nhân sự một sheet chi tiết phía sau
+        // ("1. Đỗ Quốc Hưng", "2. Nguyễn Quốc Tiến"…); đọc hết mọi sheet là cộng trùng công của từng
+        // người lên bảng tổng.
+        Sheet sheet = wb.getNumberOfSheets() > 0 ? wb.getSheetAt(0) : null;
         if (sheet == null) {
             problems.add("File không có sheet nào.");
-            return new ParseResult(out, problems);
+            return new ParseResult(out, problems, null);
         }
+        String sheetName = sheet.getSheetName();
 
         int headerRow = -1;
         int nameCol = -1;
@@ -120,7 +125,7 @@ public final class CustomerWorkdaySheet {
         if (headerRow < 0) {
             problems.add("Không tìm thấy dòng tiêu đề — cần một cột \"Họ và tên\" và các cột ngày "
                     + "(1, 2, 3… hoặc 01/" + String.format("%02d", period.getMonthValue()) + ").");
-            return new ParseResult(out, problems);
+            return new ParseResult(out, problems, sheetName);
         }
 
         int blankStreak = 0;
@@ -174,7 +179,7 @@ public final class CustomerWorkdaySheet {
                 }
             }
         }
-        return new ParseResult(out, problems);
+        return new ParseResult(out, problems, sheetName);
     }
 
     /**
